@@ -60,10 +60,13 @@ Poser ces questions à l'utilisateur. Adapter selon le contexte, ne poser que le
 Basé sur les réponses, déterminer la branche enfant :
 
 | Si la source est... | Déclencher |
-|---------------------|-----------|
+|---------------------|------------|
 | Un ticket Zoho | → `/zoho` (fetch ticket + pièces jointes + analyse) |
 | Un nouveau projet from scratch | → `/nouveau-projet` (bootstrap complet) |
-| Un nouveau module dans un projet existant | → `/nouveau-module` (backend + frontend) |
+| Un nouveau module CRUD complet | → `/nouveau-module` (backend + frontend) |
+| **Une feature à ajouter ou modifier** | → **`/feature`** (template lookup + Rule-Gap) |
+| **Un bug à corriger** | → **`/fix`** (diagnostic + RED-GREEN-REFACTOR) |
+| **Un refactoring** | → **`/refactor`** (safety-first) |
 | De l'exploration, R&D, ou une décision archi | → `/nouveau-ingenierie` (recherche structurée) |
 
 ---
