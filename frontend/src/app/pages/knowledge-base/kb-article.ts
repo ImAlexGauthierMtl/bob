@@ -64,7 +64,7 @@ export class KBArticleComponent implements OnInit {
     }
 
     processContent(markdown: string): void {
-        // Simple markdown → HTML conversion (headings, paragraphs, lists, code, bold, links)
+        // Simple markdown → HTML conversion (headings, paragraphs, lists, code, bold, links, images)
         const lines = markdown.split('\n');
         const htmlParts: string[] = [];
         const tocEntries: TocEntry[] = [];
@@ -106,6 +106,20 @@ export class KBArticleComponent implements OnInit {
                 continue;
             }
 
+            // Standalone image line: ![alt](url)
+            const imgMatch = trimmed.match(/^!\[(.*)\]\((.+?)\)$/);
+            if (imgMatch) {
+                const alt = imgMatch[1];
+                const src = imgMatch[2];
+                htmlParts.push(
+                    `<figure class="article__figure">` +
+                    `<img src="${src}" alt="${this.escapeHtml(alt)}" class="article__image" loading="lazy" />` +
+                    (alt ? `<figcaption class="article__figcaption">${this.escapeHtml(alt)}</figcaption>` : '') +
+                    `</figure>`
+                );
+                continue;
+            }
+
             // Regular paragraph
             htmlParts.push(`<p class="article__paragraph">${this.inlineMarkdown(trimmed)}</p>`);
         }
@@ -124,6 +138,8 @@ export class KBArticleComponent implements OnInit {
         html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
         // Inline code
         html = html.replace(/`(.+?)`/g, '<code class="article__code">$1</code>');
+        // Inline images (must come before links)
+        html = html.replace(/!\[(.+?)\]\((.+?)\)/g, '<img src="$2" alt="$1" class="article__image--inline" loading="lazy" />');
         // Links
         html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="article__link">$1</a>');
         return html;

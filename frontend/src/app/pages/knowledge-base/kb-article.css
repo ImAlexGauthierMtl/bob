@@ -303,6 +303,36 @@
     text-decoration: underline;
 }
 
+:host ::ng-deep .article__figure {
+    margin: 24px 0;
+    border: 1px solid #e5e7eb;
+    background: #fafafa;
+    overflow: hidden;
+}
+
+:host ::ng-deep .article__image {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+:host ::ng-deep .article__figcaption {
+    padding: 10px 16px;
+    font-size: 13px;
+    color: #6b7280;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+    font-style: italic;
+}
+
+:host ::ng-deep .article__image--inline {
+    display: inline-block;
+    max-width: 100%;
+    height: auto;
+    margin: 8px 0;
+    border: 1px solid #e5e7eb;
+}
+
 /* ── Feedback ────────────────────────────────────────────── */
 
 .article-feedback {
