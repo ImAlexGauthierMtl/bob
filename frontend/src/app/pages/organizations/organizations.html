@@ -1,0 +1,191 @@
+<div class="page-header">
+    <div class="page-header__left">
+        <h2 class="page-title">Organizations</h2>
+        <p class="page-subtitle">247 active organizations</p>
+    </div>
+    <div class="page-header__actions">
+        <button class="btn btn-outline"><i class="fa-solid fa-download"></i> Export</button>
+        <button class="btn btn-accent"><i class="fa-solid fa-plus"></i> Add Organization</button>
+    </div>
+</div>
+
+<!-- AI Insights -->
+<section class="ai-insights" id="ai-insights">
+    <div class="ai-insights__header">
+        <div class="ai-insights__icon">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </div>
+        <h3 class="ai-insights__title">AI Insights</h3>
+    </div>
+    <div class="ai-insights__grid">
+        <div class="ai-insight-card">
+            <p class="ai-insight-card__label">Highest Growth</p>
+            <p class="ai-insight-card__value">TechVision Inc.</p>
+            <p class="ai-insight-card__desc">Revenue increased 47% this quarter</p>
+        </div>
+        <div class="ai-insight-card">
+            <p class="ai-insight-card__label">Needs Attention</p>
+            <p class="ai-insight-card__value">3 Organizations</p>
+            <p class="ai-insight-card__desc">Haven't been contacted in 30+ days</p>
+        </div>
+        <div class="ai-insight-card">
+            <p class="ai-insight-card__label">Upsell Opportunity</p>
+            <p class="ai-insight-card__value">$340K potential</p>
+            <p class="ai-insight-card__desc">Based on usage patterns and growth</p>
+        </div>
+    </div>
+</section>
+
+<!-- Search & Filters -->
+<div class="toolbar" id="toolbar">
+    <div class="search-box">
+        <i class="fa-solid fa-search search-box__icon"></i>
+        <input type="text" class="search-box__input" placeholder="Search organizations..." />
+    </div>
+    <div class="filter-pills">
+        <button class="filter-pill filter-pill--active">All</button>
+        <button class="filter-pill">Enterprise</button>
+        <button class="filter-pill">Mid-Market</button>
+        <button class="filter-pill">Startup</button>
+    </div>
+</div>
+
+<!-- Organizations Table -->
+<section class="table-card" id="org-table">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Organization</th>
+                <th>Industry</th>
+                <th class="hide-mobile">Contacts</th>
+                <th class="hide-mobile">Revenue</th>
+                <th>Status</th>
+                <th class="text-right hide-mobile">Health</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><a routerLink="/organizations/1" class="org-link">
+                        <div class="avatar-sm">AC</div>
+                        <div>
+                            <p class="org-name">Acme Corporation</p>
+                            <p class="org-meta">Technology · San Francisco, CA</p>
+                        </div>
+                    </a></td>
+                <td>Technology</td>
+                <td class="hide-mobile">24</td>
+                <td class="hide-mobile">$1.2M</td>
+                <td><span class="status-badge status-badge--accent">Active</span></td>
+                <td class="text-right hide-mobile">
+                    <div class="health-bar">
+                        <div class="health-bar__fill" style="width:92%"></div>
+                    </div><span class="health-value">92%</span>
+                </td>
+            </tr>
+            <tr>
+                <td><a routerLink="/organizations/2" class="org-link">
+                        <div class="avatar-sm">GS</div>
+                        <div>
+                            <p class="org-name">Global Solutions Ltd</p>
+                            <p class="org-meta">Consulting · London, UK</p>
+                        </div>
+                    </a></td>
+                <td>Consulting</td>
+                <td class="hide-mobile">18</td>
+                <td class="hide-mobile">$890K</td>
+                <td><span class="status-badge status-badge--accent">Active</span></td>
+                <td class="text-right hide-mobile">
+                    <div class="health-bar">
+                        <div class="health-bar__fill" style="width:87%"></div>
+                    </div><span class="health-value">87%</span>
+                </td>
+            </tr>
+            <tr>
+                <td><a routerLink="/organizations/3" class="org-link">
+                        <div class="avatar-sm">TV</div>
+                        <div>
+                            <p class="org-name">TechVision Inc.</p>
+                            <p class="org-meta">SaaS · Austin, TX</p>
+                        </div>
+                    </a></td>
+                <td>SaaS</td>
+                <td class="hide-mobile">12</td>
+                <td class="hide-mobile">$2.1M</td>
+                <td><span class="status-badge status-badge--accent">Active</span></td>
+                <td class="text-right hide-mobile">
+                    <div class="health-bar">
+                        <div class="health-bar__fill" style="width:95%"></div>
+                    </div><span class="health-value">95%</span>
+                </td>
+            </tr>
+            <tr>
+                <td><a routerLink="/organizations/4" class="org-link">
+                        <div class="avatar-sm">NI</div>
+                        <div>
+                            <p class="org-name">Nordic Innovations</p>
+                            <p class="org-meta">Manufacturing · Stockholm, SE</p>
+                        </div>
+                    </a></td>
+                <td>Manufacturing</td>
+                <td class="hide-mobile">8</td>
+                <td class="hide-mobile">$650K</td>
+                <td><span class="status-badge status-badge--muted">Prospect</span></td>
+                <td class="text-right hide-mobile">
+                    <div class="health-bar">
+                        <div class="health-bar__fill" style="width:74%"></div>
+                    </div><span class="health-value">74%</span>
+                </td>
+            </tr>
+            <tr>
+                <td><a routerLink="/organizations/5" class="org-link">
+                        <div class="avatar-sm">PN</div>
+                        <div>
+                            <p class="org-name">Pacific Networks</p>
+                            <p class="org-meta">Telecom · Tokyo, JP</p>
+                        </div>
+                    </a></td>
+                <td>Telecom</td>
+                <td class="hide-mobile">15</td>
+                <td class="hide-mobile">$1.8M</td>
+                <td><span class="status-badge status-badge--accent">Active</span></td>
+                <td class="text-right hide-mobile">
+                    <div class="health-bar">
+                        <div class="health-bar__fill" style="width:89%"></div>
+                    </div><span class="health-value">89%</span>
+                </td>
+            </tr>
+            <tr>
+                <td><a routerLink="/organizations/6" class="org-link">
+                        <div class="avatar-sm">SA</div>
+                        <div>
+                            <p class="org-name">Stellar Analytics</p>
+                            <p class="org-meta">Data Science · Berlin, DE</p>
+                        </div>
+                    </a></td>
+                <td>Data Science</td>
+                <td class="hide-mobile">6</td>
+                <td class="hide-mobile">$420K</td>
+                <td><span class="status-badge status-badge--accent">Active</span></td>
+                <td class="text-right hide-mobile">
+                    <div class="health-bar">
+                        <div class="health-bar__fill" style="width:81%"></div>
+                    </div><span class="health-value">81%</span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- Pagination -->
+<div class="pagination" id="pagination">
+    <p class="pagination__info">Showing <strong>1-6</strong> of <strong>247</strong> organizations</p>
+    <div class="pagination__controls">
+        <button class="pagination__btn" disabled><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="pagination__btn pagination__btn--active">1</button>
+        <button class="pagination__btn">2</button>
+        <button class="pagination__btn">3</button>
+        <span class="pagination__dots">...</span>
+        <button class="pagination__btn">42</button>
+        <button class="pagination__btn"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+</div>

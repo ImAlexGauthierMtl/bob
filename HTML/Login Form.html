@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>::-webkit-scrollbar { display: none;}</style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'accent': '#FF4500',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-white font-sans antialiased">
+
+<div id="login-container" class="min-h-screen flex">
+    
+    <div id="left-panel" class="hidden lg:flex lg:w-1/2 bg-black relative overflow-hidden">
+        <div class="absolute inset-0 opacity-30">
+            <div class="absolute top-0 left-0 w-96 h-96 bg-accent rounded-full blur-3xl"></div>
+            <div class="absolute bottom-0 right-0 w-96 h-96 bg-accent rounded-full blur-3xl"></div>
+        </div>
+        
+        <div class="relative z-10 flex flex-col justify-between p-16 w-full">
+            <div>
+                <h1 class="text-4xl font-light tracking-tight text-white mb-2">Dynamics<br><span class="font-semibold">Nexus</span></h1>
+            </div>
+            
+            <div class="space-y-12">
+                <div>
+                    <p class="text-6xl font-light text-white leading-tight mb-6">Where AI enhances<br>human productivity</p>
+                    <p class="text-lg text-gray-400 font-light max-w-md">Experience the perfect balance of aesthetics and functionality in a universal business tool designed for the modern era.</p>
+                </div>
+                
+                <div class="space-y-6">
+                    <div class="flex items-start gap-4">
+                        <div class="w-1 h-12 bg-accent"></div>
+                        <div>
+                            <p class="text-white font-medium mb-1">Intelligent Automation</p>
+                            <p class="text-sm text-gray-400 font-light">AI-powered workflows that adapt to your business needs</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-4">
+                        <div class="w-1 h-12 bg-accent"></div>
+                        <div>
+                            <p class="text-white font-medium mb-1">Unified Platform</p>
+                            <p class="text-sm text-gray-400 font-light">CRM, ERP, and analytics in one seamless interface</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-4">
+                        <div class="w-1 h-12 bg-accent"></div>
+                        <div>
+                            <p class="text-white font-medium mb-1">Real-time Insights</p>
+                            <p class="text-sm text-gray-400 font-light">Data-driven decisions powered by advanced analytics</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-8">
+                <div>
+                    <p class="text-4xl font-light text-white">2.4M+</p>
+                    <p class="text-xs text-gray-400 uppercase tracking-wider mt-1">Active Users</p>
+                </div>
+                <div class="w-px h-12 bg-gray-700"></div>
+                <div>
+                    <p class="text-4xl font-light text-white">99.9%</p>
+                    <p class="text-xs text-gray-400 uppercase tracking-wider mt-1">Uptime</p>
+                </div>
+                <div class="w-px h-12 bg-gray-700"></div>
+                <div>
+                    <p class="text-4xl font-light text-white">150+</p>
+                    <p class="text-xs text-gray-400 uppercase tracking-wider mt-1">Countries</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="right-panel" class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
+        <div class="w-full max-w-md">
+            
+            <div id="mobile-logo" class="lg:hidden mb-12">
+                <h1 class="text-3xl font-light tracking-tight text-black">Dynamics<br><span class="font-semibold">Nexus</span></h1>
+            </div>
+
+            <div id="login-header" class="mb-12">
+                <h2 class="text-4xl font-light text-black mb-3">Welcome back</h2>
+                <p class="text-gray-500 font-light">Enter your credentials to access your account</p>
+            </div>
+
+            <form id="login-form" class="space-y-6">
+                
+                <div id="email-field">
+                    <label for="email" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Email Address</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fa-regular fa-envelope text-gray-400 text-sm"></i>
+                        </div>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email"
+                            class="w-full pl-12 pr-4 py-4 border border-gray-200 focus:border-accent focus:outline-none transition-colors text-black font-light"
+                            placeholder="your.email@company.com"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div id="password-field">
+                    <label for="password" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Password</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-lock text-gray-400 text-sm"></i>
+                        </div>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password"
+                            class="w-full pl-12 pr-12 py-4 border border-gray-200 focus:border-accent focus:outline-none transition-colors text-black font-light"
+                            placeholder="Enter your password"
+                            required
+                        >
+                        <button type="button" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-black transition-colors">
+                            <i class="fa-regular fa-eye text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="remember-forgot" class="flex items-center justify-between">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="checkbox" class="w-4 h-4 border-gray-200 text-accent focus:ring-0 focus:ring-offset-0">
+                        <span class="text-sm text-gray-600 group-hover:text-black transition-colors">Remember me</span>
+                    </label>
+                    <a href="#" class="text-sm text-accent hover:underline font-medium">Forgot password?</a>
+                </div>
+
+                <button 
+                    type="submit" 
+                    id="login-button"
+                    class="w-full bg-accent hover:bg-opacity-90 text-white font-medium py-4 transition-all duration-200 hover:shadow-lg"
+                >
+                    Sign In
+                </button>
+
+                <div id="divider" class="relative my-8">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div class="relative flex justify-center">
+                        <span class="px-4 bg-white text-xs text-gray-400 uppercase tracking-wider">Or continue with</span>
+                    </div>
+                </div>
+
+                <div id="sso-options" class="space-y-3">
+                    <button 
+                        type="button"
+                        class="w-full border border-gray-200 hover:border-gray-300 py-4 flex items-center justify-center gap-3 transition-colors group"
+                    >
+                        <i class="fa-brands fa-google text-lg text-gray-600 group-hover:text-black transition-colors"></i>
+                        <span class="text-sm font-medium text-gray-600 group-hover:text-black transition-colors">Sign in with Google</span>
+                    </button>
+
+                    <button 
+                        type="button"
+                        class="w-full border border-gray-200 hover:border-gray-300 py-4 flex items-center justify-center gap-3 transition-colors group"
+                    >
+                        <i class="fa-brands fa-microsoft text-lg text-gray-600 group-hover:text-black transition-colors"></i>
+                        <span class="text-sm font-medium text-gray-600 group-hover:text-black transition-colors">Sign in with Microsoft</span>
+                    </button>
+
+                    <button 
+                        type="button"
+                        class="w-full border border-gray-200 hover:border-gray-300 py-4 flex items-center justify-center gap-3 transition-colors group"
+                    >
+                        <i class="fa-solid fa-fingerprint text-lg text-gray-600 group-hover:text-black transition-colors"></i>
+                        <span class="text-sm font-medium text-gray-600 group-hover:text-black transition-colors">Sign in with Biometric</span>
+                    </button>
+                </div>
+
+                <div id="ai-assistant-hint" class="mt-8 p-6 border border-gray-200 bg-gray-50">
+                    <div class="flex items-start gap-4">
+                        <div class="flex-shrink-0 w-10 h-10 bg-accent bg-opacity-10 flex items-center justify-center">
+                            <i class="fa-solid fa-sparkles text-accent text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-black mb-1">AI-Powered Experience</p>
+                            <p class="text-xs text-gray-600 font-light">Once logged in, our AI assistant will help you navigate, automate tasks, and provide intelligent insights tailored to your workflow.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+
+            <div id="signup-link" class="mt-8 text-center">
+                <p class="text-sm text-gray-600">
+                    Don't have an account? 
+                    <a href="#" class="text-accent hover:underline font-medium">Create one now</a>
+                </p>
+            </div>
+
+            <div id="footer-links" class="mt-12 pt-8 border-t border-gray-200">
+                <div class="flex flex-wrap justify-center gap-6">
+                    <a href="#" class="text-xs text-gray-400 hover:text-black transition-colors">Privacy Policy</a>
+                    <a href="#" class="text-xs text-gray-400 hover:text-black transition-colors">Terms of Service</a>
+                    <a href="#" class="text-xs text-gray-400 hover:text-black transition-colors">Help Center</a>
+                    <a href="#" class="text-xs text-gray-400 hover:text-black transition-colors">Contact Support</a>
+                </div>
+                <p class="text-xs text-gray-400 text-center mt-6">© 2024 Dynamics Nexus. All rights reserved.</p>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('login-form');
+    const passwordToggle = document.querySelector('[type="button"]');
+    const passwordInput = document.getElementById('password');
+    
+    if (passwordToggle) {
+        passwordToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            const icon = this.querySelector('i');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+    }
+    
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+        });
+    }
+});
+</script>
+
+</body>
+</html>

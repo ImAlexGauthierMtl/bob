@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Profile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>::-webkit-scrollbar { display: none;}</style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'accent': '#FF4500',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-white font-sans antialiased">
+
+<div id="main-container" class="flex min-h-screen">
+    
+    <aside id="sidebar" class="hidden lg:flex lg:flex-col w-72 border-r border-gray-100 bg-white fixed h-screen overflow-y-auto">
+        <div class="p-10 border-b border-gray-100">
+            <h1 class="text-3xl font-extralight tracking-tight leading-tight">Dynamics<br><span class="font-semibold">Nexus</span></h1>
+            <p class="text-xs text-gray-400 mt-3 tracking-wide">AI-ENHANCED CRM</p>
+        </div>
+        
+        <nav class="flex-1 p-8">
+            <div class="space-y-2">
+                <a href="#" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Dashboard</a>
+                <a href="#organizations" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Organizations</a>
+                <a href="#contacts" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Contacts</a>
+                <a href="#opportunities" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Opportunities</a>
+                <a href="#tasks" class="block py-4 px-5 text-sm font-medium text-black bg-gray-50 border-l-2 border-accent">Tasks</a>
+                <a href="#" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Analytics</a>
+            </div>
+            
+            <div class="mt-16 pt-8 border-t border-gray-100">
+                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4 px-5">AI Assistant</p>
+                <div class="bg-gradient-to-br from-gray-50 to-white border border-gray-100 p-6 mb-6">
+                    <div class="flex items-start gap-3 mb-4">
+                        <div class="w-8 h-8 bg-accent rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-wand-magic-sparkles text-white text-xs"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-black mb-1">Task Prioritization</p>
+                            <p class="text-xs text-gray-500 leading-relaxed">AI suggests reordering 3 tasks</p>
+                        </div>
+                    </div>
+                    <button class="w-full py-2 px-4 bg-black text-white text-xs font-medium hover:bg-gray-800 transition-colors">Apply Suggestions</button>
+                </div>
+                
+                <div class="space-y-2">
+                    <a href="#" class="block py-3 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Team</a>
+                    <a href="#settings" class="block py-3 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Settings</a>
+                    <a href="#" class="block py-3 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Integrations</a>
+                </div>
+            </div>
+        </nav>
+        
+        <div class="p-8 border-t border-gray-100">
+            <div class="flex items-center gap-4">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="User" class="w-12 h-12 rounded-full object-cover">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-black truncate">Marcus Chen</p>
+                    <p class="text-xs text-gray-400 truncate">Sales Manager</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="main-content" class="flex-1 flex flex-col min-w-0 lg:ml-72">
+        
+        <header id="header" class="bg-white border-b border-gray-100 sticky top-0 z-20">
+            <div class="px-6 lg:px-16 py-8">
+                <div class="flex items-start justify-between gap-6 mb-6">
+                    <div class="flex items-start gap-6 flex-1">
+                        <button class="lg:hidden text-gray-600 mt-2">
+                            <i class="fa-solid fa-bars text-xl"></i>
+                        </button>
+                        <div class="flex-1">
+                            <div class="flex items-start gap-6 mb-3">
+                                <div class="w-20 h-20 bg-gradient-to-br from-orange-100 to-orange-50 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-orange-200">
+                                    <i class="fa-solid fa-list-check text-3xl text-orange-600"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-2 flex-wrap">
+                                        <h2 class="text-3xl lg:text-4xl font-light tracking-tight text-black">Finalize Enterprise Platform Proposal</h2>
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-3 py-1 bg-yellow-100 text-xs font-semibold text-yellow-700">IN PROGRESS</span>
+                                            <span class="px-3 py-1 bg-red-100 text-xs font-semibold text-red-600">HIGH PRIORITY</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-base text-gray-600 font-medium mb-2">Related to Global Solutions Inc. • OPP-8429</p>
+                                    <p class="text-sm text-gray-400 tracking-wide mb-3">TASK-5824 • Created: Nov 18, 2024 • Due: Nov 25, 2024</p>
+                                    <div class="flex items-center gap-6 flex-wrap">
+                                        <div class="flex items-center gap-2">
+                                            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="Assignee" class="w-8 h-8 rounded-full object-cover">
+                                            <span class="text-sm text-gray-600 font-light">Sarah Johnson</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <i class="fa-solid fa-calendar text-gray-400 text-xs"></i>
+                                            <span class="text-sm text-gray-600 font-light">5 days remaining</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <i class="fa-solid fa-chart-line text-gray-400 text-xs"></i>
+                                            <span class="text-sm text-gray-600 font-light">Progress: 65%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        <button class="px-5 py-3 border border-gray-200 text-sm font-medium text-gray-600 hover:border-gray-300 transition-colors hidden lg:flex items-center gap-2">
+                            <i class="fa-solid fa-pen text-xs"></i>
+                            Edit Task
+                        </button>
+                        <button class="px-5 py-3 bg-accent text-white text-sm font-medium hover:bg-opacity-90 transition-colors hidden lg:flex items-center gap-2">
+                            <i class="fa-solid fa-check text-xs"></i>
+                            Complete Task
+                        </button>
+                        <button class="w-10 h-10 border border-gray-200 flex items-center justify-center hover:border-accent hover:text-accent transition-all lg:hidden">
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border-b border-gray-100">
+                    <nav class="flex gap-8 overflow-x-auto">
+                        <button class="py-4 px-2 text-sm font-medium text-black border-b-2 border-accent whitespace-nowrap" data-tab="overview">Overview</button>
+                        <button class="py-4 px-2 text-sm font-light text-gray-500 hover:text-black transition-colors whitespace-nowrap" data-tab="subtasks">Subtasks & Checklist</button>
+                        <button class="py-4 px-2 text-sm font-light text-gray-500 hover:text-black transition-colors whitespace-nowrap" data-tab="activity">Activity Timeline</button>
+                        <button class="py-4 px-2 text-sm font-light text-gray-500 hover:text-black transition-colors whitespace-nowrap" data-tab="dependencies">Dependencies</button>
+                        <button class="py-4 px-2 text-sm font-light text-gray-500 hover:text-black transition-colors whitespace-nowrap" data-tab="timetracking">Time Tracking</button>
+                        <button class="py-4 px-2 text-sm font-light text-gray-500 hover:text-black transition-colors whitespace-nowrap" data-tab="attachments">Attachments</button>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 bg-white">
+            <div class="flex flex-col lg:flex-row">
+                
+                <div id="content-area" class="flex-1 px-6 lg:px-16 py-12 min-w-0">
+                    
+                    <section id="overview-tab" class="tab-content">
+                        
+                        <div id="ai-productivity-assistant" class="mb-12 bg-gradient-to-r from-purple-50 to-white border border-purple-100 p-8">
+                            <div class="flex items-start gap-4 mb-6">
+                                <div class="w-10 h-10 bg-accent rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid fa-robot text-white text-sm"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-xl font-light text-black mb-2">AI Productivity Assistant</h3>
+                                    <p class="text-sm text-gray-500">Smart insights to optimize your workflow</p>
+                                </div>
+                                <div class="text-xs text-gray-400 uppercase tracking-wider">Active Learning</div>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="bg-white border border-purple-200 p-4">
+                                    <div class="flex items-start gap-3 mb-3">
+                                        <i class="fa-solid fa-lightbulb text-yellow-500 text-sm mt-1"></i>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-black mb-1">Optimal Work Time Detected</p>
+                                            <p class="text-sm text-gray-600 leading-relaxed">Based on your productivity patterns, you work most efficiently on proposal tasks between 9-11 AM. Consider scheduling focused time tomorrow morning to complete this task.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white border border-purple-200 p-4">
+                                    <div class="flex items-start gap-3 mb-3">
+                                        <i class="fa-solid fa-users text-blue-500 text-sm mt-1"></i>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-black mb-1">Collaboration Suggestion</p>
+                                            <p class="text-sm text-gray-600 leading-relaxed">David Chen from Technical team has expertise in similar proposals. Consider requesting his input on technical specifications. He's typically available for quick consultations on Thursdays.</p>
+                                        </div>
+                                    </div>
+                                    <button class="text-sm text-accent hover:underline font-medium">Send collaboration request</button>
+                                </div>
+                                <div class="bg-white border border-purple-200 p-4">
+                                    <div class="flex items-start gap-3 mb-3">
+                                        <i class="fa-solid fa-clock-rotate-left text-green-500 text-sm mt-1"></i>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-black mb-1">Historical Insight</p>
+                                            <p class="text-sm text-gray-600 leading-relaxed">Similar proposals took an average of 8.5 hours to complete. You've logged 5.5 hours so far. You're on track to finish ahead of schedule.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="task-description" class="mb-12">
+                            <h3 class="text-2xl font-light text-black mb-6">Task Description</h3>
+                            <div class="border border-gray-100 p-8">
+                                <p class="text-base text-gray-700 leading-relaxed mb-6">
+                                    Complete the comprehensive proposal for Global Solutions Inc.'s Enterprise Platform Expansion project. This includes finalizing technical specifications, pricing models, implementation timeline, and resource allocation. The proposal must address all requirements outlined in the RFP and demonstrate clear ROI for the client.
+                                </p>
+                                <div class="pt-6 border-t border-gray-200">
+                                    <h4 class="text-sm font-medium text-black mb-4">Key Deliverables</h4>
+                                    <ul class="space-y-2">
+                                        <li class="flex items-start gap-3">
+                                            <i class="fa-solid fa-check-circle text-green-500 text-sm mt-1"></i>
+                                            <span class="text-sm text-gray-700">Executive summary highlighting business value and ROI</span>
+                                        </li>
+                                        <li class="flex items-start gap-3">
+                                            <i class="fa-solid fa-check-circle text-green-500 text-sm mt-1"></i>
+                                            <span class="text-sm text-gray-700">Detailed technical architecture and integration approach</span>
+                                        </li>
+                                        <li class="flex items-start gap-3">
+                                            <i class="fa-solid fa-circle text-gray-300 text-xs mt-1.5"></i>
+                                            <span class="text-sm text-gray-700">Comprehensive pricing breakdown with cost justification</span>
+                                        </li>
+                                        <li class="flex items-start gap-3">
+                                            <i class="fa-solid fa-circle text-gray-300 text-xs mt-1.5"></i>
+                                            <span class="text-sm text-gray-700">Project timeline with milestones and dependencies</span>
+                                        </li>
+                                        <li class="flex items-start gap-3">
+                                            <i class="fa-solid fa-circle text-gray-300 text-xs mt-1.5"></i>
+                                            <span class="text-sm text-gray-700">Risk assessment and mitigation strategies</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="task-metrics" class="mb-12">
+                            <h3 class="text-2xl font-light text-black mb-6">Task Metrics</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                                <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Progress</p>
+                                        <i class="fa-solid fa-chart-line text-gray-300"></i>
+                                    </div>
+                                    <div class="mb-3">
+                                        <p class="text-3xl font-light text-black mb-2">65%</p>
+                                        <div class="w-full h-2 bg-gray-100">
+                                            <div class="h-full bg-accent" style="width: 65%"></div>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-500">3 of 5 deliverables complete</p>
+                                </div>
+                                <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Time Spent</p>
+                                        <i class="fa-solid fa-clock text-gray-300"></i>
+                                    </div>
+                                    <p class="text-3xl font-light text-black mb-1">5.5h</p>
+                                    <p class="text-xs text-gray-500">Est. 8.5h total</p>
+                                </div>
+                                <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Due Date</p>
+                                        <i class="fa-solid fa-calendar-days text-gray-300"></i>
+                                    </div>
+                                    <p class="text-3xl font-light text-black mb-1">5</p>
+                                    <p class="text-xs text-orange-600 font-medium">Days remaining</p>
+                                </div>
+                                <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Priority</p>
+                                        <i class="fa-solid fa-flag text-gray-300"></i>
+                                    </div>
+                                    <p class="text-3xl font-light text-black mb-1">High</p>
+                                    <p class="text-xs text-red-600 font-medium">Critical path item</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="related-entities" class="mb-12">
+                            <h3 class="text-2xl font-light text-black mb-6">Related Entities</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                    <div class="flex items-start gap-4 mb-4">
+                                        <div class="w-12 h-12 bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                            <i class="fa-solid fa-building text-blue-600 text-lg"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Organization</p>
+                                            <a href="#" class="text-base font-medium text-black hover:text-accent transition-colors">Global Solutions Inc.</a>
+                                            <p class="text-sm text-gray-600 mt-1">Enterprise Software • San Francisco, CA</p>
+                                        </div>
+                                    </div>
+                                    <div class="pt-4 border-t border-gray-200 flex items-center justify-between">
+                                        <span class="text-xs text-gray-500">Account Value: $2.5M</span>
+                                        <a href="#" class="text-xs text-accent hover:underline font-medium">View Profile</a>
+                                    </div>
+                                </div>
+                                <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                    <div class="flex items-start gap-4 mb-4">
+                                        <div class="w-12 h-12 bg-green-100 flex items-center justify-center flex-shrink-0">
+                                            <i class="fa-solid fa-bullseye text-green-600 text-lg"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Opportunity</p>
+                                            <a href="#" class="text-base font-medium text-black hover:text-accent transition-colors">Enterprise Platform Expansion</a>
+                                            <p class="text-sm text-gray-600 mt-1">$820,800 • 75% Probability</p>
+                                        </div>
+                                    </div>
+                                    <div class="pt-4 border-t border-gray-200 flex items-center justify-between">
+                                        <span class="text-xs text-gray-500">Closes: Dec 15, 2024</span>
+                                        <a href="#" class="text-xs text-accent hover:underline font-medium">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="team-collaboration" class="mb-12">
+                            <h3 class="text-2xl font-light text-black mb-6">Team & Collaboration</h3>
+                            <div class="border border-gray-100">
+                                <div class="p-6 border-b border-gray-100">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h4 class="text-sm font-medium text-black">Assigned To</h4>
+                                        <button class="text-xs text-accent hover:underline font-medium">Change Assignee</button>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="Assignee" class="w-14 h-14 rounded-full object-cover">
+                                        <div class="flex-1">
+                                            <p class="text-base font-medium text-black">Sarah Johnson</p>
+                                            <p class="text-sm text-gray-600">Senior Account Executive</p>
+                                            <p class="text-xs text-gray-400 mt-1">sarah.johnson@dynamicsnexus.com</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-xs text-gray-400 mb-1">Current Workload</p>
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-20 h-2 bg-gray-100">
+                                                    <div class="h-full bg-yellow-500" style="width: 75%"></div>
+                                                </div>
+                                                <span class="text-xs text-gray-600">75%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h4 class="text-sm font-medium text-black">Collaborators</h4>
+                                        <button class="text-xs text-accent hover:underline font-medium">Add Collaborator</button>
+                                    </div>
+                                    <div class="space-y-3">
+                                        <div class="flex items-center gap-3">
+                                            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="Collaborator" class="w-10 h-10 rounded-full object-cover">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black">David Chen</p>
+                                                <p class="text-xs text-gray-500">Technical Consultant</p>
+                                            </div>
+                                            <span class="px-2 py-1 bg-blue-50 text-xs text-blue-600">Reviewer</span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="Collaborator" class="w-10 h-10 rounded-full object-cover">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black">Marcus Chen</p>
+                                                <p class="text-xs text-gray-500">Sales Manager</p>
+                                            </div>
+                                            <span class="px-2 py-1 bg-purple-50 text-xs text-purple-600">Approver</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </section>
+
+                    <section id="subtasks-tab" class="tab-content hidden">
+                        <div class="mb-8 flex items-center justify-between">
+                            <div>
+                                <h3 class="text-2xl font-light text-black mb-2">Subtasks & Checklist</h3>
+                                <p class="text-sm text-gray-500">Break down complex tasks into manageable steps</p>
+                            </div>
+                            <button class="px-5 py-3 bg-accent text-white text-sm font-medium hover:bg-opacity-90 transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                                Add Subtask
+                            </button>
+                        </div>
+
+                        <div class="mb-8 p-6 bg-green-50 border border-green-200">
+                            <div class="flex items-start gap-3">
+                                <i class="fa-solid fa-sparkles text-green-600 text-lg mt-1"></i>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-green-900 mb-2">AI Subtask Suggestions</p>
+                                    <p class="text-sm text-green-700 mb-3">Based on similar completed proposals, AI recommends adding these subtasks:</p>
+                                    <div class="space-y-2 mb-3">
+                                        <div class="flex items-center gap-2 text-sm text-green-800">
+                                            <i class="fa-solid fa-circle-plus text-xs"></i>
+                                            <span>Schedule technical review meeting with David Chen</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 text-sm text-green-800">
+                                            <i class="fa-solid fa-circle-plus text-xs"></i>
+                                            <span>Request legal review of contract terms</span>
+                                        </div>
+                                    </div>
+                                    <button class="text-sm text-green-900 font-medium hover:underline">Apply all suggestions</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border border-gray-100 mb-8">
+                            <div class="bg-gray-50 px-6 py-4 border-b border-gray-100">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-sm font-medium text-black">Completed (3/8)</h4>
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-32 h-2 bg-gray-200">
+                                            <div class="h-full bg-accent" style="width: 37.5%"></div>
+                                        </div>
+                                        <span class="text-xs text-gray-600">37.5%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="divide-y divide-gray-100">
+                                <div class="p-6 hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-start gap-4">
+                                        <button class="w-6 h-6 border-2 border-green-500 bg-green-500 flex items-center justify-center flex-shrink-0 mt-1">
+                                            <i class="fa-solid fa-check text-white text-xs"></i>
+                                        </button>
+                                        <div class="flex-1">
+                                            <p class="text-base font-medium text-gray-400 line-through mb-1">Research client's current infrastructure and pain points</p>
+                                            <div class="flex items-center gap-4 text-xs text-gray-400 mt-2">
+                                                <span>Completed by Sarah Johnson</span>
+                                                <span>•</span>
+                                                <span>Nov 19, 2024</span>
+                                                <span>•</span>
+                                                <span>2.5 hours logged</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-6 hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-start gap-4">
+                                        <button class="w-6 h-6 border-2 border-green-500 bg-green-500 flex items-center justify-center flex-shrink-0 mt-1">
+                                            <i class="fa-solid fa-check text-white text-xs"></i>
+                                        </button>
+                                        <div class="flex-1">
+                                            <p class="text-base font-medium text-gray-400 line-through mb-1">Draft executive summary with ROI projections</p>
+                                            <div class="flex items-center gap-4 text-xs text-gray-400 mt-2">
+                                                <span>Completed by Sarah Johnson</span>
+                                                <span>•</span>
+                                                <span>Nov 20, 2024</span>
+                                                <span>•</span>
+                                                <span>1.5 hours logged</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-6 hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-start gap-4">
+                                        <button class="w-6 h-6 border-2 border-green-500 bg-green-500 flex items-center justify-center flex-shrink-0 mt-1">
+                                            <i class="fa-solid fa-check text-white text-xs"></i>
+                                        </button>
+                                        <div class="flex-1">
+                                            <p class="text-base font-medium text-gray-400 line-through mb-1">Create technical architecture diagrams</p>
+                                            <div class="flex items-center gap-4 text-xs text-gray-400 mt-2">
+                                                <span>Completed by David Chen</span>
+                                                <span>•</span>
+                                                <span>Nov 21, 2024</span>
+                                                <span>•</span>
+                                                <span>1.5 hours logged</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-6 hover:bg-gray-50 transition-colors bg-blue-50">
+                                    <div class="flex items-start gap-4">
+                                        <button class="w-6 h-6 border-2 border-blue-500 flex items-center justify-center flex-shrink-0 mt-1">
+                                            <div class="w-3 h-3 bg-blue-500"></div>
+                                        </button>
+                                        <div class="flex-1">
+                                            <p class="text-base font-medium text-black mb-1">Develop detailed pricing breakdown and justification</p>
+                                            <p class="text-sm text-gray-600 mb-3">Include cost analysis, margin calculations, and competitive positioning</p>
+                                            <div class="flex items-center gap-4 flex-wrap">
+                                                <div class="flex items-center gap-2">
+                                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="Assignee" class="w-6 h-6 rounded-full object-cover">
+                                                    <span class="text-xs text-gray-600">Sarah Johnson</span>
+                                                </div>
+                                                <span class="text-xs text-gray-400">•</span>
+                                                <span class="text-xs text-gray-600">Due: Nov 23</span>
+                                                <span class="text-xs text-gray-400">•</span>
+                                                <span class="px-2 py-1 bg-yellow-100 text-xs text-yellow-700">In Progress</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-6 hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-start gap-4">
+                                        <button class="w-6 h-6 border-2 border-gray-300 flex items-center justify-center flex-shrink-0 mt-1"></button>
+                                        <div class="flex-1">
+                                            <p class="text-base font-medium text-black mb-1">Create implementation timeline with milestones</p>
+                                            <p class="text-sm text-gray-600 mb-3">Include resource allocation, dependencies, and critical path</p>
+                                            <div class="flex items-center gap-4 flex-wrap">
+                                                <div class="flex items-center gap-2">
+                                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="Assignee" class="w-6 h-6 rounded-full object-cover">
+                                                    <span class="text-xs text-gray-600">Sarah Johnson</span>
+                                                </div>
+                                                <span class="text-xs text-gray-400">•</span>
+                                                <span class="text-xs text-gray-600">Due: Nov 24</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-6 hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-start gap-4">
+                                        <button class="w-6 h-6 border-2 border-gray-300 flex items-center justify-center flex-shrink-0 mt-1"></button>
+                                        <div class="flex-1">
+                                            <p class="text-base font-medium text-black mb-1">Document risk assessment and mitigation strategies</p>
+                                            <p class="text-sm text-gray-600 mb-3">Identify potential risks and provide contingency plans</p>
+                                            <div class="flex items-center gap-4 flex-wrap">
+                                                <div class="flex items-center gap-2">
+                                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="Assignee" class="w-6 h-6 rounded-full object-cover">
+                                                    <span class="text-xs text-gray-600">David Chen</span>
+                                                </div>
+                                                <span class="text-xs text-gray-400">•</span>
+                                                <span class="text-xs text-gray-600">Due: Nov 24</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-6 hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-start gap-4">
+                                        <button class="w-6 h-6 border-2 border-gray-300 flex items-center justify-center flex-shrink-0 mt-1"></button>
+                                        <div class="flex-1">
+                                            <p class="text-base font-medium text-black mb-1">Compile final proposal document</p>
+                                            <p class="text-sm text-gray-600 mb-3">Format, proofread, and ensure brand consistency</p>
+                                            <div class="flex items-center gap-4 flex-wrap">
+                                                <div class="flex items-center gap-2">
+                                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="Assignee" class="w-6 h-6 rounded-full object-cover">
+                                                    <span class="text-xs text-gray-600">Sarah Johnson</span>
+                                                </div>
+                                                <span class="text-xs text-gray-400">•</span>
+                                                <span class="text-xs text-gray-600">Due: Nov 25</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-6 hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-start gap-4">
+                                        <button class="w-6 h-6 border-2 border-gray-300 flex items-center justify-center flex-shrink-0 mt-1"></button>
+                                        <div class="flex-1">
+                                            <p class="text-base font-medium text-black mb-1">Get final approval from Sales Manager</p>
+                                            <p class="text-sm text-gray-600 mb-3">Review with Marcus Chen before client submission</p>
+                                            <div class="flex items-center gap-4 flex-wrap">
+                                                <div class="flex items-center gap-2">
+                                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="Assignee" class="w-6 h-6 rounded-full object-cover">
+                                                    <span class="text-xs text-gray-600">Marcus Chen</span>
+                                                </div>
+                                                <span class="text-xs text-gray-400">•</span>
+                                                <span class="text-xs text-gray-600">Due: Nov 25</span>
+                                                <span class="text-xs text-gray-400">•</span>
+                                                <span class="px-2 py-1 bg-purple-100 text-xs text-purple-600">Approval Required</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="activity-tab" class="tab-content hidden">
+                        <h3 class="text-2xl font-light text-black mb-6">Activity Timeline</h3>
+
+                        <div class="border-l-2 border-gray-200 ml-3 space-y-8">
+                            <div class="relative pl-8">
+                                <div class="absolute left-0 top-1 w-6 h-6 bg-white border-2 border-accent rounded-full -ml-3"></div>
+                                <div class="mb-2">
+                                    <p class="text-xs text-gray-400 uppercase tracking-wider">Today, 2:45 PM</p>
+                                </div>
+                                <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                    <div class="flex items-start gap-4 mb-3">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="User" class="w-10 h-10 rounded-full object-cover">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-black">Sarah Johnson updated progress to 65%</p>
+                                            <p class="text-sm text-gray-600 mt-1">Completed pricing breakdown section. Moving to implementation timeline next.</p>
+                                        </div>
+                                    </div>
+                                    <div class="ml-14">
+                                        <div class="flex items-center gap-2 text-xs text-gray-500">
+                                            <i class="fa-solid fa-chart-line"></i>
+                                            <span>Progress: 50% → 65%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="relative pl-8">
+                                <div class="absolute left-0 top-1 w-6 h-6 bg-white border-2 border-gray-300 rounded-full -ml-3"></div>
+                                <div class="mb-2">
+                                    <p class="text-xs text-gray-400 uppercase tracking-wider">Today, 11:20 AM</p>
+                                </div>
+                                <div class="border border-gray-100 p-6">
+                                    <div class="flex items-start gap-4">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="User" class="w-10 h-10 rounded-full object-cover">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-black">Sarah Johnson logged 2 hours</p>
+                                            <p class="text-sm text-gray-600 mt-1">Working on detailed pricing breakdown and cost justification</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="relative pl-8">
+                                <div class="absolute left-0 top-1 w-6 h-6 bg-white border-2 border-gray-300 rounded-full -ml-3"></div>
+                                <div class="mb-2">
+                                    <p class="text-xs text-gray-400 uppercase tracking-wider">Yesterday, 4:15 PM</p>
+                                </div>
+                                <div class="border border-gray-100 p-6">
+                                    <div class="flex items-start gap-4 mb-3">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="User" class="w-10 h-10 rounded-full object-cover">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-black">David Chen completed subtask</p>
+                                            <p class="text-sm text-gray-600 mt-1">Created technical architecture diagrams</p>
+                                        </div>
+                                    </div>
+                                    <div class="ml-14">
+                                        <div class="flex items-center gap-2 text-xs text-green-600">
+                                            <i class="fa-solid fa-check-circle"></i>
+                                            <span>Subtask marked as complete</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="relative pl-8">
+                                <div class="absolute left-0 top-1 w-6 h-6 bg-white border-2 border-gray-300 rounded-full -ml-3"></div>
+                                <div class="mb-2">
+                                    <p class="text-xs text-gray-400 uppercase tracking-wider">Yesterday, 10:30 AM</p>
+                                </div>
+                                <div class="border border-gray-100 p-6">
+                                    <div class="flex items-start gap-4">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="User" class="w-10 h-10 rounded-full object-cover">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-black">Sarah Johnson added a comment</p>
+                                            <p class="text-sm text-gray-600 mt-1">"Need to schedule review meeting with David for technical specs validation. Should we include the advanced analytics module or present as optional add-on?"</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="relative pl-8">
+                                <div class="absolute left-0 top-1 w-6 h-6 bg-white border-2 border-gray-300 rounded-full -ml-3"></div>
+                                <div class="mb-2">
+                                    <p class="text-xs text-gray-400 uppercase tracking-wider">Nov 20, 3:45 PM</p>
+                                </div>
+                                <div class="border border-gray-100 p-6">
+                                    <div class="flex items-start gap-4">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="User" class="w-10 h-10 rounded-full object-cover">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-black">Sarah Johnson completed subtask</p>
+                                            <p class="text-sm text-gray-600 mt-1">Draft executive summary with ROI projections</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="relative pl-8">
+                                <div class="absolute left-0 top-1 w-6 h-6 bg-white border-2 border-gray-300 rounded-full -ml-3"></div>
+                                <div class="mb-2">
+                                    <p class="text-xs text-gray-400 uppercase tracking-wider">Nov 19, 2:00 PM</p>
+                                </div>
+                                <div class="border border-gray-100 p-6">
+                                    <div class="flex items-start gap-4 mb-3">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="User" class="w-10 h-10 rounded-full object-cover">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-black">Marcus Chen changed priority to High</p>
+                                            <p class="text-sm text-gray-600 mt-1">Client requested proposal by end of month. This is now critical path.</p>
+                                        </div>
+                                    </div>
+                                    <div class="ml-14">
+                                        <div class="flex items-center gap-2 text-xs text-red-600">
+                                            <i class="fa-solid fa-flag"></i>
+                                            <span>Priority: Medium → High</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="relative pl-8">
+                                <div class="absolute left-0 top-1 w-6 h-6 bg-white border-2 border-gray-300 rounded-full -ml-3"></div>
+                                <div class="mb-2">
+                                    <p class="text-xs text-gray-400 uppercase tracking-wider">Nov 18, 9:00 AM</p>
+                                </div>
+                                <div class="border border-gray-100 p-6">
+                                    <div class="flex items-start gap-4">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="User" class="w-10 h-10 rounded-full object-cover">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-black">Marcus Chen created this task</p>
+                                            <p class="text-sm text-gray-600 mt-1">Assigned to Sarah Johnson with due date Nov 25, 2024</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="dependencies-tab" class="tab-content hidden">
+                        <h3 class="text-2xl font-light text-black mb-6">Task Dependencies</h3>
+
+                        <div class="mb-8 bg-blue-50 border border-blue-200 p-6">
+                            <div class="flex items-start gap-3">
+                                <i class="fa-solid fa-diagram-project text-blue-600 text-lg mt-1"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-blue-900 mb-2">Critical Path Analysis</p>
+                                    <p class="text-sm text-blue-700">This task is on the critical path for the opportunity closure. Any delays will impact the overall timeline.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-8">
+                            <h4 class="text-lg font-light text-black mb-4">Blocked By (2)</h4>
+                            <div class="space-y-4">
+                                <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                    <div class="flex items-start gap-4">
+                                        <div class="w-12 h-12 bg-green-100 flex items-center justify-center flex-shrink-0">
+                                            <i class="fa-solid fa-check-circle text-green-600 text-lg"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <p class="text-base font-medium text-black">Technical Requirements Gathering</p>
+                                                <span class="px-2 py-1 bg-green-100 text-xs font-medium text-green-600">COMPLETED</span>
+                                            </div>
+                                            <p class="text-sm text-gray-600 mb-3">Gather detailed technical requirements from client stakeholders</p>
+                                            <div class="flex items-center gap-4 text-xs text-gray-500">
+                                                <span>TASK-5820</span>
+                                                <span>•</span>
+                                                <span>Completed Nov 17, 2024</span>
+                                                <span>•</span>
+                                                <a href="#" class="text-accent hover:underline">View task</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                    <div class="flex items-start gap-4">
+                                        <div class="w-12 h-12 bg-green-100 flex items-center justify-center flex-shrink-0">
+                                            <i class="fa-solid fa-check-circle text-green-600 text-lg"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <p class="text-base font-medium text-black">Budget Approval from Client</p>
+                                                <span class="px-2 py-1 bg-green-100 text-xs font-medium text-green-600">COMPLETED</span>
+                                            </div>
+                                            <p class="text-sm text-gray-600 mb-3">Confirm budget range and approval authority with client</p>
+                                            <div class="flex items-center gap-4 text-xs text-gray-500">
+                                                <span>TASK-5818</span>
+                                                <span>•</span>
+                                                <span>Completed Nov 15, 2024</span>
+                                                <span>•</span>
+                                                <a href="#" class="text-accent hover:underline">View task</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-8">
+                            <h4 class="text-lg font-light text-black mb-4">Blocking (3)</h4>
+                            <div class="space-y-4">
+                                <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                    <div class="flex items-start gap-4">
+                                        <div class="w-12 h-12 bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                                            <i class="fa-solid fa-clock text-yellow-600 text-lg"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <p class="text-base font-medium text-black">Schedule Client Presentation</p>
+                                                <span class="px-2 py-1 bg-gray-100 text-xs font-medium text-gray-600">WAITING</span>
+                                            </div>
+                                            <p class="text-sm text-gray-600 mb-3">Book meeting with client stakeholders to present proposal</p>
+                                            <div class="flex items-center gap-4 text-xs text-gray-500">
+                                                <span>TASK-5826</span>
+                                                <span>•</span>
+                                                <span>Due: Nov 26, 2024</span>
+                                                <span>•</span>
+                                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="Assignee" class="w-5 h-5 rounded-full object-cover">
+                                                <span>Sarah Johnson</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                    <div class="flex items-start gap-4">
+                                        <div class="w-12 h-12 bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                            <i class="fa-solid fa-hourglass text-gray-400 text-lg"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <p class="text-base font-medium text-black">Contract Review & Negotiation</p>
+                                                <span class="px-2 py-1 bg-gray-100 text-xs font-medium text-gray-600">WAITING</span>
+                                            </div>
+                                            <p class="text-sm text-gray-600 mb-3">Legal review and contract terms negotiation with client</p>
+                                            <div class="flex items-center gap-4 text-xs text-gray-500">
+                                                <span>TASK-5827</span>
+                                                <span>•</span>
+                                                <span>Due: Dec 5, 2024</span>
+                                                <span>•</span>
+                                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="Assignee" class="w-5 h-5 rounded-full object-cover">
+                                                <span>Marcus Chen</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                    <div class="flex items-start gap-4">
+                                        <div class="w-12 h-12 bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                            <i class="fa-solid fa-hourglass text-gray-400 text-lg"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <p class="text-base font-medium text-black">Project Kickoff Meeting</p>
+                                                <span class="px-2 py-1 bg-gray-100 text-xs font-medium text-gray-600">WAITING</span>
+                                            </div>
+                                            <p class="text-sm text-gray-600 mb-3">Initial project kickoff with client and internal team</p>
+                                            <div class="flex items-center gap-4 text-xs text-gray-500">
+                                                <span>TASK-5828</span>
+                                                <span>•</span>
+                                                <span>Due: Dec 10, 2024</span>
+                                                <span>•</span>
+                                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="Assignee" class="w-5 h-5 rounded-full object-cover">
+                                                <span>David Chen</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border border-gray-100 p-6">
+                            <h4 class="text-sm font-medium text-black mb-4">Related Tasks</h4>
+                            <div class="space-y-3">
+                                <a href="#" class="flex items-center justify-between py-2 hover:bg-gray-50 transition-colors">
+                                    <span class="text-sm text-gray-700">Client Discovery Call - Global Solutions Inc.</span>
+                                    <span class="text-xs text-gray-400">TASK-5815</span>
+                                </a>
+                                <a href="#" class="flex items-center justify-between py-2 hover:bg-gray-50 transition-colors">
+                                    <span class="text-sm text-gray-700">Competitive Analysis for Enterprise Segment</span>
+                                    <span class="text-xs text-gray-400">TASK-5819</span>
+                                </a>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="timetracking-tab" class="tab-content hidden">
+                        <div class="mb-8 flex items-center justify-between">
+                            <div>
+                                <h3 class="text-2xl font-light text-black mb-2">Time Tracking</h3>
+                                <p class="text-sm text-gray-500">Monitor time spent and estimate completion</p>
+                            </div>
+                            <button class="px-5 py-3 bg-accent text-white text-sm font-medium hover:bg-opacity-90 transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-play text-xs"></i>
+                                Start Timer
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div class="border border-gray-100 p-6">
+                                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Time Logged</p>
+                                <p class="text-3xl font-light text-black mb-1">5.5h</p>
+                                <p class="text-xs text-gray-500">Across 4 sessions</p>
+                            </div>
+                            <div class="border border-gray-100 p-6">
+                                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Estimated Total</p>
+                                <p class="text-3xl font-light text-black mb-1">8.5h</p>
+                                <p class="text-xs text-gray-500">Based on similar tasks</p>
+                            </div>
+                            <div class="border border-gray-100 p-6">
+                                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Remaining</p>
+                                <p class="text-3xl font-light text-black mb-1">3.0h</p>
+                                <p class="text-xs text-green-600 font-medium">On track</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-8">
+                            <h4 class="text-lg font-light text-black mb-4">Time Entries</h4>
+                            <div class="border border-gray-100">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
+                                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">User</th>
+                                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Description</th>
+                                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Duration</th>
+                                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100">
+                                            <tr class="hover:bg-gray-50 transition-colors">
+                                                <td class="px-6 py-5">
+                                                    <p class="text-sm text-black">Nov 22, 2024</p>
+                                                    <p class="text-xs text-gray-500">9:00 AM - 11:00 AM</p>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <div class="flex items-center gap-2">
+                                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="User" class="w-8 h-8 rounded-full object-cover">
+                                                        <span class="text-sm text-black">Sarah Johnson</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <p class="text-sm text-gray-700">Detailed pricing breakdown and cost justification</p>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <p class="text-sm font-medium text-black">2.0h</p>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <button class="text-gray-400 hover:text-accent transition-colors">
+                                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <tr class="hover:bg-gray-50 transition-colors">
+                                                <td class="px-6 py-5">
+                                                    <p class="text-sm text-black">Nov 21, 2024</p>
+                                                    <p class="text-xs text-gray-500">2:00 PM - 3:30 PM</p>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <div class="flex items-center gap-2">
+                                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="User" class="w-8 h-8 rounded-full object-cover">
+                                                        <span class="text-sm text-black">David Chen</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <p class="text-sm text-gray-700">Technical architecture diagrams creation</p>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <p class="text-sm font-medium text-black">1.5h</p>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <button class="text-gray-400 hover:text-accent transition-colors">
+                                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <tr class="hover:bg-gray-50 transition-colors">
+                                                <td class="px-6 py-5">
+                                                    <p class="text-sm text-black">Nov 20, 2024</p>
+                                                    <p class="text-xs text-gray-500">10:00 AM - 11:30 AM</p>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <div class="flex items-center gap-2">
+                                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="User" class="w-8 h-8 rounded-full object-cover">
+                                                        <span class="text-sm text-black">Sarah Johnson</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <p class="text-sm text-gray-700">Executive summary drafting with ROI projections</p>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <p class="text-sm font-medium text-black">1.5h</p>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <button class="text-gray-400 hover:text-accent transition-colors">
+                                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <tr class="hover:bg-gray-50 transition-colors">
+                                                <td class="px-6 py-5">
+                                                    <p class="text-sm text-black">Nov 19, 2024</p>
+                                                    <p class="text-xs text-gray-500">9:30 AM - 12:00 PM</p>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <div class="flex items-center gap-2">
+                                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="User" class="w-8 h-8 rounded-full object-cover">
+                                                        <span class="text-sm text-black">Sarah Johnson</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <p class="text-sm text-gray-700">Research client infrastructure and pain points</p>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <p class="text-sm font-medium text-black">2.5h</p>
+                                                </td>
+                                                <td class="px-6 py-5">
+                                                    <button class="text-gray-400 hover:text-accent transition-colors">
+                                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-purple-50 border border-purple-200 p-6">
+                            <div class="flex items-start gap-3">
+                                <i class="fa-solid fa-chart-simple text-purple-600 text-lg mt-1"></i>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-purple-900 mb-2">AI Time Prediction</p>
+                                    <p class="text-sm text-purple-700 mb-3">Based on your work patterns and similar tasks, you're likely to complete this task by Nov 24, one day ahead of schedule. Most productive hours for you on this type of work: 9-11 AM.</p>
+                                    <div class="grid grid-cols-2 gap-4 pt-3 border-t border-purple-200">
+                                        <div>
+                                            <p class="text-xs text-purple-600 uppercase tracking-wider mb-1">Predicted Completion</p>
+                                            <p class="text-base font-medium text-purple-900">Nov 24, 2024</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-purple-600 uppercase tracking-wider mb-1">Confidence Level</p>
+                                            <p class="text-base font-medium text-purple-900">87%</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="attachments-tab" class="tab-content hidden">
+                        <div class="mb-8 flex items-center justify-between">
+                            <div>
+                                <h3 class="text-2xl font-light text-black mb-2">Attachments & Documents</h3>
+                                <p class="text-sm text-gray-500">Files related to this task</p>
+                            </div>
+                            <button class="px-5 py-3 bg-accent text-white text-sm font-medium hover:bg-opacity-90 transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-upload text-xs"></i>
+                                Upload File
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-red-100 flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-solid fa-file-pdf text-red-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-base font-medium text-black mb-1 truncate">Client_RFP_Requirements.pdf</p>
+                                        <p class="text-sm text-gray-600 mb-2">Original RFP document from client</p>
+                                        <div class="flex items-center gap-3 text-xs text-gray-500">
+                                            <span>2.4 MB</span>
+                                            <span>•</span>
+                                            <span>Uploaded Nov 18</span>
+                                        </div>
+                                    </div>
+                                    <button class="text-gray-400 hover:text-accent transition-colors">
+                                        <i class="fa-solid fa-download"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-solid fa-file-word text-blue-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-base font-medium text-black mb-1 truncate">Executive_Summary_Draft_v2.docx</p>
+                                        <p class="text-sm text-gray-600 mb-2">Latest version of executive summary</p>
+                                        <div class="flex items-center gap-3 text-xs text-gray-500">
+                                            <span>856 KB</span>
+                                            <span>•</span>
+                                            <span>Updated Nov 20</span>
+                                        </div>
+                                    </div>
+                                    <button class="text-gray-400 hover:text-accent transition-colors">
+                                        <i class="fa-solid fa-download"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-green-100 flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-solid fa-file-excel text-green-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-base font-medium text-black mb-1 truncate">Pricing_Model_Calculator.xlsx</p>
+                                        <p class="text-sm text-gray-600 mb-2">Detailed pricing breakdown spreadsheet</p>
+                                        <div class="flex items-center gap-3 text-xs text-gray-500">
+                                            <span>1.2 MB</span>
+                                            <span>•</span>
+                                            <span>Updated Nov 22</span>
+                                        </div>
+                                    </div>
+                                    <button class="text-gray-400 hover:text-accent transition-colors">
+                                        <i class="fa-solid fa-download"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-purple-100 flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-solid fa-file-powerpoint text-purple-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-base font-medium text-black mb-1 truncate">Technical_Architecture_Diagrams.pptx</p>
+                                        <p class="text-sm text-gray-600 mb-2">System architecture presentation</p>
+                                        <div class="flex items-center gap-3 text-xs text-gray-500">
+                                            <span>3.8 MB</span>
+                                            <span>•</span>
+                                            <span>Created Nov 21</span>
+                                        </div>
+                                    </div>
+                                    <button class="text-gray-400 hover:text-accent transition-colors">
+                                        <i class="fa-solid fa-download"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-orange-100 flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-solid fa-image text-orange-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-base font-medium text-black mb-1 truncate">Client_Meeting_Notes.png</p>
+                                        <p class="text-sm text-gray-600 mb-2">Whiteboard notes from discovery call</p>
+                                        <div class="flex items-center gap-3 text-xs text-gray-500">
+                                            <span>445 KB</span>
+                                            <span>•</span>
+                                            <span>Uploaded Nov 19</span>
+                                        </div>
+                                    </div>
+                                    <button class="text-gray-400 hover:text-accent transition-colors">
+                                        <i class="fa-solid fa-download"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-solid fa-file text-gray-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-base font-medium text-black mb-1 truncate">Competitor_Analysis.pdf</p>
+                                        <p class="text-sm text-gray-600 mb-2">Market research and competitive positioning</p>
+                                        <div class="flex items-center gap-3 text-xs text-gray-500">
+                                            <span>1.8 MB</span>
+                                            <span>•</span>
+                                            <span>Uploaded Nov 18</span>
+                                        </div>
+                                    </div>
+                                    <button class="text-gray-400 hover:text-accent transition-colors">
+                                        <i class="fa-solid fa-download"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border border-gray-100 p-6">
+                            <h4 class="text-sm font-medium text-black mb-4">Recent Activity</h4>
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-3 text-sm">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="User" class="w-6 h-6 rounded-full object-cover">
+                                    <span class="text-gray-700">Sarah Johnson uploaded</span>
+                                    <span class="text-black font-medium">Pricing_Model_Calculator.xlsx</span>
+                                    <span class="text-gray-400 ml-auto">2 hours ago</span>
+                                </div>
+                                <div class="flex items-center gap-3 text-sm">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="User" class="w-6 h-6 rounded-full object-cover">
+                                    <span class="text-gray-700">David Chen uploaded</span>
+                                    <span class="text-black font-medium">Technical_Architecture_Diagrams.pptx</span>
+                                    <span class="text-gray-400 ml-auto">Yesterday</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                </div>
+
+                <aside id="sidebar-right" class="hidden xl:block w-80 border-l border-gray-100 p-8 bg-gray-50">
+                    <div class="sticky top-24">
+                        <h3 class="text-sm font-medium text-black mb-4 uppercase tracking-wider">Quick Actions</h3>
+                        <div class="space-y-3 mb-8">
+                            <button class="w-full py-3 px-4 bg-accent text-white text-sm font-medium hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-check text-xs"></i>
+                                Complete Task
+                            </button>
+                            <button class="w-full py-3 px-4 border border-gray-200 text-sm font-medium text-gray-600 hover:border-gray-300 transition-colors flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                                Edit Details
+                            </button>
+                            <button class="w-full py-3 px-4 border border-gray-200 text-sm font-medium text-gray-600 hover:border-gray-300 transition-colors flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-share-nodes text-xs"></i>
+                                Share Task
+                            </button>
+                        </div>
+
+                        <div class="mb-8">
+                            <h3 class="text-sm font-medium text-black mb-4 uppercase tracking-wider">Task Details</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <p class="text-xs text-gray-400 mb-1">Status</p>
+                                    <select class="w-full py-2 px-3 border border-gray-200 text-sm text-black bg-white">
+                                        <option>In Progress</option>
+                                        <option>Not Started</option>
+                                        <option>Completed</option>
+                                        <option>On Hold</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-400 mb-1">Priority</p>
+                                    <select class="w-full py-2 px-3 border border-gray-200 text-sm text-black bg-white">
+                                        <option>High</option>
+                                        <option>Medium</option>
+                                        <option>Low</option>
+                                        <option>Critical</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-400 mb-1">Due Date</p>
+                                    <input type="date" value="2024-11-25" class="w-full py-2 px-3 border border-gray-200 text-sm text-black bg-white">
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-400 mb-1">Progress</p>
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex-1 h-2 bg-gray-200">
+                                            <div class="h-full bg-accent" style="width: 65%"></div>
+                                        </div>
+                                        <span class="text-sm font-medium text-black">65%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-8 p-4 bg-white border border-gray-200">
+                            <h3 class="text-sm font-medium text-black mb-3">Tags</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-3 py-1 bg-blue-50 text-xs text-blue-600">Proposal</span>
+                                <span class="px-3 py-1 bg-green-50 text-xs text-green-600">High Value</span>
+                                <span class="px-3 py-1 bg-purple-50 text-xs text-purple-600">Enterprise</span>
+                                <button class="px-3 py-1 border border-gray-200 text-xs text-gray-600 hover:border-accent hover:text-accent">+ Add</button>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-white border border-gray-200">
+                            <h3 class="text-sm font-medium text-black mb-3">Recent Comments</h3>
+                            <div class="space-y-3">
+                                <div class="text-xs">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="User" class="w-5 h-5 rounded-full object-cover">
+                                        <span class="font-medium text-black">Sarah Johnson</span>
+                                    </div>
+                                    <p class="text-gray-600 mb-1">Need input on analytics module pricing</p>
+                                    <p class="text-gray-400">2 hours ago</p>
+                                </div>
+                                <div class="text-xs">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="User" class="w-5 h-5 rounded-full object-cover">
+                                        <span class="font-medium text-black">David Chen</span>
+                                    </div>
+                                    <p class="text-gray-600 mb-1">Architecture diagrams are ready for review</p>
+                                    <p class="text-gray-400">Yesterday</p>
+                                </div>
+                            </div>
+                            <button class="w-full mt-3 py-2 text-xs text-accent hover:underline font-medium">View all comments</button>
+                        </div>
+                    </div>
+                </aside>
+
+            </div>
+        </main>
+
+    </div>
+
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabButtons = document.querySelectorAll('[data-tab]');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const targetTab = this.getAttribute('data-tab');
+                
+                tabButtons.forEach(btn => {
+                    btn.classList.remove('text-black', 'font-medium', 'border-accent');
+                    btn.classList.add('text-gray-500', 'font-light');
+                });
+                
+                this.classList.remove('text-gray-500', 'font-light');
+                this.classList.add('text-black', 'font-medium', 'border-accent');
+                
+                tabContents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+                
+                document.getElementById(targetTab + '-tab').classList.remove('hidden');
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

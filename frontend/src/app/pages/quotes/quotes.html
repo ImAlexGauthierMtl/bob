@@ -1,0 +1,729 @@
+<!-- ── Header ──────────────────────────────────────────────── -->
+<header class="page-header">
+    <div class="page-header__top">
+        <div class="page-header__left">
+            <div class="page-header__title-row">
+                <h2 class="page-title">Quotes</h2>
+                <div class="badge badge--muted">284 TOTAL</div>
+            </div>
+            <p class="page-subtitle">QUOTE & PROPOSAL MANAGEMENT</p>
+        </div>
+
+        <div class="page-header__actions">
+            <button class="btn btn--outline hide-mobile">
+                <i class="fa-solid fa-file-export"></i>
+                Export
+            </button>
+            <button class="btn btn--accent">
+                <i class="fa-solid fa-plus"></i>
+                New Quote
+            </button>
+        </div>
+    </div>
+
+    <!-- Search + Filters -->
+    <div class="search-row">
+        <div class="search-box">
+            <i class="fa-solid fa-search search-box__icon"></i>
+            <input type="text" class="search-box__input" placeholder="Search quotes by title, client, amount...">
+        </div>
+        <div class="filter-row">
+            <button class="btn-filter"><i class="fa-solid fa-filter"></i> Status <i
+                    class="fa-solid fa-chevron-down"></i></button>
+            <button class="btn-filter"><i class="fa-solid fa-folder"></i> Category <i
+                    class="fa-solid fa-chevron-down"></i></button>
+            <button class="btn-filter"><i class="fa-solid fa-star"></i> Priority <i
+                    class="fa-solid fa-chevron-down"></i></button>
+            <button class="btn-filter"><i class="fa-solid fa-calendar"></i> Date Range <i
+                    class="fa-solid fa-chevron-down"></i></button>
+            <button class="btn-filter btn-filter--icon"><i class="fa-solid fa-times"></i></button>
+        </div>
+    </div>
+
+    <!-- Pills -->
+    <div class="filter-pills">
+        <button class="pill pill--active">All Quotes</button>
+        <button class="pill">Pending Review</button>
+        <button class="pill">In Progress</button>
+        <button class="pill">Approved</button>
+        <button class="pill">Rejected</button>
+    </div>
+</header>
+
+<!-- ── Main Content ────────────────────────────────────────── -->
+<main class="page-main">
+
+    <!-- AI Content Intelligence -->
+    <section class="ai-section">
+        <div class="ai-header">
+            <div class="ai-icon-round"><i class="fa-solid fa-brain"></i></div>
+            <div>
+                <h3 class="ai-title">AI Quote Intelligence</h3>
+                <p class="ai-subtitle">Smart categorization and quality scoring powered by machine learning</p>
+            </div>
+        </div>
+
+        <div class="stat-grid stat-grid--4">
+            <div class="stat-card">
+                <div class="stat-card__top">
+                    <div class="stat-icon stat-icon--orange"><i class="fa-solid fa-clock"></i></div>
+                    <span class="stat-label stat-label--orange">NEEDS REVIEW</span>
+                </div>
+                <p class="stat-value">47</p>
+                <p class="stat-sub">Quotes awaiting approval</p>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-card__top">
+                    <div class="stat-icon stat-icon--blue"><i class="fa-solid fa-hourglass-half"></i></div>
+                    <span class="stat-label stat-label--blue">IN PROGRESS</span>
+                </div>
+                <p class="stat-value">92</p>
+                <p class="stat-sub">Currently being processed</p>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-card__top">
+                    <div class="stat-icon stat-icon--green"><i class="fa-solid fa-check-circle"></i></div>
+                    <span class="stat-label stat-label--green">APPROVED</span>
+                </div>
+                <p class="stat-value">128</p>
+                <p class="stat-sub">Successfully processed</p>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-card__top">
+                    <div class="stat-icon stat-icon--purple"><i class="fa-solid fa-chart-line"></i></div>
+                    <span class="stat-label stat-label--purple">AVG SCORE</span>
+                </div>
+                <p class="stat-value">8.4/10</p>
+                <p class="stat-sub">↑ 0.8 improvement this month</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quotes Table -->
+    <section class="table-section">
+        <div class="table-card">
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="col-check"><input type="checkbox"></th>
+                            <th><button class="sort-btn">Title <i class="fa-solid fa-sort"></i></button></th>
+                            <th>Author</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>AI Quality Score</th>
+                            <th>Reviewer</th>
+                            <th><button class="sort-btn">Submitted <i class="fa-solid fa-sort"></i></button></th>
+                            <th class="col-actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Row 1 -->
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <p class="cell-primary">Q1 2024 Financial Analysis Report</p>
+                                <p class="cell-secondary">SUB-1847 • 12 pages • PDF</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
+                                        alt="Author" class="avatar-sm">
+                                    <span class="cell-name">Sarah Johnson</span>
+                                </div>
+                            </td>
+                            <td><span class="cat-badge cat-badge--blue"><i class="fa-solid fa-chart-pie"></i>
+                                    FINANCE</span></td>
+                            <td><span class="status-badge status-badge--orange"><span
+                                        class="status-dot status-dot--pulse"></span> PENDING REVIEW</span></td>
+                            <td>
+                                <div class="score-row">
+                                    <div class="score-bar">
+                                        <div class="score-bar__fill score-bar__fill--green" style="width:94%"></div>
+                                    </div>
+                                    <span class="score-val score-val--green">9.4</span>
+                                </div>
+                                <p class="score-label">Excellent quality</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <div class="avatar-placeholder"><i class="fa-solid fa-user"></i></div>
+                                    <span class="cell-name cell-name--muted">Unassigned</span>
+                                </div>
+                            </td>
+                            <td>
+                                <p class="cell-name">2 hours ago</p>
+                                <p class="cell-note cell-note--orange">Action needed</p>
+                            </td>
+                            <td class="col-actions"><button class="row-action"><i
+                                        class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                        </tr>
+
+                        <!-- Row 2 -->
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <p class="cell-primary">Product Development Roadmap 2024</p>
+                                <p class="cell-secondary">SUB-1846 • 24 pages • DOCX</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
+                                        alt="Author" class="avatar-sm">
+                                    <span class="cell-name">Michael Chen</span>
+                                </div>
+                            </td>
+                            <td><span class="cat-badge cat-badge--purple"><i class="fa-solid fa-lightbulb"></i>
+                                    STRATEGY</span></td>
+                            <td><span class="status-badge status-badge--blue"><span class="status-dot"></span> IN
+                                    PROGRESS</span></td>
+                            <td>
+                                <div class="score-row">
+                                    <div class="score-bar">
+                                        <div class="score-bar__fill score-bar__fill--green" style="width:88%"></div>
+                                    </div>
+                                    <span class="score-val score-val--green">8.8</span>
+                                </div>
+                                <p class="score-label">High quality</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg"
+                                        alt="Reviewer" class="avatar-xs">
+                                    <span class="cell-name">Marcus Chen</span>
+                                </div>
+                            </td>
+                            <td>
+                                <p class="cell-name">5 hours ago</p>
+                                <p class="cell-note cell-note--blue">Under review</p>
+                            </td>
+                            <td class="col-actions"><button class="row-action"><i
+                                        class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                        </tr>
+
+                        <!-- Row 3 -->
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <p class="cell-primary">Marketing Campaign Performance Q4</p>
+                                <p class="cell-secondary">SUB-1845 • 8 pages • PPTX</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg"
+                                        alt="Author" class="avatar-sm">
+                                    <span class="cell-name">Emily Rodriguez</span>
+                                </div>
+                            </td>
+                            <td><span class="cat-badge cat-badge--pink"><i class="fa-solid fa-bullhorn"></i>
+                                    MARKETING</span></td>
+                            <td><span class="status-badge status-badge--green"><span class="status-dot"></span>
+                                    APPROVED</span></td>
+                            <td>
+                                <div class="score-row">
+                                    <div class="score-bar">
+                                        <div class="score-bar__fill score-bar__fill--green" style="width:91%"></div>
+                                    </div>
+                                    <span class="score-val score-val--green">9.1</span>
+                                </div>
+                                <p class="score-label">Excellent quality</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg"
+                                        alt="Reviewer" class="avatar-xs">
+                                    <span class="cell-name">Jessica Williams</span>
+                                </div>
+                            </td>
+                            <td>
+                                <p class="cell-name">1 day ago</p>
+                                <p class="cell-note cell-note--green">Completed</p>
+                            </td>
+                            <td class="col-actions"><button class="row-action"><i
+                                        class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                        </tr>
+
+                        <!-- Row 4 -->
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <p class="cell-primary">Technical Architecture Proposal</p>
+                                <p class="cell-secondary">SUB-1844 • 18 pages • PDF</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg"
+                                        alt="Author" class="avatar-sm">
+                                    <span class="cell-name">David Kim</span>
+                                </div>
+                            </td>
+                            <td><span class="cat-badge cat-badge--indigo"><i class="fa-solid fa-code"></i>
+                                    TECHNICAL</span></td>
+                            <td><span class="status-badge status-badge--orange"><span
+                                        class="status-dot status-dot--pulse"></span> PENDING REVIEW</span></td>
+                            <td>
+                                <div class="score-row">
+                                    <div class="score-bar">
+                                        <div class="score-bar__fill score-bar__fill--yellow" style="width:76%"></div>
+                                    </div>
+                                    <span class="score-val score-val--yellow">7.6</span>
+                                </div>
+                                <p class="score-label">Good quality</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <div class="avatar-placeholder"><i class="fa-solid fa-user"></i></div>
+                                    <span class="cell-name cell-name--muted">Unassigned</span>
+                                </div>
+                            </td>
+                            <td>
+                                <p class="cell-name">3 hours ago</p>
+                                <p class="cell-note cell-note--orange">Action needed</p>
+                            </td>
+                            <td class="col-actions"><button class="row-action"><i
+                                        class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                        </tr>
+
+                        <!-- Row 5 — Rejected (at-risk row) -->
+                        <tr class="row--alert">
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <div class="cell-alert-row">
+                                    <i class="fa-solid fa-exclamation-circle cell-alert-icon"></i>
+                                    <div>
+                                        <p class="cell-primary">Compliance Audit Documentation</p>
+                                        <p class="cell-secondary">SUB-1843 • 32 pages • PDF</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg"
+                                        alt="Author" class="avatar-sm">
+                                    <span class="cell-name">James Wilson</span>
+                                </div>
+                            </td>
+                            <td><span class="cat-badge cat-badge--gray"><i class="fa-solid fa-shield-halved"></i>
+                                    LEGAL</span></td>
+                            <td><span class="status-badge status-badge--red"><span class="status-dot"></span>
+                                    REJECTED</span></td>
+                            <td>
+                                <div class="score-row">
+                                    <div class="score-bar">
+                                        <div class="score-bar__fill score-bar__fill--red" style="width:52%"></div>
+                                    </div>
+                                    <span class="score-val score-val--red">5.2</span>
+                                </div>
+                                <p class="score-label score-label--red">Needs revision</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg"
+                                        alt="Reviewer" class="avatar-xs">
+                                    <span class="cell-name">Marcus Chen</span>
+                                </div>
+                            </td>
+                            <td>
+                                <p class="cell-name">2 days ago</p>
+                                <p class="cell-note cell-note--red">Revision required</p>
+                            </td>
+                            <td class="col-actions"><button class="row-action"><i
+                                        class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                        </tr>
+
+                        <!-- Row 6 -->
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <p class="cell-primary">User Research Findings Report</p>
+                                <p class="cell-secondary">SUB-1842 • 16 pages • DOCX</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg"
+                                        alt="Author" class="avatar-sm">
+                                    <span class="cell-name">Emma Davis</span>
+                                </div>
+                            </td>
+                            <td><span class="cat-badge cat-badge--teal"><i class="fa-solid fa-users"></i>
+                                    RESEARCH</span></td>
+                            <td><span class="status-badge status-badge--blue"><span class="status-dot"></span> IN
+                                    PROGRESS</span></td>
+                            <td>
+                                <div class="score-row">
+                                    <div class="score-bar">
+                                        <div class="score-bar__fill score-bar__fill--green" style="width:86%"></div>
+                                    </div>
+                                    <span class="score-val score-val--green">8.6</span>
+                                </div>
+                                <p class="score-label">High quality</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
+                                        alt="Reviewer" class="avatar-xs">
+                                    <span class="cell-name">Sarah Johnson</span>
+                                </div>
+                            </td>
+                            <td>
+                                <p class="cell-name">6 hours ago</p>
+                                <p class="cell-note cell-note--blue">Under review</p>
+                            </td>
+                            <td class="col-actions"><button class="row-action"><i
+                                        class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                        </tr>
+
+                        <!-- Row 7 -->
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <p class="cell-primary">Sales Training Materials Update</p>
+                                <p class="cell-secondary">SUB-1841 • 20 pages • PPTX</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-9.jpg"
+                                        alt="Author" class="avatar-sm">
+                                    <span class="cell-name">Alex Thompson</span>
+                                </div>
+                            </td>
+                            <td><span class="cat-badge cat-badge--orange"><i class="fa-solid fa-graduation-cap"></i>
+                                    TRAINING</span></td>
+                            <td><span class="status-badge status-badge--green"><span class="status-dot"></span>
+                                    APPROVED</span></td>
+                            <td>
+                                <div class="score-row">
+                                    <div class="score-bar">
+                                        <div class="score-bar__fill score-bar__fill--green" style="width:89%"></div>
+                                    </div>
+                                    <span class="score-val score-val--green">8.9</span>
+                                </div>
+                                <p class="score-label">High quality</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg"
+                                        alt="Reviewer" class="avatar-xs">
+                                    <span class="cell-name">Emily Rodriguez</span>
+                                </div>
+                            </td>
+                            <td>
+                                <p class="cell-name">1 day ago</p>
+                                <p class="cell-note cell-note--green">Completed</p>
+                            </td>
+                            <td class="col-actions"><button class="row-action"><i
+                                        class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                        </tr>
+
+                        <!-- Row 8 -->
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <p class="cell-primary">Brand Guidelines Revision 2024</p>
+                                <p class="cell-secondary">SUB-1840 • 45 pages • PDF</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg"
+                                        alt="Author" class="avatar-sm">
+                                    <span class="cell-name">Jessica Williams</span>
+                                </div>
+                            </td>
+                            <td><span class="cat-badge cat-badge--rose"><i class="fa-solid fa-palette"></i>
+                                    DESIGN</span></td>
+                            <td><span class="status-badge status-badge--orange"><span
+                                        class="status-dot status-dot--pulse"></span> PENDING REVIEW</span></td>
+                            <td>
+                                <div class="score-row">
+                                    <div class="score-bar">
+                                        <div class="score-bar__fill score-bar__fill--green" style="width:92%"></div>
+                                    </div>
+                                    <span class="score-val score-val--green">9.2</span>
+                                </div>
+                                <p class="score-label">Excellent quality</p>
+                            </td>
+                            <td>
+                                <div class="avatar-cell">
+                                    <div class="avatar-placeholder"><i class="fa-solid fa-user"></i></div>
+                                    <span class="cell-name cell-name--muted">Unassigned</span>
+                                </div>
+                            </td>
+                            <td>
+                                <p class="cell-name">4 hours ago</p>
+                                <p class="cell-note cell-note--orange">Action needed</p>
+                            </td>
+                            <td class="col-actions"><button class="row-action"><i
+                                        class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination">
+                <p class="pagination__info">Showing <strong>1-8</strong> of <strong>284</strong> quotes</p>
+                <div class="pagination__controls">
+                    <button class="page-btn" disabled><i class="fa-solid fa-chevron-left"></i></button>
+                    <button class="page-btn page-btn--active">1</button>
+                    <button class="page-btn">2</button>
+                    <button class="page-btn">3</button>
+                    <span class="page-ellipsis">...</span>
+                    <button class="page-btn">36</button>
+                    <button class="page-btn"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Content Recommendations -->
+    <section class="ai-section">
+        <div class="ai-header">
+            <div class="ai-icon-round"><i class="fa-solid fa-sparkles"></i></div>
+            <div>
+                <h3 class="ai-title-lg">AI Content Recommendations</h3>
+                <p class="ai-subtitle">Intelligent insights to optimize your content workflow</p>
+            </div>
+        </div>
+
+        <div class="rec-grid">
+            <div class="rec-card">
+                <div class="rec-card__top">
+                    <div class="rec-icon rec-icon--orange"><i class="fa-solid fa-bolt"></i></div>
+                    <div>
+                        <p class="rec-name">Priority Review Alert</p>
+                        <p class="rec-conf">AI Confidence: 96%</p>
+                    </div>
+                </div>
+                <p class="rec-text">Q1 Financial Analysis has high quality score (9.4/10) and is time-sensitive.
+                    Recommend immediate assignment to senior reviewer for fast-track approval.</p>
+                <button class="link-accent">Assign Reviewer</button>
+            </div>
+
+            <div class="rec-card">
+                <div class="rec-card__top">
+                    <div class="rec-icon rec-icon--blue"><i class="fa-solid fa-chart-line"></i></div>
+                    <div>
+                        <p class="rec-name">Quality Trend Analysis</p>
+                        <p class="rec-conf">AI Confidence: 91%</p>
+                    </div>
+                </div>
+                <p class="rec-text">Sarah Johnson's submissions show consistent high quality (avg 9.1/10). Consider
+                    fast-track approval process for future submissions from this contributor.</p>
+                <button class="link-accent">View Analytics</button>
+            </div>
+
+            <div class="rec-card">
+                <div class="rec-card__top">
+                    <div class="rec-icon rec-icon--red"><i class="fa-solid fa-flag"></i></div>
+                    <div>
+                        <p class="rec-name">Revision Support Needed</p>
+                        <p class="rec-conf">AI Confidence: 88%</p>
+                    </div>
+                </div>
+                <p class="rec-text">Compliance Audit doc rejected (5.2 score). AI detected formatting issues and missing
+                    sections. Auto-generated feedback sent to author for revision guidance.</p>
+                <button class="link-accent">View Feedback</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Analytics rows -->
+    <section class="analytics-row">
+        <!-- Quotes by Category -->
+        <div class="analytics-card">
+            <div class="analytics-card__header">
+                <div>
+                    <h3 class="analytics-card__title">Quotes by Category</h3>
+                    <p class="analytics-card__sub">Content distribution across departments</p>
+                </div>
+                <button class="link-accent">View Details</button>
+            </div>
+            <div class="bar-list">
+                <div class="bar-item">
+                    <div class="bar-label"><span>Technical Documentation</span><span class="bar-value">68 (24%)</span>
+                    </div>
+                    <div class="bar-track">
+                        <div class="bar-fill bar-fill--indigo" style="width:24%"></div>
+                    </div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label"><span>Marketing Materials</span><span class="bar-value">62 (22%)</span></div>
+                    <div class="bar-track">
+                        <div class="bar-fill bar-fill--pink" style="width:22%"></div>
+                    </div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label"><span>Financial Reports</span><span class="bar-value">51 (18%)</span></div>
+                    <div class="bar-track">
+                        <div class="bar-fill bar-fill--blue" style="width:18%"></div>
+                    </div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label"><span>Strategy Documents</span><span class="bar-value">45 (16%)</span></div>
+                    <div class="bar-track">
+                        <div class="bar-fill bar-fill--purple" style="width:16%"></div>
+                    </div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label"><span>Research & Analysis</span><span class="bar-value">34 (12%)</span></div>
+                    <div class="bar-track">
+                        <div class="bar-fill bar-fill--teal" style="width:12%"></div>
+                    </div>
+                </div>
+                <div class="bar-item">
+                    <div class="bar-label"><span>Other</span><span class="bar-value">24 (8%)</span></div>
+                    <div class="bar-track">
+                        <div class="bar-fill bar-fill--gray" style="width:8%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="analytics-total">
+                <span>Total Quotes</span>
+                <span class="analytics-total__val">284</span>
+            </div>
+        </div>
+
+        <!-- Processing Metrics -->
+        <div class="analytics-card">
+            <div class="analytics-card__header">
+                <div>
+                    <h3 class="analytics-card__title">Processing Metrics</h3>
+                    <p class="analytics-card__sub">Current month performance</p>
+                </div>
+                <button class="link-accent">Full Report</button>
+            </div>
+            <div class="metric-list">
+                <div class="metric-row">
+                    <div class="metric-row__icon metric-row__icon--green"><i class="fa-solid fa-gauge-high"></i></div>
+                    <div>
+                        <p class="metric-row__label">Avg Processing Time</p>
+                        <p class="metric-row__val">2.4 hours</p>
+                        <p class="metric-row__change metric-row__change--green">↓ 18% faster than last month</p>
+                    </div>
+                </div>
+                <div class="metric-row">
+                    <div class="metric-row__icon metric-row__icon--blue"><i class="fa-solid fa-check-double"></i></div>
+                    <div>
+                        <p class="metric-row__label">Approval Rate</p>
+                        <p class="metric-row__val">82%</p>
+                        <p class="metric-row__change metric-row__change--blue">↑ 5% vs last month</p>
+                    </div>
+                </div>
+                <div class="metric-row">
+                    <div class="metric-row__icon metric-row__icon--purple"><i class="fa-solid fa-star"></i></div>
+                    <div>
+                        <p class="metric-row__label">Avg Quality Score</p>
+                        <p class="metric-row__val">8.4/10</p>
+                        <p class="metric-row__change metric-row__change--purple">↑ 0.8 improvement</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Top Contributors -->
+    <section class="section-block">
+        <div class="section-block__header">
+            <div>
+                <h3 class="analytics-card__title">Top Contributors This Month</h3>
+                <p class="analytics-card__sub">Most active and high-quality content creators</p>
+            </div>
+            <button class="link-accent">View All</button>
+        </div>
+        <div class="contributor-grid">
+            <div class="contributor-card">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt=""
+                    class="contributor-avatar">
+                <div class="contributor-info">
+                    <p class="contributor-name">Sarah Johnson</p>
+                    <div class="contributor-meta"><span>18 submissions</span><span class="meta-dot">•</span><i
+                            class="fa-solid fa-star contributor-star"></i><span>9.1 avg</span></div>
+                    <div class="contributor-bar">
+                        <div class="contributor-bar__fill" style="width:91%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="contributor-card">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt=""
+                    class="contributor-avatar">
+                <div class="contributor-info">
+                    <p class="contributor-name">Michael Chen</p>
+                    <div class="contributor-meta"><span>15 submissions</span><span class="meta-dot">•</span><i
+                            class="fa-solid fa-star contributor-star"></i><span>8.8 avg</span></div>
+                    <div class="contributor-bar">
+                        <div class="contributor-bar__fill" style="width:88%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="contributor-card">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg" alt=""
+                    class="contributor-avatar">
+                <div class="contributor-info">
+                    <p class="contributor-name">Emily Rodriguez</p>
+                    <div class="contributor-meta"><span>14 submissions</span><span class="meta-dot">•</span><i
+                            class="fa-solid fa-star contributor-star"></i><span>8.6 avg</span></div>
+                    <div class="contributor-bar">
+                        <div class="contributor-bar__fill" style="width:86%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Workflow Automation -->
+    <section class="ai-section">
+        <div class="ai-header ai-header--between">
+            <div class="ai-header__left">
+                <div class="ai-icon-round"><i class="fa-solid fa-robot"></i></div>
+                <div>
+                    <h3 class="ai-title-lg">AI Workflow Automation</h3>
+                    <p class="ai-subtitle">Smart routing and auto-categorization powered by AI</p>
+                </div>
+            </div>
+            <button class="btn btn--outline">Configure</button>
+        </div>
+
+        <div class="rec-grid">
+            <div class="rec-card">
+                <div class="rec-card__top">
+                    <div class="rec-icon rec-icon--blue"><i class="fa-solid fa-tags"></i></div>
+                    <div>
+                        <p class="rec-name">Auto-Categorization</p>
+                        <p class="rec-conf">97.2% accuracy</p>
+                    </div>
+                </div>
+                <p class="rec-text">AI automatically categorizes submissions based on content analysis, saving 3.5 hours
+                    per day in manual classification.</p>
+                <div class="automation-status"><i class="fa-solid fa-check-circle"></i> Active</div>
+            </div>
+            <div class="rec-card">
+                <div class="rec-card__top">
+                    <div class="rec-icon rec-icon--purple"><i class="fa-solid fa-route"></i></div>
+                    <div>
+                        <p class="rec-name">Smart Routing</p>
+                        <p class="rec-conf">92.8% accuracy</p>
+                    </div>
+                </div>
+                <p class="rec-text">Intelligent assignment of submissions to optimal reviewers based on expertise,
+                    workload, and historical performance.</p>
+                <div class="automation-status"><i class="fa-solid fa-check-circle"></i> Active</div>
+            </div>
+            <div class="rec-card">
+                <div class="rec-card__top">
+                    <div class="rec-icon rec-icon--orange"><i class="fa-solid fa-flag-checkered"></i></div>
+                    <div>
+                        <p class="rec-name">Priority Detection</p>
+                        <p class="rec-conf">94.5% accuracy</p>
+                    </div>
+                </div>
+                <p class="rec-text">AI identifies time-sensitive and high-priority submissions for expedited review,
+                    reducing turnaround by 40%.</p>
+                <div class="automation-status"><i class="fa-solid fa-check-circle"></i> Active</div>
+            </div>
+        </div>
+    </section>
+
+</main>

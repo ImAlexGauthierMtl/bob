@@ -1,0 +1,72 @@
+<div class="app-shell">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar__brand">
+            <img src="croo-logo.png" alt="Croo" class="sidebar__logo" />
+            <div class="sidebar__brand-divider"></div>
+            <div class="sidebar__brand-text">
+                <span class="sidebar__brand-line1">Digital</span>
+                <span class="sidebar__brand-line2">Experience</span>
+            </div>
+        </div>
+
+        <nav class="sidebar__nav">
+            <div class="sidebar__nav-main">
+                <a routerLink="/dashboard" routerLinkActive="sidebar__link--active" class="sidebar__link">Dashboard</a>
+                <a routerLink="/organizations" routerLinkActive="sidebar__link--active"
+                    class="sidebar__link">Organizations</a>
+                <a routerLink="/contacts" class="sidebar__link">Contacts</a>
+                <a routerLink="/opportunities" class="sidebar__link">Opportunities</a>
+                <a routerLink="/tasks" class="sidebar__link">Tasks</a>
+                <a routerLink="/analytics" class="sidebar__link">Analytics</a>
+            </div>
+
+            <div class="sidebar__section">
+                <p class="sidebar__section-title">AI Assistant</p>
+                <div class="sidebar__ai-card">
+                    <div class="sidebar__ai-header">
+                        <div class="sidebar__ai-icon">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+                        <div>
+                            <p class="sidebar__ai-title">Smart Suggestions</p>
+                            <p class="sidebar__ai-desc">5 opportunities need follow-up</p>
+                        </div>
+                    </div>
+                    <button class="sidebar__ai-btn">View Insights</button>
+                </div>
+
+                <div class="sidebar__nav-secondary">
+                    <a routerLink="/team" class="sidebar__link sidebar__link--sm">Team</a>
+                    <a routerLink="/settings" class="sidebar__link sidebar__link--sm">Settings</a>
+                    <a routerLink="/integrations" class="sidebar__link sidebar__link--sm">Integrations</a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="sidebar__user">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="User"
+                class="sidebar__avatar" />
+            <div class="sidebar__user-info">
+                <p class="sidebar__user-name">Marcus Chen</p>
+                <p class="sidebar__user-role">Sales Manager</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="app-main">
+        <router-outlet />
+
+        <footer class="app-footer">
+            <p class="app-footer__copyright">© 2026 Croo Digital Experience. All rights reserved.</p>
+            <div class="app-footer__links">
+                <a href="#">Help Center</a>
+                <a href="#">API Docs</a>
+                <a href="#">Privacy</a>
+            </div>
+        </footer>
+    </div>
+
+</div>

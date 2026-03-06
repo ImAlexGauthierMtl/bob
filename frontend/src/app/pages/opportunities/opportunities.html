@@ -1,0 +1,627 @@
+<div class="page-header">
+    <div class="page-header__left">
+        <div class="page-header__title-row">
+            <h2 class="page-title">Opportunities</h2>
+            <div class="counter-badge">347 ACTIVE</div>
+        </div>
+        <p class="page-subtitle">PIPELINE VALUE: $12.8M</p>
+    </div>
+    <div class="page-header__actions">
+        <button class="btn btn-outline hide-mobile"><i class="fa-solid fa-file-export"></i> Export</button>
+        <button class="btn btn-accent"><i class="fa-solid fa-plus"></i> New Opportunity</button>
+    </div>
+</div>
+
+<!-- Search & Filters -->
+<div class="toolbar">
+    <div class="search-box">
+        <i class="fa-solid fa-search search-box__icon"></i>
+        <input type="text" class="search-box__input" placeholder="Search opportunities by name, company, value..." />
+    </div>
+    <div class="filter-btns">
+        <button class="filter-btn"><i class="fa-solid fa-filter"></i> Stage <i
+                class="fa-solid fa-chevron-down"></i></button>
+        <button class="filter-btn"><i class="fa-solid fa-dollar-sign"></i> Value Range <i
+                class="fa-solid fa-chevron-down"></i></button>
+        <button class="filter-btn"><i class="fa-solid fa-user"></i> Owner <i
+                class="fa-solid fa-chevron-down"></i></button>
+        <button class="filter-btn"><i class="fa-solid fa-calendar"></i> Close Date <i
+                class="fa-solid fa-chevron-down"></i></button>
+        <button class="filter-btn"><i class="fa-solid fa-times"></i></button>
+    </div>
+</div>
+
+<!-- Filter Pills -->
+<div class="filter-pills">
+    <button class="filter-pill filter-pill--active">All Opportunities</button>
+    <button class="filter-pill">Hot Deals</button>
+    <button class="filter-pill">Closing This Month</button>
+    <button class="filter-pill">High Value</button>
+    <button class="filter-pill">At Risk</button>
+</div>
+
+<!-- AI Revenue Intelligence -->
+<section class="ai-insights">
+    <div class="ai-insights__header">
+        <div class="ai-insights__icon ai-insights__icon--round"><i class="fa-solid fa-chart-line"></i></div>
+        <div>
+            <h3 class="ai-insights__title">AI Revenue Intelligence</h3>
+            <p class="ai-insights__subtitle">Predictive analytics and deal scoring powered by machine learning</p>
+        </div>
+    </div>
+    <div class="ai-insights__grid ai-insights__grid--4">
+        <div class="ai-stat-card">
+            <div class="ai-stat-card__header">
+                <div class="ai-stat-icon ai-stat-icon--green"><i class="fa-solid fa-trophy"></i></div><span
+                    class="ai-stat-badge ai-stat-badge--green">LIKELY TO CLOSE</span>
+            </div>
+            <p class="ai-stat-value">$2.4M</p>
+            <p class="ai-stat-desc">18 deals with 85%+ win probability</p>
+        </div>
+        <div class="ai-stat-card">
+            <div class="ai-stat-card__header">
+                <div class="ai-stat-icon ai-stat-icon--orange"><i class="fa-solid fa-exclamation-triangle"></i></div>
+                <span class="ai-stat-badge ai-stat-badge--orange">AT RISK</span>
+            </div>
+            <p class="ai-stat-value">$1.2M</p>
+            <p class="ai-stat-desc">9 deals need immediate attention</p>
+        </div>
+        <div class="ai-stat-card">
+            <div class="ai-stat-card__header">
+                <div class="ai-stat-icon ai-stat-icon--blue"><i class="fa-solid fa-calendar-days"></i></div><span
+                    class="ai-stat-badge ai-stat-badge--blue">THIS MONTH</span>
+            </div>
+            <p class="ai-stat-value">42</p>
+            <p class="ai-stat-desc">Expected close dates in next 30 days</p>
+        </div>
+        <div class="ai-stat-card">
+            <div class="ai-stat-card__header">
+                <div class="ai-stat-icon ai-stat-icon--purple"><i class="fa-solid fa-percent"></i></div><span
+                    class="ai-stat-badge ai-stat-badge--purple">WIN RATE</span>
+            </div>
+            <p class="ai-stat-value">67%</p>
+            <p class="ai-stat-desc">↑ 8% improvement from last quarter</p>
+        </div>
+    </div>
+</section>
+
+<!-- Opportunities Table -->
+<section class="table-card">
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th class="th-check"><input type="checkbox" /></th>
+                    <th><button class="sort-btn">Opportunity Name <i class="fa-solid fa-sort"></i></button></th>
+                    <th>Account</th>
+                    <th><button class="sort-btn">Value <i class="fa-solid fa-sort"></i></button></th>
+                    <th class="hide-mobile">Stage</th>
+                    <th class="hide-mobile">AI Score</th>
+                    <th class="hide-mobile">Owner</th>
+                    <th class="hide-mobile"><button class="sort-btn">Close Date <i
+                                class="fa-solid fa-sort"></i></button></th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/opportunities/1" class="opp-link">
+                            <p class="opp-name">Enterprise CRM Implementation</p>
+                            <p class="opp-id">OPP-2847</p>
+                        </a></td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--blue">GS</div><span>Global Solutions</span>
+                        </div>
+                    </td>
+                    <td>
+                        <p class="opp-value-cell">$285,000</p>
+                        <p class="opp-value-sub">Annual contract</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="stage-badge stage-badge--purple">
+                            <div class="dot dot--purple"></div><span>NEGOTIATION</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="ai-score-col">
+                            <div class="ai-score-bar">
+                                <div class="ai-score-bar__fill ai-score-bar__fill--green" style="width:92%"></div>
+                            </div><span class="ai-score-value ai-score-value--green">92%</span>
+                        </div>
+                        <p class="ai-score-label">High confidence</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg"
+                                class="owner-avatar" alt="" /><span>Marcus Chen</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="close-date">Mar 15, 2024</p>
+                        <p class="close-remaining close-remaining--green">12 days remaining</p>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/opportunities/2" class="opp-link">
+                            <p class="opp-name">Cloud Migration Project</p>
+                            <p class="opp-id">OPP-2846</p>
+                        </a></td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--purple">AC</div><span>Acme Corp</span>
+                        </div>
+                    </td>
+                    <td>
+                        <p class="opp-value-cell">$450,000</p>
+                        <p class="opp-value-sub">Multi-year deal</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="stage-badge stage-badge--blue">
+                            <div class="dot dot--blue"></div><span>PROPOSAL</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="ai-score-col">
+                            <div class="ai-score-bar">
+                                <div class="ai-score-bar__fill ai-score-bar__fill--green" style="width:88%"></div>
+                            </div><span class="ai-score-value ai-score-value--green">88%</span>
+                        </div>
+                        <p class="ai-score-label">High confidence</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
+                                class="owner-avatar" alt="" /><span>Sarah Johnson</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="close-date">Mar 28, 2024</p>
+                        <p class="close-remaining close-remaining--green">25 days remaining</p>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/opportunities/3" class="opp-link">
+                            <p class="opp-name">Product Suite Upgrade</p>
+                            <p class="opp-id">OPP-2845</p>
+                        </a></td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--orange">TS</div><span>TechStart</span>
+                        </div>
+                    </td>
+                    <td>
+                        <p class="opp-value-cell">$125,000</p>
+                        <p class="opp-value-sub">Renewal + expansion</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="stage-badge stage-badge--green">
+                            <div class="dot dot--green"></div><span>CLOSING</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="ai-score-col">
+                            <div class="ai-score-bar">
+                                <div class="ai-score-bar__fill ai-score-bar__fill--green" style="width:95%"></div>
+                            </div><span class="ai-score-value ai-score-value--green">95%</span>
+                        </div>
+                        <p class="ai-score-label">Very high confidence</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
+                                class="owner-avatar" alt="" /><span>Michael Chen</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="close-date">Mar 8, 2024</p>
+                        <p class="close-remaining close-remaining--green">5 days remaining</p>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/opportunities/4" class="opp-link">
+                            <p class="opp-name">Analytics Platform License</p>
+                            <p class="opp-id">OPP-2844</p>
+                        </a></td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--green">NX</div><span>Nexus Group</span>
+                        </div>
+                    </td>
+                    <td>
+                        <p class="opp-value-cell">$195,000</p>
+                        <p class="opp-value-sub">Annual subscription</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="stage-badge stage-badge--yellow">
+                            <div class="dot dot--yellow"></div><span>DISCOVERY</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="ai-score-col">
+                            <div class="ai-score-bar">
+                                <div class="ai-score-bar__fill ai-score-bar__fill--yellow" style="width:68%"></div>
+                            </div><span class="ai-score-value ai-score-value--yellow">68%</span>
+                        </div>
+                        <p class="ai-score-label">Moderate confidence</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg"
+                                class="owner-avatar" alt="" /><span>Emily Rodriguez</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="close-date">Apr 12, 2024</p>
+                        <p class="close-remaining">40 days remaining</p>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr class="at-risk-row">
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/opportunities/5" class="opp-link"><i
+                                class="fa-solid fa-exclamation-circle at-risk-icon"></i>
+                            <div>
+                                <p class="opp-name">Digital Transformation Initiative</p>
+                                <p class="opp-id">OPP-2843</p>
+                            </div>
+                        </a></td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--red">IV</div><span>Innovate Labs</span>
+                        </div>
+                    </td>
+                    <td>
+                        <p class="opp-value-cell">$620,000</p>
+                        <p class="opp-value-sub">Strategic partnership</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="stage-badge stage-badge--purple">
+                            <div class="dot dot--purple"></div><span>NEGOTIATION</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="ai-score-col">
+                            <div class="ai-score-bar">
+                                <div class="ai-score-bar__fill ai-score-bar__fill--red" style="width:42%"></div>
+                            </div><span class="ai-score-value ai-score-value--red">42%</span>
+                        </div>
+                        <p class="ai-score-label ai-score-label--red">At risk - Action needed</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg"
+                                class="owner-avatar" alt="" /><span>David Kim</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="close-date">Mar 20, 2024</p>
+                        <p class="close-remaining close-remaining--red">17 days remaining</p>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/opportunities/6" class="opp-link">
+                            <p class="opp-name">Security Compliance Package</p>
+                            <p class="opp-id">OPP-2842</p>
+                        </a></td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--indigo">VS</div><span>Vertex Systems</span>
+                        </div>
+                    </td>
+                    <td>
+                        <p class="opp-value-cell">$340,000</p>
+                        <p class="opp-value-sub">Implementation + support</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="stage-badge stage-badge--blue">
+                            <div class="dot dot--blue"></div><span>PROPOSAL</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="ai-score-col">
+                            <div class="ai-score-bar">
+                                <div class="ai-score-bar__fill ai-score-bar__fill--green" style="width:81%"></div>
+                            </div><span class="ai-score-value ai-score-value--green">81%</span>
+                        </div>
+                        <p class="ai-score-label">High confidence</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg"
+                                class="owner-avatar" alt="" /><span>Marcus Chen</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="close-date">Apr 5, 2024</p>
+                        <p class="close-remaining">33 days remaining</p>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/opportunities/7" class="opp-link">
+                            <p class="opp-name">AI Integration Services</p>
+                            <p class="opp-id">OPP-2841</p>
+                        </a></td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--pink">QE</div><span>Quantum Ent.</span>
+                        </div>
+                    </td>
+                    <td>
+                        <p class="opp-value-cell">$520,000</p>
+                        <p class="opp-value-sub">Custom development</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="stage-badge stage-badge--yellow">
+                            <div class="dot dot--yellow"></div><span>DISCOVERY</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="ai-score-col">
+                            <div class="ai-score-bar">
+                                <div class="ai-score-bar__fill ai-score-bar__fill--yellow" style="width:73%"></div>
+                            </div><span class="ai-score-value ai-score-value--yellow">73%</span>
+                        </div>
+                        <p class="ai-score-label">Moderate confidence</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg"
+                                class="owner-avatar" alt="" /><span>Jessica Williams</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="close-date">May 1, 2024</p>
+                        <p class="close-remaining">59 days remaining</p>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/opportunities/8" class="opp-link">
+                            <p class="opp-name">Training &amp; Onboarding Program</p>
+                            <p class="opp-id">OPP-2840</p>
+                        </a></td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--teal">AP</div><span>Apex Partners</span>
+                        </div>
+                    </td>
+                    <td>
+                        <p class="opp-value-cell">$85,000</p>
+                        <p class="opp-value-sub">Professional services</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="stage-badge stage-badge--green">
+                            <div class="dot dot--green"></div><span>CLOSING</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="ai-score-col">
+                            <div class="ai-score-bar">
+                                <div class="ai-score-bar__fill ai-score-bar__fill--green" style="width:91%"></div>
+                            </div><span class="ai-score-value ai-score-value--green">91%</span>
+                        </div>
+                        <p class="ai-score-label">High confidence</p>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
+                                class="owner-avatar" alt="" /><span>Sarah Johnson</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="close-date">Mar 10, 2024</p>
+                        <p class="close-remaining close-remaining--green">7 days remaining</p>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="table-footer">
+        <p class="pagination-info">Showing <strong>1-8</strong> of <strong>347</strong> opportunities</p>
+        <div class="pagination-controls">
+            <button class="pagination-btn" disabled><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="pagination-btn pagination-btn--active">1</button>
+            <button class="pagination-btn">2</button>
+            <button class="pagination-btn">3</button>
+            <span class="pagination-dots">...</span>
+            <button class="pagination-btn">44</button>
+            <button class="pagination-btn"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+    </div>
+</section>
+
+<!-- AI Deal Acceleration -->
+<section class="ai-reco">
+    <div class="ai-reco__header">
+        <div class="ai-insights__icon ai-insights__icon--round"><i class="fa-solid fa-lightbulb"></i></div>
+        <div>
+            <h3 class="ai-reco__title">AI Deal Acceleration Insights</h3>
+            <p class="ai-reco__subtitle">Intelligent recommendations to close deals faster</p>
+        </div>
+    </div>
+    <div class="ai-reco__grid">
+        <div class="ai-reco-card">
+            <div class="ai-reco-card__header">
+                <div class="ai-reco-icon ai-reco-icon--red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div>
+                    <p class="ai-reco-card__title">Deal at Risk Alert</p>
+                    <p class="ai-reco-card__confidence">AI Confidence: 94%</p>
+                </div>
+            </div>
+            <p class="ai-reco-card__text">Digital Transformation Initiative showing low engagement. No contact in 14
+                days. Competitor activity detected. Recommend executive intervention within 48 hours.</p>
+            <button class="link-accent">Schedule Executive Call</button>
+        </div>
+        <div class="ai-reco-card">
+            <div class="ai-reco-card__header">
+                <div class="ai-reco-icon ai-reco-icon--green"><i class="fa-solid fa-rocket"></i></div>
+                <div>
+                    <p class="ai-reco-card__title">Upsell Opportunity</p>
+                    <p class="ai-reco-card__confidence">AI Confidence: 89%</p>
+                </div>
+            </div>
+            <p class="ai-reco-card__text">Acme Corp showing strong product adoption metrics. Usage patterns indicate
+                readiness for premium tier. Estimated additional revenue: $175K annually.</p>
+            <button class="link-accent">Generate Proposal</button>
+        </div>
+        <div class="ai-reco-card">
+            <div class="ai-reco-card__header">
+                <div class="ai-reco-icon ai-reco-icon--blue"><i class="fa-solid fa-clock"></i></div>
+                <div>
+                    <p class="ai-reco-card__title">Optimal Contact Time</p>
+                    <p class="ai-reco-card__confidence">AI Confidence: 91%</p>
+                </div>
+            </div>
+            <p class="ai-reco-card__text">Best time to contact Global Solutions decision maker: Tomorrow 2-3 PM EST.
+                Historical data shows 78% response rate during this window.</p>
+            <button class="link-accent">Set Reminder</button>
+        </div>
+    </div>
+</section>
+
+<!-- Pipeline Analytics -->
+<section class="analytics-row">
+    <div class="analytics-card">
+        <div class="analytics-card__header">
+            <div>
+                <h3 class="analytics-card__title">Pipeline by Stage</h3>
+                <p class="analytics-card__subtitle">Total pipeline value distribution</p>
+            </div><button class="link-accent text-sm">View Details</button>
+        </div>
+        <div class="pipeline-stages">
+            <div class="pipeline-stage">
+                <div class="pipeline-stage__header"><span>Closing (95%+ confidence)</span><span
+                        class="pipeline-stage__value">$2.4M (19%)</span></div>
+                <div class="pipeline-bar">
+                    <div class="pipeline-bar__fill pipeline-bar__fill--green" style="width:19%"></div>
+                </div>
+            </div>
+            <div class="pipeline-stage">
+                <div class="pipeline-stage__header"><span>Negotiation</span><span class="pipeline-stage__value">$3.8M
+                        (30%)</span></div>
+                <div class="pipeline-bar">
+                    <div class="pipeline-bar__fill pipeline-bar__fill--purple" style="width:30%"></div>
+                </div>
+            </div>
+            <div class="pipeline-stage">
+                <div class="pipeline-stage__header"><span>Proposal</span><span class="pipeline-stage__value">$4.2M
+                        (33%)</span></div>
+                <div class="pipeline-bar">
+                    <div class="pipeline-bar__fill pipeline-bar__fill--blue" style="width:33%"></div>
+                </div>
+            </div>
+            <div class="pipeline-stage">
+                <div class="pipeline-stage__header"><span>Discovery</span><span class="pipeline-stage__value">$2.4M
+                        (18%)</span></div>
+                <div class="pipeline-bar">
+                    <div class="pipeline-bar__fill pipeline-bar__fill--yellow" style="width:18%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="pipeline-total"><span>Total Pipeline Value</span><span class="pipeline-total__value">$12.8M</span>
+        </div>
+    </div>
+
+    <div class="analytics-card">
+        <div class="analytics-card__header">
+            <div>
+                <h3 class="analytics-card__title">Performance Metrics</h3>
+                <p class="analytics-card__subtitle">Quarter-to-date performance</p>
+            </div><button class="link-accent text-sm">Full Report</button>
+        </div>
+        <div class="perf-list">
+            <div class="perf-item">
+                <div class="perf-icon perf-icon--green"><i class="fa-solid fa-trophy"></i></div>
+                <div class="perf-content">
+                    <p class="perf-label">Closed Won</p>
+                    <p class="perf-value">$4.2M</p>
+                    <p class="perf-change perf-change--green">↑ 23.5% vs last quarter</p>
+                </div>
+            </div>
+            <div class="perf-item">
+                <div class="perf-icon perf-icon--blue"><i class="fa-solid fa-chart-simple"></i></div>
+                <div class="perf-content">
+                    <p class="perf-label">Average Deal Size</p>
+                    <p class="perf-value">$186K</p>
+                    <p class="perf-change perf-change--blue">↑ 12.8% vs last quarter</p>
+                </div>
+            </div>
+            <div class="perf-item">
+                <div class="perf-icon perf-icon--purple"><i class="fa-solid fa-clock"></i></div>
+                <div class="perf-content">
+                    <p class="perf-label">Avg. Sales Cycle</p>
+                    <p class="perf-value">42 days</p>
+                    <p class="perf-change perf-change--purple">↓ 6 days vs last quarter</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Top Opportunities -->
+<section class="top-opps">
+    <div class="top-opps__header">
+        <div>
+            <h3 class="analytics-card__title">Top Opportunities This Month</h3>
+            <p class="analytics-card__subtitle">Highest value deals with strong win probability</p>
+        </div><button class="link-accent text-sm">View All</button>
+    </div>
+    <div class="top-opps__list">
+        <div class="top-opp-item">
+            <div class="top-opp-info">
+                <p class="top-opp-name">Digital Transformation Initiative</p>
+                <div class="top-opp-meta"><span>Innovate Labs</span><span>•</span><span>Mar 20, 2024</span></div>
+            </div>
+            <div class="top-opp-right">
+                <p class="top-opp-value">$620K</p>
+                <div class="top-opp-score">
+                    <div class="top-opp-bar">
+                        <div class="top-opp-bar__fill top-opp-bar__fill--red" style="width:42%"></div>
+                    </div><span class="ai-score-value ai-score-value--red">42%</span>
+                </div>
+            </div>
+        </div>
+        <div class="top-opp-item">
+            <div class="top-opp-info">
+                <p class="top-opp-name">AI Integration Services</p>
+                <div class="top-opp-meta"><span>Quantum Ent.</span><span>•</span><span>May 1, 2024</span></div>
+            </div>
+            <div class="top-opp-right">
+                <p class="top-opp-value">$520K</p>
+                <div class="top-opp-score">
+                    <div class="top-opp-bar">
+                        <div class="top-opp-bar__fill top-opp-bar__fill--yellow" style="width:73%"></div>
+                    </div><span class="ai-score-value ai-score-value--yellow">73%</span>
+                </div>
+            </div>
+        </div>
+        <div class="top-opp-item">
+            <div class="top-opp-info">
+                <p class="top-opp-name">Cloud Migration Project</p>
+                <div class="top-opp-meta"><span>Acme Corp</span><span>•</span><span>Mar 28, 2024</span></div>
+            </div>
+            <div class="top-opp-right">
+                <p class="top-opp-value">$450K</p>
+                <div class="top-opp-score">
+                    <div class="top-opp-bar">
+                        <div class="top-opp-bar__fill top-opp-bar__fill--green" style="width:88%"></div>
+                    </div><span class="ai-score-value ai-score-value--green">88%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

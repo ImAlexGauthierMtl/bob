@@ -1,0 +1,651 @@
+<header class="profile-header">
+    <div class="profile-header__top">
+        <div class="profile-identity">
+            <div class="deal-icon-lg"><i class="fa-solid fa-handshake"></i></div>
+            <div class="profile-info">
+                <div class="profile-name-row">
+                    <h2 class="profile-name">Enterprise Platform Expansion</h2><span
+                        class="stage-badge stage-badge--green">NEGOTIATION</span>
+                </div>
+                <p class="profile-role">Global Solutions Inc. • Technology Sector</p>
+                <p class="profile-meta">ID: OPP-8429 • Created: Oct 15, 2024</p>
+                <div class="profile-quick-stats">
+                    <span><i class="fa-solid fa-dollar-sign"></i> <strong>$850,000</strong></span>
+                    <span><i class="fa-solid fa-calendar"></i> Close Date: Dec 15, 2024</span>
+                    <span><i class="fa-solid fa-chart-line"></i> Probability: 75%</span>
+                </div>
+            </div>
+        </div>
+        <div class="profile-actions"><button class="btn btn-outline hide-mobile"><i class="fa-solid fa-pen"></i>
+                Edit</button><button class="btn btn-outline hide-mobile"><i class="fa-solid fa-share"></i>
+                Share</button></div>
+    </div>
+    <div class="tabs">
+        <button class="tab" [class.tab--active]="activeTab==='overview'"
+            (click)="setActiveTab('overview')">Overview</button>
+        <button class="tab" [class.tab--active]="activeTab==='products'"
+            (click)="setActiveTab('products')">Products</button>
+        <button class="tab" [class.tab--active]="activeTab==='quote'" (click)="setActiveTab('quote')">Quote</button>
+        <button class="tab" [class.tab--active]="activeTab==='stakeholders'"
+            (click)="setActiveTab('stakeholders')">Stakeholders</button>
+        <button class="tab" [class.tab--active]="activeTab==='activities'"
+            (click)="setActiveTab('activities')">Activities</button>
+        <button class="tab" [class.tab--active]="activeTab==='documents'"
+            (click)="setActiveTab('documents')">Documents</button>
+    </div>
+</header>
+
+<div class="profile-content">
+    @if (activeTab==='overview') {
+    <section class="ai-intel">
+        <div class="ai-intel__header">
+            <div class="ai-icon-round"><i class="fa-solid fa-brain"></i></div>
+            <div>
+                <h3 class="section-title">AI Opportunity Intelligence</h3>
+                <p class="section-subtitle">Predictive analysis powered by AI</p>
+            </div><span class="ai-confidence">Confidence: 94%</span>
+        </div>
+        <p class="ai-intel__text">This opportunity shows strong signals for closure. Decision-maker David Martinez (CTO)
+            is highly engaged (89/100). Budget confirmed at $850K with Q1 2025 timeline. Key risk: two competing
+            vendors. Recommended: accelerate tech docs delivery and schedule executive alignment meeting within 48
+            hours.</p>
+        <div class="ai-intel__metrics">
+            <div>
+                <p class="metric-label">Win Probability</p>
+                <div class="metric-bar-row">
+                    <div class="metric-bar">
+                        <div class="metric-bar__fill" style="width:75%"></div>
+                    </div><span class="metric-val-green">75%</span>
+                </div>
+            </div>
+            <div>
+                <p class="metric-label">Deal Health</p>
+                <div class="metric-inline"><i class="fa-solid fa-heart-pulse" style="color:#22c55e"></i><span
+                        style="color:#16a34a;font-weight:500">Excellent</span></div>
+            </div>
+            <div>
+                <p class="metric-label">Risk Level</p>
+                <div class="metric-inline"><i class="fa-solid fa-shield-halved" style="color:#eab308"></i><span
+                        style="color:#ca8a04;font-weight:500">Medium</span></div>
+            </div>
+            <div>
+                <p class="metric-label">Next Best Action</p><button class="link-accent text-sm">Send tech docs</button>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h3 class="section-title-lg">Deal Progression</h3>
+        <div class="detail-card">
+            <div class="deal-stepper">
+                <div class="stepper-track">
+                    <div class="stepper-progress" style="width:75%"></div>
+                </div>
+                <div class="stepper-steps">
+                    <div class="stepper-step stepper-step--done">
+                        <div class="stepper-dot"><i class="fa-solid fa-check"></i></div>
+                        <p class="stepper-label">Qualification</p>
+                        <p class="stepper-date">Oct 15</p>
+                    </div>
+                    <div class="stepper-step stepper-step--done">
+                        <div class="stepper-dot"><i class="fa-solid fa-check"></i></div>
+                        <p class="stepper-label">Discovery</p>
+                        <p class="stepper-date">Oct 22</p>
+                    </div>
+                    <div class="stepper-step stepper-step--done">
+                        <div class="stepper-dot"><i class="fa-solid fa-check"></i></div>
+                        <p class="stepper-label">Proposal</p>
+                        <p class="stepper-date">Nov 5</p>
+                    </div>
+                    <div class="stepper-step stepper-step--active">
+                        <div class="stepper-dot stepper-dot--pulse"><i class="fa-solid fa-handshake"></i></div>
+                        <p class="stepper-label">Negotiation</p>
+                        <p class="stepper-date stepper-date--accent">In Progress</p>
+                    </div>
+                    <div class="stepper-step stepper-step--pending">
+                        <div class="stepper-dot stepper-dot--gray"><i class="fa-solid fa-trophy"></i></div>
+                        <p class="stepper-label stepper-label--gray">Closed Won</p>
+                        <p class="stepper-date">Target: Dec 15</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h3 class="section-title-lg">Key Metrics</h3>
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-card__top">
+                    <p class="metric-card__label">Deal Value</p><i
+                        class="fa-solid fa-dollar-sign metric-card__icon"></i>
+                </div>
+                <p class="metric-card__value">$850K</p>
+                <p class="metric-change metric-change--green">+15% from initial</p>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__top">
+                    <p class="metric-card__label">Days in Stage</p><i class="fa-solid fa-clock metric-card__icon"></i>
+                </div>
+                <p class="metric-card__value">12</p>
+                <p class="metric-card__sub">Negotiation</p>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__top">
+                    <p class="metric-card__label">Stakeholders</p><i class="fa-solid fa-users metric-card__icon"></i>
+                </div>
+                <p class="metric-card__value">7</p>
+                <p class="metric-card__sub">3 decision makers</p>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__top">
+                    <p class="metric-card__label">Interactions</p><i class="fa-solid fa-comments metric-card__icon"></i>
+                </div>
+                <p class="metric-card__value">47</p>
+                <p class="metric-change metric-change--green">+23% this week</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h3 class="section-title-lg">Opportunity Details</h3>
+        <div class="detail-card">
+            <div class="details-grid">
+                <div>
+                    <p class="detail-label">Description</p>
+                    <p class="detail-text">Global Solutions Inc. is expanding their enterprise platform: 500 additional
+                        licenses, premium support, advanced analytics module, and custom integration.</p>
+                    <p class="detail-label" style="margin-top:1.5rem">Business Drivers</p>
+                    <ul class="check-list">
+                        <li><i class="fa-solid fa-check"></i><span>Rapid company growth requiring scalable
+                                solutions</span></li>
+                        <li><i class="fa-solid fa-check"></i><span>Advanced analytics and reporting needs</span></li>
+                        <li><i class="fa-solid fa-check"></i><span>Legacy system integration</span></li>
+                        <li><i class="fa-solid fa-check"></i><span>Executive digital transformation mandate</span></li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="detail-label">Key Information</p>
+                    <div class="info-rows">
+                        <div class="info-row"><span class="info-label-sm">Organization</span><a
+                                class="link-accent">Global Solutions Inc.</a></div>
+                        <div class="info-row"><span class="info-label-sm">Primary Contact</span><a
+                                class="link-accent">David Martinez, CTO</a></div>
+                        <div class="info-row"><span class="info-label-sm">Owner</span>
+                            <div class="owner-col"><img
+                                    src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
+                                    class="owner-avatar" alt="" /><span>Sarah Johnson</span></div>
+                        </div>
+                        <div class="info-row"><span class="info-label-sm">Expected Close</span><span>December 15,
+                                2024</span></div>
+                        <div class="info-row"><span class="info-label-sm">Lead Source</span><span>Existing Customer -
+                                Upsell</span></div>
+                        <div class="info-row"><span class="info-label-sm">Competitors</span>
+                            <div class="competitor-tags"><span class="competitor-tag">Salesforce</span><span
+                                    class="competitor-tag">Microsoft Dynamics</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h3 class="section-title-lg">Competitive Position</h3>
+        <div class="detail-card">
+            <div class="competitive-section">
+                <div class="competitive-header">
+                    <p class="competitive-title">Our Strengths</p><span
+                        class="competitive-badge competitive-badge--green">STRONG POSITION</span>
+                </div>
+                <ul class="strength-list">
+                    <li><i class="fa-solid fa-plus"></i><span>Existing relationship and proven track record</span></li>
+                    <li><i class="fa-solid fa-plus"></i><span>Deep technical integration already in place</span></li>
+                    <li><i class="fa-solid fa-plus"></i><span>Champion relationship with CTO</span></li>
+                    <li><i class="fa-solid fa-plus"></i><span>Superior AI-powered analytics</span></li>
+                </ul>
+            </div>
+            <div class="competitive-section competitive-section--border">
+                <div class="competitive-header">
+                    <p class="competitive-title">Areas to Address</p><span
+                        class="competitive-badge competitive-badge--yellow">REQUIRES ATTENTION</span>
+                </div>
+                <ul class="weakness-list">
+                    <li><i class="fa-solid fa-minus"></i><span>Price point 12% higher than competitors</span></li>
+                    <li><i class="fa-solid fa-minus"></i><span>Need to demonstrate ROI for analytics module</span></li>
+                    <li><i class="fa-solid fa-minus"></i><span>Procurement exploring alternatives</span></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+    }
+
+    @if (activeTab==='products') {
+    <section>
+        <div class="tab-header">
+            <h3 class="section-title-lg">Products &amp; Services</h3><button class="btn btn-accent"><i
+                    class="fa-solid fa-plus"></i> Add Product</button>
+        </div>
+        <div class="table-card" style="margin-bottom:2rem">
+            <div class="table-scroll">
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>Product/Service</th>
+                            <th>Category</th>
+                            <th>Qty</th>
+                            <th>Unit Price</th>
+                            <th>Discount</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <p class="prod-name">Enterprise Platform License</p>
+                                <p class="prod-desc">500 user licenses</p>
+                            </td>
+                            <td><span class="cat-badge cat-badge--blue">SOFTWARE</span></td>
+                            <td>500</td>
+                            <td>$850</td>
+                            <td class="text-green">15%</td>
+                            <td class="prod-total">$361,250</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p class="prod-name">Advanced Analytics Module</p>
+                                <p class="prod-desc">AI-powered insights</p>
+                            </td>
+                            <td><span class="cat-badge cat-badge--purple">ADD-ON</span></td>
+                            <td>1</td>
+                            <td>$180,000</td>
+                            <td class="text-green">10%</td>
+                            <td class="prod-total">$162,000</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p class="prod-name">Premium Support Package</p>
+                                <p class="prod-desc">24/7 dedicated support</p>
+                            </td>
+                            <td><span class="cat-badge cat-badge--green">SERVICE</span></td>
+                            <td>12 mo</td>
+                            <td>$8,500</td>
+                            <td>0%</td>
+                            <td class="prod-total">$102,000</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p class="prod-name">Professional Services</p>
+                                <p class="prod-desc">Custom integration</p>
+                            </td>
+                            <td><span class="cat-badge cat-badge--yellow">CONSULTING</span></td>
+                            <td>320h</td>
+                            <td>$350</td>
+                            <td>0%</td>
+                            <td class="prod-total">$112,000</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p class="prod-name">Training &amp; Onboarding</p>
+                                <p class="prod-desc">User training program</p>
+                            </td>
+                            <td><span class="cat-badge cat-badge--green">SERVICE</span></td>
+                            <td>500</td>
+                            <td>$225</td>
+                            <td class="text-green">20%</td>
+                            <td class="prod-total">$90,000</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p class="prod-name">Data Migration Services</p>
+                                <p class="prod-desc">Legacy data migration</p>
+                            </td>
+                            <td><span class="cat-badge cat-badge--yellow">CONSULTING</span></td>
+                            <td>1</td>
+                            <td>$22,750</td>
+                            <td>0%</td>
+                            <td class="prod-total">$22,750</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="detail-card">
+            <div class="quote-summary">
+                <div class="summary-row"><span>Subtotal</span><span>$850,000</span></div>
+                <div class="summary-row"><span>Discount</span><span class="text-green">-$88,750 (10.4%)</span></div>
+                <div class="summary-row"><span>Tax (8%)</span><span>$60,900</span></div>
+                <div class="summary-row summary-row--total"><span>Total</span><span
+                        class="summary-total">$822,150</span></div>
+            </div>
+        </div>
+    </section>
+    }
+
+    @if (activeTab==='quote') {
+    <section>
+        <div class="tab-header">
+            <h3 class="section-title-lg">Quote &amp; Proposal</h3>
+            <div class="tab-header__actions"><button class="btn btn-outline"><i class="fa-solid fa-download"></i>
+                    PDF</button><button class="btn btn-accent"><i class="fa-solid fa-paper-plane"></i> Send</button>
+            </div>
+        </div>
+        <div class="detail-card">
+            <div class="quote-header-row">
+                <div>
+                    <p class="quote-brand">Croo</p>
+                    <p class="quote-brand-sub">Digital Experience</p>
+                </div>
+                <div class="quote-meta-right">
+                    <p class="detail-label">Quote Number</p>
+                    <p class="quote-number">QUO-2024-8429</p>
+                    <p class="quote-dates">Nov 20, 2024 · Valid Until Dec 20, 2024</p>
+                </div>
+            </div>
+            <div class="details-grid"
+                style="margin-top:2rem;padding-top:2rem;border-top:1px solid var(--color-gray-100)">
+                <div>
+                    <p class="detail-label">Quote To</p>
+                    <p class="detail-text"><strong>Global Solutions Inc.</strong><br />David Martinez, CTO<br />1234
+                        Technology Drive<br />San Francisco, CA 94105</p>
+                </div>
+                <div>
+                    <p class="detail-label">Quote From</p>
+                    <p class="detail-text"><strong>Croo Digital Experience</strong><br />Sarah Johnson, Sr. Account
+                        Executive<br />5678 Innovation Boulevard<br />New York, NY 10001</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    }
+
+    @if (activeTab==='stakeholders') {
+    <section>
+        <div class="tab-header">
+            <h3 class="section-title-lg">Stakeholders</h3><button class="btn btn-accent"><i
+                    class="fa-solid fa-plus"></i> Add</button>
+        </div>
+        <div class="stakeholder-list">
+            <div class="stakeholder-card">
+                <div class="stakeholder-body"><img
+                        src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
+                        class="stakeholder-avatar" alt="" />
+                    <div class="stakeholder-info">
+                        <div class="stakeholder-top">
+                            <div>
+                                <h4 class="stakeholder-name">David Martinez</h4>
+                                <p class="stakeholder-role">CTO</p>
+                            </div>
+                            <div class="stakeholder-badges"><span class="role-badge role-badge--blue">DECISION
+                                    MAKER</span><span class="role-badge role-badge--green">CHAMPION</span></div>
+                        </div>
+                        <div class="stakeholder-metrics">
+                            <div>
+                                <p class="metric-label">Influence</p><span class="metric-inline-value">Executive</span>
+                            </div>
+                            <div>
+                                <p class="metric-label">Engagement</p>
+                                <div class="metric-bar-row">
+                                    <div class="metric-bar">
+                                        <div class="metric-bar__fill" style="width:89%"></div>
+                                    </div><span class="metric-val-green">89%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="metric-label">Last Contact</p><span class="metric-inline-value">2h ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="stakeholder-card">
+                <div class="stakeholder-body"><img
+                        src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg"
+                        class="stakeholder-avatar" alt="" />
+                    <div class="stakeholder-info">
+                        <div class="stakeholder-top">
+                            <div>
+                                <h4 class="stakeholder-name">Michael Torres</h4>
+                                <p class="stakeholder-role">CEO</p>
+                            </div>
+                            <div class="stakeholder-badges"><span class="role-badge role-badge--red">FINAL
+                                    APPROVER</span></div>
+                        </div>
+                        <div class="stakeholder-metrics">
+                            <div>
+                                <p class="metric-label">Influence</p><span class="metric-inline-value">C-Level</span>
+                            </div>
+                            <div>
+                                <p class="metric-label">Engagement</p>
+                                <div class="metric-bar-row">
+                                    <div class="metric-bar">
+                                        <div class="metric-bar__fill metric-bar__fill--yellow" style="width:45%"></div>
+                                    </div><span style="color:#ca8a04;font-size:.75rem;font-weight:600">45%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="metric-label">Last Contact</p><span class="metric-inline-value">3d ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="stakeholder-card">
+                <div class="stakeholder-body"><img
+                        src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg"
+                        class="stakeholder-avatar" alt="" />
+                    <div class="stakeholder-info">
+                        <div class="stakeholder-top">
+                            <div>
+                                <h4 class="stakeholder-name">Jennifer Lee</h4>
+                                <p class="stakeholder-role">VP Operations</p>
+                            </div>
+                            <div class="stakeholder-badges"><span
+                                    class="role-badge role-badge--purple">INFLUENCER</span></div>
+                        </div>
+                        <div class="stakeholder-metrics">
+                            <div>
+                                <p class="metric-label">Influence</p><span class="metric-inline-value">Management</span>
+                            </div>
+                            <div>
+                                <p class="metric-label">Engagement</p>
+                                <div class="metric-bar-row">
+                                    <div class="metric-bar">
+                                        <div class="metric-bar__fill" style="width:72%"></div>
+                                    </div><span class="metric-val-green">72%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="metric-label">Last Contact</p><span class="metric-inline-value">1d ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="stakeholder-card">
+                <div class="stakeholder-body"><img
+                        src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg"
+                        class="stakeholder-avatar" alt="" />
+                    <div class="stakeholder-info">
+                        <div class="stakeholder-top">
+                            <div>
+                                <h4 class="stakeholder-name">Robert Chen</h4>
+                                <p class="stakeholder-role">Procurement Mgr</p>
+                            </div>
+                            <div class="stakeholder-badges"><span
+                                    class="role-badge role-badge--yellow">GATEKEEPER</span></div>
+                        </div>
+                        <div class="stakeholder-metrics">
+                            <div>
+                                <p class="metric-label">Influence</p><span
+                                    class="metric-inline-value">Operational</span>
+                            </div>
+                            <div>
+                                <p class="metric-label">Engagement</p>
+                                <div class="metric-bar-row">
+                                    <div class="metric-bar">
+                                        <div class="metric-bar__fill metric-bar__fill--yellow" style="width:58%"></div>
+                                    </div><span style="color:#ca8a04;font-size:.75rem;font-weight:600">58%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="metric-label">Last Contact</p><span class="metric-inline-value">5d ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="stakeholder-card">
+                <div class="stakeholder-body"><img
+                        src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-9.jpg"
+                        class="stakeholder-avatar" alt="" />
+                    <div class="stakeholder-info">
+                        <div class="stakeholder-top">
+                            <div>
+                                <h4 class="stakeholder-name">Amanda Foster</h4>
+                                <p class="stakeholder-role">CFO</p>
+                            </div>
+                            <div class="stakeholder-badges"><span class="role-badge role-badge--blue">BUDGET
+                                    HOLDER</span></div>
+                        </div>
+                        <div class="stakeholder-metrics">
+                            <div>
+                                <p class="metric-label">Influence</p><span class="metric-inline-value">Executive</span>
+                            </div>
+                            <div>
+                                <p class="metric-label">Engagement</p>
+                                <div class="metric-bar-row">
+                                    <div class="metric-bar">
+                                        <div class="metric-bar__fill" style="width:67%"></div>
+                                    </div><span class="metric-val-green">67%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="metric-label">Last Contact</p><span class="metric-inline-value">1w ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    }
+
+    @if (activeTab==='activities') {
+    <section>
+        <div class="tab-header">
+            <h3 class="section-title-lg">Activities &amp; Tasks</h3><button class="btn btn-accent"><i
+                    class="fa-solid fa-plus"></i> New Activity</button>
+        </div>
+        <h4 class="sub-section-title">Upcoming</h4>
+        <div class="task-list">
+            <div class="task-item"><input type="checkbox" />
+                <div>
+                    <p class="task-title">Executive alignment meeting with CEO</p>
+                    <p class="task-desc">Final approval meeting with Michael Torres.</p>
+                    <div class="task-meta"><span class="task-due task-due--accent">Tomorrow, 2PM</span><span
+                            class="meta-dot">·</span><span
+                            class="priority-badge priority-badge--red">CRITICAL</span><span
+                            class="meta-dot">·</span><span class="text-sm">Sarah Johnson</span></div>
+                </div>
+            </div>
+            <div class="task-item"><input type="checkbox" />
+                <div>
+                    <p class="task-title">Send technical documentation</p>
+                    <p class="task-desc">API docs, architecture diagrams to David Martinez.</p>
+                    <div class="task-meta"><span class="task-due task-due--accent">Tomorrow</span><span
+                            class="meta-dot">·</span><span class="priority-badge priority-badge--red">HIGH</span><span
+                            class="meta-dot">·</span><span class="text-sm">Sarah Johnson</span></div>
+                </div>
+            </div>
+            <div class="task-item"><input type="checkbox" />
+                <div>
+                    <p class="task-title">Follow up with procurement</p>
+                    <p class="task-desc">Robert Chen's questions about payment terms and SLAs.</p>
+                    <div class="task-meta"><span class="task-due">Dec 8, 2024</span><span class="meta-dot">·</span><span
+                            class="priority-badge priority-badge--yellow">MEDIUM</span><span
+                            class="meta-dot">·</span><span class="text-sm">Sarah Johnson</span></div>
+                </div>
+            </div>
+        </div>
+        <h4 class="sub-section-title">Recent</h4>
+        <div class="completed-list">
+            <div class="completed-item">
+                <div class="completed-icon completed-icon--green"><i class="fa-solid fa-phone"></i></div>
+                <div>
+                    <p class="task-title">Phone call with David Martinez</p>
+                    <p class="task-desc">45-min discussion about Q4 expansion. Very positive sentiment.</p><span
+                        class="completed-date">2h ago · Sarah Johnson</span>
+                </div>
+            </div>
+            <div class="completed-item">
+                <div class="completed-icon completed-icon--blue"><i class="fa-solid fa-file-lines"></i></div>
+                <div>
+                    <p class="task-title">Proposal sent to stakeholders</p>
+                    <p class="task-desc">Enterprise proposal delivered to David, Jennifer, Robert.</p><span
+                        class="completed-date">1d ago · Sarah Johnson</span>
+                </div>
+            </div>
+            <div class="completed-item">
+                <div class="completed-icon completed-icon--purple"><i class="fa-solid fa-users"></i></div>
+                <div>
+                    <p class="task-title">Quarterly business review</p>
+                    <p class="task-desc">Successful QBR with executive team.</p><span class="completed-date">3d ago ·
+                        Sarah Johnson</span>
+                </div>
+            </div>
+        </div>
+    </section>
+    }
+
+    @if (activeTab==='documents') {
+    <section>
+        <div class="tab-header">
+            <h3 class="section-title-lg">Documents</h3><button class="btn btn-accent"><i class="fa-solid fa-upload"></i>
+                Upload</button>
+        </div>
+        <div class="docs-grid">
+            <div class="doc-card">
+                <div class="doc-body">
+                    <div class="doc-icon doc-icon--red"><i class="fa-solid fa-file-pdf"></i></div>
+                    <div class="doc-info">
+                        <p class="doc-name">Enterprise Proposal.pdf</p>
+                        <p class="doc-desc">Pricing and timeline</p>
+                        <div class="doc-meta"><span>2.4 MB</span><span>•</span><span>Nov 20</span></div>
+                    </div><button class="doc-dl"><i class="fa-solid fa-download"></i></button>
+                </div>
+            </div>
+            <div class="doc-card">
+                <div class="doc-body">
+                    <div class="doc-icon doc-icon--blue"><i class="fa-solid fa-file-word"></i></div>
+                    <div class="doc-info">
+                        <p class="doc-name">Technical Requirements.docx</p>
+                        <p class="doc-desc">Specs and requirements</p>
+                        <div class="doc-meta"><span>1.8 MB</span><span>•</span><span>Nov 15</span></div>
+                    </div><button class="doc-dl"><i class="fa-solid fa-download"></i></button>
+                </div>
+            </div>
+            <div class="doc-card">
+                <div class="doc-body">
+                    <div class="doc-icon doc-icon--green"><i class="fa-solid fa-file-excel"></i></div>
+                    <div class="doc-info">
+                        <p class="doc-name">ROI Analysis.xlsx</p>
+                        <p class="doc-desc">Cost-benefit analysis</p>
+                        <div class="doc-meta"><span>856 KB</span><span>•</span><span>Nov 10</span></div>
+                    </div><button class="doc-dl"><i class="fa-solid fa-download"></i></button>
+                </div>
+            </div>
+            <div class="doc-card">
+                <div class="doc-body">
+                    <div class="doc-icon doc-icon--red"><i class="fa-solid fa-file-pdf"></i></div>
+                    <div class="doc-info">
+                        <p class="doc-name">Master Service Agreement.pdf</p>
+                        <p class="doc-desc">Legal contract</p>
+                        <div class="doc-meta"><span>3.2 MB</span><span>•</span><span>Nov 5</span></div>
+                    </div><button class="doc-dl"><i class="fa-solid fa-download"></i></button>
+                </div>
+            </div>
+        </div>
+    </section>
+    }
+</div>

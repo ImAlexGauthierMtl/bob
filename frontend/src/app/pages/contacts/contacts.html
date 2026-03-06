@@ -1,0 +1,500 @@
+<div class="page-header">
+    <div class="page-header__left">
+        <div class="page-header__title-row">
+            <h2 class="page-title">Contacts</h2>
+            <div class="counter-badge">1,847 TOTAL</div>
+        </div>
+        <p class="page-subtitle">MANAGE YOUR PROFESSIONAL NETWORK</p>
+    </div>
+    <div class="page-header__actions">
+        <button class="btn btn-outline hide-mobile"><i class="fa-solid fa-file-import"></i> Import</button>
+        <button class="btn btn-accent"><i class="fa-solid fa-plus"></i> New Contact</button>
+    </div>
+</div>
+
+<!-- Search & Filters -->
+<div class="toolbar">
+    <div class="search-box">
+        <i class="fa-solid fa-search search-box__icon"></i>
+        <input type="text" class="search-box__input" placeholder="Search contacts by name, email, company..." />
+    </div>
+    <div class="filter-btns">
+        <button class="filter-btn"><i class="fa-solid fa-filter"></i> Role <i
+                class="fa-solid fa-chevron-down"></i></button>
+        <button class="filter-btn"><i class="fa-solid fa-building"></i> Company <i
+                class="fa-solid fa-chevron-down"></i></button>
+        <button class="filter-btn"><i class="fa-solid fa-user"></i> Owner <i
+                class="fa-solid fa-chevron-down"></i></button>
+        <button class="filter-btn"><i class="fa-solid fa-tags"></i> Tags <i
+                class="fa-solid fa-chevron-down"></i></button>
+        <button class="filter-btn"><i class="fa-solid fa-times"></i></button>
+    </div>
+</div>
+
+<!-- Filter Pills -->
+<div class="filter-pills">
+    <button class="filter-pill filter-pill--active">All Contacts</button>
+    <button class="filter-pill">Decision Makers</button>
+    <button class="filter-pill">Hot Leads</button>
+    <button class="filter-pill">Recent Activity</button>
+    <button class="filter-pill">VIP</button>
+</div>
+
+<!-- AI Contact Intelligence -->
+<section class="ai-insights">
+    <div class="ai-insights__header">
+        <div class="ai-insights__icon ai-insights__icon--round"><i class="fa-solid fa-brain"></i></div>
+        <div>
+            <h3 class="ai-insights__title">AI Contact Intelligence</h3>
+            <p class="ai-insights__subtitle">Real-time insights powered by machine learning</p>
+        </div>
+    </div>
+    <div class="ai-insights__grid ai-insights__grid--4">
+        <div class="ai-stat-card">
+            <div class="ai-stat-card__header">
+                <div class="ai-stat-icon ai-stat-icon--blue"><i class="fa-solid fa-fire"></i></div><span
+                    class="ai-stat-badge ai-stat-badge--blue">HIGH PRIORITY</span>
+            </div>
+            <p class="ai-stat-value">23</p>
+            <p class="ai-stat-desc">Contacts need immediate follow-up</p>
+        </div>
+        <div class="ai-stat-card">
+            <div class="ai-stat-card__header">
+                <div class="ai-stat-icon ai-stat-icon--green"><i class="fa-solid fa-chart-line"></i></div><span
+                    class="ai-stat-badge ai-stat-badge--green">ENGAGED</span>
+            </div>
+            <p class="ai-stat-value">156</p>
+            <p class="ai-stat-desc">Active in last 30 days</p>
+        </div>
+        <div class="ai-stat-card">
+            <div class="ai-stat-card__header">
+                <div class="ai-stat-icon ai-stat-icon--purple"><i class="fa-solid fa-star"></i></div><span
+                    class="ai-stat-badge ai-stat-badge--purple">VIP</span>
+            </div>
+            <p class="ai-stat-value">47</p>
+            <p class="ai-stat-desc">High-value relationships</p>
+        </div>
+        <div class="ai-stat-card">
+            <div class="ai-stat-card__header">
+                <div class="ai-stat-icon ai-stat-icon--orange"><i class="fa-solid fa-calendar-check"></i></div><span
+                    class="ai-stat-badge ai-stat-badge--orange">TODAY</span>
+            </div>
+            <p class="ai-stat-value">8</p>
+            <p class="ai-stat-desc">Scheduled meetings</p>
+        </div>
+    </div>
+</section>
+
+<!-- Contacts Table -->
+<section class="table-card">
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th class="th-check"><input type="checkbox" /></th>
+                    <th><button class="sort-btn">Contact Name <i class="fa-solid fa-sort"></i></button></th>
+                    <th><button class="sort-btn">Role / Title <i class="fa-solid fa-sort"></i></button></th>
+                    <th>Company</th>
+                    <th class="hide-mobile">Contact Info</th>
+                    <th class="hide-mobile">Owner</th>
+                    <th class="hide-mobile"><button class="sort-btn">Last Contact <i
+                                class="fa-solid fa-sort"></i></button></th>
+                    <th>Status</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/contacts/1" class="contact-link"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
+                                class="contact-avatar" alt="" />
+                            <div>
+                                <p class="contact-name">Sarah Johnson</p>
+                                <p class="contact-id">ID: CNT-5847</p>
+                            </div>
+                        </a></td>
+                    <td>
+                        <p class="role-title">VP of Engineering</p>
+                        <p class="role-level">Executive</p>
+                    </td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--blue">GS</div><span>Global Solutions</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="contact-info-col"><span><i class="fa-solid fa-envelope"></i>
+                                sarah.j&#64;globalsol.com</span><span><i class="fa-solid fa-phone"></i> +1 (415)
+                                555-0123</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg"
+                                class="owner-avatar" alt="" /><span>Marcus Chen</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="last-contact-date">Today, 10:30 AM</p>
+                        <p class="last-contact-type">Email sent</p>
+                    </td>
+                    <td>
+                        <div class="status-dot">
+                            <div class="dot dot--green"></div><span class="status-text status-text--green">ACTIVE</span>
+                        </div>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/contacts/2" class="contact-link"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
+                                class="contact-avatar" alt="" />
+                            <div>
+                                <p class="contact-name">Michael Chen</p>
+                                <p class="contact-id">ID: CNT-5846</p>
+                            </div>
+                        </a></td>
+                    <td>
+                        <p class="role-title">Chief Technology Officer</p>
+                        <p class="role-level">C-Level</p>
+                    </td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--purple">AC</div><span>Acme Corp</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="contact-info-col"><span><i class="fa-solid fa-envelope"></i>
+                                m.chen&#64;acmecorp.com</span><span><i class="fa-solid fa-phone"></i> +1 (212)
+                                555-0198</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
+                                class="owner-avatar" alt="" /><span>Sarah Johnson</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="last-contact-date">Yesterday, 3:45 PM</p>
+                        <p class="last-contact-type">Meeting</p>
+                    </td>
+                    <td>
+                        <div class="status-dot">
+                            <div class="dot dot--purple"></div><span class="status-text status-text--purple">VIP</span>
+                        </div>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/contacts/3" class="contact-link"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg"
+                                class="contact-avatar" alt="" />
+                            <div>
+                                <p class="contact-name">Emily Rodriguez</p>
+                                <p class="contact-id">ID: CNT-5845</p>
+                            </div>
+                        </a></td>
+                    <td>
+                        <p class="role-title">Product Manager</p>
+                        <p class="role-level">Management</p>
+                    </td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--orange">TS</div><span>TechStart</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="contact-info-col"><span><i class="fa-solid fa-envelope"></i>
+                                emily.r&#64;techstart.io</span><span><i class="fa-solid fa-phone"></i> +1 (512)
+                                555-0147</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
+                                class="owner-avatar" alt="" /><span>Michael Chen</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="last-contact-date">2 days ago</p>
+                        <p class="last-contact-type">Phone call</p>
+                    </td>
+                    <td>
+                        <div class="status-dot">
+                            <div class="dot dot--green"></div><span class="status-text status-text--green">ACTIVE</span>
+                        </div>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/contacts/4" class="contact-link"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg"
+                                class="contact-avatar" alt="" />
+                            <div>
+                                <p class="contact-name">David Kim</p>
+                                <p class="contact-id">ID: CNT-5844</p>
+                            </div>
+                        </a></td>
+                    <td>
+                        <p class="role-title">Director of Sales</p>
+                        <p class="role-level">Director</p>
+                    </td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--green">NX</div><span>Nexus Group</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="contact-info-col"><span><i class="fa-solid fa-envelope"></i>
+                                d.kim&#64;nexusgroup.com</span><span><i class="fa-solid fa-phone"></i> +1 (312)
+                                555-0176</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg"
+                                class="owner-avatar" alt="" /><span>Emily Rodriguez</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="last-contact-date">5 days ago</p>
+                        <p class="last-contact-type">Email sent</p>
+                    </td>
+                    <td>
+                        <div class="status-dot">
+                            <div class="dot dot--yellow"></div><span
+                                class="status-text status-text--yellow">FOLLOW-UP</span>
+                        </div>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/contacts/5" class="contact-link"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg"
+                                class="contact-avatar" alt="" />
+                            <div>
+                                <p class="contact-name">Jessica Williams</p>
+                                <p class="contact-id">ID: CNT-5843</p>
+                            </div>
+                        </a></td>
+                    <td>
+                        <p class="role-title">Marketing Director</p>
+                        <p class="role-level">Director</p>
+                    </td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--red">IV</div><span>Innovate Labs</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="contact-info-col"><span><i class="fa-solid fa-envelope"></i>
+                                j.williams&#64;innovate.io</span><span><i class="fa-solid fa-phone"></i> +1 (617)
+                                555-0132</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg"
+                                class="owner-avatar" alt="" /><span>David Kim</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="last-contact-date">1 week ago</p>
+                        <p class="last-contact-type">Meeting</p>
+                    </td>
+                    <td>
+                        <div class="status-dot">
+                            <div class="dot dot--gray"></div><span class="status-text status-text--gray">COLD</span>
+                        </div>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/contacts/6" class="contact-link"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg"
+                                class="contact-avatar" alt="" />
+                            <div>
+                                <p class="contact-name">Alex Thompson</p>
+                                <p class="contact-id">ID: CNT-5842</p>
+                            </div>
+                        </a></td>
+                    <td>
+                        <p class="role-title">Senior Developer</p>
+                        <p class="role-level">Technical</p>
+                    </td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--indigo">VS</div><span>Vertex Systems</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="contact-info-col"><span><i class="fa-solid fa-envelope"></i>
+                                alex.t&#64;vertexsys.com</span><span><i class="fa-solid fa-phone"></i> +1 (206)
+                                555-0165</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg"
+                                class="owner-avatar" alt="" /><span>Marcus Chen</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="last-contact-date">3 days ago</p>
+                        <p class="last-contact-type">Email sent</p>
+                    </td>
+                    <td>
+                        <div class="status-dot">
+                            <div class="dot dot--green"></div><span class="status-text status-text--green">ACTIVE</span>
+                        </div>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/contacts/7" class="contact-link"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-9.jpg"
+                                class="contact-avatar" alt="" />
+                            <div>
+                                <p class="contact-name">Robert Lee</p>
+                                <p class="contact-id">ID: CNT-5841</p>
+                            </div>
+                        </a></td>
+                    <td>
+                        <p class="role-title">Operations Manager</p>
+                        <p class="role-level">Management</p>
+                    </td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--pink">QE</div><span>Quantum Ent.</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="contact-info-col"><span><i class="fa-solid fa-envelope"></i>
+                                robert.lee&#64;quantum.com</span><span><i class="fa-solid fa-phone"></i> +1 (713)
+                                555-0189</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg"
+                                class="owner-avatar" alt="" /><span>Jessica Williams</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="last-contact-date">4 days ago</p>
+                        <p class="last-contact-type">Phone call</p>
+                    </td>
+                    <td>
+                        <div class="status-dot">
+                            <div class="dot dot--green"></div><span class="status-text status-text--green">ACTIVE</span>
+                        </div>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" /></td>
+                    <td><a routerLink="/contacts/8" class="contact-link"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg"
+                                class="contact-avatar" alt="" />
+                            <div>
+                                <p class="contact-name">Amanda Foster</p>
+                                <p class="contact-id">ID: CNT-5840</p>
+                            </div>
+                        </a></td>
+                    <td>
+                        <p class="role-title">Business Analyst</p>
+                        <p class="role-level">Analyst</p>
+                    </td>
+                    <td>
+                        <div class="company-badge">
+                            <div class="company-icon company-icon--teal">AP</div><span>Apex Partners</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="contact-info-col"><span><i class="fa-solid fa-envelope"></i>
+                                amanda.f&#64;apexpart.com</span><span><i class="fa-solid fa-phone"></i> +1 (305)
+                                555-0143</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <div class="owner-col"><img
+                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
+                                class="owner-avatar" alt="" /><span>Sarah Johnson</span></div>
+                    </td>
+                    <td class="hide-mobile">
+                        <p class="last-contact-date">6 hours ago</p>
+                        <p class="last-contact-type">Email sent</p>
+                    </td>
+                    <td>
+                        <div class="status-dot">
+                            <div class="dot dot--purple"></div><span class="status-text status-text--purple">VIP</span>
+                        </div>
+                    </td>
+                    <td class="text-right"><button class="row-action"><i
+                                class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="table-footer">
+        <p class="pagination-info">Showing <strong>1-8</strong> of <strong>1,847</strong> contacts</p>
+        <div class="pagination-controls">
+            <button class="pagination-btn" disabled><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="pagination-btn pagination-btn--active">1</button>
+            <button class="pagination-btn">2</button>
+            <button class="pagination-btn">3</button>
+            <span class="pagination-dots">...</span>
+            <button class="pagination-btn">231</button>
+            <button class="pagination-btn"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+    </div>
+</section>
+
+<!-- AI-Powered Recommendations -->
+<section class="ai-reco">
+    <div class="ai-reco__header">
+        <div class="ai-insights__icon ai-insights__icon--round"><i class="fa-solid fa-robot"></i></div>
+        <div>
+            <h3 class="ai-reco__title">AI-Powered Recommendations</h3>
+            <p class="ai-reco__subtitle">Intelligent suggestions to optimize your contact engagement</p>
+        </div>
+    </div>
+    <div class="ai-reco__grid">
+        <div class="ai-reco-card">
+            <div class="ai-reco-card__header">
+                <div class="ai-reco-icon ai-reco-icon--red"><i class="fa-solid fa-fire-flame-curved"></i></div>
+                <div>
+                    <p class="ai-reco-card__title">Hot Lead Alert</p>
+                    <p class="ai-reco-card__confidence">AI Confidence: 96%</p>
+                </div>
+            </div>
+            <p class="ai-reco-card__text">Sarah Johnson opened your email 8 times and visited pricing page. High intent
+                detected. Recommend immediate follow-up call.</p>
+            <button class="link-accent">Schedule Call Now</button>
+        </div>
+        <div class="ai-reco-card">
+            <div class="ai-reco-card__header">
+                <div class="ai-reco-icon ai-reco-icon--yellow"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                <div>
+                    <p class="ai-reco-card__title">Re-engagement Needed</p>
+                    <p class="ai-reco-card__confidence">AI Confidence: 87%</p>
+                </div>
+            </div>
+            <p class="ai-reco-card__text">12 contacts haven't been contacted in 30+ days. AI suggests personalized
+                re-engagement campaign with 73% success probability.</p>
+            <button class="link-accent">Start Campaign</button>
+        </div>
+        <div class="ai-reco-card">
+            <div class="ai-reco-card__header">
+                <div class="ai-reco-icon ai-reco-icon--blue"><i class="fa-solid fa-link"></i></div>
+                <div>
+                    <p class="ai-reco-card__title">Cross-Sell Opportunity</p>
+                    <p class="ai-reco-card__confidence">AI Confidence: 89%</p>
+                </div>
+            </div>
+            <p class="ai-reco-card__text">Michael Chen's company expanded to 3 new locations. Similar profiles converted
+                to premium tier. Estimated deal value: $47K.</p>
+            <button class="link-accent">Create Proposal</button>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,740 @@
+<!-- ── Profile Header ──────────────────────────────────────── -->
+<header class="profile-header">
+    <div class="profile-header__top">
+        <div class="profile-identity">
+            <div class="quote-icon-lg">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+            </div>
+            <div class="profile-info">
+                <div class="profile-name-row">
+                    <h2 class="profile-name">Enterprise Platform Expansion</h2>
+                    <span class="stage-badge stage-badge--blue">DRAFT</span>
+                </div>
+                <p class="profile-role">Quote for Global Solutions Inc.</p>
+                <p class="profile-meta">SUB-2024-8429 • Created: Nov 20, 2024 • Valid until: Dec 20, 2024</p>
+                <div class="profile-quick-stats">
+                    <div><i class="fa-solid fa-dollar-sign"></i> <span class="stat-highlight">$822,150</span></div>
+                    <div><i class="fa-solid fa-percentage"></i> Margin: 42%</div>
+                    <div><i class="fa-solid fa-boxes-stacked"></i> 6 Items</div>
+                </div>
+            </div>
+        </div>
+        <div class="profile-actions">
+            <button class="btn btn--outline hide-mobile"><i class="fa-solid fa-download"></i> Export PDF</button>
+            <button class="btn btn--accent hide-mobile"><i class="fa-solid fa-paper-plane"></i> Send to Client</button>
+            <button class="btn btn--outline btn--icon-only lg-hidden"><i
+                    class="fa-solid fa-ellipsis-vertical"></i></button>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <nav class="tabs">
+        <button class="tab" [class.tab--active]="activeTab==='overview'"
+            (click)="activeTab='overview'">Overview</button>
+        <button class="tab" [class.tab--active]="activeTab==='hourly'" (click)="activeTab='hourly'">Hourly
+            Services</button>
+        <button class="tab" [class.tab--active]="activeTab==='onetime'" (click)="activeTab='onetime'">One-Time
+            Items</button>
+        <button class="tab" [class.tab--active]="activeTab==='recurring'" (click)="activeTab='recurring'">Recurring
+            Services</button>
+        <button class="tab" [class.tab--active]="activeTab==='summary'" (click)="activeTab='summary'">Financial
+            Summary</button>
+        <button class="tab" [class.tab--active]="activeTab==='terms'" (click)="activeTab='terms'">Terms &
+            Conditions</button>
+    </nav>
+</header>
+
+<!-- ── Content ─────────────────────────────────────────────── -->
+<div class="profile-body">
+    <div class="profile-content">
+
+        <!-- ═══ Overview Tab ═══ -->
+        @if (activeTab==='overview') {
+
+        <!-- AI Pricing Intelligence -->
+        <div class="ai-intel ai-intel--blue">
+            <div class="ai-intel__header">
+                <div class="ai-icon-round"><i class="fa-solid fa-brain"></i></div>
+                <div class="ai-intel__title-col">
+                    <h3 class="section-title">AI Pricing Intelligence</h3>
+                    <p class="section-subtitle">Optimized pricing analysis and margin recommendations</p>
+                </div>
+                <span class="ai-confidence">Confidence: 96%</span>
+            </div>
+            <p class="ai-intel__text">This quote is strategically priced with a healthy 42% margin while remaining
+                competitive. AI analysis suggests the client budget aligns well with proposed pricing. The mix of
+                hourly consulting, one-time equipment, and recurring services creates balanced revenue streams.
+                Recommendation: Consider offering 5% early-payment discount to accelerate closure while maintaining
+                strong margins.</p>
+            <div class="ai-intel__metrics ai-intel__metrics--4">
+                <div>
+                    <p class="metric-label">Margin Health</p>
+                    <div class="metric-bar-row">
+                        <div class="metric-bar">
+                            <div class="metric-bar__fill" style="width:85%"></div>
+                        </div>
+                        <span class="metric-val-green">Excellent</span>
+                    </div>
+                </div>
+                <div>
+                    <p class="metric-label">Price Competitiveness</p>
+                    <div class="metric-inline"><i class="fa-solid fa-chart-line" style="color:#3b82f6"></i><span
+                            class="metric-inline-value" style="color:#2563eb">Optimal</span></div>
+                </div>
+                <div>
+                    <p class="metric-label">Win Probability</p>
+                    <div class="metric-inline"><i class="fa-solid fa-trophy" style="color:#eab308"></i><span
+                            class="metric-inline-value" style="color:#ca8a04">78%</span></div>
+                </div>
+                <div>
+                    <p class="metric-label">Optimization</p>
+                    <button class="link-accent">View suggestions</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quote Summary -->
+        <h3 class="section-title-lg">Quote Summary</h3>
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-card__top">
+                    <p class="metric-card__label">Total Value</p>
+                    <i class="fa-solid fa-sack-dollar metric-card__icon"></i>
+                </div>
+                <p class="metric-card__value">$822,150</p>
+                <p class="metric-card__sub">Including taxes</p>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__top">
+                    <p class="metric-card__label">Gross Margin</p>
+                    <i class="fa-solid fa-percent metric-card__icon"></i>
+                </div>
+                <p class="metric-card__value">42%</p>
+                <p class="metric-card__sub metric-card__sub--green">Above target (35%)</p>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__top">
+                    <p class="metric-card__label">Monthly Recurring</p>
+                    <i class="fa-solid fa-rotate metric-card__icon"></i>
+                </div>
+                <p class="metric-card__value">$8,500</p>
+                <p class="metric-card__sub">Per month</p>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__top">
+                    <p class="metric-card__label">Valid Until</p>
+                    <i class="fa-solid fa-calendar-days metric-card__icon"></i>
+                </div>
+                <p class="metric-card__value">30</p>
+                <p class="metric-card__sub">Days remaining</p>
+            </div>
+        </div>
+
+        <!-- Quote Breakdown -->
+        <h3 class="section-title-lg">Quote Breakdown</h3>
+        <div class="breakdown-grid">
+            <div class="breakdown-card">
+                <div class="breakdown-card__header">
+                    <div class="breakdown-icon breakdown-icon--purple"><i class="fa-solid fa-clock"></i></div>
+                    <div>
+                        <p class="breakdown-label">Hourly Services</p>
+                        <p class="breakdown-value">$134,750</p>
+                    </div>
+                </div>
+                <div class="breakdown-rows">
+                    <div class="breakdown-row"><span>Professional Services</span><span
+                            class="breakdown-row__val">$112,000</span></div>
+                    <div class="breakdown-row"><span>Data Migration</span><span
+                            class="breakdown-row__val">$22,750</span></div>
+                </div>
+            </div>
+            <div class="breakdown-card">
+                <div class="breakdown-card__header">
+                    <div class="breakdown-icon breakdown-icon--blue"><i class="fa-solid fa-box"></i></div>
+                    <div>
+                        <p class="breakdown-label">One-Time Items</p>
+                        <p class="breakdown-value">$523,250</p>
+                    </div>
+                </div>
+                <div class="breakdown-rows">
+                    <div class="breakdown-row"><span>Software Licenses</span><span
+                            class="breakdown-row__val">$361,250</span></div>
+                    <div class="breakdown-row"><span>Analytics Module</span><span
+                            class="breakdown-row__val">$162,000</span></div>
+                </div>
+            </div>
+            <div class="breakdown-card">
+                <div class="breakdown-card__header">
+                    <div class="breakdown-icon breakdown-icon--green"><i class="fa-solid fa-repeat"></i></div>
+                    <div>
+                        <p class="breakdown-label">Monthly Recurring</p>
+                        <p class="breakdown-value">$102,000</p>
+                    </div>
+                </div>
+                <div class="breakdown-rows">
+                    <div class="breakdown-row"><span>Premium Support</span><span
+                            class="breakdown-row__val">$102,000</span></div>
+                    <div class="breakdown-row breakdown-row--muted"><span>$8,500/month × 12 months</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Client Information -->
+        <h3 class="section-title-lg">Client Information</h3>
+        <div class="detail-card">
+            <div class="client-grid">
+                <div>
+                    <p class="detail-label">Bill To</p>
+                    <p class="client-name">Global Solutions Inc.</p>
+                    <p class="detail-text">David Martinez, Chief Technology Officer</p>
+                    <p class="detail-text">1234 Technology Drive</p>
+                    <p class="detail-text">San Francisco, CA 94105</p>
+                    <p class="detail-text" style="margin-top:0.5rem">david.m&#64;globalsolutions.com</p>
+                    <p class="detail-text">+1 (555) 123-4567</p>
+                </div>
+                <div>
+                    <p class="detail-label">Prepared By</p>
+                    <div class="preparer">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
+                            alt="Owner" class="preparer-avatar">
+                        <div>
+                            <p class="client-name">Sarah Johnson</p>
+                            <p class="detail-text">Senior Account Executive</p>
+                        </div>
+                    </div>
+                    <p class="detail-text">sarah.johnson&#64;croo.com</p>
+                    <p class="detail-text">+1 (555) 987-6543</p>
+                    <div class="related-opp">
+                        <p class="detail-text" style="margin-bottom:0.25rem">Related Opportunity</p>
+                        <a href="#" class="link-accent">OPP-8429: Enterprise Platform Expansion</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        }
+
+        <!-- ═══ Hourly Tab ═══ -->
+        @if (activeTab==='hourly') {
+        <div class="tab-header">
+            <div>
+                <h3 class="section-title-lg" style="margin-bottom:0.5rem">Hourly Services & Consulting</h3>
+                <p class="section-subtitle">Time-based professional services with hourly rates</p>
+            </div>
+            <button class="btn btn--accent"><i class="fa-solid fa-plus"></i> Add Service</button>
+        </div>
+
+        <div class="table-card">
+            <div class="table-scroll">
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>Service Description</th>
+                            <th>Resource Type</th>
+                            <th>Hours</th>
+                            <th>Hourly Rate</th>
+                            <th>Cost</th>
+                            <th>Margin</th>
+                            <th>Total</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <p class="prod-name">Senior Solution Architect</p>
+                                <p class="prod-desc">Custom integration design and technical leadership</p>
+                            </td>
+                            <td><span class="cat-badge cat-badge--purple">ARCHITECT</span></td>
+                            <td class="text-medium">80</td>
+                            <td>$450</td>
+                            <td class="text-muted">$260</td>
+                            <td class="text-green">42%</td>
+                            <td class="text-medium">$36,000</td>
+                            <td><button class="row-action-always"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p class="prod-name">Technical Consultant</p>
+                                <p class="prod-desc">API development and system integration</p>
+                            </td>
+                            <td><span class="cat-badge cat-badge--blue">CONSULTANT</span></td>
+                            <td class="text-medium">160</td>
+                            <td>$350</td>
+                            <td class="text-muted">$200</td>
+                            <td class="text-green">43%</td>
+                            <td class="text-medium">$56,000</td>
+                            <td><button class="row-action-always"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p class="prod-name">Implementation Specialist</p>
+                                <p class="prod-desc">Configuration, testing, and deployment support</p>
+                            </td>
+                            <td><span class="cat-badge cat-badge--green">SPECIALIST</span></td>
+                            <td class="text-medium">80</td>
+                            <td>$250</td>
+                            <td class="text-muted">$145</td>
+                            <td class="text-green">42%</td>
+                            <td class="text-medium">$20,000</td>
+                            <td><button class="row-action-always"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p class="prod-name">Data Migration Expert</p>
+                                <p class="prod-desc">Legacy system data extraction and validation</p>
+                            </td>
+                            <td><span class="cat-badge cat-badge--yellow">DATA EXPERT</span></td>
+                            <td class="text-medium">65</td>
+                            <td>$350</td>
+                            <td class="text-muted">$205</td>
+                            <td class="text-green">41%</td>
+                            <td class="text-medium">$22,750</td>
+                            <td><button class="row-action-always"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="quote-summary-card">
+            <div class="quote-summary">
+                <div class="summary-row"><span>Total Hours</span><span class="text-medium">385 hours</span></div>
+                <div class="summary-row"><span>Total Cost</span><span class="text-muted">$77,950</span></div>
+                <div class="summary-row"><span>Average Margin</span><span class="text-green">42%</span></div>
+                <div class="summary-row summary-row--total"><span>Subtotal Hourly Services</span><span
+                        class="summary-total">$134,750</span></div>
+            </div>
+        </div>
+
+        <div class="info-banner info-banner--blue">
+            <i class="fa-solid fa-lightbulb info-banner__icon"></i>
+            <div>
+                <p class="info-banner__title">Resource Allocation Insights</p>
+                <p class="info-banner__text">The proposed resource allocation balances senior expertise with cost
+                    efficiency. Consider adjusting the consultant hours if timeline needs to be compressed. Current
+                    timeline: 10 weeks with parallel workstreams.</p>
+            </div>
+        </div>
+        }
+
+        <!-- ═══ One-Time Tab ═══ -->
+        @if (activeTab==='onetime') {
+        <div class="tab-header">
+            <div>
+                <h3 class="section-title-lg" style="margin-bottom:0.5rem">One-Time Items & Equipment</h3>
+                <p class="section-subtitle">Software licenses, hardware, and one-time purchases</p>
+            </div>
+            <button class="btn btn--accent"><i class="fa-solid fa-plus"></i> Add Item</button>
+        </div>
+
+        <div class="table-card">
+            <div class="table-scroll">
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>Item Description</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Discount</th>
+                            <th>Cost</th>
+                            <th>Margin</th>
+                            <th>Total</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <p class="prod-name">Enterprise Platform License</p>
+                                <p class="prod-desc">500 user perpetual licenses with premium features</p>
+                            </td>
+                            <td><span class="cat-badge cat-badge--blue">SOFTWARE</span></td>
+                            <td class="text-medium">500</td>
+                            <td>$850</td>
+                            <td class="text-green">15%</td>
+                            <td class="text-muted">$210,000</td>
+                            <td class="text-green">42%</td>
+                            <td class="text-medium">$361,250</td>
+                            <td><button class="row-action-always"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p class="prod-name">Advanced Analytics Module</p>
+                                <p class="prod-desc">AI-powered insights, predictive analytics, custom dashboards
+                                </p>
+                            </td>
+                            <td><span class="cat-badge cat-badge--purple">ADD-ON</span></td>
+                            <td class="text-medium">1</td>
+                            <td>$180,000</td>
+                            <td class="text-green">10%</td>
+                            <td class="text-muted">$94,000</td>
+                            <td class="text-green">42%</td>
+                            <td class="text-medium">$162,000</td>
+                            <td><button class="row-action-always"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="quote-summary-card">
+            <div class="quote-summary">
+                <div class="summary-row"><span>Subtotal Before Discount</span><span class="text-medium">$605,000</span>
+                </div>
+                <div class="summary-row"><span>Volume Discount</span><span class="text-green">-$81,750
+                        (13.5%)</span></div>
+                <div class="summary-row"><span>Total Cost</span><span class="text-muted">$304,000</span></div>
+                <div class="summary-row"><span>Average Margin</span><span class="text-green">42%</span></div>
+                <div class="summary-row summary-row--total"><span>Subtotal One-Time Items</span><span
+                        class="summary-total">$523,250</span></div>
+            </div>
+        </div>
+
+        <div class="info-banner info-banner--green">
+            <i class="fa-solid fa-tag info-banner__icon"></i>
+            <div>
+                <p class="info-banner__title">Volume Discount Applied</p>
+                <p class="info-banner__text">Enterprise volume discount of 13.5% applied for 500+ user licenses.
+                    This represents significant value while maintaining healthy margins. Consider highlighting this
+                    savings in client presentation.</p>
+            </div>
+        </div>
+        }
+
+        <!-- ═══ Recurring Tab ═══ -->
+        @if (activeTab==='recurring') {
+        <div class="tab-header">
+            <div>
+                <h3 class="section-title-lg" style="margin-bottom:0.5rem">Recurring Monthly Services</h3>
+                <p class="section-subtitle">Subscription-based services with monthly billing</p>
+            </div>
+            <button class="btn btn--accent"><i class="fa-solid fa-plus"></i> Add Service</button>
+        </div>
+
+        <div class="table-card">
+            <div class="table-scroll">
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>Service Description</th>
+                            <th>Billing Type</th>
+                            <th>Monthly Rate</th>
+                            <th>Term (Months)</th>
+                            <th>Cost/Month</th>
+                            <th>Margin</th>
+                            <th>Total Value</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <p class="prod-name">Premium Support Package</p>
+                                <p class="prod-desc">24/7 support, dedicated account manager, priority SLA</p>
+                            </td>
+                            <td><span class="cat-badge cat-badge--green">SUBSCRIPTION</span></td>
+                            <td class="text-medium">$8,500</td>
+                            <td>12</td>
+                            <td class="text-muted">$4,930</td>
+                            <td class="text-green">42%</td>
+                            <td class="text-medium">$102,000</td>
+                            <td><button class="row-action-always"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recurring-details">
+            <div class="detail-card">
+                <h4 class="detail-card__title">Monthly Recurring Revenue</h4>
+                <div class="info-rows">
+                    <div class="info-row"><span>Monthly Rate</span><span class="info-row__val-lg">$8,500</span>
+                    </div>
+                    <div class="info-row"><span>Annual Contract Value</span><span
+                            class="info-row__val-lg">$102,000</span></div>
+                    <div class="info-row info-row--border"><span>Monthly Margin</span><span class="text-green">$3,570
+                            (42%)</span></div>
+                </div>
+            </div>
+            <div class="detail-card">
+                <h4 class="detail-card__title">Service Level Agreement</h4>
+                <ul class="check-list">
+                    <li><i class="fa-solid fa-check"></i> 24/7 technical support access</li>
+                    <li><i class="fa-solid fa-check"></i> 1-hour response time for critical issues</li>
+                    <li><i class="fa-solid fa-check"></i> Dedicated account manager</li>
+                    <li><i class="fa-solid fa-check"></i> Quarterly business reviews</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="quote-summary-card">
+            <div class="quote-summary">
+                <div class="summary-row"><span>Monthly Recurring Revenue</span><span class="text-medium">$8,500</span>
+                </div>
+                <div class="summary-row"><span>Contract Term</span><span class="text-medium">12 months</span></div>
+                <div class="summary-row"><span>Total Monthly Cost</span><span class="text-muted">$4,930</span></div>
+                <div class="summary-row"><span>Average Margin</span><span class="text-green">42%</span></div>
+                <div class="summary-row summary-row--total"><span>Total Recurring Value</span><span
+                        class="summary-total">$102,000</span></div>
+            </div>
+        </div>
+        }
+
+        <!-- ═══ Financial Summary Tab ═══ -->
+        @if (activeTab==='summary') {
+        <h3 class="section-title-lg">Financial Summary</h3>
+
+        <div class="detail-card">
+            <h4 class="detail-card__title-lg">Revenue Breakdown</h4>
+            <div class="revenue-list">
+                <div class="revenue-row">
+                    <div class="revenue-left">
+                        <div class="breakdown-icon breakdown-icon--purple"><i class="fa-solid fa-clock"></i></div>
+                        <div>
+                            <p class="revenue-name">Hourly Services</p>
+                            <p class="revenue-sub">Professional consulting (385 hours)</p>
+                        </div>
+                    </div>
+                    <p class="revenue-amount">$134,750</p>
+                </div>
+                <div class="revenue-row">
+                    <div class="revenue-left">
+                        <div class="breakdown-icon breakdown-icon--blue"><i class="fa-solid fa-box"></i></div>
+                        <div>
+                            <p class="revenue-name">One-Time Items</p>
+                            <p class="revenue-sub">Software licenses & equipment</p>
+                        </div>
+                    </div>
+                    <p class="revenue-amount">$523,250</p>
+                </div>
+                <div class="revenue-row">
+                    <div class="revenue-left">
+                        <div class="breakdown-icon breakdown-icon--green"><i class="fa-solid fa-repeat"></i></div>
+                        <div>
+                            <p class="revenue-name">Recurring Services</p>
+                            <p class="revenue-sub">12-month premium support ($8,500/mo)</p>
+                        </div>
+                    </div>
+                    <p class="revenue-amount">$102,000</p>
+                </div>
+                <div class="revenue-subtotal">
+                    <span>Subtotal</span><span class="revenue-amount-lg">$760,000</span>
+                </div>
+                <div class="revenue-row revenue-row--no-border">
+                    <span class="text-muted">Tax (8%)</span><span class="text-medium">$60,800</span>
+                </div>
+                <div class="revenue-total">
+                    <span>Total Investment</span><span class="revenue-total-val">$820,800</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-pair">
+            <div class="detail-card">
+                <h4 class="detail-card__title">Cost Analysis</h4>
+                <div class="info-rows">
+                    <div class="info-row"><span>Total Cost of Goods</span><span class="text-medium">$386,880</span>
+                    </div>
+                    <div class="info-row"><span>Gross Profit</span><span class="text-green">$373,120</span></div>
+                    <div class="info-row info-row--border"><span>Gross Margin</span><span
+                            class="text-green text-lg">49%</span></div>
+                </div>
+            </div>
+            <div class="detail-card">
+                <h4 class="detail-card__title">Payment Terms</h4>
+                <div class="info-rows">
+                    <div class="info-row"><span>Deposit (50%)</span><span class="text-medium">$410,400</span></div>
+                    <div class="info-row"><span>Upon Completion (50%)</span><span class="text-medium">$410,400</span>
+                    </div>
+                    <div class="info-row info-row--border"><span>Monthly Recurring</span><span
+                            style="color:var(--color-accent);font-weight:500">$8,500/mo</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-banner info-banner--green-gradient">
+            <i class="fa-solid fa-chart-pie info-banner__icon"></i>
+            <div class="info-banner__body">
+                <p class="info-banner__title">Healthy Margin Profile</p>
+                <p class="info-banner__text">This quote achieves a strong 49% gross margin while remaining
+                    competitive. The revenue mix provides both immediate cash flow (one-time items) and predictable
+                    recurring revenue.</p>
+                <div class="margin-stats">
+                    <div>
+                        <p class="margin-stats__label">Immediate Revenue</p>
+                        <p class="margin-stats__val">$658,000</p>
+                    </div>
+                    <div>
+                        <p class="margin-stats__label">Recurring (Annual)</p>
+                        <p class="margin-stats__val">$102,000</p>
+                    </div>
+                    <div>
+                        <p class="margin-stats__label">Total Value</p>
+                        <p class="margin-stats__val">$820,800</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        }
+
+        <!-- ═══ Terms Tab ═══ -->
+        @if (activeTab==='terms') {
+        <h3 class="section-title-lg">Terms & Conditions</h3>
+
+        <div class="detail-card">
+            <div class="terms-list">
+                <div class="terms-item">
+                    <h4 class="terms-heading">1. Payment Terms</h4>
+                    <p class="detail-text">Payment shall be made in two installments: 50% deposit ($410,400) due
+                        upon contract execution, and remaining 50% ($410,400) due upon successful project completion
+                        and client acceptance. Monthly recurring services ($8,500/month) will be billed on the first
+                        day of each month beginning 30 days after go-live date.</p>
+                </div>
+                <div class="terms-item">
+                    <h4 class="terms-heading">2. Scope of Work</h4>
+                    <p class="detail-text" style="margin-bottom:0.75rem">This quote covers the following
+                        deliverables:</p>
+                    <ul class="check-list">
+                        <li><i class="fa-solid fa-check"></i> Professional services totaling 385 hours for system
+                            integration, custom development, and data migration</li>
+                        <li><i class="fa-solid fa-check"></i> Enterprise platform licenses for 500 users with
+                            advanced analytics module</li>
+                        <li><i class="fa-solid fa-check"></i> 12-month premium support subscription with 24/7 access
+                            and dedicated account management</li>
+                    </ul>
+                </div>
+                <div class="terms-item">
+                    <h4 class="terms-heading">3. Project Timeline</h4>
+                    <p class="detail-text">Implementation will commence within 10 business days of deposit receipt.
+                        Estimated project duration is 10 weeks, subject to timely client feedback and resource
+                        availability.</p>
+                </div>
+                <div class="terms-item">
+                    <h4 class="terms-heading">4. Change Orders</h4>
+                    <p class="detail-text">Any changes to the scope of work must be documented in writing and
+                        approved by both parties. Additional work beyond the original scope will be billed at
+                        standard hourly rates: Senior Architect $450/hr, Technical Consultant $350/hr,
+                        Implementation Specialist $250/hr.</p>
+                </div>
+                <div class="terms-item">
+                    <h4 class="terms-heading">5. Support Services</h4>
+                    <p class="detail-text">Premium support subscription includes 24/7 technical support with 1-hour
+                        response time for critical issues, 4-hour response for non-critical issues, dedicated
+                        account manager, and quarterly business reviews.</p>
+                </div>
+                <div class="terms-item">
+                    <h4 class="terms-heading">6. Warranty</h4>
+                    <p class="detail-text">Vendor warrants that all services will be performed in a professional and
+                        workmanlike manner consistent with industry standards. Custom development includes 90-day
+                        warranty for defects from date of acceptance.</p>
+                </div>
+                <div class="terms-item">
+                    <h4 class="terms-heading">7. Confidentiality</h4>
+                    <p class="detail-text">Both parties agree to maintain confidentiality of all proprietary
+                        information exchanged during the course of this engagement. This obligation survives
+                        termination of the agreement for a period of 3 years.</p>
+                </div>
+                <div class="terms-item">
+                    <h4 class="terms-heading">8. Termination</h4>
+                    <p class="detail-text">Either party may terminate this agreement with 30 days written notice. In
+                        the event of termination, client shall pay for all work completed through the termination
+                        date.</p>
+                </div>
+                <div class="terms-item">
+                    <h4 class="terms-heading">9. Acceptance</h4>
+                    <p class="detail-text">Client acceptance constitutes agreement to all terms and conditions
+                        outlined in this quote. Acceptance may be indicated by signing below, issuing a purchase
+                        order referencing this quote number, or making the initial deposit payment.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-card">
+            <h4 class="detail-card__title-lg">Acceptance Signatures</h4>
+            <div class="signatures-grid">
+                <div>
+                    <p class="detail-label">Client Acceptance</p>
+                    <div class="signature-line"></div>
+                    <p class="detail-text">David Martinez, CTO</p>
+                    <p class="detail-text">Global Solutions Inc.</p>
+                    <p class="signature-date">Date: _______________</p>
+                </div>
+                <div>
+                    <p class="detail-label">Croo Digital Experience Representative</p>
+                    <div class="signature-line"></div>
+                    <p class="detail-text">Sarah Johnson</p>
+                    <p class="detail-text">Senior Account Executive</p>
+                    <p class="signature-date">Date: November 20, 2024</p>
+                </div>
+            </div>
+        </div>
+        }
+
+    </div>
+
+    <!-- ── Right Sidebar ─────────────────────────────────────── -->
+    <aside class="profile-sidebar">
+        <div class="sidebar-sticky">
+            <h3 class="sidebar-title">Quick Actions</h3>
+            <div class="sidebar-actions">
+                <button class="btn btn--accent btn--full"><i class="fa-solid fa-paper-plane"></i> Send to
+                    Client</button>
+                <button class="btn btn--outline btn--full"><i class="fa-solid fa-download"></i> Export PDF</button>
+                <button class="btn btn--outline btn--full"><i class="fa-solid fa-copy"></i> Duplicate</button>
+            </div>
+
+            <h3 class="sidebar-title">Key Metrics</h3>
+            <div class="sidebar-metrics">
+                <div>
+                    <p class="sidebar-metric-label">Total Value</p>
+                    <p class="sidebar-metric-val">$820,800</p>
+                </div>
+                <div>
+                    <p class="sidebar-metric-label">Gross Margin</p>
+                    <div class="metric-bar-row">
+                        <div class="metric-bar">
+                            <div class="metric-bar__fill" style="width:49%"></div>
+                        </div>
+                        <span class="metric-val-green">49%</span>
+                    </div>
+                </div>
+                <div>
+                    <p class="sidebar-metric-label">Monthly Recurring</p>
+                    <p class="sidebar-metric-val-sm">$8,500</p>
+                </div>
+                <div>
+                    <p class="sidebar-metric-label">Status</p><span class="stage-badge stage-badge--blue">DRAFT</span>
+                </div>
+            </div>
+
+            <div class="sidebar-card">
+                <h3 class="sidebar-card__title">Related Opportunity</h3>
+                <a href="#" class="link-accent">OPP-8429: Enterprise Platform Expansion</a>
+                <p class="sidebar-card__meta">75% probability • Closes Dec 15</p>
+            </div>
+
+            <div class="sidebar-card">
+                <h3 class="sidebar-card__title">Activity Log</h3>
+                <div class="activity-log">
+                    <div class="log-entry">
+                        <p class="log-time">2 hours ago</p>
+                        <p class="log-text">Quote created by Sarah Johnson</p>
+                    </div>
+                    <div class="log-entry">
+                        <p class="log-time">1 day ago</p>
+                        <p class="log-text">Pricing approved by Sales Manager</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+</div>
