@@ -92,11 +92,9 @@
                 <td class="hide-mobile">
                     @if (org.ai_enriched === 'Y') {
                     <span class="ai-badge ai-badge--done"><i class="fa-solid fa-check"></i> Enriched</span>
-                    } @else if (enrichingOrgId === org.id) {
-                    <span class="ai-badge ai-badge--loading"><i class="fa-solid fa-spinner fa-spin"></i>
-                        Enriching...</span>
                     } @else {
-                    <span class="ai-badge ai-badge--pending">Pending</span>
+                    <span class="ai-badge ai-badge--pending"><i class="fa-solid fa-spinner fa-spin"></i>
+                        Processing</span>
                     }
                 </td>
             </tr>

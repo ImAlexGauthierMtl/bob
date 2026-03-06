@@ -1,11 +1,10 @@
 import { Component, OnInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
     OrganizationService,
     Organization,
     PlaceResult,
-    EnrichmentResult,
     CreateOrganizationRequest,
 } from '../../shared/services/organization.service';
 
@@ -28,21 +27,22 @@ export class OrganizationsComponent implements OnInit {
     searchResults: PlaceResult[] = [];
     hasSearched = false;
 
-    // Manual entry (when no results)
+    // Manual entry
     showManualForm = false;
     manualName = '';
     manualIndustry = '';
     manualPhone = '';
     manualWebsite = '';
-    manualAddress = '';
 
-    // Creation + enrichment
+    // Creation
     isCreating = false;
-    enrichingOrgId: string | null = null;
     statusMessage = '';
     statusType: 'info' | 'success' | 'error' = 'info';
 
-    constructor(private orgService: OrganizationService) { }
+    constructor(
+        private orgService: OrganizationService,
+        private router: Router,
+    ) { }
 
     ngOnInit(): void {
         this.loadOrganizations();
@@ -85,10 +85,9 @@ export class OrganizationsComponent implements OnInit {
         this.manualIndustry = '';
         this.manualPhone = '';
         this.manualWebsite = '';
-        this.manualAddress = '';
     }
 
-    // ── Step 1: Search ──────────────────────
+    // ── Step 1: Search Maps ─────────────────
 
     searchMaps(): void {
         if (!this.searchQuery.trim()) return;
@@ -113,20 +112,17 @@ export class OrganizationsComponent implements OnInit {
                 this.hasSearched = true;
                 this.showManualForm = true;
                 this.manualName = this.searchQuery.trim();
-                this.statusMessage = '⚠️ Search service unavailable. Enter details manually.';
+                this.statusMessage = '⚠️ Search unavailable. Enter details manually.';
                 this.statusType = 'error';
             },
         });
     }
 
-    // ── Step 2: Select result ───────────────
+    // ── Step 2: Select → Create → Redirect ──
 
     selectPlace(place: PlaceResult): void {
         this.isCreating = true;
-        this.statusMessage = `Creating ${place.title}...`;
-        this.statusType = 'info';
 
-        // Parse address from Maps format "269 Rue Racine E, Chicoutimi, QC G7H 1S5, Canada"
         const addressParts = place.address.split(', ');
         const createData: CreateOrganizationRequest = {
             name: place.title,
@@ -138,9 +134,7 @@ export class OrganizationsComponent implements OnInit {
             status: 'PROSPECT',
         };
 
-        // Parse state/postal and country from remaining parts
         if (addressParts.length >= 4) {
-            // "QC G7H 1S5" → state + postal
             const statePostal = addressParts[2] || '';
             const spaceIdx = statePostal.indexOf(' ');
             if (spaceIdx > 0) {
@@ -154,18 +148,14 @@ export class OrganizationsComponent implements OnInit {
             createData.address_country = addressParts[2];
         }
 
-        this.createAndEnrich(createData);
+        this.createAndRedirect(createData);
     }
-
-    // ── Manual entry ────────────────────────
 
     submitManual(): void {
         if (!this.manualName.trim()) return;
         this.isCreating = true;
-        this.statusMessage = `Creating ${this.manualName}...`;
-        this.statusType = 'info';
 
-        this.createAndEnrich({
+        this.createAndRedirect({
             name: this.manualName.trim(),
             industry: this.manualIndustry || undefined,
             phone: this.manualPhone || undefined,
@@ -174,34 +164,17 @@ export class OrganizationsComponent implements OnInit {
         });
     }
 
-    // ── Create + Enrich ─────────────────────
+    // ── Create → fire enrich in background → redirect ──
 
-    private createAndEnrich(data: CreateOrganizationRequest): void {
+    private createAndRedirect(data: CreateOrganizationRequest): void {
         this.orgService.create(data).subscribe({
             next: (org) => {
-                this.statusMessage = `✅ ${org.name} created! AI enrichment starting...`;
-                this.statusType = 'success';
-                this.enrichingOrgId = org.id;
-                this.loadOrganizations();
+                // Fire enrichment in background (non-blocking, returns immediately)
+                this.orgService.enrich(org.id).subscribe();
 
-                // Auto-enrich in background
-                this.orgService.enrich(org.id).subscribe({
-                    next: (result: EnrichmentResult) => {
-                        this.enrichingOrgId = null;
-                        if (result.status === 'done') {
-                            this.statusMessage = `🎉 ${org.name} enriched! ${result.fields_updated} fields filled by AI.`;
-                        } else {
-                            this.statusMessage = `⚠️ Partial enrichment: ${result.error || 'unknown'}`;
-                            this.statusType = 'error';
-                        }
-                        this.loadOrganizations();
-                    },
-                    error: () => {
-                        this.enrichingOrgId = null;
-                        this.statusMessage = `⚠️ Enrichment failed. You can retry later.`;
-                        this.statusType = 'error';
-                    },
-                });
+                // Close dialog and redirect to org page immediately
+                this.showAddDialog = false;
+                this.router.navigate(['/organizations', org.id]);
             },
             error: () => {
                 this.isCreating = false;

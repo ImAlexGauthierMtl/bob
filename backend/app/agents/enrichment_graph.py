@@ -1,51 +1,40 @@
-"""LangGraph enrichment pipeline — orchestrates the full enrichment flow.
+"""LangGraph enrichment pipeline — scrape website + Groq extraction.
 
-UNRULED PATTERN — No HDQ template for LangGraph graph definitions.
+Maps search already provides name, address, phone, website, industry.
+This pipeline adds: description, employee count, revenue, LinkedIn, etc.
+by scraping the org's website and extracting with Groq.
 
-Pipeline: search → scrape → extract
+NO additional Serper queries — Maps is the only Serper call.
 """
 
 from langgraph.graph import StateGraph, END
 import structlog
 
 from app.agents.state import EnrichmentState
-from app.agents.nodes.search_node import search_node
 from app.agents.nodes.scraper_node import scraper_node
 from app.agents.nodes.extraction_node import extraction_node
 
 logger = structlog.get_logger(__name__)
 
 
-def should_continue(state: EnrichmentState) -> str:
-    """Decide whether to continue or stop based on state."""
-    if state.get("error"):
-        return "end"
-    return "continue"
-
-
 def build_enrichment_graph() -> StateGraph:
-    """Build and compile the enrichment pipeline graph.
+    """Build and compile the enrichment pipeline.
 
-    Flow:
-        search → scrape → extract → END
+    Flow: scrape → extract → END
+    (search step removed — Maps search already done at creation)
     """
     graph = StateGraph(EnrichmentState)
 
-    # Add nodes
-    graph.add_node("search", search_node)
     graph.add_node("scrape", scraper_node)
     graph.add_node("extract", extraction_node)
 
-    # Define edges
-    graph.set_entry_point("search")
-    graph.add_edge("search", "scrape")
+    graph.set_entry_point("scrape")
     graph.add_edge("scrape", "extract")
     graph.add_edge("extract", END)
 
     return graph.compile()
 
 
-# Compiled graph — ready to invoke
 enrichment_pipeline = build_enrichment_graph()
 
 
@@ -54,28 +43,27 @@ async def run_enrichment(
     organization_name: str,
     tenant_id: str,
     user_email: str,
+    website_url: str | None = None,
 ) -> dict:
     """Run the enrichment pipeline for an organization.
 
-    Args:
-        organization_id: UUID of the organization to enrich
-        organization_name: Name to search for
-        tenant_id: Tenant ID for persistence
-        user_email: Email of the user who triggered enrichment
-
-    Returns:
-        dict with extracted organization fields
+    Uses the website URL from Maps data to scrape and extract info.
     """
+    # Build URLs to scrape from the website
+    urls_to_scrape = []
+    if website_url:
+        urls_to_scrape.append(website_url)
+
     initial_state: EnrichmentState = {
         "organization_id": organization_id,
         "organization_name": organization_name,
         "tenant_id": tenant_id,
         "user_email": user_email,
         "search_results": [],
-        "urls_to_scrape": [],
+        "urls_to_scrape": urls_to_scrape,
         "scraped_data": [],
         "extracted": {},
-        "status": "searching",
+        "status": "scraping",
         "error": None,
     }
 
@@ -83,6 +71,7 @@ async def run_enrichment(
         "enrichment_pipeline_start",
         organization=organization_name,
         org_id=organization_id,
+        website=website_url,
     )
 
     result = await enrichment_pipeline.ainvoke(initial_state)

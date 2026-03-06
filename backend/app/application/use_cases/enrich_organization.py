@@ -1,6 +1,7 @@
-"""Enrich organization use case.
+"""Enrich organization use case — runs in background.
 
-Based on `use-case` template (RULED).
+Maps already provides: name, address, phone, website, industry.
+This use case scrapes the website + extracts deeper info with Groq.
 """
 
 from sqlalchemy.orm import Session
@@ -21,20 +22,23 @@ class EnrichOrganizationUseCase:
     async def execute(self, org_id: str, tenant_id: str, user_email: str) -> dict:
         """Enrich an organization with AI-gathered data.
 
-        Returns:
-            dict with status, fields_updated, and extracted fields
+        Scrapes the org's website and uses Groq to extract:
+        description, employee_count, annual_revenue, linkedin_url, etc.
         """
-        # Get the organization
         org = self.repo.get_by_id(org_id, tenant_id)
         if not org:
+            logger.error("enrichment_org_not_found", org_id=org_id)
             return {"status": "error", "error": "Organization not found", "fields_updated": 0, "fields": {}}
 
-        # Run the enrichment pipeline
+        # Use the website from Maps data for scraping
+        website_url = org.website
+
         result = await run_enrichment(
             organization_id=org_id,
             organization_name=org.name,
             tenant_id=tenant_id,
             user_email=user_email,
+            website_url=website_url,
         )
 
         if result.get("status") == "error":
@@ -45,11 +49,10 @@ class EnrichOrganizationUseCase:
                 "fields": {},
             }
 
-        # Apply extracted fields to the organization
+        # Apply extracted fields — only fill empty fields
         extracted = result.get("extracted", {})
         updated_count = 0
 
-        # Only update fields that are currently empty
         allowed_fields = [
             "industry", "website", "phone", "email",
             "address_street", "address_city", "address_state",
@@ -61,11 +64,10 @@ class EnrichOrganizationUseCase:
         for field in allowed_fields:
             if field in extracted and extracted[field]:
                 current_value = getattr(org, field, None)
-                if not current_value:  # Only fill empty fields
+                if not current_value:
                     setattr(org, field, extracted[field])
                     updated_count += 1
 
-        # Mark as AI-enriched
         org.ai_enriched = "Y"
         org.updated_by = f"ai-agent ({user_email})"
 
