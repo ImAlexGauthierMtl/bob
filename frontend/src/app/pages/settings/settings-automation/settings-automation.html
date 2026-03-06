@@ -119,6 +119,9 @@
                     <input type="text" [(ngModel)]="searchQuery" placeholder="Search workflows..."
                         class="search-bar__input" />
                 </div>
+                <button class="btn btn-purple" (click)="createNewWorkflow()" style="white-space:nowrap">
+                    <i class="fa-solid fa-plus"></i> New Workflow
+                </button>
             </div>
         </div>
 
@@ -162,6 +165,9 @@
                 </div>
                 <div class="auto-card__actions">
                     @if (wf.level !== 'system') {
+                    <button class="auto-card__edit-btn" title="Edit" (click)="openBuilder(wf)">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
                     <button class="auto-card__edit-btn" title="Run" (click)="runWorkflow(wf)"
                         [disabled]="runningWorkflowId === wf.id">
                         @if (runningWorkflowId === wf.id) {
@@ -172,6 +178,10 @@
                     </button>
                     <button class="auto-card__edit-btn" title="Delete" (click)="deleteWorkflow(wf)">
                         <i class="fa-solid fa-trash"></i>
+                    </button>
+                    } @else {
+                    <button class="auto-card__edit-btn" title="View" (click)="openBuilder(wf)">
+                        <i class="fa-solid fa-eye"></i>
                     </button>
                     }
                     <label class="toggle">

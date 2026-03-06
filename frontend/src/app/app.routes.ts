@@ -140,6 +140,13 @@ export const routes: Routes = [
                             ),
                     },
                     {
+                        path: 'automation/builder/:id',
+                        loadComponent: () =>
+                            import('./pages/settings/workflow-builder/workflow-builder').then(
+                                (m) => m.WorkflowBuilderComponent
+                            ),
+                    },
+                    {
                         path: '',
                         redirectTo: 'profile',
                         pathMatch: 'full',

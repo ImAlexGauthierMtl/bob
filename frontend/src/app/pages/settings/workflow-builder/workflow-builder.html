@@ -1,0 +1,308 @@
+<div class="builder">
+
+    <!-- ═══════ Header ═══════ -->
+    <div class="builder__header">
+        <div class="builder__header-left">
+            <a routerLink="../automation" class="builder__back">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            @if (workflow) {
+            <div class="builder__title-group">
+                <input type="text" [(ngModel)]="workflow.name" class="builder__title-input"
+                    [disabled]="isSystemWorkflow()" placeholder="Workflow name..." />
+                <div class="builder__meta">
+                    <span class="builder__badge builder__badge--{{ workflow.level }}">
+                        {{ workflow.level | uppercase }}
+                    </span>
+                    <span class="builder__badge builder__badge--mode">
+                        <i
+                            [class]="workflow.execution_mode === 'auto' ? 'fa-solid fa-robot' : workflow.execution_mode === 'approval' ? 'fa-solid fa-user-shield' : 'fa-solid fa-lightbulb'"></i>
+                        {{ workflow.execution_mode }}
+                    </span>
+                    <span class="builder__step-count">
+                        <i class="fa-solid fa-layer-group"></i> {{ workflow.steps.length }} steps
+                    </span>
+                </div>
+            </div>
+            } @else if (isNewWorkflow) {
+            <h2 class="builder__title">New Workflow</h2>
+            }
+        </div>
+        <div class="builder__header-right">
+            @if (workflow) {
+            @if (hasChanges) {
+            <button class="btn btn--save" (click)="saveStepOrder()" [disabled]="isSaving">
+                <i class="fa-solid fa-arrows-up-down"></i> Save Order
+            </button>
+            }
+            <button class="btn btn--outline" (click)="saveWorkflowSettings()"
+                [disabled]="isSaving || isSystemWorkflow()">
+                <i class="fa-solid fa-floppy-disk"></i> Save
+            </button>
+            <button class="btn btn--primary" (click)="testRun()" [disabled]="testRunning">
+                @if (testRunning) {
+                <i class="fa-solid fa-spinner fa-spin"></i> Running...
+                } @else {
+                <i class="fa-solid fa-play"></i> Test Run
+                }
+            </button>
+            }
+        </div>
+    </div>
+
+    <!-- ═══════ Loading ═══════ -->
+    @if (isLoading) {
+    <div class="builder__loading">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <p>Loading workflow...</p>
+    </div>
+    }
+
+    <!-- ═══════ New Workflow Form ═══════ -->
+    @if (isNewWorkflow) {
+    <div class="builder__new-form">
+        <div class="form-card">
+            <h3 class="form-card__title"><i class="fa-solid fa-wand-magic-sparkles"></i> Create New Workflow</h3>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input type="text" [(ngModel)]="newWorkflow.name" class="form-input" placeholder="My Workflow" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Level</label>
+                    <select [(ngModel)]="newWorkflow.level" class="form-input">
+                        <option value="user">User</option>
+                        <option value="company">Company</option>
+                        <option value="department">Department</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea [(ngModel)]="newWorkflow.description" class="form-input form-input--textarea"
+                    placeholder="What does this workflow do?"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Trigger Type</label>
+                    <select [(ngModel)]="newWorkflow.trigger_type" class="form-input">
+                        <option value="manual">Manual</option>
+                        <option value="event">Event</option>
+                        <option value="schedule">Schedule</option>
+                        <option value="webhook">Webhook</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Execution Mode</label>
+                    <select [(ngModel)]="newWorkflow.execution_mode" class="form-input">
+                        <option value="suggest">Suggest — Bob recommends</option>
+                        <option value="approval">Approval — Needs human OK</option>
+                        <option value="auto">Auto — Runs immediately</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a routerLink="../automation" class="btn btn--outline">Cancel</a>
+                <button class="btn btn--primary" (click)="createWorkflow()" [disabled]="!newWorkflow.name || isSaving">
+                    @if (isSaving) {
+                    <i class="fa-solid fa-spinner fa-spin"></i> Creating...
+                    } @else {
+                    <i class="fa-solid fa-plus"></i> Create Workflow
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- ═══════ Builder Canvas ═══════ -->
+    @if (workflow && !isLoading) {
+    <div class="builder__body">
+
+        <!-- ── Left: Step Palette ── -->
+        <div class="builder__palette">
+            <h4 class="palette__title">
+                <i class="fa-solid fa-shapes"></i> Step Types
+            </h4>
+            <p class="palette__subtitle">Click to add</p>
+
+            @for (type of stepTypeKeys; track type) {
+            <button class="palette__item" (click)="addStepFromPalette(type)" [disabled]="isSystemWorkflow()"
+                [style.--step-color]="stepTypes[type].color">
+                <div class="palette__icon">
+                    <i [class]="stepTypes[type].icon"></i>
+                </div>
+                <div class="palette__info">
+                    <span class="palette__label">{{ stepTypes[type].label }}</span>
+                    <span class="palette__desc">{{ stepTypes[type].description }}</span>
+                </div>
+            </button>
+            }
+        </div>
+
+        <!-- ── Center: Canvas ── -->
+        <div class="builder__canvas">
+
+            <!-- Test Run Result -->
+            @if (lastExecution) {
+            <div class="test-result" [class.test-result--ok]="lastExecution.status === 'completed'"
+                [class.test-result--fail]="lastExecution.status === 'failed'">
+                <div class="test-result__icon">
+                    @if (lastExecution.status === 'completed') {
+                    <i class="fa-solid fa-circle-check"></i>
+                    } @else {
+                    <i class="fa-solid fa-circle-xmark"></i>
+                    }
+                </div>
+                <div class="test-result__info">
+                    <strong>{{ lastExecution.status | uppercase }}</strong>
+                    — {{ lastExecution.steps_completed }}/{{ lastExecution.steps_total }} steps
+                    @if (lastExecution.duration_ms) {
+                    · {{ lastExecution.duration_ms }}ms
+                    }
+                    @if (lastExecution.error) {
+                    <span class="test-result__error">{{ lastExecution.error }}</span>
+                    }
+                </div>
+                <button class="test-result__close" (click)="lastExecution = null">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            }
+
+            <!-- Steps list with drag & drop -->
+            <div class="canvas__steps" cdkDropList (cdkDropListDropped)="onStepDrop($event)">
+                @for (step of workflow.steps; track step.id; let i = $index; let last = $last) {
+                <div class="canvas__step" cdkDrag [class.canvas__step--selected]="selectedStep?.id === step.id"
+                    [class.canvas__step--entry]="step.is_entry_point" (click)="selectStep(step, i)"
+                    [style.--step-color]="getStepType(step.step_type).color">
+
+                    <!-- Drag handle -->
+                    <div class="canvas__drag-handle" cdkDragHandle>
+                        <i class="fa-solid fa-grip-vertical"></i>
+                    </div>
+
+                    <!-- Step node -->
+                    <div class="canvas__node">
+                        <div class="canvas__node-icon">
+                            <i [class]="getStepType(step.step_type).icon"></i>
+                        </div>
+                        <div class="canvas__node-info">
+                            <div class="canvas__node-name">{{ step.name }}</div>
+                            <div class="canvas__node-type">
+                                {{ getStepType(step.step_type).label }}
+                                @if (step.agent_node) {
+                                · {{ step.agent_node }}
+                                }
+                            </div>
+                        </div>
+                        <div class="canvas__node-badge">{{ i + 1 }}</div>
+                    </div>
+
+                    <!-- Connector line -->
+                    @if (!last) {
+                    <div class="canvas__connector">
+                        <div class="canvas__connector-line"></div>
+                        <i class="fa-solid fa-chevron-down canvas__connector-arrow"></i>
+                    </div>
+                    }
+                </div>
+                }
+
+                @if (workflow.steps.length === 0) {
+                <div class="canvas__empty">
+                    <i class="fa-solid fa-plus-circle"></i>
+                    <p>Add steps from the palette on the left</p>
+                </div>
+                }
+            </div>
+        </div>
+
+        <!-- ── Right: Config Panel ── -->
+        <div class="builder__config" [class.builder__config--open]="selectedStep">
+            @if (selectedStep) {
+            <div class="config__header">
+                <h4 class="config__title">
+                    <i [class]="getStepType(selectedStep.step_type).icon"
+                        [style.color]="getStepType(selectedStep.step_type).color"></i>
+                    Step Configuration
+                </h4>
+                <button class="config__close" (click)="deselectStep()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="config__body">
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-tag"></i> Name</label>
+                    <input type="text" [(ngModel)]="selectedStep.name" class="form-input" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-shapes"></i> Step Type</label>
+                    <select [(ngModel)]="selectedStep.step_type" class="form-input">
+                        @for (type of stepTypeKeys; track type) {
+                        <option [value]="type">{{ stepTypes[type].label }}</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-microchip"></i> Agent Node</label>
+                    <select [(ngModel)]="selectedStep.agent_node" class="form-input">
+                        <option [ngValue]="null">— None —</option>
+                        @for (node of agentNodeKeys; track node) {
+                        <option [value]="node">{{ agentNodes[node] }}</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-align-left"></i> Description</label>
+                    <textarea [(ngModel)]="selectedStep.description" class="form-input form-input--textarea"
+                        rows="2"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-code"></i> Config (JSON)</label>
+                    <textarea class="form-input form-input--textarea form-input--mono" [ngModel]="getConfigJsonString()"
+                        (ngModelChange)="setConfigFromJson($event)" rows="4"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" [(ngModel)]="selectedStep.is_entry_point" />
+                        Entry point
+                    </label>
+                </div>
+            </div>
+
+            <div class="config__footer">
+                <button class="btn btn--danger-outline" (click)="deleteStep(selectedStep)"
+                    [disabled]="isSystemWorkflow()">
+                    <i class="fa-solid fa-trash"></i> Delete
+                </button>
+                <button class="btn btn--primary" (click)="saveStepConfig()" [disabled]="isSaving">
+                    @if (isSaving) {
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    } @else {
+                    <i class="fa-solid fa-check"></i> Apply
+                    }
+                </button>
+            </div>
+            } @else {
+            <div class="config__empty">
+                <i class="fa-solid fa-hand-pointer"></i>
+                <p>Select a step to configure</p>
+            </div>
+            }
+        </div>
+
+    </div>
+    }
+
+</div>

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TitleCasePipe } from '@angular/common';
+import { Router } from '@angular/router';
 import { WorkflowService, Workflow, WorkflowExecution, UserCapabilities } from '../../../shared/services/workflow.service';
 
 @Component({
@@ -25,7 +26,10 @@ export class SettingsAutomationComponent implements OnInit {
     runningWorkflowId: string | null = null;
     lastExecution: WorkflowExecution | null = null;
 
-    constructor(private workflowService: WorkflowService) { }
+    constructor(
+        private workflowService: WorkflowService,
+        private router: Router,
+    ) { }
 
     ngOnInit(): void {
         this.loadWorkflows();
@@ -128,6 +132,14 @@ export class SettingsAutomationComponent implements OnInit {
                 this.workflows = this.workflows.filter(w => w.id !== wf.id);
             },
         });
+    }
+
+    openBuilder(wf: Workflow): void {
+        this.router.navigate(['/settings/automation/builder', wf.id]);
+    }
+
+    createNewWorkflow(): void {
+        this.router.navigate(['/settings/automation/builder', 'new']);
     }
 
     get filteredWorkflows(): Workflow[] {
