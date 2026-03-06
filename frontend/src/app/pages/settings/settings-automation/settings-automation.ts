@@ -1,183 +1,67 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-
-interface WorkflowStep {
-    label: string;
-    type: 'trigger' | 'ai' | 'condition' | 'action';
-}
-
-interface Automation {
-    id: string;
-    name: string;
-    description: string;
-    level: 'user' | 'company' | 'system';
-    status: 'active' | 'paused';
-    icon: string;
-    iconGradient: string;
-    createdDaysAgo: number;
-    triggeredCount: number;
-    successRate: number;
-    steps: WorkflowStep[];
-}
-
-interface AutomationTemplate {
-    name: string;
-    description: string;
-    level: 'User' | 'Company' | 'System';
-    icon: string;
-    gradient: string;
-    borderColor: string;
-    textColor: string;
-    bgColor: string;
-}
+import { TitleCasePipe } from '@angular/common';
+import { WorkflowService, Workflow, WorkflowExecution, UserCapabilities } from '../../../shared/services/workflow.service';
 
 @Component({
     selector: 'croo-settings-automation',
     standalone: true,
-    imports: [FormsModule],
+    imports: [FormsModule, TitleCasePipe],
     templateUrl: './settings-automation.html',
     styleUrls: ['../settings-shared.css'],
 })
-export class SettingsAutomationComponent {
+export class SettingsAutomationComponent implements OnInit {
     showBanner = true;
     searchQuery = '';
-    selectedLevel: 'all' | 'user' | 'company' | 'system' = 'all';
+    selectedLevel: 'all' | 'user' | 'company' | 'department' | 'system' = 'all';
+    isLoading = true;
 
-    automations: Automation[] = [
-        {
-            id: '1',
-            name: 'Smart Email Prioritization',
-            description: 'Automatically categorizes incoming emails and flags urgent messages requiring immediate attention',
-            level: 'user',
-            status: 'active',
-            icon: 'fa-solid fa-envelope',
-            iconGradient: 'auto-card__icon--blue',
-            createdDaysAgo: 14,
-            triggeredCount: 247,
-            successRate: 98.4,
-            steps: [
-                { label: 'Trigger: New Email Received', type: 'trigger' },
-                { label: 'Bob Analysis: Content & Sender Priority', type: 'ai' },
-                { label: 'Action: Apply Label & Send Notification', type: 'action' },
-            ],
-        },
-        {
-            id: '2',
-            name: 'Lead Assignment & Distribution',
-            description: 'Intelligently assigns new leads to sales reps based on territory, expertise, and current workload',
-            level: 'company',
-            status: 'active',
-            icon: 'fa-solid fa-user-plus',
-            iconGradient: 'auto-card__icon--orange',
-            createdDaysAgo: 28,
-            triggeredCount: 1834,
-            successRate: 99.2,
-            steps: [
-                { label: 'Trigger: New Lead Created', type: 'trigger' },
-                { label: 'Bob Routing: Analyze Territory & Skills Match', type: 'ai' },
-                { label: 'Condition: Check Team Capacity', type: 'condition' },
-                { label: 'Action: Assign to Rep & Notify', type: 'action' },
-            ],
-        },
-        {
-            id: '3',
-            name: 'Cross-Platform Data Synchronization',
-            description: 'Maintains data consistency across CRM, ERP, and external platforms in real-time',
-            level: 'system',
-            status: 'active',
-            icon: 'fa-solid fa-sync',
-            iconGradient: 'auto-card__icon--purple',
-            createdDaysAgo: 45,
-            triggeredCount: 8921,
-            successRate: 99.8,
-            steps: [
-                { label: 'Trigger: Data Change Detected', type: 'trigger' },
-                { label: 'Validation: Check Data Integrity', type: 'condition' },
-                { label: 'Bob Mapping: Transform Data Format', type: 'ai' },
-                { label: 'Action: Sync Across All Platforms', type: 'action' },
-            ],
-        },
-        {
-            id: '4',
-            name: 'Smart Task Completion Reminder',
-            description: 'Sends contextual reminders for pending tasks based on priority and deadline proximity',
-            level: 'user',
-            status: 'paused',
-            icon: 'fa-solid fa-check-double',
-            iconGradient: 'auto-card__icon--green',
-            createdDaysAgo: 7,
-            triggeredCount: 89,
-            successRate: 97.8,
-            steps: [
-                { label: 'Trigger: Task Due Within 24 Hours', type: 'trigger' },
-                { label: 'Bob Analysis: Assess Task Context & Priority', type: 'ai' },
-                { label: 'Action: Send Smart Reminder', type: 'action' },
-            ],
-        },
-    ];
+    // API data
+    workflows: Workflow[] = [];
+    templates: Workflow[] = [];
+    capabilities: UserCapabilities | null = null;
 
-    templates: AutomationTemplate[] = [
-        {
-            name: 'Welcome New Customers',
-            description: 'Automatically send onboarding emails, create tasks, and schedule follow-ups for new clients',
-            level: 'Company',
-            icon: 'fa-solid fa-handshake',
-            gradient: 'auto-tpl--blue',
-            borderColor: 'border-blue',
-            textColor: 'text-blue',
-            bgColor: 'bg-blue',
-        },
-        {
-            name: 'Pipeline Stage Updates',
-            description: 'Notify team members and update records when opportunities move through sales stages',
-            level: 'Company',
-            icon: 'fa-solid fa-chart-simple',
-            gradient: 'auto-tpl--purple',
-            borderColor: 'border-purple',
-            textColor: 'text-purple',
-            bgColor: 'bg-purple',
-        },
-        {
-            name: 'Invoice Generation',
-            description: 'Automatically create and send invoices when deals are marked as closed-won',
-            level: 'System',
-            icon: 'fa-solid fa-file-invoice',
-            gradient: 'auto-tpl--green',
-            borderColor: 'border-green',
-            textColor: 'text-green',
-            bgColor: 'bg-green',
-        },
-        {
-            name: 'Deal Risk Alerts',
-            description: 'Bob detects stagnant opportunities and alerts managers to take action',
-            level: 'Company',
-            icon: 'fa-solid fa-triangle-exclamation',
-            gradient: 'auto-tpl--orange',
-            borderColor: 'border-orange',
-            textColor: 'text-orange',
-            bgColor: 'bg-orange',
-        },
-        {
-            name: 'Meeting Follow-ups',
-            description: 'Create tasks and send summary emails after meetings are completed',
-            level: 'User',
-            icon: 'fa-solid fa-calendar-check',
-            gradient: 'auto-tpl--indigo',
-            borderColor: 'border-indigo',
-            textColor: 'text-indigo',
-            bgColor: 'bg-indigo',
-        },
-        {
-            name: 'Customer Anniversaries',
-            description: 'Celebrate customer milestones with personalized messages and offers',
-            level: 'Company',
-            icon: 'fa-solid fa-cake-candles',
-            gradient: 'auto-tpl--yellow',
-            borderColor: 'border-yellow',
-            textColor: 'text-yellow',
-            bgColor: 'bg-yellow',
-        },
-    ];
+    // Execution state
+    runningWorkflowId: string | null = null;
+    lastExecution: WorkflowExecution | null = null;
+
+    constructor(private workflowService: WorkflowService) { }
+
+    ngOnInit(): void {
+        this.loadWorkflows();
+        this.loadTemplates();
+        this.loadCapabilities();
+    }
+
+    loadWorkflows(): void {
+        this.isLoading = true;
+        const level = this.selectedLevel === 'all' ? undefined : this.selectedLevel;
+        this.workflowService.list(level, undefined, false).subscribe({
+            next: (res) => {
+                this.workflows = res.items;
+                this.isLoading = false;
+            },
+            error: () => {
+                this.isLoading = false;
+            },
+        });
+    }
+
+    loadTemplates(): void {
+        this.workflowService.list(undefined, undefined, true).subscribe({
+            next: (res) => {
+                this.templates = res.items;
+            },
+        });
+    }
+
+    loadCapabilities(): void {
+        this.workflowService.getMyCapabilities().subscribe({
+            next: (caps) => {
+                this.capabilities = caps;
+            },
+        });
+    }
 
     // ── Helpers ──────────────────────────
 
@@ -185,23 +69,73 @@ export class SettingsAutomationComponent {
         this.showBanner = false;
     }
 
-    selectLevel(level: 'all' | 'user' | 'company' | 'system'): void {
+    selectLevel(level: 'all' | 'user' | 'company' | 'department' | 'system'): void {
         this.selectedLevel = level;
+        this.loadWorkflows();
     }
 
-    toggleAutomation(auto: Automation): void {
-        auto.status = auto.status === 'active' ? 'paused' : 'active';
+    toggleAutomation(wf: Workflow): void {
+        const newStatus = !wf.is_active;
+        this.workflowService.update(wf.id, { is_active: newStatus } as Record<string, unknown>).subscribe({
+            next: (updated) => {
+                wf.is_active = updated.is_active;
+            },
+        });
     }
 
-    get filteredAutomations(): Automation[] {
-        let result = this.automations;
-        if (this.selectedLevel !== 'all') {
-            result = result.filter(a => a.level === this.selectedLevel);
-        }
+    runWorkflow(wf: Workflow): void {
+        this.runningWorkflowId = wf.id;
+        this.lastExecution = null;
+        this.workflowService.run(wf.id).subscribe({
+            next: (exe) => {
+                this.lastExecution = exe;
+                this.runningWorkflowId = null;
+            },
+            error: () => {
+                this.runningWorkflowId = null;
+            },
+        });
+    }
+
+    useTemplate(tpl: Workflow): void {
+        this.workflowService.create({
+            name: tpl.name + ' (Copy)',
+            description: tpl.description || '',
+            level: 'user',
+            trigger_type: tpl.trigger_type,
+            execution_mode: tpl.execution_mode,
+            module: tpl.module || undefined,
+            category: tpl.category || undefined,
+            steps: tpl.steps.map(s => ({
+                name: s.name,
+                step_order: s.step_order,
+                step_type: s.step_type,
+                agent_node: s.agent_node || undefined,
+                config: s.config || undefined,
+                description: s.description || undefined,
+                is_entry_point: s.is_entry_point,
+            })),
+        }).subscribe({
+            next: () => {
+                this.loadWorkflows();
+            },
+        });
+    }
+
+    deleteWorkflow(wf: Workflow): void {
+        this.workflowService.delete(wf.id).subscribe({
+            next: () => {
+                this.workflows = this.workflows.filter(w => w.id !== wf.id);
+            },
+        });
+    }
+
+    get filteredWorkflows(): Workflow[] {
+        let result = this.workflows;
         if (this.searchQuery.trim()) {
             const q = this.searchQuery.toLowerCase();
-            result = result.filter(a =>
-                a.name.toLowerCase().includes(q) || a.description.toLowerCase().includes(q)
+            result = result.filter(w =>
+                w.name.toLowerCase().includes(q) || (w.description || '').toLowerCase().includes(q)
             );
         }
         return result;
@@ -211,6 +145,7 @@ export class SettingsAutomationComponent {
         switch (level) {
             case 'user': return 'User Level';
             case 'company': return 'Company Level';
+            case 'department': return 'Department Level';
             case 'system': return 'System Level';
             default: return level;
         }
@@ -220,6 +155,7 @@ export class SettingsAutomationComponent {
         switch (level) {
             case 'user': return 'auto-badge--blue';
             case 'company': return 'auto-badge--orange';
+            case 'department': return 'auto-badge--indigo';
             case 'system': return 'auto-badge--purple';
             default: return 'auto-badge--gray';
         }
@@ -228,14 +164,60 @@ export class SettingsAutomationComponent {
     getStepColor(type: string): string {
         switch (type) {
             case 'trigger': return 'auto-step__num--blue';
-            case 'ai': return 'auto-step__num--purple';
+            case 'ai_analysis': return 'auto-step__num--purple';
             case 'condition': return 'auto-step__num--indigo';
             case 'action': return 'auto-step__num--green';
+            case 'human_approval': return 'auto-step__num--orange';
             default: return 'auto-step__num--gray';
         }
     }
 
-    formatCount(n: number): string {
-        return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : n.toString();
+    getStepIcon(type: string): string {
+        switch (type) {
+            case 'trigger': return 'fa-solid fa-bolt';
+            case 'ai_analysis': return 'fa-solid fa-brain';
+            case 'condition': return 'fa-solid fa-code-branch';
+            case 'action': return 'fa-solid fa-play';
+            case 'human_approval': return 'fa-solid fa-user-check';
+            default: return 'fa-solid fa-circle';
+        }
+    }
+
+    getModeIcon(mode: string): string {
+        switch (mode) {
+            case 'auto': return 'fa-solid fa-robot';
+            case 'approval': return 'fa-solid fa-user-shield';
+            case 'suggest': return 'fa-solid fa-lightbulb';
+            default: return 'fa-solid fa-circle-question';
+        }
+    }
+
+    getModeLabel(mode: string): string {
+        switch (mode) {
+            case 'auto': return 'Auto Execute';
+            case 'approval': return 'Needs Approval';
+            case 'suggest': return 'Suggest Only';
+            default: return mode;
+        }
+    }
+
+    getTemplateIcon(tpl: Workflow): string {
+        switch (tpl.category) {
+            case 'onboarding': return 'fa-solid fa-handshake';
+            case 'lead_management': return 'fa-solid fa-chart-simple';
+            case 'notification': return 'fa-solid fa-bell';
+            case 'data_sync': return 'fa-solid fa-sync';
+            default: return 'fa-solid fa-wand-magic-sparkles';
+        }
+    }
+
+    formatDate(dateStr: string): string {
+        const d = new Date(dateStr);
+        const now = new Date();
+        const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays === 0) return 'Today';
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 30) return `${diffDays} days ago`;
+        return d.toLocaleDateString();
     }
 }

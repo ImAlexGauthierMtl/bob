@@ -1,16 +1,19 @@
 <div class="settings-panel">
 
     <!-- ═══════ Bob Recommendation Banner ═══════ -->
-    @if (showBanner) {
+    @if (showBanner && capabilities) {
     <div class="ai-banner">
         <div class="ai-banner__row">
             <div class="ai-banner__icon">
                 <i class="fa-solid fa-brain"></i>
             </div>
             <div class="ai-banner__body">
-                <h3 class="ai-banner__title">Bob Automation Recommendations</h3>
-                <p class="ai-banner__text">Based on your workflow patterns, Bob identified 3 high-impact automations
-                    that could save your team 8.5 hours per week</p>
+                <h3 class="ai-banner__title">Bob Automation Engine</h3>
+                <p class="ai-banner__text">
+                    Agent Mode: <strong>{{ capabilities.agent_mode | titlecase }}</strong> ·
+                    Trust Score: <strong>{{ (capabilities.trust_score * 100).toFixed(0) }}%</strong> ·
+                    {{ capabilities.capabilities.length }} capabilities loaded
+                </p>
                 <div class="ai-banner__actions">
                     <button class="btn btn-outline--purple">
                         <i class="fa-solid fa-wand-magic-sparkles"></i> View Recommendations
@@ -107,89 +110,112 @@
     <div class="auto-section">
         <div class="auto-section__header">
             <div>
-                <h3 class="settings-panel__title" style="margin-bottom:0.25rem">Active Automations</h3>
+                <h3 class="settings-panel__title" style="margin-bottom:0.25rem">Workflows</h3>
                 <p class="settings-panel__subtitle">Manage and monitor your automation workflows</p>
             </div>
             <div class="auto-section__filters">
                 <div class="search-bar" style="margin-bottom:0">
                     <i class="fa-solid fa-search search-bar__icon"></i>
-                    <input type="text" [(ngModel)]="searchQuery" placeholder="Search automations..."
+                    <input type="text" [(ngModel)]="searchQuery" placeholder="Search workflows..."
                         class="search-bar__input" />
                 </div>
-                <select [(ngModel)]="selectedLevel" class="form-input" style="width:auto;padding:0.5rem 1rem">
-                    <option value="all">All Levels</option>
-                    <option value="user">User Level</option>
-                    <option value="company">Company Level</option>
-                    <option value="system">System Level</option>
-                </select>
             </div>
         </div>
 
-        @for (auto of filteredAutomations; track auto.id) {
+        @if (isLoading) {
+        <div style="text-align:center;padding:3rem;color:var(--color-gray-500)">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;margin-bottom:1rem"></i>
+            <p>Loading workflows...</p>
+        </div>
+        }
+
+        @for (wf of filteredWorkflows; track wf.id) {
         <div class="auto-card">
             <div class="auto-card__header">
                 <div class="auto-card__left">
-                    <div class="auto-card__icon {{ auto.iconGradient }}">
-                        <i class="{{ auto.icon }}"></i>
+                    <div class="auto-card__icon" [class]="'auto-card__icon--' + wf.level">
+                        <i [class]="getModeIcon(wf.execution_mode)"></i>
                     </div>
                     <div class="auto-card__info">
                         <div class="auto-card__title-row">
-                            <h4 class="auto-card__name">{{ auto.name }}</h4>
-                            <span class="auto-badge {{ getLevelBadgeClass(auto.level) }}">{{ getLevelLabel(auto.level)
+                            <h4 class="auto-card__name">{{ wf.name }}</h4>
+                            <span class="auto-badge" [class]="getLevelBadgeClass(wf.level)">{{ getLevelLabel(wf.level)
                                 }}</span>
-                            <span class="auto-badge" [class.auto-badge--green]="auto.status === 'active'"
-                                [class.auto-badge--gray]="auto.status === 'paused'">
-                                {{ auto.status === 'active' ? 'Active' : 'Paused' }}
+                            <span class="auto-badge" [class.auto-badge--green]="wf.is_active"
+                                [class.auto-badge--gray]="!wf.is_active">
+                                {{ wf.is_active ? 'Active' : 'Paused' }}
+                            </span>
+                            <span class="auto-badge auto-badge--outline" style="font-size:0.65rem">
+                                <i [class]="getModeIcon(wf.execution_mode)" style="margin-right:0.25rem"></i>
+                                {{ getModeLabel(wf.execution_mode) }}
                             </span>
                         </div>
-                        <p class="auto-card__desc">{{ auto.description }}</p>
+                        <p class="auto-card__desc">{{ wf.description }}</p>
                         <div class="auto-card__stats">
-                            <span><i class="fa-solid fa-clock"></i> Created {{ auto.createdDaysAgo }} days ago</span>
-                            <span><i class="fa-solid fa-bolt"></i> Triggered {{ formatCount(auto.triggeredCount) }}
-                                times</span>
-                            <span><i class="fa-solid fa-chart-line"></i> {{ auto.successRate }}% success rate</span>
+                            <span><i class="fa-solid fa-clock"></i> {{ formatDate(wf.created_at) }}</span>
+                            <span><i class="fa-solid fa-layer-group"></i> {{ wf.steps.length }} steps</span>
+                            @if (wf.trigger_type !== 'manual') {
+                            <span><i class="fa-solid fa-bolt"></i> {{ wf.trigger_type }}</span>
+                            }
                         </div>
                     </div>
                 </div>
                 <div class="auto-card__actions">
-                    <button class="auto-card__edit-btn"><i class="fa-solid fa-pen"></i></button>
+                    @if (wf.level !== 'system') {
+                    <button class="auto-card__edit-btn" title="Run" (click)="runWorkflow(wf)"
+                        [disabled]="runningWorkflowId === wf.id">
+                        @if (runningWorkflowId === wf.id) {
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        } @else {
+                        <i class="fa-solid fa-play"></i>
+                        }
+                    </button>
+                    <button class="auto-card__edit-btn" title="Delete" (click)="deleteWorkflow(wf)">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                    }
                     <label class="toggle">
-                        <input type="checkbox" [checked]="auto.status === 'active'" (change)="toggleAutomation(auto)" />
+                        <input type="checkbox" [checked]="wf.is_active" (change)="toggleAutomation(wf)" />
                         <span class="toggle__track"></span>
                     </label>
                 </div>
             </div>
 
             <!-- Workflow Steps -->
+            @if (wf.steps.length > 0) {
             <div class="auto-card__steps">
                 <p class="section-label" style="margin-bottom:0.75rem">Workflow Steps</p>
                 <div class="auto-steps">
-                    @for (step of auto.steps; track step.label; let i = $index) {
+                    @for (step of wf.steps; track step.id; let i = $index) {
                     <div class="auto-step">
-                        <div class="auto-step__num {{ getStepColor(step.type) }}">
-                            @if (step.type === 'ai') {
+                        <div class="auto-step__num" [class]="getStepColor(step.step_type)">
+                            @if (step.step_type === 'ai_analysis') {
                             <i class="fa-solid fa-brain"></i>
+                            } @else if (step.step_type === 'human_approval') {
+                            <i class="fa-solid fa-user-check"></i>
                             } @else {
                             <span>{{ i + 1 }}</span>
                             }
                         </div>
-                        <div class="auto-step__label">{{ step.label }}</div>
+                        <div class="auto-step__label">{{ step.name }}</div>
                     </div>
                     }
                 </div>
             </div>
+            }
         </div>
         }
 
-        @if (filteredAutomations.length === 0) {
+        @if (!isLoading && filteredWorkflows.length === 0) {
         <div style="text-align:center;padding:3rem;color:var(--color-gray-500)">
             <i class="fa-solid fa-robot" style="font-size:2rem;margin-bottom:1rem"></i>
-            <p>No automations match your search</p>
+            <p>No workflows found. Create one or use a template below.</p>
         </div>
         }
     </div>
 
     <!-- ═══════ Quick Start Templates ═══════ -->
+    @if (templates.length > 0) {
     <div class="auto-section auto-section--border-top">
         <div class="settings-panel__header" style="margin-bottom:1.5rem">
             <h3 class="settings-panel__title">Quick Start Templates</h3>
@@ -197,22 +223,24 @@
         </div>
 
         <div class="template-grid">
-            @for (tpl of templates; track tpl.name) {
-            <div class="auto-tpl {{ tpl.gradient }}">
+            @for (tpl of templates; track tpl.id) {
+            <div class="auto-tpl">
                 <div class="auto-tpl__header">
-                    <div class="auto-tpl__icon {{ tpl.gradient }}--icon">
-                        <i class="{{ tpl.icon }}"></i>
+                    <div class="auto-tpl__icon">
+                        <i [class]="getTemplateIcon(tpl)"></i>
                     </div>
                     <div class="auto-tpl__meta">
                         <h4 class="auto-tpl__name">{{ tpl.name }}</h4>
-                        <span class="auto-tpl__level {{ tpl.gradient }}--badge">{{ tpl.level }}</span>
+                        <span class="auto-badge" [class]="getLevelBadgeClass(tpl.level)">{{ getLevelLabel(tpl.level)
+                            }}</span>
                     </div>
                 </div>
                 <p class="auto-tpl__desc">{{ tpl.description }}</p>
-                <button class="auto-tpl__btn {{ tpl.gradient }}--btn">Use Template</button>
+                <button class="auto-tpl__btn" (click)="useTemplate(tpl)">Use Template</button>
             </div>
             }
         </div>
     </div>
+    }
 
 </div>
