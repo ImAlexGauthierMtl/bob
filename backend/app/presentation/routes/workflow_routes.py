@@ -1,6 +1,7 @@
 """Workflow routes — CRUD + execution."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 import structlog
@@ -326,3 +327,164 @@ def _workflow_to_response(wf: Workflow, steps: list) -> WorkflowResponse:
         created_at=wf.created_at,
         updated_at=wf.updated_at,
     )
+
+
+# ── Monitoring ────────────────────────────────────
+
+@router.get("/monitoring/stats")
+async def get_monitoring_stats(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get aggregate execution statistics."""
+    from app.domain.entities.workflow_execution import WorkflowExecution
+    from sqlalchemy import func
+
+    tenant_id = current_user["tenant_id"]
+
+    # Total executions + status breakdown
+    stats = db.query(
+        func.count(WorkflowExecution.id).label("total"),
+        func.count(WorkflowExecution.id).filter(WorkflowExecution.status == "completed").label("completed"),
+        func.count(WorkflowExecution.id).filter(WorkflowExecution.status == "failed").label("failed"),
+        func.count(WorkflowExecution.id).filter(WorkflowExecution.status == "running").label("running"),
+        func.count(WorkflowExecution.id).filter(WorkflowExecution.status == "pending_approval").label("pending"),
+        func.avg(WorkflowExecution.duration_ms).label("avg_duration_ms"),
+    ).filter(WorkflowExecution.tenant_id == tenant_id).first()
+
+    # Active workflows
+    repo = WorkflowRepository(db)
+    workflows = repo.list_all(tenant_id, skip=0, limit=500)
+    active_count = sum(1 for wf in workflows if wf.is_active)
+
+    return {
+        "total_executions": stats.total or 0,
+        "completed": stats.completed or 0,
+        "failed": stats.failed or 0,
+        "running": stats.running or 0,
+        "pending_approval": stats.pending or 0,
+        "avg_duration_ms": round(stats.avg_duration_ms, 1) if stats.avg_duration_ms else 0,
+        "success_rate": round((stats.completed / stats.total) * 100, 1) if stats.total else 0,
+        "total_workflows": len(workflows),
+        "active_workflows": active_count,
+    }
+
+
+@router.get("/monitoring/recent")
+async def get_recent_executions(
+    limit: int = Query(20, ge=1, le=100),
+    status_filter: str = Query(None, alias="status"),
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List recent executions across all workflows."""
+    from app.domain.entities.workflow_execution import WorkflowExecution
+
+    query = db.query(WorkflowExecution).filter(
+        WorkflowExecution.tenant_id == current_user["tenant_id"],
+    )
+    if status_filter:
+        query = query.filter(WorkflowExecution.status == status_filter)
+
+    exes = query.order_by(WorkflowExecution.started_at.desc()).limit(limit).all()
+
+    return [
+        {
+            "id": e.id,
+            "workflow_id": e.workflow_id,
+            "status": e.status,
+            "triggered_by": e.triggered_by,
+            "steps_completed": e.steps_completed,
+            "steps_total": e.steps_total,
+            "duration_ms": e.duration_ms,
+            "error": e.error,
+            "started_at": str(e.started_at) if e.started_at else None,
+            "completed_at": str(e.completed_at) if e.completed_at else None,
+        }
+        for e in exes
+    ]
+
+
+# ── Override (clone at different level) ───────────
+
+class OverrideRequest(BaseModel):
+    """Request to override a workflow."""
+    target_level: str  # company, department, user
+    new_name: str | None = None
+    owner_id: str | None = None
+    execution_mode: str | None = None
+
+
+
+@router.post("/{wf_id}/override", response_model=WorkflowResponse, status_code=status.HTTP_201_CREATED)
+async def override_workflow(
+    wf_id: str,
+    data: OverrideRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Clone a workflow at a lower level as an override.
+
+    This allows company/department/user to customize a system or company workflow.
+    The override links back to the parent via overrides_workflow_id.
+    """
+    repo = WorkflowRepository(db)
+    parent = repo.get_by_id(wf_id, current_user["tenant_id"])
+    if not parent:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    if not parent.is_overridable:
+        raise HTTPException(status_code=403, detail="This workflow does not allow overrides")
+
+    # Validate level hierarchy: system > company > department > user
+    level_rank = {"system": 0, "company": 1, "department": 2, "user": 3}
+    if level_rank.get(data.target_level, 99) <= level_rank.get(parent.level, 0):
+        raise HTTPException(status_code=400, detail=f"Cannot override to same or higher level ({parent.level} → {data.target_level})")
+
+    # Clone the workflow
+    override = Workflow(
+        name=data.new_name or f"{parent.name} (Override)",
+        description=parent.description,
+        level=data.target_level,
+        owner_id=data.owner_id or current_user.get("user_id"),
+        owner_type="user" if data.target_level == "user" else data.target_level,
+        trigger_type=parent.trigger_type,
+        trigger_config=parent.trigger_config,
+        execution_mode=data.execution_mode or parent.execution_mode,
+        required_capabilities=parent.required_capabilities,
+        is_overridable=True,
+        override_policy=parent.override_policy,
+        overrides_workflow_id=parent.id,
+        module=parent.module,
+        category=parent.category,
+        is_template=False,
+        tenant_id=current_user["tenant_id"],
+        created_by=current_user["email"],
+    )
+    override = repo.create(override)
+
+    # Clone steps
+    parent_steps = repo.get_steps(parent.id)
+    for ps in parent_steps:
+        step = WorkflowStep(
+            workflow_id=override.id,
+            name=ps.name,
+            step_order=ps.step_order,
+            step_type=ps.step_type,
+            agent_node=ps.agent_node,
+            config=ps.config,
+            description=ps.description,
+            is_entry_point=ps.is_entry_point,
+        )
+        repo.add_step(step)
+
+    logger.info(
+        "workflow_overridden",
+        parent=parent.name,
+        override=override.name,
+        level=data.target_level,
+        user=current_user["email"],
+    )
+
+    steps = repo.get_steps(override.id)
+    return _workflow_to_response(override, steps)
