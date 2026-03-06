@@ -373,3 +373,143 @@
         justify-content: space-between;
     }
 }
+
+/* ── Loading State ────────────────────────────────────────── */
+
+.loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 4rem;
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem !important;
+    color: var(--color-gray-500);
+}
+
+/* ── AI Badges ────────────────────────────────────────────── */
+
+.ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+}
+
+.ai-badge--done {
+    background-color: #ecfdf5;
+    color: #059669;
+}
+
+.ai-badge--loading {
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+
+.ai-badge--pending {
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-500);
+}
+
+/* ── Status Badge variants ────────────────────────────────── */
+
+.status-badge--warn {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.status-badge--danger {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
+/* ── Dialog ───────────────────────────────────────────────── */
+
+.dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    backdrop-filter: blur(4px);
+}
+
+.dialog {
+    background-color: var(--color-white);
+    width: 100%;
+    max-width: 32rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.dialog__title {
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-light);
+}
+
+.dialog__close {
+    background: none;
+    border: none;
+    color: var(--color-gray-400);
+    cursor: pointer;
+    font-size: 1.125rem;
+    padding: 0.25rem;
+    transition: color var(--transition-base);
+}
+
+.dialog__close:hover {
+    color: var(--color-black);
+}
+
+.dialog__body {
+    padding: 2rem;
+}
+
+.dialog__hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    background-color: var(--color-accent-10);
+    color: var(--color-accent);
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+}
+
+.dialog__hint i {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+}
+
+.dialog__status {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background-color: var(--color-gray-50);
+    font-size: 0.875rem;
+    color: var(--color-gray-700);
+}
+
+.dialog__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--color-gray-200);
+}

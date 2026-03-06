@@ -1,11 +1,12 @@
 <div class="page-header">
     <div class="page-header__left">
         <h2 class="page-title">Organizations</h2>
-        <p class="page-subtitle">247 active organizations</p>
+        <p class="page-subtitle">{{ total }} organizations</p>
     </div>
     <div class="page-header__actions">
         <button class="btn btn-outline"><i class="fa-solid fa-download"></i> Export</button>
-        <button class="btn btn-accent"><i class="fa-solid fa-plus"></i> Add Organization</button>
+        <button class="btn btn-accent" (click)="openAddDialog()"><i class="fa-solid fa-plus"></i> Add
+            Organization</button>
     </div>
 </div>
 
@@ -19,19 +20,19 @@
     </div>
     <div class="ai-insights__grid">
         <div class="ai-insight-card">
-            <p class="ai-insight-card__label">Highest Growth</p>
-            <p class="ai-insight-card__value">TechVision Inc.</p>
-            <p class="ai-insight-card__desc">Revenue increased 47% this quarter</p>
+            <p class="ai-insight-card__label">Total Organizations</p>
+            <p class="ai-insight-card__value">{{ total }}</p>
+            <p class="ai-insight-card__desc">In your CRM database</p>
         </div>
         <div class="ai-insight-card">
-            <p class="ai-insight-card__label">Needs Attention</p>
-            <p class="ai-insight-card__value">3 Organizations</p>
-            <p class="ai-insight-card__desc">Haven't been contacted in 30+ days</p>
+            <p class="ai-insight-card__label">Agent-First CRM</p>
+            <p class="ai-insight-card__value">Active</p>
+            <p class="ai-insight-card__desc">Add a name → AI fills the rest</p>
         </div>
         <div class="ai-insight-card">
-            <p class="ai-insight-card__label">Upsell Opportunity</p>
-            <p class="ai-insight-card__value">$340K potential</p>
-            <p class="ai-insight-card__desc">Based on usage patterns and growth</p>
+            <p class="ai-insight-card__label">Powered by</p>
+            <p class="ai-insight-card__value">Groq + Serper</p>
+            <p class="ai-insight-card__desc">LangGraph enrichment pipeline</p>
         </div>
     </div>
 </section>
@@ -44,148 +45,122 @@
     </div>
     <div class="filter-pills">
         <button class="filter-pill filter-pill--active">All</button>
-        <button class="filter-pill">Enterprise</button>
-        <button class="filter-pill">Mid-Market</button>
-        <button class="filter-pill">Startup</button>
+        <button class="filter-pill">Customer</button>
+        <button class="filter-pill">Prospect</button>
+        <button class="filter-pill">Lead</button>
     </div>
 </div>
 
+<!-- Loading -->
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Loading organizations...</span>
+</div>
+}
+
 <!-- Organizations Table -->
+@if (!isLoading) {
 <section class="table-card" id="org-table">
     <table class="data-table">
         <thead>
             <tr>
                 <th>Organization</th>
                 <th>Industry</th>
-                <th class="hide-mobile">Contacts</th>
                 <th class="hide-mobile">Revenue</th>
                 <th>Status</th>
-                <th class="text-right hide-mobile">Health</th>
+                <th class="hide-mobile">AI</th>
             </tr>
         </thead>
         <tbody>
+            @for (org of organizations; track org.id) {
             <tr>
-                <td><a routerLink="/organizations/1" class="org-link">
-                        <div class="avatar-sm">AC</div>
+                <td><a [routerLink]="'/organizations/' + org.id" class="org-link">
+                        <div class="avatar-sm">{{ getInitials(org.name) }}</div>
                         <div>
-                            <p class="org-name">Acme Corporation</p>
-                            <p class="org-meta">Technology · San Francisco, CA</p>
+                            <p class="org-name">{{ org.name }}</p>
+                            <p class="org-meta">{{ org.industry || '—' }}
+                                @if (getLocationString(org)) {
+                                · {{ getLocationString(org) }}
+                                }
+                            </p>
                         </div>
                     </a></td>
-                <td>Technology</td>
-                <td class="hide-mobile">24</td>
-                <td class="hide-mobile">$1.2M</td>
-                <td><span class="status-badge status-badge--accent">Active</span></td>
-                <td class="text-right hide-mobile">
-                    <div class="health-bar">
-                        <div class="health-bar__fill" style="width:92%"></div>
-                    </div><span class="health-value">92%</span>
+                <td>{{ org.industry || '—' }}</td>
+                <td class="hide-mobile">{{ formatRevenue(org.annual_revenue) }}</td>
+                <td><span class="status-badge" [class]="getStatusClass(org.status)">{{ org.status }}</span></td>
+                <td class="hide-mobile">
+                    @if (org.ai_enriched === 'Y') {
+                    <span class="ai-badge ai-badge--done"><i class="fa-solid fa-check"></i> Enriched</span>
+                    } @else if (enrichingOrgId === org.id) {
+                    <span class="ai-badge ai-badge--loading"><i class="fa-solid fa-spinner fa-spin"></i>
+                        Enriching...</span>
+                    } @else {
+                    <span class="ai-badge ai-badge--pending">Pending</span>
+                    }
                 </td>
             </tr>
+            }
+            @empty {
             <tr>
-                <td><a routerLink="/organizations/2" class="org-link">
-                        <div class="avatar-sm">GS</div>
-                        <div>
-                            <p class="org-name">Global Solutions Ltd</p>
-                            <p class="org-meta">Consulting · London, UK</p>
-                        </div>
-                    </a></td>
-                <td>Consulting</td>
-                <td class="hide-mobile">18</td>
-                <td class="hide-mobile">$890K</td>
-                <td><span class="status-badge status-badge--accent">Active</span></td>
-                <td class="text-right hide-mobile">
-                    <div class="health-bar">
-                        <div class="health-bar__fill" style="width:87%"></div>
-                    </div><span class="health-value">87%</span>
+                <td colspan="5" class="empty-state">
+                    <p>No organizations yet. Click <strong>"Add Organization"</strong> to get started.</p>
                 </td>
             </tr>
-            <tr>
-                <td><a routerLink="/organizations/3" class="org-link">
-                        <div class="avatar-sm">TV</div>
-                        <div>
-                            <p class="org-name">TechVision Inc.</p>
-                            <p class="org-meta">SaaS · Austin, TX</p>
-                        </div>
-                    </a></td>
-                <td>SaaS</td>
-                <td class="hide-mobile">12</td>
-                <td class="hide-mobile">$2.1M</td>
-                <td><span class="status-badge status-badge--accent">Active</span></td>
-                <td class="text-right hide-mobile">
-                    <div class="health-bar">
-                        <div class="health-bar__fill" style="width:95%"></div>
-                    </div><span class="health-value">95%</span>
-                </td>
-            </tr>
-            <tr>
-                <td><a routerLink="/organizations/4" class="org-link">
-                        <div class="avatar-sm">NI</div>
-                        <div>
-                            <p class="org-name">Nordic Innovations</p>
-                            <p class="org-meta">Manufacturing · Stockholm, SE</p>
-                        </div>
-                    </a></td>
-                <td>Manufacturing</td>
-                <td class="hide-mobile">8</td>
-                <td class="hide-mobile">$650K</td>
-                <td><span class="status-badge status-badge--muted">Prospect</span></td>
-                <td class="text-right hide-mobile">
-                    <div class="health-bar">
-                        <div class="health-bar__fill" style="width:74%"></div>
-                    </div><span class="health-value">74%</span>
-                </td>
-            </tr>
-            <tr>
-                <td><a routerLink="/organizations/5" class="org-link">
-                        <div class="avatar-sm">PN</div>
-                        <div>
-                            <p class="org-name">Pacific Networks</p>
-                            <p class="org-meta">Telecom · Tokyo, JP</p>
-                        </div>
-                    </a></td>
-                <td>Telecom</td>
-                <td class="hide-mobile">15</td>
-                <td class="hide-mobile">$1.8M</td>
-                <td><span class="status-badge status-badge--accent">Active</span></td>
-                <td class="text-right hide-mobile">
-                    <div class="health-bar">
-                        <div class="health-bar__fill" style="width:89%"></div>
-                    </div><span class="health-value">89%</span>
-                </td>
-            </tr>
-            <tr>
-                <td><a routerLink="/organizations/6" class="org-link">
-                        <div class="avatar-sm">SA</div>
-                        <div>
-                            <p class="org-name">Stellar Analytics</p>
-                            <p class="org-meta">Data Science · Berlin, DE</p>
-                        </div>
-                    </a></td>
-                <td>Data Science</td>
-                <td class="hide-mobile">6</td>
-                <td class="hide-mobile">$420K</td>
-                <td><span class="status-badge status-badge--accent">Active</span></td>
-                <td class="text-right hide-mobile">
-                    <div class="health-bar">
-                        <div class="health-bar__fill" style="width:81%"></div>
-                    </div><span class="health-value">81%</span>
-                </td>
-            </tr>
+            }
         </tbody>
     </table>
 </section>
+}
 
 <!-- Pagination -->
+@if (total > 0) {
 <div class="pagination" id="pagination">
-    <p class="pagination__info">Showing <strong>1-6</strong> of <strong>247</strong> organizations</p>
-    <div class="pagination__controls">
-        <button class="pagination__btn" disabled><i class="fa-solid fa-chevron-left"></i></button>
-        <button class="pagination__btn pagination__btn--active">1</button>
-        <button class="pagination__btn">2</button>
-        <button class="pagination__btn">3</button>
-        <span class="pagination__dots">...</span>
-        <button class="pagination__btn">42</button>
-        <button class="pagination__btn"><i class="fa-solid fa-chevron-right"></i></button>
+    <p class="pagination__info">Showing <strong>{{ organizations.length }}</strong> of <strong>{{ total }}</strong>
+        organizations</p>
+</div>
+}
+
+<!-- Add Organization Dialog -->
+@if (showAddDialog) {
+<div class="dialog-overlay" (click)="closeAddDialog()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+        <div class="dialog__header">
+            <h3 class="dialog__title">Add Organization</h3>
+            <button class="dialog__close" (click)="closeAddDialog()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="dialog__body">
+            <p class="dialog__hint">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                Just type the company name — our AI will find and fill all the details automatically.
+            </p>
+
+            <div class="form-group">
+                <label for="org-name" class="form-label">Company Name</label>
+                <input type="text" id="org-name" class="input" placeholder="e.g. Bombardier, Shopify, Ubisoft..."
+                    [(ngModel)]="newOrgName" (keydown.enter)="createAndEnrich()" autofocus />
+            </div>
+
+            @if (enrichmentMessage) {
+            <div class="dialog__status">
+                <p>{{ enrichmentMessage }}</p>
+            </div>
+            }
+        </div>
+
+        <div class="dialog__footer">
+            <button class="btn btn-outline" (click)="closeAddDialog()">Cancel</button>
+            <button class="btn btn-accent" (click)="createAndEnrich()" [disabled]="isCreating || !newOrgName.trim()">
+                @if (isCreating) {
+                <i class="fa-solid fa-spinner fa-spin"></i> Creating...
+                } @else {
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Create & Enrich
+                }
+            </button>
+        </div>
     </div>
 </div>
+}
