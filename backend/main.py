@@ -40,6 +40,7 @@ from app.presentation.routes.department_routes import router as department_route
 from app.presentation.routes.capability_routes import router as capability_router
 from app.presentation.routes.workflow_routes import router as workflow_router
 from app.presentation.routes.webhook_routes import router as webhook_router
+from app.presentation.routes.kb_routes import router as kb_router
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(search_router, tags=["search"])
@@ -55,6 +56,7 @@ app.include_router(department_router, tags=["departments"])
 app.include_router(capability_router, tags=["capabilities"])
 app.include_router(workflow_router, tags=["workflows"])
 app.include_router(webhook_router, tags=["webhooks"])
+app.include_router(kb_router, tags=["knowledge-base"])
 
 
 @app.get("/health", tags=["monitoring"])

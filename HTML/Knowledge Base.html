@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Base</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>::-webkit-scrollbar { display: none;}</style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'accent': '#FF4500',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-white font-sans antialiased">
+
+<div id="main-container" class="flex min-h-screen">
+    
+    <aside id="sidebar" class="hidden lg:flex lg:flex-col w-72 border-r border-gray-100 bg-white fixed h-screen overflow-y-auto">
+        <div class="p-10 border-b border-gray-100">
+            <h1 class="text-3xl font-extralight tracking-tight leading-tight">Dynamics<br><span class="font-semibold">Nexus</span></h1>
+            <p class="text-xs text-gray-400 mt-3 tracking-wide">AI-ENHANCED CRM</p>
+        </div>
+        
+        <nav class="flex-1 p-8">
+            <div class="space-y-2">
+                <a href="#" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Dashboard</a>
+                <a href="#organizations" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Organizations</a>
+                <a href="#contacts" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Contacts</a>
+                <a href="#opportunities" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Opportunities</a>
+                <a href="#tasks" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Tasks</a>
+                <a href="#" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Analytics</a>
+            </div>
+            
+            <div class="mt-16 pt-8 border-t border-gray-100">
+                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4 px-5">AI Assistant</p>
+                <div class="bg-gradient-to-br from-gray-50 to-white border border-gray-100 p-6 mb-6">
+                    <div class="flex items-start gap-3 mb-4">
+                        <div class="w-8 h-8 bg-accent rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-wand-magic-sparkles text-white text-xs"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-black mb-1">Smart Search</p>
+                            <p class="text-xs text-gray-500 leading-relaxed">AI-powered knowledge discovery</p>
+                        </div>
+                    </div>
+                    <button class="w-full py-2 px-4 bg-black text-white text-xs font-medium hover:bg-gray-800 transition-colors">Ask AI Anything</button>
+                </div>
+                
+                <div class="space-y-2">
+                    <a href="#" class="block py-3 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Team</a>
+                    <a href="#knowledge" class="block py-3 px-5 text-sm font-medium text-black bg-gray-50 border-l-2 border-accent">Knowledge Base</a>
+                    <a href="#settings" class="block py-3 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Settings</a>
+                </div>
+            </div>
+        </nav>
+        
+        <div class="p-8 border-t border-gray-100">
+            <div class="flex items-center gap-4">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="User" class="w-12 h-12 rounded-full object-cover">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-black truncate">Marcus Chen</p>
+                    <p class="text-xs text-gray-400 truncate">Sales Manager</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="main-content" class="flex-1 flex flex-col min-w-0 lg:ml-72">
+        
+        <header id="header" class="bg-white border-b border-gray-100 sticky top-0 z-20">
+            <div class="px-6 lg:px-16 py-8">
+                <div class="flex items-center justify-between gap-6 mb-6">
+                    <div class="flex items-center gap-6 flex-1">
+                        <button class="lg:hidden text-gray-600">
+                            <i class="fa-solid fa-bars text-xl"></i>
+                        </button>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-4 mb-2">
+                                <div class="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-50 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-purple-200">
+                                    <i class="fa-solid fa-book text-2xl text-purple-600"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-3xl lg:text-4xl font-light tracking-tight text-black">Knowledge Base</h2>
+                                    <p class="text-sm text-gray-500 mt-1">Your centralized hub for documentation, guides, and best practices</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        <button class="px-5 py-3 border border-gray-200 text-sm font-medium text-gray-600 hover:border-gray-300 transition-colors hidden lg:flex items-center gap-2">
+                            <i class="fa-solid fa-upload text-xs"></i>
+                            Import
+                        </button>
+                        <button class="px-5 py-3 bg-accent text-white text-sm font-medium hover:bg-opacity-90 transition-colors hidden lg:flex items-center gap-2">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                            New Article
+                        </button>
+                    </div>
+                </div>
+
+                <div class="relative">
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" placeholder="Ask AI or search knowledge base..." class="w-full py-4 pl-14 pr-32 border border-gray-200 text-sm text-black placeholder-gray-400 focus:outline-none focus:border-accent transition-colors">
+                        <button class="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-accent text-white text-xs font-medium hover:bg-opacity-90 transition-colors flex items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                            Ask AI
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 bg-white">
+            <div class="flex flex-col lg:flex-row">
+                
+                <div id="content-area" class="flex-1 px-6 lg:px-16 py-12 min-w-0">
+                    
+                    <section id="ai-insights" class="mb-12">
+                        <div class="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 border border-purple-100 p-8">
+                            <div class="flex items-start gap-4 mb-6">
+                                <div class="w-12 h-12 bg-accent rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid fa-brain text-white text-lg"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-xl font-light text-black mb-2">AI Knowledge Assistant</h3>
+                                    <p class="text-sm text-gray-600">Get instant answers, discover related content, and receive personalized recommendations</p>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="bg-white border border-purple-200 p-5 hover:border-accent transition-colors cursor-pointer">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <i class="fa-solid fa-lightbulb text-yellow-500 text-lg"></i>
+                                        <p class="text-sm font-medium text-black">Suggested for You</p>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mb-3">Based on your role and recent activities</p>
+                                    <div class="space-y-2">
+                                        <a href="#" class="block text-xs text-accent hover:underline">Advanced Sales Techniques</a>
+                                        <a href="#" class="block text-xs text-accent hover:underline">CRM Best Practices 2024</a>
+                                        <a href="#" class="block text-xs text-accent hover:underline">Proposal Writing Guide</a>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-white border border-purple-200 p-5 hover:border-accent transition-colors cursor-pointer">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <i class="fa-solid fa-fire text-orange-500 text-lg"></i>
+                                        <p class="text-sm font-medium text-black">Trending Now</p>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mb-3">Most viewed this week</p>
+                                    <div class="space-y-2">
+                                        <a href="#" class="block text-xs text-accent hover:underline">Q4 Sales Strategy</a>
+                                        <a href="#" class="block text-xs text-accent hover:underline">AI Features Overview</a>
+                                        <a href="#" class="block text-xs text-accent hover:underline">Team Collaboration Tips</a>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-white border border-purple-200 p-5 hover:border-accent transition-colors cursor-pointer">
+                                    <div class="flex items-center gap-3 mb-3">
+                                        <i class="fa-solid fa-clock-rotate-left text-blue-500 text-lg"></i>
+                                        <p class="text-sm font-medium text-black">Recently Updated</p>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mb-3">Fresh content and updates</p>
+                                    <div class="space-y-2">
+                                        <a href="#" class="block text-xs text-accent hover:underline">Platform Updates v3.2</a>
+                                        <a href="#" class="block text-xs text-accent hover:underline">Security Guidelines</a>
+                                        <a href="#" class="block text-xs text-accent hover:underline">API Documentation</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="quick-stats" class="mb-12">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                <div class="flex items-center justify-between mb-3">
+                                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Total Articles</p>
+                                    <i class="fa-solid fa-file-lines text-gray-300"></i>
+                                </div>
+                                <p class="text-3xl font-light text-black">247</p>
+                            </div>
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                <div class="flex items-center justify-between mb-3">
+                                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Categories</p>
+                                    <i class="fa-solid fa-folder text-gray-300"></i>
+                                </div>
+                                <p class="text-3xl font-light text-black">18</p>
+                            </div>
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                <div class="flex items-center justify-between mb-3">
+                                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Contributors</p>
+                                    <i class="fa-solid fa-users text-gray-300"></i>
+                                </div>
+                                <p class="text-3xl font-light text-black">34</p>
+                            </div>
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-colors">
+                                <div class="flex items-center justify-between mb-3">
+                                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">This Month</p>
+                                    <i class="fa-solid fa-arrow-trend-up text-gray-300"></i>
+                                </div>
+                                <p class="text-3xl font-light text-black">+12</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="categories-section" class="mb-12">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-2xl font-light text-black">Browse by Category</h3>
+                            <button class="text-sm text-accent hover:underline font-medium">View All</button>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-all cursor-pointer group">
+                                <div class="flex items-start gap-4 mb-4">
+                                    <div class="w-14 h-14 bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-accent transition-colors">
+                                        <i class="fa-solid fa-rocket text-blue-600 text-xl group-hover:text-white transition-colors"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-lg font-medium text-black mb-1">Getting Started</h4>
+                                        <p class="text-sm text-gray-600">Essential guides for new users</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                                    <span class="text-xs text-gray-500">24 articles</span>
+                                    <i class="fa-solid fa-arrow-right text-accent text-xs"></i>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-all cursor-pointer group">
+                                <div class="flex items-start gap-4 mb-4">
+                                    <div class="w-14 h-14 bg-green-100 flex items-center justify-center flex-shrink-0 group-hover:bg-accent transition-colors">
+                                        <i class="fa-solid fa-chart-line text-green-600 text-xl group-hover:text-white transition-colors"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-lg font-medium text-black mb-1">Sales & CRM</h4>
+                                        <p class="text-sm text-gray-600">Master your sales process</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                                    <span class="text-xs text-gray-500">38 articles</span>
+                                    <i class="fa-solid fa-arrow-right text-accent text-xs"></i>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-all cursor-pointer group">
+                                <div class="flex items-start gap-4 mb-4">
+                                    <div class="w-14 h-14 bg-purple-100 flex items-center justify-center flex-shrink-0 group-hover:bg-accent transition-colors">
+                                        <i class="fa-solid fa-wand-magic-sparkles text-purple-600 text-xl group-hover:text-white transition-colors"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-lg font-medium text-black mb-1">AI Features</h4>
+                                        <p class="text-sm text-gray-600">Leverage AI capabilities</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                                    <span class="text-xs text-gray-500">19 articles</span>
+                                    <i class="fa-solid fa-arrow-right text-accent text-xs"></i>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-all cursor-pointer group">
+                                <div class="flex items-start gap-4 mb-4">
+                                    <div class="w-14 h-14 bg-orange-100 flex items-center justify-center flex-shrink-0 group-hover:bg-accent transition-colors">
+                                        <i class="fa-solid fa-users-gear text-orange-600 text-xl group-hover:text-white transition-colors"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-lg font-medium text-black mb-1">Team Management</h4>
+                                        <p class="text-sm text-gray-600">Collaborate effectively</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                                    <span class="text-xs text-gray-500">15 articles</span>
+                                    <i class="fa-solid fa-arrow-right text-accent text-xs"></i>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-all cursor-pointer group">
+                                <div class="flex items-start gap-4 mb-4">
+                                    <div class="w-14 h-14 bg-red-100 flex items-center justify-center flex-shrink-0 group-hover:bg-accent transition-colors">
+                                        <i class="fa-solid fa-shield-halved text-red-600 text-xl group-hover:text-white transition-colors"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-lg font-medium text-black mb-1">Security & Privacy</h4>
+                                        <p class="text-sm text-gray-600">Keep your data safe</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                                    <span class="text-xs text-gray-500">12 articles</span>
+                                    <i class="fa-solid fa-arrow-right text-accent text-xs"></i>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-all cursor-pointer group">
+                                <div class="flex items-start gap-4 mb-4">
+                                    <div class="w-14 h-14 bg-yellow-100 flex items-center justify-center flex-shrink-0 group-hover:bg-accent transition-colors">
+                                        <i class="fa-solid fa-code text-yellow-600 text-xl group-hover:text-white transition-colors"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-lg font-medium text-black mb-1">API & Integrations</h4>
+                                        <p class="text-sm text-gray-600">Connect your tools</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                                    <span class="text-xs text-gray-500">31 articles</span>
+                                    <i class="fa-solid fa-arrow-right text-accent text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="popular-articles" class="mb-12">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-2xl font-light text-black">Popular Articles</h3>
+                            <div class="flex items-center gap-3">
+                                <button class="text-sm text-gray-500 hover:text-black transition-colors" data-filter="all">All</button>
+                                <span class="text-gray-300">|</span>
+                                <button class="text-sm text-gray-500 hover:text-black transition-colors" data-filter="week">This Week</button>
+                                <span class="text-gray-300">|</span>
+                                <button class="text-sm text-gray-500 hover:text-black transition-colors" data-filter="month">This Month</button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-all cursor-pointer group">
+                                <div class="flex items-start gap-6">
+                                    <div class="flex-shrink-0 text-center">
+                                        <div class="w-12 h-12 bg-accent text-white flex items-center justify-center mb-2">
+                                            <span class="text-xl font-light">1</span>
+                                        </div>
+                                        <div class="flex items-center gap-1 text-xs text-gray-500">
+                                            <i class="fa-solid fa-eye"></i>
+                                            <span>1.2k</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-start justify-between gap-4 mb-2">
+                                            <h4 class="text-lg font-medium text-black group-hover:text-accent transition-colors">How to Create Winning Sales Proposals with AI</h4>
+                                            <span class="px-2 py-1 bg-green-100 text-xs text-green-600 flex-shrink-0">Updated</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 mb-3 leading-relaxed">Learn how to leverage AI-powered insights to craft compelling proposals that close deals faster. This comprehensive guide covers everything from initial research to final presentation.</p>
+                                        <div class="flex items-center gap-4 text-xs text-gray-500">
+                                            <span class="flex items-center gap-1">
+                                                <i class="fa-solid fa-folder"></i>
+                                                Sales & CRM
+                                            </span>
+                                            <span>•</span>
+                                            <span>8 min read</span>
+                                            <span>•</span>
+                                            <span>Updated 2 days ago</span>
+                                            <span class="ml-auto flex items-center gap-2">
+                                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="Author" class="w-5 h-5 rounded-full object-cover">
+                                                Sarah Johnson
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-all cursor-pointer group">
+                                <div class="flex items-start gap-6">
+                                    <div class="flex-shrink-0 text-center">
+                                        <div class="w-12 h-12 bg-gray-200 text-gray-600 flex items-center justify-center mb-2">
+                                            <span class="text-xl font-light">2</span>
+                                        </div>
+                                        <div class="flex items-center gap-1 text-xs text-gray-500">
+                                            <i class="fa-solid fa-eye"></i>
+                                            <span>956</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-start justify-between gap-4 mb-2">
+                                            <h4 class="text-lg font-medium text-black group-hover:text-accent transition-colors">Mastering the AI Assistant: Advanced Tips & Tricks</h4>
+                                        </div>
+                                        <p class="text-sm text-gray-600 mb-3 leading-relaxed">Unlock the full potential of your AI assistant with these advanced techniques. From custom workflows to predictive analytics, discover features that will transform your productivity.</p>
+                                        <div class="flex items-center gap-4 text-xs text-gray-500">
+                                            <span class="flex items-center gap-1">
+                                                <i class="fa-solid fa-folder"></i>
+                                                AI Features
+                                            </span>
+                                            <span>•</span>
+                                            <span>12 min read</span>
+                                            <span>•</span>
+                                            <span>Updated 5 days ago</span>
+                                            <span class="ml-auto flex items-center gap-2">
+                                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="Author" class="w-5 h-5 rounded-full object-cover">
+                                                David Chen
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-all cursor-pointer group">
+                                <div class="flex items-start gap-6">
+                                    <div class="flex-shrink-0 text-center">
+                                        <div class="w-12 h-12 bg-gray-200 text-gray-600 flex items-center justify-center mb-2">
+                                            <span class="text-xl font-light">3</span>
+                                        </div>
+                                        <div class="flex items-center gap-1 text-xs text-gray-500">
+                                            <i class="fa-solid fa-eye"></i>
+                                            <span>847</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-start justify-between gap-4 mb-2">
+                                            <h4 class="text-lg font-medium text-black group-hover:text-accent transition-colors">Complete Guide to Pipeline Management</h4>
+                                            <span class="px-2 py-1 bg-blue-100 text-xs text-blue-600 flex-shrink-0">Essential</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 mb-3 leading-relaxed">Build and optimize your sales pipeline with proven strategies. Learn how to track opportunities, forecast revenue, and identify bottlenecks before they impact your numbers.</p>
+                                        <div class="flex items-center gap-4 text-xs text-gray-500">
+                                            <span class="flex items-center gap-1">
+                                                <i class="fa-solid fa-folder"></i>
+                                                Sales & CRM
+                                            </span>
+                                            <span>•</span>
+                                            <span>15 min read</span>
+                                            <span>•</span>
+                                            <span>Updated 1 week ago</span>
+                                            <span class="ml-auto flex items-center gap-2">
+                                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="Author" class="w-5 h-5 rounded-full object-cover">
+                                                Marcus Chen
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-all cursor-pointer group">
+                                <div class="flex items-start gap-6">
+                                    <div class="flex-shrink-0 text-center">
+                                        <div class="w-12 h-12 bg-gray-200 text-gray-600 flex items-center justify-center mb-2">
+                                            <span class="text-xl font-light">4</span>
+                                        </div>
+                                        <div class="flex items-center gap-1 text-xs text-gray-500">
+                                            <i class="fa-solid fa-eye"></i>
+                                            <span>723</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-start justify-between gap-4 mb-2">
+                                            <h4 class="text-lg font-medium text-black group-hover:text-accent transition-colors">Security Best Practices for Enterprise Teams</h4>
+                                        </div>
+                                        <p class="text-sm text-gray-600 mb-3 leading-relaxed">Protect your organization's data with enterprise-grade security measures. This guide covers authentication, permissions, data encryption, and compliance requirements.</p>
+                                        <div class="flex items-center gap-4 text-xs text-gray-500">
+                                            <span class="flex items-center gap-1">
+                                                <i class="fa-solid fa-folder"></i>
+                                                Security & Privacy
+                                            </span>
+                                            <span>•</span>
+                                            <span>10 min read</span>
+                                            <span>•</span>
+                                            <span>Updated 2 weeks ago</span>
+                                            <span class="ml-auto flex items-center gap-2">
+                                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Author" class="w-5 h-5 rounded-full object-cover">
+                                                Alex Rivera
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 p-6 hover:border-accent transition-all cursor-pointer group">
+                                <div class="flex items-start gap-6">
+                                    <div class="flex-shrink-0 text-center">
+                                        <div class="w-12 h-12 bg-gray-200 text-gray-600 flex items-center justify-center mb-2">
+                                            <span class="text-xl font-light">5</span>
+                                        </div>
+                                        <div class="flex items-center gap-1 text-xs text-gray-500">
+                                            <i class="fa-solid fa-eye"></i>
+                                            <span>689</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-start justify-between gap-4 mb-2">
+                                            <h4 class="text-lg font-medium text-black group-hover:text-accent transition-colors">API Integration Guide for Developers</h4>
+                                            <span class="px-2 py-1 bg-yellow-100 text-xs text-yellow-700 flex-shrink-0">Technical</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 mb-3 leading-relaxed">Integrate Dynamics Nexus with your existing tools and workflows. Complete API documentation with code examples, webhooks, and authentication methods.</p>
+                                        <div class="flex items-center gap-4 text-xs text-gray-500">
+                                            <span class="flex items-center gap-1">
+                                                <i class="fa-solid fa-folder"></i>
+                                                API & Integrations
+                                            </span>
+                                            <span>•</span>
+                                            <span>20 min read</span>
+                                            <span>•</span>
+                                            <span>Updated 3 weeks ago</span>
+                                            <span class="ml-auto flex items-center gap-2">
+                                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="Author" class="w-5 h-5 rounded-full object-cover">
+                                                David Chen
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 text-center">
+                            <button class="px-8 py-3 border border-gray-200 text-sm font-medium text-gray-600 hover:border-accent hover:text-accent transition-colors">
+                                Load More Articles
+                            </button>
+                        </div>
+                    </section>
+
+                    <section id="video-tutorials" class="mb-12">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-2xl font-light text-black">Video Tutorials</h3>
+                            <button class="text-sm text-accent hover:underline font-medium">View All Videos</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            <div class="border border-gray-100 hover:border-accent transition-all cursor-pointer group">
+                                <div class="aspect-video bg-gradient-to-br from-blue-100 to-blue-50 relative overflow-hidden">
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center group-hover:bg-accent transition-colors">
+                                            <i class="fa-solid fa-play text-accent group-hover:text-white text-xl transition-colors"></i>
+                                        </div>
+                                    </div>
+                                    <div class="absolute top-3 right-3 px-2 py-1 bg-black bg-opacity-75 text-white text-xs">8:42</div>
+                                </div>
+                                <div class="p-5">
+                                    <h4 class="text-base font-medium text-black mb-2 group-hover:text-accent transition-colors">Getting Started with Dynamics Nexus</h4>
+                                    <p class="text-sm text-gray-600 mb-3">A complete walkthrough for new users</p>
+                                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                                        <i class="fa-solid fa-eye"></i>
+                                        <span>2.4k views</span>
+                                        <span>•</span>
+                                        <span>3 days ago</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 hover:border-accent transition-all cursor-pointer group">
+                                <div class="aspect-video bg-gradient-to-br from-purple-100 to-purple-50 relative overflow-hidden">
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center group-hover:bg-accent transition-colors">
+                                            <i class="fa-solid fa-play text-accent group-hover:text-white text-xl transition-colors"></i>
+                                        </div>
+                                    </div>
+                                    <div class="absolute top-3 right-3 px-2 py-1 bg-black bg-opacity-75 text-white text-xs">12:15</div>
+                                </div>
+                                <div class="p-5">
+                                    <h4 class="text-base font-medium text-black mb-2 group-hover:text-accent transition-colors">AI-Powered Sales Forecasting</h4>
+                                    <p class="text-sm text-gray-600 mb-3">Predict revenue with machine learning</p>
+                                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                                        <i class="fa-solid fa-eye"></i>
+                                        <span>1.8k views</span>
+                                        <span>•</span>
+                                        <span>1 week ago</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-100 hover:border-accent transition-all cursor-pointer group">
+                                <div class="aspect-video bg-gradient-to-br from-green-100 to-green-50 relative overflow-hidden">
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center group-hover:bg-accent transition-colors">
+                                            <i class="fa-solid fa-play text-accent group-hover:text-white text-xl transition-colors"></i>
+                                        </div>
+                                    </div>
+                                    <div class="absolute top-3 right-3 px-2 py-1 bg-black bg-opacity-75 text-white text-xs">15:30</div>
+                                </div>
+                                <div class="p-5">
+                                    <h4 class="text-base font-medium text-black mb-2 group-hover:text-accent transition-colors">Advanced Automation Workflows</h4>
+                                    <p class="text-sm text-gray-600 mb-3">Save time with intelligent automation</p>
+                                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                                        <i class="fa-solid fa-eye"></i>
+                                        <span>1.5k views</span>
+                                        <span>•</span>
+                                        <span>2 weeks ago</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="community-section" class="mb-12">
+                        <div class="bg-gradient-to-r from-gray-50 to-white border border-gray-100 p-8">
+                            <div class="flex items-start gap-6">
+                                <div class="w-16 h-16 bg-accent rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fa-solid fa-users text-white text-2xl"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-2xl font-light text-black mb-2">Join Our Community</h3>
+                                    <p class="text-base text-gray-600 mb-4">Connect with other users, share best practices, and get help from our expert community members.</p>
+                                    <div class="flex items-center gap-4">
+                                        <button class="px-6 py-3 bg-accent text-white text-sm font-medium hover:bg-opacity-90 transition-colors">Join Discussion Forum</button>
+                                        <button class="px-6 py-3 border border-gray-200 text-sm font-medium text-gray-600 hover:border-gray-300 transition-colors">Browse Q&A</button>
+                                    </div>
+                                </div>
+                                <div class="hidden xl:block">
+                                    <div class="flex -space-x-2">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg" alt="User" class="w-10 h-10 rounded-full object-cover border-2 border-white">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="User" class="w-10 h-10 rounded-full object-cover border-2 border-white">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="User" class="w-10 h-10 rounded-full object-cover border-2 border-white">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg" alt="User" class="w-10 h-10 rounded-full object-cover border-2 border-white">
+                                        <div class="w-10 h-10 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center">
+                                            <span class="text-xs font-medium text-gray-600">+2k</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2 text-center">Active members</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                </div>
+
+                <aside id="sidebar-right" class="hidden xl:block w-80 border-l border-gray-100 p-8 bg-gray-50">
+                    <div class="sticky top-24">
+                        <div class="mb-8">
+                            <h3 class="text-sm font-medium text-black mb-4 uppercase tracking-wider">Quick Links</h3>
+                            <div class="space-y-2">
+                                <a href="#" class="flex items-center gap-3 py-2 px-3 text-sm text-gray-600 hover:bg-white hover:text-accent transition-all">
+                                    <i class="fa-solid fa-question-circle text-xs"></i>
+                                    FAQ
+                                </a>
+                                <a href="#" class="flex items-center gap-3 py-2 px-3 text-sm text-gray-600 hover:bg-white hover:text-accent transition-all">
+                                    <i class="fa-solid fa-headset text-xs"></i>
+                                    Contact Support
+                                </a>
+                                <a href="#" class="flex items-center gap-3 py-2 px-3 text-sm text-gray-600 hover:bg-white hover:text-accent transition-all">
+                                    <i class="fa-solid fa-graduation-cap text-xs"></i>
+                                    Training Resources
+                                </a>
+                                <a href="#" class="flex items-center gap-3 py-2 px-3 text-sm text-gray-600 hover:bg-white hover:text-accent transition-all">
+                                    <i class="fa-solid fa-file-contract text-xs"></i>
+                                    Release Notes
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="mb-8 p-5 bg-white border border-gray-200">
+                            <h3 class="text-sm font-medium text-black mb-4">Your Progress</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs text-gray-600">Articles Read</span>
+                                        <span class="text-xs font-medium text-black">12/24</span>
+                                    </div>
+                                    <div class="w-full h-2 bg-gray-100">
+                                        <div class="h-full bg-accent" style="width: 50%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs text-gray-600">Certifications</span>
+                                        <span class="text-xs font-medium text-black">2/5</span>
+                                    </div>
+                                    <div class="w-full h-2 bg-gray-100">
+                                        <div class="h-full bg-green-500" style="width: 40%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="w-full mt-4 py-2 text-xs text-accent hover:underline font-medium">View Learning Path</button>
+                        </div>
+
+                        <div class="mb-8 p-5 bg-white border border-gray-200">
+                            <h3 class="text-sm font-medium text-black mb-3">Recent Searches</h3>
+                            <div class="space-y-2">
+                                <a href="#" class="flex items-center justify-between py-1 text-xs text-gray-600 hover:text-accent transition-colors">
+                                    <span>Sales automation</span>
+                                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                                </a>
+                                <a href="#" class="flex items-center justify-between py-1 text-xs text-gray-600 hover:text-accent transition-colors">
+                                    <span>Email templates</span>
+                                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                                </a>
+                                <a href="#" class="flex items-center justify-between py-1 text-xs text-gray-600 hover:text-accent transition-colors">
+                                    <span>Pipeline stages</span>
+                                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="p-5 bg-white border border-gray-200">
+                            <h3 class="text-sm font-medium text-black mb-3">Need Help?</h3>
+                            <p class="text-xs text-gray-600 mb-4">Can't find what you're looking for? Our support team is here to help.</p>
+                            <button class="w-full py-2 px-4 bg-accent text-white text-xs font-medium hover:bg-opacity-90 transition-colors">
+                                Chat with Support
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+
+            </div>
+        </main>
+
+    </div>
+
+</div>
+
+</body>
+</html>
