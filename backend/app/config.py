@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     rate_limit_max_attempts: int = 5
     rate_limit_window_minutes: int = 15
 
+    # Groq (LLM)
+    groq_api_key: str = ""
+    groq_default_model: str = "llama-3.3-70b-versatile"
+
+    # Serper.dev (Search)
+    serper_api_key: str = ""
+
     # Admin seed
     admin_email: str = "admin@croo.digital"
     admin_password: str = "Admin123!"

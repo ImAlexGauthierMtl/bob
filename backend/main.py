@@ -28,9 +28,11 @@ app.add_middleware(
 # Import and include routers
 from app.presentation.routes.auth_routes import router as auth_router
 from app.presentation.routes.organization_routes import router as organization_router
+from app.presentation.routes.enrichment_routes import router as enrichment_router
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(organization_router, tags=["organizations"])
+app.include_router(enrichment_router, tags=["enrichment"])
 
 
 @app.get("/health", tags=["monitoring"])
