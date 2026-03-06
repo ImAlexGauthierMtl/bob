@@ -22,12 +22,14 @@ from main import app
 
 # Import all entities so they register with Base.metadata
 from app.domain.entities import user, organization, contact, opportunity, quote, activity  # noqa: F401
+from app.domain.entities import department, capability, workflow, workflow_execution  # noqa: F401
 
 # Create test engine pointing to test DB
 test_engine = create_engine(settings.database_url)
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
-# Create all tables on test DB
+# Create all tables on test DB (drop first for schema updates)
+Base.metadata.drop_all(bind=test_engine)
 Base.metadata.create_all(bind=test_engine)
 
 
