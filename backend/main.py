@@ -38,6 +38,7 @@ from app.presentation.routes.user_routes import router as user_router
 from app.presentation.routes.contact_ai_routes import router as contact_ai_router
 from app.presentation.routes.department_routes import router as department_router
 from app.presentation.routes.capability_routes import router as capability_router
+from app.presentation.routes.workflow_routes import router as workflow_router
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(search_router, tags=["search"])
@@ -51,6 +52,7 @@ app.include_router(activity_router, tags=["activities"])
 app.include_router(user_router, tags=["users"])
 app.include_router(department_router, tags=["departments"])
 app.include_router(capability_router, tags=["capabilities"])
+app.include_router(workflow_router, tags=["workflows"])
 
 
 @app.get("/health", tags=["monitoring"])
@@ -66,6 +68,7 @@ async def startup_event():
     from app.domain.entities.base import Base
     # Import entities so they register with Base.metadata
     from app.domain.entities import user, organization, contact, opportunity, quote, activity, department, capability  # noqa: F401
+    from app.domain.entities import workflow, workflow_execution  # noqa: F401
     from app.infrastructure.seed import run_seed
     from app.infrastructure.seed_capabilities import seed_capabilities
 
