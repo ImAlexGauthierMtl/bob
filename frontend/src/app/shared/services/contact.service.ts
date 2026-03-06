@@ -40,6 +40,12 @@ export interface CreateContactRequest {
     organization_id?: string;
 }
 
+export interface AiParseResult {
+    extracted: Partial<CreateContactRequest>;
+    confidence: number;
+    raw_text: string;
+}
+
 const API_URL = 'http://localhost:8555/api/v1';
 
 @Injectable({ providedIn: 'root' })
@@ -66,5 +72,12 @@ export class ContactService {
 
     delete(id: string): Observable<void> {
         return this.http.delete<void>(`${API_URL}/contacts/${id}`);
+    }
+
+    aiParse(rawText: string, organizationId?: string): Observable<AiParseResult> {
+        return this.http.post<AiParseResult>(`${API_URL}/contacts/ai-parse`, {
+            raw_text: rawText,
+            organization_id: organizationId ?? null,
+        });
     }
 }

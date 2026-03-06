@@ -35,12 +35,14 @@ from app.presentation.routes.opportunity_routes import router as opportunity_rou
 from app.presentation.routes.quote_routes import router as quote_router
 from app.presentation.routes.activity_routes import router as activity_router
 from app.presentation.routes.user_routes import router as user_router
+from app.presentation.routes.contact_ai_routes import router as contact_ai_router
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(search_router, tags=["search"])
 app.include_router(enrichment_router, tags=["enrichment"])
 app.include_router(organization_router, tags=["organizations"])
 app.include_router(contact_router, tags=["contacts"])
+app.include_router(contact_ai_router, tags=["contacts-ai"])
 app.include_router(opportunity_router, tags=["opportunities"])
 app.include_router(quote_router, tags=["quotes"])
 app.include_router(activity_router, tags=["activities"])

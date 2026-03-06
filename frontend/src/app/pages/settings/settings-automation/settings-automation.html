@@ -1,0 +1,218 @@
+<div class="settings-panel">
+
+    <!-- ═══════ Bob Recommendation Banner ═══════ -->
+    @if (showBanner) {
+    <div class="ai-banner">
+        <div class="ai-banner__row">
+            <div class="ai-banner__icon">
+                <i class="fa-solid fa-brain"></i>
+            </div>
+            <div class="ai-banner__body">
+                <h3 class="ai-banner__title">Bob Automation Recommendations</h3>
+                <p class="ai-banner__text">Based on your workflow patterns, Bob identified 3 high-impact automations
+                    that could save your team 8.5 hours per week</p>
+                <div class="ai-banner__actions">
+                    <button class="btn btn-outline--purple">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> View Recommendations
+                    </button>
+                    <button class="btn btn-purple">
+                        Auto-Generate Workflow
+                    </button>
+                </div>
+            </div>
+            <button class="ai-banner__close" (click)="dismissBanner()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+    }
+
+    <!-- ═══════ Automation Levels ═══════ -->
+    <div class="auto-section">
+        <div class="settings-panel__header" style="margin-bottom:1.5rem">
+            <h3 class="settings-panel__title">Automation Levels</h3>
+            <p class="settings-panel__subtitle">Choose the scope and impact of your automation workflow</p>
+        </div>
+
+        <div class="level-grid">
+            <!-- User Level -->
+            <button class="level-card" [class.level-card--active]="selectedLevel === 'user'"
+                (click)="selectLevel('user')">
+                <div class="level-card__top">
+                    <div class="level-card__icon level-card__icon--blue">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <span class="level-card__tag level-card__tag--blue">Personal</span>
+                </div>
+                <h4 class="level-card__name">User Level</h4>
+                <p class="level-card__desc">Personal automations that enhance individual productivity and streamline
+                    your daily tasks</p>
+                <div class="level-card__features">
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--blue"></i> Personal
+                        task automation</div>
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--blue"></i> Email
+                        filters & responses</div>
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--blue"></i> Custom
+                        notifications</div>
+                </div>
+            </button>
+
+            <!-- Company Level -->
+            <button class="level-card level-card--recommended" [class.level-card--active]="selectedLevel === 'company'"
+                (click)="selectLevel('company')">
+                <div class="level-card__top">
+                    <div class="level-card__icon level-card__icon--accent">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <span class="level-card__tag level-card__tag--accent">Recommended</span>
+                </div>
+                <h4 class="level-card__name">Company Level</h4>
+                <p class="level-card__desc">Team-wide workflows that coordinate actions across departments and enhance
+                    collaboration</p>
+                <div class="level-card__features">
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--accent"></i>
+                        Cross-team workflows</div>
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--accent"></i> Lead
+                        assignment rules</div>
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--accent"></i>
+                        Approval processes</div>
+                </div>
+            </button>
+
+            <!-- System Level -->
+            <button class="level-card" [class.level-card--active]="selectedLevel === 'system'"
+                (click)="selectLevel('system')">
+                <div class="level-card__top">
+                    <div class="level-card__icon level-card__icon--purple">
+                        <i class="fa-solid fa-server"></i>
+                    </div>
+                    <span class="level-card__tag level-card__tag--purple">Advanced</span>
+                </div>
+                <h4 class="level-card__name">System Level</h4>
+                <p class="level-card__desc">Enterprise-wide automations that integrate with external systems and manage
+                    critical processes</p>
+                <div class="level-card__features">
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--purple"></i> API
+                        integrations</div>
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--purple"></i> Data
+                        synchronization</div>
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--purple"></i>
+                        System-wide policies</div>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════ Active Automations ═══════ -->
+    <div class="auto-section">
+        <div class="auto-section__header">
+            <div>
+                <h3 class="settings-panel__title" style="margin-bottom:0.25rem">Active Automations</h3>
+                <p class="settings-panel__subtitle">Manage and monitor your automation workflows</p>
+            </div>
+            <div class="auto-section__filters">
+                <div class="search-bar" style="margin-bottom:0">
+                    <i class="fa-solid fa-search search-bar__icon"></i>
+                    <input type="text" [(ngModel)]="searchQuery" placeholder="Search automations..."
+                        class="search-bar__input" />
+                </div>
+                <select [(ngModel)]="selectedLevel" class="form-input" style="width:auto;padding:0.5rem 1rem">
+                    <option value="all">All Levels</option>
+                    <option value="user">User Level</option>
+                    <option value="company">Company Level</option>
+                    <option value="system">System Level</option>
+                </select>
+            </div>
+        </div>
+
+        @for (auto of filteredAutomations; track auto.id) {
+        <div class="auto-card">
+            <div class="auto-card__header">
+                <div class="auto-card__left">
+                    <div class="auto-card__icon {{ auto.iconGradient }}">
+                        <i class="{{ auto.icon }}"></i>
+                    </div>
+                    <div class="auto-card__info">
+                        <div class="auto-card__title-row">
+                            <h4 class="auto-card__name">{{ auto.name }}</h4>
+                            <span class="auto-badge {{ getLevelBadgeClass(auto.level) }}">{{ getLevelLabel(auto.level)
+                                }}</span>
+                            <span class="auto-badge" [class.auto-badge--green]="auto.status === 'active'"
+                                [class.auto-badge--gray]="auto.status === 'paused'">
+                                {{ auto.status === 'active' ? 'Active' : 'Paused' }}
+                            </span>
+                        </div>
+                        <p class="auto-card__desc">{{ auto.description }}</p>
+                        <div class="auto-card__stats">
+                            <span><i class="fa-solid fa-clock"></i> Created {{ auto.createdDaysAgo }} days ago</span>
+                            <span><i class="fa-solid fa-bolt"></i> Triggered {{ formatCount(auto.triggeredCount) }}
+                                times</span>
+                            <span><i class="fa-solid fa-chart-line"></i> {{ auto.successRate }}% success rate</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="auto-card__actions">
+                    <button class="auto-card__edit-btn"><i class="fa-solid fa-pen"></i></button>
+                    <label class="toggle">
+                        <input type="checkbox" [checked]="auto.status === 'active'" (change)="toggleAutomation(auto)" />
+                        <span class="toggle__track"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Workflow Steps -->
+            <div class="auto-card__steps">
+                <p class="section-label" style="margin-bottom:0.75rem">Workflow Steps</p>
+                <div class="auto-steps">
+                    @for (step of auto.steps; track step.label; let i = $index) {
+                    <div class="auto-step">
+                        <div class="auto-step__num {{ getStepColor(step.type) }}">
+                            @if (step.type === 'ai') {
+                            <i class="fa-solid fa-brain"></i>
+                            } @else {
+                            <span>{{ i + 1 }}</span>
+                            }
+                        </div>
+                        <div class="auto-step__label">{{ step.label }}</div>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+        }
+
+        @if (filteredAutomations.length === 0) {
+        <div style="text-align:center;padding:3rem;color:var(--color-gray-500)">
+            <i class="fa-solid fa-robot" style="font-size:2rem;margin-bottom:1rem"></i>
+            <p>No automations match your search</p>
+        </div>
+        }
+    </div>
+
+    <!-- ═══════ Quick Start Templates ═══════ -->
+    <div class="auto-section auto-section--border-top">
+        <div class="settings-panel__header" style="margin-bottom:1.5rem">
+            <h3 class="settings-panel__title">Quick Start Templates</h3>
+            <p class="settings-panel__subtitle">Pre-built workflows designed for common business scenarios</p>
+        </div>
+
+        <div class="template-grid">
+            @for (tpl of templates; track tpl.name) {
+            <div class="auto-tpl {{ tpl.gradient }}">
+                <div class="auto-tpl__header">
+                    <div class="auto-tpl__icon {{ tpl.gradient }}--icon">
+                        <i class="{{ tpl.icon }}"></i>
+                    </div>
+                    <div class="auto-tpl__meta">
+                        <h4 class="auto-tpl__name">{{ tpl.name }}</h4>
+                        <span class="auto-tpl__level {{ tpl.gradient }}--badge">{{ tpl.level }}</span>
+                    </div>
+                </div>
+                <p class="auto-tpl__desc">{{ tpl.description }}</p>
+                <button class="auto-tpl__btn {{ tpl.gradient }}--btn">Use Template</button>
+            </div>
+            }
+        </div>
+    </div>
+
+</div>

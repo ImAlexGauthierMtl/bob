@@ -133,6 +133,13 @@ export const routes: Routes = [
                             ),
                     },
                     {
+                        path: 'automation',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-automation/settings-automation').then(
+                                (m) => m.SettingsAutomationComponent
+                            ),
+                    },
+                    {
                         path: '',
                         redirectTo: 'profile',
                         pathMatch: 'full',

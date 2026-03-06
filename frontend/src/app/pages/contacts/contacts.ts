@@ -80,11 +80,19 @@ export class ContactsComponent implements OnInit {
         this.statusMessage = '';
         this.parsedPreview = null;
 
-        // Simulate agent processing delay for UX
-        setTimeout(() => {
-            this.parsedPreview = this.parseContactText(this.contactInput);
-            this.isProcessing = false;
-        }, 600);
+        this.contactService.aiParse(this.contactInput).subscribe({
+            next: (result) => {
+                this.parsedPreview = result.extracted;
+                this.isProcessing = false;
+                this.statusMessage = `Bob extracted fields (${Math.round(result.confidence * 100)}% confidence)`;
+                this.statusType = 'success';
+            },
+            error: () => {
+                this.isProcessing = false;
+                this.statusMessage = '❌ Bob could not parse the text. Try rephrasing.';
+                this.statusType = 'error';
+            },
+        });
     }
 
     createFromParsed(): void {
@@ -114,71 +122,7 @@ export class ContactsComponent implements OnInit {
         });
     }
 
-    /**
-     * Smart text parser — extracts contact fields from free-form text.
-     * This is the client-side heuristic that will be replaced by a real
-     * AI agent endpoint in the future.
-     */
-    private parseContactText(text: string): Partial<CreateContactRequest> {
-        const result: Partial<CreateContactRequest> = {};
 
-        // Extract email
-        const emailMatch = text.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
-        if (emailMatch) {
-            result.email = emailMatch[0];
-            text = text.replace(emailMatch[0], '');
-        }
-
-        // Extract phone (various formats)
-        const phoneMatch = text.match(/(?:\+?1?\s*)?(?:\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}/);
-        if (phoneMatch) {
-            result.phone = phoneMatch[0].trim();
-            text = text.replace(phoneMatch[0], '');
-        }
-
-        // Clean up separators
-        text = text.replace(/[,;|·•—–-]+/g, ' ').replace(/\s+/g, ' ').trim();
-
-        // Common title keywords for job title detection
-        const titleKeywords = /\b(CEO|CTO|CFO|COO|CMO|CIO|VP|Director|Manager|Engineer|Developer|Designer|Analyst|Coordinator|Specialist|Lead|Head|Chief|Senior|Junior|Sr\.|Jr\.|President|Founder|Partner|Associate|Consultant|Advisor|Officer)\b/i;
-
-        // Try to extract job title — look for role-like phrases
-        const words = text.split(' ');
-        let titleStartIdx = -1;
-        for (let i = 0; i < words.length; i++) {
-            if (titleKeywords.test(words[i])) {
-                titleStartIdx = i;
-                break;
-            }
-        }
-
-        if (titleStartIdx >= 0) {
-            // Name is before the title keyword, title is from the keyword onward
-            const namePart = words.slice(0, titleStartIdx).join(' ').trim();
-            const titlePart = words.slice(titleStartIdx).join(' ').trim();
-
-            if (namePart) {
-                const nameParts = namePart.split(' ');
-                result.first_name = nameParts[0];
-                result.last_name = nameParts.slice(1).join(' ') || 'Unknown';
-            }
-            if (titlePart) {
-                result.job_title = titlePart;
-            }
-        } else {
-            // No title found — just extract name
-            const cleanedWords = words.filter(w => w.length > 0 && !(/^\d+$/.test(w)));
-            if (cleanedWords.length >= 2) {
-                result.first_name = cleanedWords[0];
-                result.last_name = cleanedWords.slice(1).join(' ');
-            } else if (cleanedWords.length === 1) {
-                result.first_name = cleanedWords[0];
-                result.last_name = 'Unknown';
-            }
-        }
-
-        return result;
-    }
 
     // ── Helpers ──────────────────────────────
 
