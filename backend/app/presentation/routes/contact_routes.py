@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.presentation.routes.auth_routes import get_current_user
 from app.domain.entities.contact import Contact
+from app.agents.event_bus import event_bus
 from app.infrastructure.persistence.contact_repository import ContactRepository
 from app.presentation.schemas.contact_schemas import (
     ContactCreate, ContactUpdate, ContactResponse, ContactListResponse,
@@ -41,7 +42,13 @@ async def create_contact(
 ):
     repo = ContactRepository(db)
     contact = Contact(**data.model_dump(exclude_none=True), tenant_id=current_user["tenant_id"], created_by=current_user["email"])
-    return ContactResponse.model_validate(repo.create(contact))
+    created = repo.create(contact)
+    # Fire event for workflow triggers
+    import asyncio
+    asyncio.ensure_future(event_bus.publish(
+        "contact.created", {"contact_id": created.id}, db, current_user["tenant_id"], current_user["email"]
+    ))
+    return ContactResponse.model_validate(created)
 
 
 @router.get("/{contact_id}", response_model=ContactResponse)
@@ -85,3 +92,8 @@ async def delete_contact(
     if not contact:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found")
     repo.soft_delete(contact, current_user["email"])
+    # Fire event for workflow triggers
+    import asyncio
+    asyncio.ensure_future(event_bus.publish(
+        "contact.deleted", {"contact_id": contact_id}, db, current_user["tenant_id"], current_user["email"]
+    ))
