@@ -71,16 +71,21 @@ async def startup_event():
     from app.domain.entities import workflow, workflow_execution  # noqa: F401
     from app.infrastructure.seed import run_seed
     from app.infrastructure.seed_capabilities import seed_capabilities
+    from app.infrastructure.seed_workflows import seed_workflows
 
     # Create tables
     Base.metadata.create_all(bind=engine)
     logger.info("database_tables_created")
 
-    # Seed admin + capabilities
+    # Seed admin + capabilities + workflows
     db = SessionLocal()
     try:
         run_seed(db)
         seed_capabilities(db)
+        # Seed workflows — use admin user's tenant for default tenant
+        admin = db.query(user.User).filter(user.User.email == settings.admin_email).first()
+        if admin:
+            seed_workflows(db, tenant_id=admin.tenant_id)
     finally:
         db.close()
     logger.info("api_started", environment=settings.environment)
