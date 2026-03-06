@@ -39,6 +39,7 @@ from app.presentation.routes.contact_ai_routes import router as contact_ai_route
 from app.presentation.routes.department_routes import router as department_router
 from app.presentation.routes.capability_routes import router as capability_router
 from app.presentation.routes.workflow_routes import router as workflow_router
+from app.presentation.routes.webhook_routes import router as webhook_router
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(search_router, tags=["search"])
@@ -53,6 +54,7 @@ app.include_router(user_router, tags=["users"])
 app.include_router(department_router, tags=["departments"])
 app.include_router(capability_router, tags=["capabilities"])
 app.include_router(workflow_router, tags=["workflows"])
+app.include_router(webhook_router, tags=["webhooks"])
 
 
 @app.get("/health", tags=["monitoring"])

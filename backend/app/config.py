@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     admin_first_name: str = "Admin"
     admin_last_name: str = "Croo"
 
+    # Webhooks
+    webhook_api_key: str = "croo-webhook-dev-key"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
