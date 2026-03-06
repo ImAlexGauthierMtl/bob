@@ -1,5 +1,7 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { AuthService } from '../../shared/services/auth.service';
 
 @Component({
     selector: 'croo-login',
@@ -11,6 +13,20 @@ import { FormsModule } from '@angular/forms';
 export class LoginComponent {
     passwordVisible = false;
     rememberMe = false;
+    email = '';
+    password = '';
+    errorMessage = '';
+    isLoading = false;
+
+    constructor(
+        private authService: AuthService,
+        private router: Router,
+    ) {
+        // Redirect if already logged in
+        if (this.authService.hasToken()) {
+            this.router.navigate(['/dashboard']);
+        }
+    }
 
     togglePasswordVisibility(): void {
         this.passwordVisible = !this.passwordVisible;
@@ -18,7 +34,26 @@ export class LoginComponent {
 
     onSubmit(event: Event): void {
         event.preventDefault();
-        // TODO: Implement authentication logic
+        this.errorMessage = '';
+        this.isLoading = true;
+
+        this.authService
+            .login({ email: this.email, password: this.password })
+            .subscribe({
+                next: () => {
+                    this.router.navigate(['/dashboard']);
+                },
+                error: (err) => {
+                    this.isLoading = false;
+                    if (err.status === 401) {
+                        this.errorMessage = 'Invalid email or password';
+                    } else if (err.status === 429) {
+                        this.errorMessage = 'Too many attempts. Please wait.';
+                    } else {
+                        this.errorMessage = 'Connection error. Please try again.';
+                    }
+                },
+            });
     }
 
     signInWithGoogle(): void {

@@ -95,7 +95,7 @@
           <div class="input-wrapper">
             <i class="fa-regular fa-envelope input-icon"></i>
             <input type="email" id="email" name="email" class="input input--with-icon"
-              placeholder="your.email@company.com" required autocomplete="email" />
+              placeholder="your.email@company.com" required autocomplete="email" [(ngModel)]="email" />
           </div>
         </div>
 
@@ -106,7 +106,7 @@
             <i class="fa-solid fa-lock input-icon"></i>
             <input [type]="passwordVisible ? 'text' : 'password'" id="password" name="password"
               class="input input--with-icon input--with-action" placeholder="Enter your password" required
-              autocomplete="current-password" />
+              autocomplete="current-password" [(ngModel)]="password" />
             <button type="button" class="input-action" (click)="togglePasswordVisibility()"
               [attr.aria-label]="passwordVisible ? 'Hide password' : 'Show password'">
               <i [class]="passwordVisible ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye'"></i>
@@ -123,9 +123,17 @@
           <a href="#" class="link-accent">Forgot password?</a>
         </div>
 
+        <!-- Error Message -->
+        @if (errorMessage) {
+        <div class="login-error" id="login-error">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+        }
+
         <!-- Submit -->
-        <button type="submit" id="login-button" class="btn btn-accent btn-full">
-          Sign In
+        <button type="submit" id="login-button" class="btn btn-accent btn-full" [disabled]="isLoading">
+          {{ isLoading ? 'Signing In...' : 'Sign In' }}
         </button>
 
         <!-- Divider -->

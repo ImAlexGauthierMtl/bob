@@ -349,9 +349,30 @@
     font-size: 0.875rem;
 }
 
+/* Error Message */
+.login-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    font-size: 0.875rem;
+}
+
+.login-error i {
+    flex-shrink: 0;
+}
+
 /* Full-width button */
 .btn-full {
     width: 100%;
+}
+
+.btn-full:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 /* Divider */
