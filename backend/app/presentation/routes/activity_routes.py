@@ -42,7 +42,13 @@ async def create_activity(
 ):
     repo = ActivityRepository(db)
     activity = Activity(**data.model_dump(exclude_none=True), tenant_id=current_user["tenant_id"], created_by=current_user["email"])
-    return ActivityResponse.model_validate(repo.create(activity))
+    created = repo.create(activity)
+    import asyncio
+    from app.agents.event_bus import event_bus
+    asyncio.ensure_future(event_bus.publish(
+        "activity.created", {"activity_id": created.id}, db, current_user["tenant_id"], current_user["email"]
+    ))
+    return ActivityResponse.model_validate(created)
 
 
 @router.get("/{activity_id}", response_model=ActivityResponse)
@@ -72,7 +78,18 @@ async def update_activity(
     for k, v in data.model_dump(exclude_none=True).items():
         setattr(activity, k, v)
     activity.updated_by = current_user["email"]
-    return ActivityResponse.model_validate(repo.update(activity))
+    updated = repo.update(activity)
+    import asyncio
+    from app.agents.event_bus import event_bus
+    # Fire both updated and completed events (for meeting follow-up templates)
+    asyncio.ensure_future(event_bus.publish(
+        "activity.updated", {"activity_id": activity_id}, db, current_user["tenant_id"], current_user["email"]
+    ))
+    if data.model_dump(exclude_none=True).get("status") == "completed":
+        asyncio.ensure_future(event_bus.publish(
+            "activity.completed", {"activity_id": activity_id}, db, current_user["tenant_id"], current_user["email"]
+        ))
+    return ActivityResponse.model_validate(updated)
 
 
 @router.delete("/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -86,3 +103,8 @@ async def delete_activity(
     if not activity:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity not found")
     repo.soft_delete(activity, current_user["email"])
+    import asyncio
+    from app.agents.event_bus import event_bus
+    asyncio.ensure_future(event_bus.publish(
+        "activity.deleted", {"activity_id": activity_id}, db, current_user["tenant_id"], current_user["email"]
+    ))

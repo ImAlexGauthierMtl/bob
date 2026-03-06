@@ -41,7 +41,13 @@ async def create_quote(
 ):
     repo = QuoteRepository(db)
     quote = Quote(**data.model_dump(exclude_none=True), tenant_id=current_user["tenant_id"], created_by=current_user["email"])
-    return QuoteResponse.model_validate(repo.create(quote))
+    created = repo.create(quote)
+    import asyncio
+    from app.agents.event_bus import event_bus
+    asyncio.ensure_future(event_bus.publish(
+        "quote.created", {"quote_id": created.id}, db, current_user["tenant_id"], current_user["email"]
+    ))
+    return QuoteResponse.model_validate(created)
 
 
 @router.get("/{quote_id}", response_model=QuoteResponse)
@@ -71,7 +77,13 @@ async def update_quote(
     for k, v in data.model_dump(exclude_none=True).items():
         setattr(quote, k, v)
     quote.updated_by = current_user["email"]
-    return QuoteResponse.model_validate(repo.update(quote))
+    updated = repo.update(quote)
+    import asyncio
+    from app.agents.event_bus import event_bus
+    asyncio.ensure_future(event_bus.publish(
+        "quote.updated", {"quote_id": quote_id}, db, current_user["tenant_id"], current_user["email"]
+    ))
+    return QuoteResponse.model_validate(updated)
 
 
 @router.delete("/{quote_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -85,3 +97,8 @@ async def delete_quote(
     if not quote:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quote not found")
     repo.soft_delete(quote, current_user["email"])
+    import asyncio
+    from app.agents.event_bus import event_bus
+    asyncio.ensure_future(event_bus.publish(
+        "quote.deleted", {"quote_id": quote_id}, db, current_user["tenant_id"], current_user["email"]
+    ))

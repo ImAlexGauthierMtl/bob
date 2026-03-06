@@ -41,7 +41,13 @@ async def create_opportunity(
 ):
     repo = OpportunityRepository(db)
     opp = Opportunity(**data.model_dump(exclude_none=True), tenant_id=current_user["tenant_id"], created_by=current_user["email"])
-    return OpportunityResponse.model_validate(repo.create(opp))
+    created = repo.create(opp)
+    import asyncio
+    from app.agents.event_bus import event_bus
+    asyncio.ensure_future(event_bus.publish(
+        "opportunity.created", {"opportunity_id": created.id}, db, current_user["tenant_id"], current_user["email"]
+    ))
+    return OpportunityResponse.model_validate(created)
 
 
 @router.get("/{opp_id}", response_model=OpportunityResponse)
@@ -71,7 +77,13 @@ async def update_opportunity(
     for k, v in data.model_dump(exclude_none=True).items():
         setattr(opp, k, v)
     opp.updated_by = current_user["email"]
-    return OpportunityResponse.model_validate(repo.update(opp))
+    updated = repo.update(opp)
+    import asyncio
+    from app.agents.event_bus import event_bus
+    asyncio.ensure_future(event_bus.publish(
+        "opportunity.updated", {"opportunity_id": opp_id}, db, current_user["tenant_id"], current_user["email"]
+    ))
+    return OpportunityResponse.model_validate(updated)
 
 
 @router.delete("/{opp_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -85,3 +97,8 @@ async def delete_opportunity(
     if not opp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found")
     repo.soft_delete(opp, current_user["email"])
+    import asyncio
+    from app.agents.event_bus import event_bus
+    asyncio.ensure_future(event_bus.publish(
+        "opportunity.deleted", {"opportunity_id": opp_id}, db, current_user["tenant_id"], current_user["email"]
+    ))
