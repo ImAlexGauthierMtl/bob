@@ -90,13 +90,22 @@ def node_human_approval(state: dict) -> dict:
     return {**state, "status": "pending_approval", "output_data": {"awaiting_approval": True}}
 
 
+def node_trigger(state: dict) -> dict:
+    """Trigger passthrough — marks the workflow entry point."""
+    logger.info("workflow_node_trigger", step=state.get("current_step_name"))
+    return {**state, "output_data": {"triggered": True}}
+
+
 # Registry of built-in nodes
 AGENT_NODE_REGISTRY: dict[str, Any] = {
     "log_action": node_log_action,
     "notify": node_notify,
     "ai_analyze": node_ai_analyze,
+    "ai_analysis": node_ai_analyze,  # alias — step_type fallback
     "condition": node_condition,
     "human_approval": node_human_approval,
+    "trigger": node_trigger,
+    "action": node_log_action,  # default action → log
 }
 
 
@@ -154,6 +163,8 @@ class WorkflowRunner:
         # Find entry point
         entry = next((s for s in steps if s.is_entry_point), steps[0])
         step_map = {s.id: s for s in steps}
+        # Build ordered step list for sequential fallback
+        ordered_steps = sorted(steps, key=lambda s: s.step_order)
 
         # Walk the graph
         current_step = entry
@@ -184,8 +195,16 @@ class WorkflowRunner:
             else:
                 # Success path
                 state["input_data"] = step_exe.output_data or state["input_data"]
-                next_id = current_step.on_success
-                current_step = step_map.get(next_id) if next_id else None
+                if current_step.on_success:
+                    # Explicit jump
+                    current_step = step_map.get(current_step.on_success)
+                else:
+                    # Fallback: next step by step_order
+                    idx = next(
+                        (i for i, s in enumerate(ordered_steps) if s.id == current_step.id),
+                        -1,
+                    )
+                    current_step = ordered_steps[idx + 1] if idx + 1 < len(ordered_steps) else None
 
         # If we exited normally (no more steps)
         if execution.status == "running":
