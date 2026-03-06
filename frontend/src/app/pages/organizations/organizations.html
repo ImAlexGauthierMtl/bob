@@ -121,10 +121,10 @@
 </div>
 }
 
-<!-- Add Organization Dialog -->
+<!-- ═══════════════ ADD ORGANIZATION DIALOG ═══════════════ -->
 @if (showAddDialog) {
 <div class="dialog-overlay" (click)="closeAddDialog()">
-    <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog dialog--wide" (click)="$event.stopPropagation()">
         <div class="dialog__header">
             <h3 class="dialog__title">Add Organization</h3>
             <button class="dialog__close" (click)="closeAddDialog()">
@@ -133,33 +133,107 @@
         </div>
 
         <div class="dialog__body">
-            <p class="dialog__hint">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                Just type the company name — our AI will find and fill all the details automatically.
-            </p>
 
-            <div class="form-group">
-                <label for="org-name" class="form-label">Company Name</label>
-                <input type="text" id="org-name" class="input" placeholder="e.g. Bombardier, Shopify, Ubisoft..."
-                    [(ngModel)]="newOrgName" (keydown.enter)="createAndEnrich()" autofocus />
+            <!-- Search bar -->
+            <div class="dialog__hint">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                Search by company name — we'll find it on Google Maps with address, phone, and industry.
             </div>
 
-            @if (enrichmentMessage) {
-            <div class="dialog__status">
-                <p>{{ enrichmentMessage }}</p>
+            <div class="search-row">
+                <input type="text" class="input search-input" placeholder="e.g. BC Assur, Bombardier, Shopify..."
+                    [(ngModel)]="searchQuery" (keydown.enter)="searchMaps()" autofocus />
+                <button class="btn btn-accent" (click)="searchMaps()" [disabled]="isSearching || !searchQuery.trim()">
+                    @if (isSearching) {
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    } @else {
+                    <i class="fa-solid fa-search"></i> Search
+                    }
+                </button>
+            </div>
+
+            <!-- Search Results -->
+            @if (isSearching) {
+            <div class="search-loading">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                Searching Google Maps...
             </div>
             }
-        </div>
 
-        <div class="dialog__footer">
-            <button class="btn btn-outline" (click)="closeAddDialog()">Cancel</button>
-            <button class="btn btn-accent" (click)="createAndEnrich()" [disabled]="isCreating || !newOrgName.trim()">
-                @if (isCreating) {
-                <i class="fa-solid fa-spinner fa-spin"></i> Creating...
-                } @else {
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Create & Enrich
+            @if (hasSearched && searchResults.length > 0) {
+            <p class="results-label">{{ searchResults.length }} results found — select the right one:</p>
+            <div class="results-list">
+                @for (place of searchResults; track place.place_id) {
+                <div class="result-card" (click)="selectPlace(place)" [class.result-card--disabled]="isCreating">
+                    <div class="result-card__main">
+                        <p class="result-card__name">{{ place.title }}</p>
+                        <p class="result-card__address"><i class="fa-solid fa-location-dot"></i> {{ place.address }}</p>
+                        <div class="result-card__tags">
+                            @if (place.industry) {
+                            <span class="result-tag"><i class="fa-solid fa-building"></i> {{ place.industry }}</span>
+                            }
+                            @if (place.phone) {
+                            <span class="result-tag"><i class="fa-solid fa-phone"></i> {{ place.phone }}</span>
+                            }
+                            @if (place.website) {
+                            <span class="result-tag"><i class="fa-solid fa-globe"></i> Website</span>
+                            }
+                            @if (place.rating) {
+                            <span class="result-tag"><i class="fa-solid fa-star"></i> {{ place.rating }} ({{
+                                place.rating_count }})</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="result-card__action">
+                        <i class="fa-solid fa-plus"></i>
+                    </div>
+                </div>
                 }
-            </button>
+            </div>
+            }
+
+            <!-- No results → Manual form -->
+            @if (showManualForm) {
+            <div class="manual-form">
+                <p class="manual-form__label">No results found. Enter the details manually:</p>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Company Name *</label>
+                        <input type="text" class="input" [(ngModel)]="manualName" placeholder="Company name" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Industry</label>
+                        <input type="text" class="input" [(ngModel)]="manualIndustry"
+                            placeholder="e.g. Technology, Insurance..." />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="text" class="input" [(ngModel)]="manualPhone" placeholder="(555) 123-4567" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Website</label>
+                        <input type="text" class="input" [(ngModel)]="manualWebsite" placeholder="https://..." />
+                    </div>
+                </div>
+                <button class="btn btn-accent manual-form__submit" (click)="submitManual()"
+                    [disabled]="isCreating || !manualName.trim()">
+                    @if (isCreating) {
+                    <i class="fa-solid fa-spinner fa-spin"></i> Creating...
+                    } @else {
+                    <i class="fa-solid fa-plus"></i> Create & Enrich
+                    }
+                </button>
+            </div>
+            }
+
+            <!-- Status message -->
+            @if (statusMessage) {
+            <div class="dialog__status" [class.dialog__status--success]="statusType === 'success'"
+                [class.dialog__status--error]="statusType === 'error'">
+                <p>{{ statusMessage }}</p>
+            </div>
+            }
+
         </div>
     </div>
 </div>

@@ -35,6 +35,14 @@ export interface OrganizationListResponse {
 
 export interface CreateOrganizationRequest {
     name: string;
+    industry?: string;
+    website?: string;
+    phone?: string;
+    address_street?: string;
+    address_city?: string;
+    address_state?: string;
+    address_country?: string;
+    address_postal_code?: string;
     status?: string;
 }
 
@@ -46,25 +54,50 @@ export interface EnrichmentResult {
     error: string | null;
 }
 
-const API_URL = 'http://localhost:8555/api/v1/organizations';
+export interface PlaceResult {
+    title: string;
+    address: string;
+    phone: string | null;
+    website: string | null;
+    industry: string | null;
+    industry_types: string[];
+    rating: number | null;
+    rating_count: number | null;
+    latitude: number | null;
+    longitude: number | null;
+    thumbnail_url: string | null;
+    place_id: string | null;
+}
+
+export interface SearchResponse {
+    query: string;
+    results: PlaceResult[];
+    total: number;
+}
+
+const API_URL = 'http://localhost:8555/api/v1';
 
 @Injectable({ providedIn: 'root' })
 export class OrganizationService {
     constructor(private http: HttpClient) { }
 
     list(skip = 0, limit = 50): Observable<OrganizationListResponse> {
-        return this.http.get<OrganizationListResponse>(`${API_URL}?skip=${skip}&limit=${limit}`);
+        return this.http.get<OrganizationListResponse>(`${API_URL}/organizations?skip=${skip}&limit=${limit}`);
     }
 
     getById(id: string): Observable<Organization> {
-        return this.http.get<Organization>(`${API_URL}/${id}`);
+        return this.http.get<Organization>(`${API_URL}/organizations/${id}`);
     }
 
     create(data: CreateOrganizationRequest): Observable<Organization> {
-        return this.http.post<Organization>(API_URL, data);
+        return this.http.post<Organization>(`${API_URL}/organizations`, data);
     }
 
     enrich(orgId: string): Observable<EnrichmentResult> {
-        return this.http.post<EnrichmentResult>(`${API_URL}/${orgId}/enrich`, {});
+        return this.http.post<EnrichmentResult>(`${API_URL}/organizations/${orgId}/enrich`, {});
+    }
+
+    searchMaps(query: string): Observable<SearchResponse> {
+        return this.http.post<SearchResponse>(`${API_URL}/search/maps`, { query });
     }
 }
