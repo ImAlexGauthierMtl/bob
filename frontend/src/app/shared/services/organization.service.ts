@@ -22,8 +22,65 @@ export interface Organization {
     ai_enriched: string;
     linkedin_url: string | null;
     logo_url: string | null;
+    organization_profile: OrganizationProfile | null;
     created_at: string;
     updated_at: string;
+}
+
+export interface OrganizationProfile {
+    company_info?: {
+        name?: string;
+        legal_name?: string;
+        industry?: string;
+        sub_industry?: string;
+        description?: string;
+        founding_year?: number;
+        org_type?: string;
+        employee_count?: number;
+        annual_revenue?: number;
+        languages?: string[];
+    };
+    contact_info?: {
+        main_phone?: string;
+        other_phones?: string[];
+        main_email?: string;
+        other_emails?: string[];
+        website?: string;
+        address?: {
+            street?: string;
+            city?: string;
+            state?: string;
+            country?: string;
+            postal_code?: string;
+        };
+    };
+    social_media?: {
+        linkedin_url?: string;
+        facebook_url?: string;
+        instagram_url?: string;
+        twitter_url?: string;
+        youtube_url?: string;
+        tiktok_url?: string;
+    };
+    key_people?: Array<{
+        name?: string;
+        title?: string;
+        email?: string;
+        phone?: string;
+        linkedin?: string;
+    }>;
+    services_products?: Array<{
+        name?: string;
+        description?: string;
+        category?: string;
+    }>;
+    business_details?: {
+        target_market?: string;
+        geographic_coverage?: string;
+        certifications?: string[];
+        partners?: string[];
+        unique_selling_points?: string[];
+    };
 }
 
 export interface OrganizationListResponse {

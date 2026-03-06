@@ -1,7 +1,7 @@
 """Organization schemas — Pydantic models."""
 
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Any, Dict, Optional, List
 from datetime import datetime
 
 
@@ -69,6 +69,7 @@ class OrganizationResponse(BaseModel):
     ai_enriched: Optional[str] = None
     linkedin_url: Optional[str] = None
     logo_url: Optional[str] = None
+    organization_profile: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: datetime
 

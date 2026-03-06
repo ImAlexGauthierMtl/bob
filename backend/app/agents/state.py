@@ -3,7 +3,7 @@
 UNRULED PATTERN — No HDQ template for LangGraph state definitions.
 """
 
-from typing import TypedDict, Optional, List
+from typing import TypedDict, Optional, List, Dict, Any
 
 
 class SearchResult(TypedDict):
@@ -39,9 +39,11 @@ class EnrichmentState(TypedDict):
 
     # Scrape phase
     scraped_data: List[ScrapedData]
+    regex_data: Dict[str, Any]  # Emails, phones, social links extracted by regex
 
     # Extraction phase
-    extracted: dict  # Organization fields extracted by LLM
+    extracted: dict  # Flat organization fields extracted by LLM
+    organization_profile: dict  # Deep profile (services, contacts, social, etc.)
 
     # Status
     status: str  # "pending" | "searching" | "scraping" | "extracting" | "done" | "error"

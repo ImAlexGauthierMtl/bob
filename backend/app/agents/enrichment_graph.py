@@ -62,7 +62,9 @@ async def run_enrichment(
         "search_results": [],
         "urls_to_scrape": urls_to_scrape,
         "scraped_data": [],
+        "regex_data": {},
         "extracted": {},
+        "organization_profile": {},
         "status": "scraping",
         "error": None,
     }

@@ -6,202 +6,734 @@
 }
 
 @if (org) {
-<!-- Header -->
-<div class="detail-header">
-    <a routerLink="/organizations" class="back-link">
-        <i class="fa-solid fa-arrow-left"></i> Organizations
-    </a>
-    <div class="detail-header__main">
-        <div class="avatar-lg">{{ getInitials(org.name) }}</div>
-        <div class="detail-header__info">
-            <h2 class="detail-header__name">{{ org.name }}</h2>
-            <p class="detail-header__meta">
-                {{ org.industry || 'No industry' }}
-                @if (org.address_city) {
-                · {{ org.address_city }}@if (org.address_country) {, {{ org.address_country }}}
+<!-- ═══ Sticky Header ═══ -->
+<header class="org-header">
+    <div class="org-header__top">
+        <div class="org-header__identity">
+            <button class="mobile-menu-btn lg-hidden">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="org-header__identity-inner">
+                <div class="org-header__avatar">{{ getInitials(org.name) }}</div>
+                <div class="org-header__info">
+                    <div class="org-header__name-row">
+                        <h2 class="org-header__name">{{ org.name }}</h2>
+                        <div class="org-header__status">
+                            <span class="status-dot status-dot--{{ org.status.toLowerCase() }}"></span>
+                            <span class="status-label status-label--{{ org.status.toLowerCase() }}">{{ org.status
+                                }}</span>
+                        </div>
+                    </div>
+                    <p class="org-header__meta">
+                        @if (org.industry) { {{ org.industry | uppercase }} }
+                        @if (org.org_type) { · {{ org.org_type | uppercase }} }
+                    </p>
+                    <div class="org-header__details">
+                        @if (org.ai_enriched === 'Y') {
+                        <div class="org-header__detail">
+                            <i class="fa-solid fa-brain"></i>
+                            <span class="org-header__detail-label">AI:</span>
+                            <span class="org-header__detail-value">Enriched</span>
+                        </div>
+                        }
+                        @if (org.employee_count) {
+                        <div class="org-header__detail">
+                            <i class="fa-solid fa-users"></i>
+                            <span class="org-header__detail-label">Size:</span>
+                            <span class="org-header__detail-value">{{ org.employee_count }} employees</span>
+                        </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="org-header__actions lg-only">
+            <button class="btn btn-outline">
+                <i class="fa-solid fa-pen"></i> Edit
+            </button>
+            <button class="btn btn-outline">
+                <i class="fa-solid fa-box-archive"></i> Archive
+            </button>
+        </div>
+        <button class="btn-icon lg-hidden">
+            <i class="fa-solid fa-ellipsis-vertical"></i>
+        </button>
+    </div>
+
+    <div class="org-header__tabs">
+        <nav class="tabs">
+            <button class="tab" [class.tab--active]="activeTab === 'overview'"
+                (click)="setActiveTab('overview')">Overview</button>
+            <button class="tab" [class.tab--active]="activeTab === 'profile'"
+                (click)="setActiveTab('profile')">Profile</button>
+            <button class="tab" [class.tab--active]="activeTab === 'contacts'"
+                (click)="setActiveTab('contacts')">Contacts ({{ contacts.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'opportunities'"
+                (click)="setActiveTab('opportunities')">Opportunities ({{ opportunities.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'activities'"
+                (click)="setActiveTab('activities')">Activities ({{ activities.length }})</button>
+        </nav>
+    </div>
+</header>
+
+<!-- ═══ Main Content ═══ -->
+<main class="org-main">
+    <!-- Left: Content Area -->
+    <div class="org-content">
+
+        <!-- Overview Tab -->
+        @if (activeTab === 'overview') {
+        <section class="tab-section">
+
+            <!-- AI Smart Summary -->
+            @if (org.description) {
+            <div class="ai-summary">
+                <div class="ai-summary__header">
+                    <div class="ai-summary__icon">
+                        <i class="fa-solid fa-brain"></i>
+                    </div>
+                    <div class="ai-summary__info">
+                        <h3 class="ai-summary__title">AI-Generated Summary</h3>
+                        <p class="ai-summary__subtitle">Real-time intelligence powered by machine learning</p>
+                    </div>
+                </div>
+                <div class="ai-summary__body">
+                    <p class="ai-summary__text">{{ org.description }}</p>
+                </div>
+            </div>
+            }
+
+            <!-- Key Metrics -->
+            <div class="section-block">
+                <h3 class="section-title">Key Metrics</h3>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-card__header">
+                            <p class="metric-card__label">Contacts</p>
+                            <i class="fa-solid fa-users metric-card__icon"></i>
+                        </div>
+                        <p class="metric-card__value">{{ contacts.length }}</p>
+                        <p class="metric-card__sub">Linked contacts</p>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card__header">
+                            <p class="metric-card__label">Opportunities</p>
+                            <i class="fa-solid fa-handshake metric-card__icon"></i>
+                        </div>
+                        <p class="metric-card__value">{{ opportunities.length }}</p>
+                        <p class="metric-card__sub">Open opportunities</p>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card__header">
+                            <p class="metric-card__label">Activities</p>
+                            <i class="fa-solid fa-clock metric-card__icon"></i>
+                        </div>
+                        <p class="metric-card__value">{{ activities.length }}</p>
+                        <p class="metric-card__sub">Total activities</p>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card__header">
+                            <p class="metric-card__label">Revenue</p>
+                            <i class="fa-solid fa-dollar-sign metric-card__icon"></i>
+                        </div>
+                        <p class="metric-card__value">{{ formatRevenue(org.annual_revenue) }}</p>
+                        <p class="metric-card__sub">Annual revenue</p>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+        }
+
+        <!-- Profile Tab -->
+        @if (activeTab === 'profile') {
+        <section class="tab-section">
+
+            @if (!org.organization_profile || !hasProfileData(org.organization_profile)) {
+            <!-- Empty State -->
+            <div class="profile-empty">
+                <div class="profile-empty__icon">
+                    <i class="fa-solid fa-building-magnifying-glass"></i>
+                </div>
+                <h3 class="profile-empty__title">No profile data yet</h3>
+                <p class="profile-empty__desc">Run AI enrichment to generate a comprehensive company profile with
+                    contacts, services, social media, and business intelligence.</p>
+                <button class="btn btn-accent" (click)="triggerEnrichment()" [disabled]="isEnriching">
+                    @if (isEnriching) {
+                    <i class="fa-solid fa-spinner fa-spin"></i> Enriching...
+                    } @else {
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Enrich Now
+                    }
+                </button>
+            </div>
+            }
+
+            @if (org.organization_profile && hasProfileData(org.organization_profile)) {
+            <div class="profile-tree">
+
+                <!-- ── Company Info ── -->
+                @if (org.organization_profile.company_info) {
+                <div class="profile-category">
+                    <div class="profile-category__header">
+                        <div class="profile-category__icon"><i class="fa-solid fa-building"></i></div>
+                        <h3 class="profile-category__title">Company Info</h3>
+                    </div>
+                    <div class="profile-category__body">
+                        @if (org.organization_profile.company_info.description) {
+                        <p class="profile-desc">{{ org.organization_profile.company_info.description }}</p>
+                        }
+                        <div class="profile-fields">
+                            @if (org.organization_profile.company_info.name) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Official Name</span>
+                                <span class="profile-field__value">{{ org.organization_profile.company_info.name
+                                    }}</span>
+                            </div>
+                            }
+                            @if (org.organization_profile.company_info.legal_name &&
+                            org.organization_profile.company_info.legal_name !==
+                            org.organization_profile.company_info.name) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Legal Name</span>
+                                <span class="profile-field__value">{{ org.organization_profile.company_info.legal_name
+                                    }}</span>
+                            </div>
+                            }
+                            @if (org.organization_profile.company_info.industry) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Industry</span>
+                                <span class="profile-field__value">{{ org.organization_profile.company_info.industry
+                                    }}</span>
+                            </div>
+                            }
+                            @if (org.organization_profile.company_info.sub_industry) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Sub-Industry</span>
+                                <span class="profile-field__value">{{ org.organization_profile.company_info.sub_industry
+                                    }}</span>
+                            </div>
+                            }
+                            @if (org.organization_profile.company_info.founding_year) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Founded</span>
+                                <span class="profile-field__value">{{
+                                    org.organization_profile.company_info.founding_year }}</span>
+                            </div>
+                            }
+                            @if (org.organization_profile.company_info.org_type) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Type</span>
+                                <span class="profile-field__value">{{ org.organization_profile.company_info.org_type
+                                    }}</span>
+                            </div>
+                            }
+                            @if (org.organization_profile.company_info.employee_count) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Employees</span>
+                                <span class="profile-field__value">{{
+                                    org.organization_profile.company_info.employee_count | number }}</span>
+                            </div>
+                            }
+                            @if (org.organization_profile.company_info.annual_revenue) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Annual Revenue</span>
+                                <span class="profile-field__value">{{
+                                    formatRevenue(org.organization_profile.company_info.annual_revenue) }}</span>
+                            </div>
+                            }
+                            @if (org.organization_profile.company_info.languages &&
+                            org.organization_profile.company_info.languages.length) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Languages</span>
+                                <span class="profile-field__value">{{
+                                    org.organization_profile.company_info.languages.join(', ') }}</span>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                </div>
                 }
-            </p>
-            <div class="detail-header__badges">
-                <span class="status-badge status-badge--{{ org.status.toLowerCase() }}">{{ org.status }}</span>
+
+                <!-- ── Contact Info ── -->
+                @if (org.organization_profile.contact_info) {
+                <div class="profile-category">
+                    <div class="profile-category__header">
+                        <div class="profile-category__icon"><i class="fa-solid fa-address-book"></i></div>
+                        <h3 class="profile-category__title">Contact Info</h3>
+                    </div>
+                    <div class="profile-category__body">
+                        <div class="profile-fields">
+                            @if (org.organization_profile.contact_info.main_phone) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Main Phone</span>
+                                <span class="profile-field__value">{{ org.organization_profile.contact_info.main_phone
+                                    }}</span>
+                            </div>
+                            }
+                            @if (org.organization_profile.contact_info.other_phones &&
+                            org.organization_profile.contact_info.other_phones.length) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Other Phones</span>
+                                <span class="profile-field__value">{{
+                                    org.organization_profile.contact_info.other_phones.join(', ') }}</span>
+                            </div>
+                            }
+                            @if (org.organization_profile.contact_info.main_email) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Main Email</span>
+                                <span class="profile-field__value">{{ org.organization_profile.contact_info.main_email
+                                    }}</span>
+                            </div>
+                            }
+                            @if (org.organization_profile.contact_info.other_emails &&
+                            org.organization_profile.contact_info.other_emails.length) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Other Emails</span>
+                                <span class="profile-field__value">{{
+                                    org.organization_profile.contact_info.other_emails.join(', ') }}</span>
+                            </div>
+                            }
+                            @if (org.organization_profile.contact_info.website) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Website</span>
+                                <a [href]="org.organization_profile.contact_info.website" target="_blank"
+                                    class="profile-field__link">{{ org.organization_profile.contact_info.website }}</a>
+                            </div>
+                            }
+                            @if (org.organization_profile.contact_info.address) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Address</span>
+                                <span class="profile-field__value">{{
+                                    formatProfileAddress(org.organization_profile.contact_info.address) }}</span>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                }
+
+                <!-- ── Social Media ── -->
+                @if (org.organization_profile.social_media) {
+                <div class="profile-category">
+                    <div class="profile-category__header">
+                        <div class="profile-category__icon"><i class="fa-solid fa-share-nodes"></i></div>
+                        <h3 class="profile-category__title">Social Media</h3>
+                    </div>
+                    <div class="profile-category__body">
+                        <div class="profile-social-links">
+                            @if (org.organization_profile.social_media.linkedin_url) {
+                            <a [href]="org.organization_profile.social_media.linkedin_url" target="_blank"
+                                class="profile-social-link">
+                                <i class="fa-brands fa-linkedin"></i>
+                                <span>LinkedIn</span>
+                            </a>
+                            }
+                            @if (org.organization_profile.social_media.facebook_url) {
+                            <a [href]="org.organization_profile.social_media.facebook_url" target="_blank"
+                                class="profile-social-link">
+                                <i class="fa-brands fa-facebook"></i>
+                                <span>Facebook</span>
+                            </a>
+                            }
+                            @if (org.organization_profile.social_media.instagram_url) {
+                            <a [href]="org.organization_profile.social_media.instagram_url" target="_blank"
+                                class="profile-social-link">
+                                <i class="fa-brands fa-instagram"></i>
+                                <span>Instagram</span>
+                            </a>
+                            }
+                            @if (org.organization_profile.social_media.twitter_url) {
+                            <a [href]="org.organization_profile.social_media.twitter_url" target="_blank"
+                                class="profile-social-link">
+                                <i class="fa-brands fa-x-twitter"></i>
+                                <span>X / Twitter</span>
+                            </a>
+                            }
+                            @if (org.organization_profile.social_media.youtube_url) {
+                            <a [href]="org.organization_profile.social_media.youtube_url" target="_blank"
+                                class="profile-social-link">
+                                <i class="fa-brands fa-youtube"></i>
+                                <span>YouTube</span>
+                            </a>
+                            }
+                            @if (org.organization_profile.social_media.tiktok_url) {
+                            <a [href]="org.organization_profile.social_media.tiktok_url" target="_blank"
+                                class="profile-social-link">
+                                <i class="fa-brands fa-tiktok"></i>
+                                <span>TikTok</span>
+                            </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+                }
+
+                <!-- ── Key People ── -->
+                @if (org.organization_profile.key_people && org.organization_profile.key_people.length) {
+                <div class="profile-category">
+                    <div class="profile-category__header">
+                        <div class="profile-category__icon"><i class="fa-solid fa-user-tie"></i></div>
+                        <h3 class="profile-category__title">Key People</h3>
+                    </div>
+                    <div class="profile-category__body">
+                        <div class="profile-people-grid">
+                            @for (person of org.organization_profile.key_people; track person.name) {
+                            <div class="profile-person-card">
+                                <div class="profile-person-card__avatar">
+                                    {{ person.name ? person.name.charAt(0).toUpperCase() : '?' }}
+                                </div>
+                                <div class="profile-person-card__info">
+                                    <p class="profile-person-card__name">{{ person.name }}</p>
+                                    @if (person.title) {
+                                    <p class="profile-person-card__title">{{ person.title }}</p>
+                                    }
+                                    <div class="profile-person-card__links">
+                                        @if (person.email) {
+                                        <a [href]="'mailto:' + person.email" class="profile-person-card__link">
+                                            <i class="fa-solid fa-envelope"></i> {{ person.email }}
+                                        </a>
+                                        }
+                                        @if (person.phone) {
+                                        <span class="profile-person-card__link">
+                                            <i class="fa-solid fa-phone"></i> {{ person.phone }}
+                                        </span>
+                                        }
+                                        @if (person.linkedin) {
+                                        <a [href]="person.linkedin" target="_blank" class="profile-person-card__link">
+                                            <i class="fa-brands fa-linkedin"></i> LinkedIn
+                                        </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                }
+
+                <!-- ── Services & Products ── -->
+                @if (org.organization_profile.services_products &&
+                org.organization_profile.services_products.length) {
+                <div class="profile-category">
+                    <div class="profile-category__header">
+                        <div class="profile-category__icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+                        <h3 class="profile-category__title">Services & Products</h3>
+                    </div>
+                    <div class="profile-category__body">
+                        <div class="profile-services-list">
+                            @for (svc of org.organization_profile.services_products; track svc.name) {
+                            <div class="profile-service-card">
+                                <div class="profile-service-card__header">
+                                    <p class="profile-service-card__name">{{ svc.name }}</p>
+                                    @if (svc.category) {
+                                    <span class="profile-service-card__tag">{{ svc.category }}</span>
+                                    }
+                                </div>
+                                @if (svc.description) {
+                                <p class="profile-service-card__desc">{{ svc.description }}</p>
+                                }
+                            </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                }
+
+                <!-- ── Business Details ── -->
+                @if (org.organization_profile.business_details) {
+                <div class="profile-category">
+                    <div class="profile-category__header">
+                        <div class="profile-category__icon"><i class="fa-solid fa-chart-line"></i></div>
+                        <h3 class="profile-category__title">Business Details</h3>
+                    </div>
+                    <div class="profile-category__body">
+                        <div class="profile-fields">
+                            @if (org.organization_profile.business_details.target_market) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Target Market</span>
+                                <span class="profile-field__value">{{
+                                    org.organization_profile.business_details.target_market }}</span>
+                            </div>
+                            }
+                            @if (org.organization_profile.business_details.geographic_coverage) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">Geographic Coverage</span>
+                                <span class="profile-field__value">{{
+                                    org.organization_profile.business_details.geographic_coverage }}</span>
+                            </div>
+                            }
+                        </div>
+                        @if (org.organization_profile.business_details.unique_selling_points &&
+                        org.organization_profile.business_details.unique_selling_points.length) {
+                        <div class="profile-list-section">
+                            <p class="profile-list-section__label">Unique Selling Points</p>
+                            <div class="profile-tag-list">
+                                @for (usp of org.organization_profile.business_details.unique_selling_points; track usp)
+                                {
+                                <span class="profile-tag profile-tag--accent">{{ usp }}</span>
+                                }
+                            </div>
+                        </div>
+                        }
+                        @if (org.organization_profile.business_details.partners &&
+                        org.organization_profile.business_details.partners.length) {
+                        <div class="profile-list-section">
+                            <p class="profile-list-section__label">Partners</p>
+                            <div class="profile-tag-list">
+                                @for (p of org.organization_profile.business_details.partners; track p) {
+                                <span class="profile-tag">{{ p }}</span>
+                                }
+                            </div>
+                        </div>
+                        }
+                        @if (org.organization_profile.business_details.certifications &&
+                        org.organization_profile.business_details.certifications.length) {
+                        <div class="profile-list-section">
+                            <p class="profile-list-section__label">Certifications</p>
+                            <div class="profile-tag-list">
+                                @for (c of org.organization_profile.business_details.certifications; track c) {
+                                <span class="profile-tag">{{ c }}</span>
+                                }
+                            </div>
+                        </div>
+                        }
+                    </div>
+                </div>
+                }
+
+            </div>
+
+            <!-- Re-enrich button -->
+            <div class="profile-actions">
+                <button class="btn btn-outline" (click)="triggerEnrichment()" [disabled]="isEnriching">
+                    @if (isEnriching) {
+                    <i class="fa-solid fa-spinner fa-spin"></i> Re-enriching...
+                    } @else {
+                    <i class="fa-solid fa-arrows-rotate"></i> Re-enrich Profile
+                    }
+                </button>
+            </div>
+            }
+
+        </section>
+        }
+
+        <!-- Contacts Tab -->
+        @if (activeTab === 'contacts') {
+        <section class="tab-section">
+            <div class="tab-section__header">
+                <h3 class="section-title">Related Contacts</h3>
+                <button class="btn btn-accent">
+                    <i class="fa-solid fa-plus"></i> Add Contact
+                </button>
+            </div>
+            @if (contacts.length === 0) {
+            <div class="empty-state">No contacts linked to this organization yet.</div>
+            } @else {
+            <div class="table-container">
+                <div class="table-scroll">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Job Title</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (c of contacts; track c.id) {
+                            <tr>
+                                <td>
+                                    <a [routerLink]="'/contacts/' + c.id" class="entity-link">{{ c.first_name }} {{
+                                        c.last_name }}</a>
+                                </td>
+                                <td class="cell-light">{{ c.job_title || '—' }}</td>
+                                <td class="cell-light">{{ c.email || '—' }}</td>
+                                <td class="cell-light">{{ c.phone || '—' }}</td>
+                                <td class="text-right">
+                                    <button class="btn-icon-sm">
+                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            }
+        </section>
+        }
+
+        <!-- Opportunities Tab -->
+        @if (activeTab === 'opportunities') {
+        <section class="tab-section">
+            <div class="tab-section__header">
+                <h3 class="section-title">Related Opportunities</h3>
+                <button class="btn btn-accent">
+                    <i class="fa-solid fa-plus"></i> New Opportunity
+                </button>
+            </div>
+            @if (opportunities.length === 0) {
+            <div class="empty-state">No opportunities linked to this organization yet.</div>
+            } @else {
+            <div class="opp-list">
+                @for (o of opportunities; track o.id) {
+                <div class="opp-card">
+                    <div class="opp-card__main">
+                        <div class="opp-card__info">
+                            <h4 class="opp-card__name">
+                                <a [routerLink]="'/opportunities/' + o.id" class="entity-link">{{ o.name }}</a>
+                            </h4>
+                            <div class="opp-card__tags">
+                                <span class="stage-badge">{{ o.stage }}</span>
+                                @if (o.close_date) {
+                                <span class="opp-card__meta">· Close Date: {{ o.close_date }}</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="opp-card__value">
+                            <p class="opp-card__amount">{{ o.amount ? '$' + o.amount.toLocaleString() : '—' }}</p>
+                            <p class="opp-card__amount-label">Value</p>
+                        </div>
+                    </div>
+                </div>
+                }
+            </div>
+            }
+        </section>
+        }
+
+        <!-- Activities Tab -->
+        @if (activeTab === 'activities') {
+        <section class="tab-section">
+            <div class="tab-section__header">
+                <h3 class="section-title">Activities &amp; Tasks</h3>
+                <button class="btn btn-accent">
+                    <i class="fa-solid fa-plus"></i> New Task
+                </button>
+            </div>
+            @if (activities.length === 0) {
+            <div class="empty-state">No activities yet.</div>
+            } @else {
+            <div class="activity-timeline">
+                @for (a of activities; track a.id) {
+                <div class="timeline-item">
+                    <div class="timeline-item__icon">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <div class="timeline-item__content">
+                        <p class="timeline-item__title">{{ a.subject }}</p>
+                        <div class="timeline-item__meta">
+                            <span class="stage-badge">{{ a.activity_type }}</span>
+                            <span class="dot-sep">·</span>
+                            <span>{{ a.priority }}</span>
+                            <span class="dot-sep">·</span>
+                            <span class="stage-badge">{{ a.status }}</span>
+                        </div>
+                    </div>
+                </div>
+                }
+            </div>
+            }
+        </section>
+        }
+
+    </div>
+
+    <!-- Right: Info Panel -->
+    <aside class="org-panel">
+        <div class="panel-section">
+            <h4 class="panel-section__title">Key Information</h4>
+            <div class="panel-fields">
+                <div class="panel-field">
+                    <p class="panel-field__label">Industry</p>
+                    <p class="panel-field__value">{{ org.industry || '—' }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Organization Type</p>
+                    <p class="panel-field__value">{{ org.org_type || '—' }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Company Size</p>
+                    <p class="panel-field__value">{{ org.employee_count || '—' }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Annual Revenue</p>
+                    <p class="panel-field__value">{{ formatRevenue(org.annual_revenue) }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Headquarters</p>
+                    <p class="panel-field__value">{{ org.address_city || '—' }}@if (org.address_country) {, {{
+                        org.address_country }}}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Website</p>
+                    @if (org.website) {
+                    <a [href]="org.website" target="_blank" class="panel-field__link">{{ org.website }}</a>
+                    } @else {
+                    <p class="panel-field__value">—</p>
+                    }
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Phone</p>
+                    <p class="panel-field__value">{{ org.phone || '—' }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Email</p>
+                    <p class="panel-field__value">{{ org.email || '—' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h4 class="panel-section__title">Quick Actions</h4>
+            <div class="panel-actions">
+                <button class="panel-action">
+                    <i class="fa-solid fa-envelope"></i> Send Email
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-calendar"></i> Schedule Meeting
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> Create Invoice
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-file-contract"></i> Generate Report
+                </button>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h4 class="panel-section__title">Tags</h4>
+            <div class="panel-tags">
+                <span class="panel-tag">{{ org.status }}</span>
+                @if (org.industry) {
+                <span class="panel-tag">{{ org.industry }}</span>
+                }
                 @if (org.ai_enriched === 'Y') {
-                <span class="ai-badge ai-badge--done"><i class="fa-solid fa-check"></i> AI Enriched</span>
-                } @else {
-                <span class="ai-badge ai-badge--pending"><i class="fa-solid fa-spinner fa-spin"></i> Enriching...</span>
+                <span class="panel-tag">AI Enriched</span>
                 }
+                <button class="panel-tag panel-tag--add">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Tabs -->
-<div class="tabs">
-    <button class="tab" [class.tab--active]="activeTab === 'overview'"
-        (click)="setActiveTab('overview')">Overview</button>
-    <button class="tab" [class.tab--active]="activeTab === 'contacts'" (click)="setActiveTab('contacts')">Contacts ({{
-        contacts.length }})</button>
-    <button class="tab" [class.tab--active]="activeTab === 'opportunities'"
-        (click)="setActiveTab('opportunities')">Opportunities ({{ opportunities.length }})</button>
-    <button class="tab" [class.tab--active]="activeTab === 'activities'" (click)="setActiveTab('activities')">Activities
-        ({{ activities.length }})</button>
-</div>
-
-<!-- Overview Tab -->
-@if (activeTab === 'overview') {
-<div class="detail-grid">
-    <div class="info-card">
-        <h3 class="info-card__title">Company Information</h3>
-        <div class="info-card__grid">
-            <div class="info-field">
-                <span class="info-field__label">Industry</span>
-                <span class="info-field__value">{{ org.industry || '—' }}</span>
-            </div>
-            <div class="info-field">
-                <span class="info-field__label">Type</span>
-                <span class="info-field__value">{{ org.org_type || '—' }}</span>
-            </div>
-            <div class="info-field">
-                <span class="info-field__label">Employees</span>
-                <span class="info-field__value">{{ org.employee_count || '—' }}</span>
-            </div>
-            <div class="info-field">
-                <span class="info-field__label">Annual Revenue</span>
-                <span class="info-field__value">{{ formatRevenue(org.annual_revenue) }}</span>
+        @if (org.linkedin_url) {
+        <div class="panel-section">
+            <h4 class="panel-section__title">Social Profiles</h4>
+            <div class="panel-socials">
+                <a [href]="org.linkedin_url" target="_blank" class="panel-social">
+                    <i class="fa-brands fa-linkedin"></i> LinkedIn Company Page
+                </a>
             </div>
         </div>
-    </div>
-
-    <div class="info-card">
-        <h3 class="info-card__title">Contact Details</h3>
-        <div class="info-card__grid">
-            <div class="info-field">
-                <span class="info-field__label">Phone</span>
-                <span class="info-field__value">{{ org.phone || '—' }}</span>
-            </div>
-            <div class="info-field">
-                <span class="info-field__label">Email</span>
-                <span class="info-field__value">{{ org.email || '—' }}</span>
-            </div>
-            <div class="info-field">
-                <span class="info-field__label">Website</span>
-                @if (org.website) {
-                <a [href]="org.website" target="_blank" class="info-field__link">{{ org.website }}</a>
-                } @else {
-                <span class="info-field__value">—</span>
-                }
-            </div>
-            <div class="info-field">
-                <span class="info-field__label">LinkedIn</span>
-                @if (org.linkedin_url) {
-                <a [href]="org.linkedin_url" target="_blank" class="info-field__link">View Profile</a>
-                } @else {
-                <span class="info-field__value">—</span>
-                }
-            </div>
-        </div>
-    </div>
-
-    <div class="info-card">
-        <h3 class="info-card__title">Address</h3>
-        <p class="info-card__text">{{ getFullAddress() }}</p>
-    </div>
-
-    @if (org.description) {
-    <div class="info-card info-card--wide">
-        <h3 class="info-card__title">Description</h3>
-        <p class="info-card__text">{{ org.description }}</p>
-    </div>
-    }
-</div>
-}
-
-<!-- Contacts Tab -->
-@if (activeTab === 'contacts') {
-<div class="tab-content">
-    @if (contacts.length === 0) {
-    <div class="empty-tab">No contacts linked to this organization yet.</div>
-    } @else {
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Job Title</th>
-                <th>Email</th>
-                <th>Phone</th>
-            </tr>
-        </thead>
-        <tbody>
-            @for (c of contacts; track c.id) {
-            <tr>
-                <td><a [routerLink]="'/contacts/' + c.id" class="org-link">{{ c.first_name }} {{ c.last_name }}</a></td>
-                <td>{{ c.job_title || '—' }}</td>
-                <td>{{ c.email || '—' }}</td>
-                <td>{{ c.phone || '—' }}</td>
-            </tr>
-            }
-        </tbody>
-    </table>
-    }
-</div>
-}
-
-<!-- Opportunities Tab -->
-@if (activeTab === 'opportunities') {
-<div class="tab-content">
-    @if (opportunities.length === 0) {
-    <div class="empty-tab">No opportunities linked to this organization yet.</div>
-    } @else {
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Stage</th>
-                <th>Amount</th>
-                <th>Close Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            @for (o of opportunities; track o.id) {
-            <tr>
-                <td><a [routerLink]="'/opportunities/' + o.id" class="org-link">{{ o.name }}</a></td>
-                <td><span class="status-badge">{{ o.stage }}</span></td>
-                <td>{{ o.amount ? '$' + o.amount.toLocaleString() : '—' }}</td>
-                <td>{{ o.close_date || '—' }}</td>
-            </tr>
-            }
-        </tbody>
-    </table>
-    }
-</div>
-}
-
-<!-- Activities Tab -->
-@if (activeTab === 'activities') {
-<div class="tab-content">
-    @if (activities.length === 0) {
-    <div class="empty-tab">No activities yet.</div>
-    } @else {
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Subject</th>
-                <th>Type</th>
-                <th>Priority</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            @for (a of activities; track a.id) {
-            <tr>
-                <td>{{ a.subject }}</td>
-                <td>{{ a.activity_type }}</td>
-                <td>{{ a.priority }}</td>
-                <td><span class="status-badge">{{ a.status }}</span></td>
-            </tr>
-            }
-        </tbody>
-    </table>
-    }
-</div>
-}
-
+        }
+    </aside>
+</main>
 }

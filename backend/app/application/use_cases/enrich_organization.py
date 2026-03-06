@@ -2,6 +2,8 @@
 
 Maps already provides: name, address, phone, website, industry.
 This use case scrapes the website + extracts deeper info with Groq.
+Now also generates a comprehensive organization_profile with:
+services/products, key people, social media, business details.
 """
 
 from sqlalchemy.orm import Session
@@ -23,7 +25,8 @@ class EnrichOrganizationUseCase:
         """Enrich an organization with AI-gathered data.
 
         Scrapes the org's website and uses Groq to extract:
-        description, employee_count, annual_revenue, linkedin_url, etc.
+        - Flat fields: description, employee_count, revenue, linkedin, etc.
+        - Deep profile: services, contacts, social media, key people, business details.
         """
         org = self.repo.get_by_id(org_id, tenant_id)
         if not org:
@@ -49,7 +52,7 @@ class EnrichOrganizationUseCase:
                 "fields": {},
             }
 
-        # Apply extracted fields — only fill empty fields
+        # ── Apply flat extracted fields — only fill empty fields ──
         extracted = result.get("extracted", {})
         updated_count = 0
 
@@ -68,6 +71,12 @@ class EnrichOrganizationUseCase:
                     setattr(org, field, extracted[field])
                     updated_count += 1
 
+        # ── Save deep profile ──
+        organization_profile = result.get("organization_profile", {})
+        if organization_profile:
+            org.organization_profile = organization_profile
+            logger.info("deep_profile_saved", org_id=org_id, categories=list(organization_profile.keys()))
+
         org.ai_enriched = "Y"
         org.updated_by = f"ai-agent ({user_email})"
 
@@ -78,11 +87,13 @@ class EnrichOrganizationUseCase:
             org_id=org_id,
             org_name=org.name,
             fields_updated=updated_count,
+            has_profile=bool(organization_profile),
         )
 
         return {
             "status": "done",
             "fields_updated": updated_count,
             "fields": extracted,
+            "organization_profile": organization_profile,
             "error": None,
         }

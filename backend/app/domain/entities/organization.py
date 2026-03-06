@@ -2,7 +2,7 @@
 
 import enum
 
-from sqlalchemy import Column, String, Text, Enum as SAEnum, Integer, Float
+from sqlalchemy import Column, String, Text, Enum as SAEnum, Integer, Float, JSON
 from sqlalchemy.orm import relationship
 
 from app.domain.entities.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
@@ -61,6 +61,7 @@ class Organization(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
     ai_enriched = Column(String(1), default="N", comment="Y if enriched by AI agents")
     linkedin_url = Column(String(500), nullable=True)
     logo_url = Column(String(500), nullable=True)
+    organization_profile = Column(JSON, nullable=True, comment="Deep enrichment profile (services, contacts, social, etc.)")
 
     # Relations (future)
     # contacts = relationship("Contact", back_populates="organization")
