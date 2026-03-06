@@ -34,6 +34,7 @@ from app.presentation.routes.contact_routes import router as contact_router
 from app.presentation.routes.opportunity_routes import router as opportunity_router
 from app.presentation.routes.quote_routes import router as quote_router
 from app.presentation.routes.activity_routes import router as activity_router
+from app.presentation.routes.user_routes import router as user_router
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(search_router, tags=["search"])
@@ -43,6 +44,7 @@ app.include_router(contact_router, tags=["contacts"])
 app.include_router(opportunity_router, tags=["opportunities"])
 app.include_router(quote_router, tags=["quotes"])
 app.include_router(activity_router, tags=["activities"])
+app.include_router(user_router, tags=["users"])
 
 
 @app.get("/health", tags=["monitoring"])

@@ -5,4 +5,5 @@
 
 | Date | Service | Dette | Impact | Priorité | Status |
 |------|---------|-------|--------|----------|--------|
-<!-- Les entrées seront ajoutées par /consolidation -->
+| 2026-03-06 | Frontend | zone.js réintroduit comme workaround (Angular 21 est zoneless par défaut). Migration vers Signals à planifier pour profiter du zoneless. | Performance, bundle size | 🟡 MOYENNE | Ouvert |
+

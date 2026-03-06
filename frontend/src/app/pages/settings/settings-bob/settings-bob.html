@@ -1,0 +1,157 @@
+<div class="settings-panel">
+
+    <div class="settings-panel__header">
+        <h3 class="settings-panel__title">Bob Assistant Configuration</h3>
+        <p class="settings-panel__subtitle">Customize how Bob learns and interacts with you</p>
+    </div>
+
+    <!-- Learning Status Banner -->
+    <div class="info-banner info-banner--purple">
+        <div class="info-banner__row">
+            <div class="info-banner__icon info-banner__icon--purple">
+                <i class="fa-solid fa-brain"></i>
+            </div>
+            <div style="flex:1">
+                <h4 class="info-banner__title info-banner__title--purple">Bob Learning Status</h4>
+                <p class="info-banner__text info-banner__text--purple">Bob has analyzed 2,847 interactions and is 87%
+                    trained to your preferences</p>
+                <div class="progress-bar">
+                    <div class="progress-bar__fill progress-bar__fill--purple" style="width: 87%"></div>
+                </div>
+                <button class="info-banner__btn info-banner__btn--purple">View Learning Report</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Intelligence Level -->
+    <div>
+        <h4 class="settings-section__title">Intelligence Level</h4>
+        <label class="radio-card">
+            <div class="radio-card__row">
+                <input type="radio" name="bob-level" class="radio-card__input" />
+                <div style="flex:1">
+                    <p class="radio-card__name">Adaptive Assistant</p>
+                    <p class="radio-card__desc">Bob learns from your behavior and adapts suggestions automatically</p>
+                </div>
+                <span class="status-badge status-badge--purple">Recommended</span>
+            </div>
+        </label>
+        <label class="radio-card radio-card--active">
+            <div class="radio-card__row">
+                <input type="radio" name="bob-level" checked class="radio-card__input" />
+                <div style="flex:1">
+                    <p class="radio-card__name">Proactive Intelligence</p>
+                    <p class="radio-card__desc">Bob anticipates needs and provides suggestions before you ask</p>
+                </div>
+            </div>
+        </label>
+        <label class="radio-card">
+            <div class="radio-card__row">
+                <input type="radio" name="bob-level" class="radio-card__input" />
+                <div style="flex:1">
+                    <p class="radio-card__name">Manual Mode</p>
+                    <p class="radio-card__desc">Bob only responds when explicitly requested</p>
+                </div>
+            </div>
+        </label>
+    </div>
+
+    <!-- Bob Capabilities -->
+    <div class="settings-section">
+        <h4 class="settings-section__title">Bob Capabilities</h4>
+        <div class="toggle-row">
+            <div class="toggle-row__info">
+                <p class="toggle-row__name">Smart Email Prioritization</p>
+                <p class="toggle-row__desc">Automatically sort emails by importance and urgency</p>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" checked />
+                <div class="toggle__track"></div>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <div class="toggle-row__info">
+                <p class="toggle-row__name">Predictive Lead Scoring</p>
+                <p class="toggle-row__desc">Bob analyzes patterns to predict deal success probability</p>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" checked />
+                <div class="toggle__track"></div>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <div class="toggle-row__info">
+                <p class="toggle-row__name">Auto-Response Suggestions</p>
+                <p class="toggle-row__desc">Generate contextual email reply recommendations</p>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" checked />
+                <div class="toggle__track"></div>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <div class="toggle-row__info">
+                <p class="toggle-row__name">Meeting Insights & Summaries</p>
+                <p class="toggle-row__desc">Automatically generate meeting notes and action items</p>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" />
+                <div class="toggle__track"></div>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <div class="toggle-row__info">
+                <p class="toggle-row__name">Opportunity Risk Detection</p>
+                <p class="toggle-row__desc">Alert when deals show signs of stalling or risk</p>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" checked />
+                <div class="toggle__track"></div>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <div class="toggle-row__info">
+                <p class="toggle-row__name">Smart Task Prioritization</p>
+                <p class="toggle-row__desc">Organize tasks based on deadline, importance, and context</p>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" checked />
+                <div class="toggle__track"></div>
+            </label>
+        </div>
+    </div>
+
+    <!-- Data Privacy -->
+    <div class="settings-section">
+        <h4 class="settings-section__title">Data Privacy</h4>
+        <div class="toggle-row">
+            <div class="toggle-row__info">
+                <p class="toggle-row__name">Allow Bob to learn from my interactions</p>
+                <p class="toggle-row__desc">Improve suggestions by analyzing your usage patterns</p>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" checked />
+                <div class="toggle__track"></div>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <div class="toggle-row__info">
+                <p class="toggle-row__name">Share anonymous usage data</p>
+                <p class="toggle-row__desc">Help improve Bob with anonymized data</p>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" />
+                <div class="toggle__track"></div>
+            </label>
+        </div>
+    </div>
+
+    <!-- Reset Bob -->
+    <div class="settings-section">
+        <h4 class="settings-section__title">Reset Bob Learning</h4>
+        <p class="settings-section__desc">Clear all learned preferences and start fresh. Your data will be preserved.
+        </p>
+        <button class="btn btn-gray">Reset Bob Assistant</button>
+    </div>
+
+</div>

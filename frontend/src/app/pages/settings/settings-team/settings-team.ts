@@ -1,53 +1,46 @@
 import { Component, OnInit } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { ContactService, Contact, CreateContactRequest } from '../../shared/services/contact.service';
-import { OrganizationService } from '../../shared/services/organization.service';
+import { UserService, User, UserCreateRequest } from '../../../shared/services/user.service';
 
 @Component({
-    selector: 'croo-contacts',
+    selector: 'croo-settings-team',
     standalone: true,
-    imports: [RouterLink, FormsModule],
-    templateUrl: './contacts.html',
-    styleUrl: './contacts.css',
+    imports: [FormsModule],
+    templateUrl: './settings-team.html',
+    styleUrls: ['../settings-shared.css'],
 })
-export class ContactsComponent implements OnInit {
-    contacts: Contact[] = [];
+export class SettingsTeamComponent implements OnInit {
+    users: User[] = [];
     total = 0;
     isLoading = true;
 
     // Dialog state
     showAddDialog = false;
-    contactInput = '';
+    userInput = '';
     isProcessing = false;
     isCreating = false;
     statusMessage = '';
     statusType: 'info' | 'success' | 'error' = 'info';
 
     // Parsed preview
-    parsedPreview: Partial<CreateContactRequest> | null = null;
+    parsedPreview: Partial<UserCreateRequest> | null = null;
 
-    // Org name resolution
-    orgNames: Record<string, string> = {};
+    // Search
+    searchQuery = '';
 
-    constructor(
-        private contactService: ContactService,
-        private orgService: OrganizationService,
-        private router: Router,
-    ) { }
+    constructor(private userService: UserService) { }
 
     ngOnInit(): void {
-        this.loadContacts();
+        this.loadUsers();
     }
 
-    loadContacts(): void {
+    loadUsers(): void {
         this.isLoading = true;
-        this.contactService.list().subscribe({
+        this.userService.listUsers().subscribe({
             next: (res) => {
-                this.contacts = res.items;
+                this.users = res.items;
                 this.total = res.total;
                 this.isLoading = false;
-                this.resolveOrgNames();
             },
             error: () => (this.isLoading = false),
         });
@@ -65,62 +58,61 @@ export class ContactsComponent implements OnInit {
     }
 
     resetDialog(): void {
-        this.contactInput = '';
+        this.userInput = '';
         this.isProcessing = false;
         this.isCreating = false;
         this.statusMessage = '';
         this.parsedPreview = null;
     }
 
-    // ── AI Agent Processing ─────────────────
+    // ── Bob Agent Processing ─────────────────
 
     processInput(): void {
-        if (!this.contactInput.trim()) return;
+        if (!this.userInput.trim()) return;
         this.isProcessing = true;
         this.statusMessage = '';
         this.parsedPreview = null;
 
         // Simulate agent processing delay for UX
         setTimeout(() => {
-            this.parsedPreview = this.parseContactText(this.contactInput);
+            this.parsedPreview = this.parseUserText(this.userInput);
             this.isProcessing = false;
         }, 600);
     }
 
     createFromParsed(): void {
-        if (!this.parsedPreview || !this.parsedPreview.first_name || !this.parsedPreview.last_name) return;
+        if (!this.parsedPreview?.first_name || !this.parsedPreview?.last_name || !this.parsedPreview?.email) return;
         this.isCreating = true;
 
-        const data: CreateContactRequest = {
+        const data: UserCreateRequest = {
+            email: this.parsedPreview.email,
+            password: this.generateTempPassword(),
             first_name: this.parsedPreview.first_name,
             last_name: this.parsedPreview.last_name,
-            email: this.parsedPreview.email,
-            phone: this.parsedPreview.phone,
+            role: this.parsedPreview.role || 'member',
             job_title: this.parsedPreview.job_title,
-            department: this.parsedPreview.department,
-            status: 'ACTIVE',
+            phone: this.parsedPreview.phone,
         };
 
-        this.contactService.create(data).subscribe({
-            next: (contact) => {
+        this.userService.createUser(data).subscribe({
+            next: () => {
                 this.showAddDialog = false;
-                this.router.navigate(['/contacts', contact.id]);
+                this.loadUsers();
             },
-            error: () => {
+            error: (err) => {
                 this.isCreating = false;
-                this.statusMessage = '❌ Failed to create contact.';
+                this.statusMessage = err?.error?.detail || '❌ Failed to create user.';
                 this.statusType = 'error';
             },
         });
     }
 
     /**
-     * Smart text parser — extracts contact fields from free-form text.
-     * This is the client-side heuristic that will be replaced by a real
-     * AI agent endpoint in the future.
+     * Smart text parser — extracts user fields from free-form text.
+     * Same Agent-First pattern as contacts.
      */
-    private parseContactText(text: string): Partial<CreateContactRequest> {
-        const result: Partial<CreateContactRequest> = {};
+    private parseUserText(text: string): Partial<UserCreateRequest> {
+        const result: Partial<UserCreateRequest> = {};
 
         // Extract email
         const emailMatch = text.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
@@ -129,21 +121,38 @@ export class ContactsComponent implements OnInit {
             text = text.replace(emailMatch[0], '');
         }
 
-        // Extract phone (various formats)
+        // Extract phone
         const phoneMatch = text.match(/(?:\+?1?\s*)?(?:\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}/);
         if (phoneMatch) {
             result.phone = phoneMatch[0].trim();
             text = text.replace(phoneMatch[0], '');
         }
 
-        // Clean up separators
+        // Clean up
         text = text.replace(/[,;|·•—–-]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-        // Common title keywords for job title detection
+        // Role detection
+        const roleMap: Record<string, string> = {
+            admin: 'admin',
+            manager: 'manager',
+            'sales rep': 'sales_rep',
+            sales: 'sales_rep',
+            support: 'support',
+            member: 'member',
+        };
+        const roleLower = text.toLowerCase();
+        for (const [keyword, role] of Object.entries(roleMap)) {
+            if (roleLower.includes(keyword)) {
+                result.role = role;
+                text = text.replace(new RegExp(keyword, 'i'), '').trim();
+                break;
+            }
+        }
+
+        // Title keywords for job title detection
         const titleKeywords = /\b(CEO|CTO|CFO|COO|CMO|CIO|VP|Director|Manager|Engineer|Developer|Designer|Analyst|Coordinator|Specialist|Lead|Head|Chief|Senior|Junior|Sr\.|Jr\.|President|Founder|Partner|Associate|Consultant|Advisor|Officer)\b/i;
 
-        // Try to extract job title — look for role-like phrases
-        const words = text.split(' ');
+        const words = text.split(' ').filter(w => w.length > 0);
         let titleStartIdx = -1;
         for (let i = 0; i < words.length; i++) {
             if (titleKeywords.test(words[i])) {
@@ -153,10 +162,8 @@ export class ContactsComponent implements OnInit {
         }
 
         if (titleStartIdx >= 0) {
-            // Name is before the title keyword, title is from the keyword onward
             const namePart = words.slice(0, titleStartIdx).join(' ').trim();
             const titlePart = words.slice(titleStartIdx).join(' ').trim();
-
             if (namePart) {
                 const nameParts = namePart.split(' ');
                 result.first_name = nameParts[0];
@@ -166,8 +173,7 @@ export class ContactsComponent implements OnInit {
                 result.job_title = titlePart;
             }
         } else {
-            // No title found — just extract name
-            const cleanedWords = words.filter(w => w.length > 0 && !(/^\d+$/.test(w)));
+            const cleanedWords = words.filter(w => !(/^\d+$/.test(w)));
             if (cleanedWords.length >= 2) {
                 result.first_name = cleanedWords[0];
                 result.last_name = cleanedWords.slice(1).join(' ');
@@ -180,29 +186,43 @@ export class ContactsComponent implements OnInit {
         return result;
     }
 
+    private generateTempPassword(): string {
+        return 'Temp' + Math.random().toString(36).slice(2, 10) + '!1';
+    }
+
     // ── Helpers ──────────────────────────────
 
-    getInitials(c: Contact): string {
-        return `${c.first_name[0]}${c.last_name[0]}`.toUpperCase();
+    getInitials(u: User): string {
+        return `${u.first_name[0]}${u.last_name[0]}`.toUpperCase();
     }
 
-    getStatusClass(status: string): string {
-        switch (status) {
-            case 'ACTIVE': return 'status-badge--accent';
-            case 'LEAD': return 'status-badge--warn';
-            case 'INACTIVE': return 'status-badge--muted';
-            default: return 'status-badge--muted';
+    getRoleBadgeClass(role: string): string {
+        switch (role) {
+            case 'admin': return 'status-badge--purple';
+            case 'manager': return 'status-badge--blue';
+            case 'sales_rep': return 'status-badge--green';
+            case 'support': return 'status-badge--gray';
+            default: return 'status-badge--gray';
         }
     }
 
-    private resolveOrgNames(): void {
-        const orgIds = [...new Set(
-            this.contacts.map(c => c.organization_id).filter((id): id is string => !!id)
-        )];
-        for (const id of orgIds) {
-            this.orgService.getById(id).subscribe({
-                next: (org) => this.orgNames[id] = org.name,
-            });
+    getRoleLabel(role: string): string {
+        switch (role) {
+            case 'admin': return 'Admin';
+            case 'manager': return 'Manager';
+            case 'sales_rep': return 'Sales Rep';
+            case 'support': return 'Support';
+            default: return 'Member';
         }
+    }
+
+    get filteredUsers(): User[] {
+        if (!this.searchQuery.trim()) return this.users;
+        const q = this.searchQuery.toLowerCase();
+        return this.users.filter(u =>
+            u.first_name.toLowerCase().includes(q) ||
+            u.last_name.toLowerCase().includes(q) ||
+            u.email.toLowerCase().includes(q)
+        );
     }
 }

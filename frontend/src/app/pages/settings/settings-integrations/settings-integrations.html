@@ -1,0 +1,156 @@
+<div class="settings-panel">
+
+    <div class="settings-panel__header">
+        <h3 class="settings-panel__title">Integrations</h3>
+        <p class="settings-panel__subtitle">Connect your favorite tools and services</p>
+    </div>
+
+    <!-- Search -->
+    <div class="search-bar">
+        <i class="fa-solid fa-search search-bar__icon"></i>
+        <input type="text" placeholder="Search integrations..." class="search-bar__input" />
+    </div>
+
+    <!-- Connected -->
+    <div>
+        <p class="section-label">Connected</p>
+        <div class="integration-grid">
+            <div class="integration-card">
+                <div class="integration-card__header">
+                    <div class="integration-card__brand">
+                        <div class="integration-card__icon integration-card__icon--blue">
+                            <i class="fa-brands fa-google"></i>
+                        </div>
+                        <div>
+                            <p class="integration-card__name">Google Workspace</p>
+                            <p class="integration-card__sub">Gmail, Calendar, Drive</p>
+                        </div>
+                    </div>
+                    <span class="status-badge status-badge--green">Active</span>
+                </div>
+                <p class="integration-card__desc">Sync emails, calendar events, and files automatically</p>
+                <div class="integration-card__actions">
+                    <button class="integration-card__btn">Configure</button>
+                    <button class="integration-card__btn integration-card__btn--disconnect">Disconnect</button>
+                </div>
+            </div>
+            <div class="integration-card">
+                <div class="integration-card__header">
+                    <div class="integration-card__brand">
+                        <div class="integration-card__icon integration-card__icon--purple">
+                            <i class="fa-brands fa-slack"></i>
+                        </div>
+                        <div>
+                            <p class="integration-card__name">Slack</p>
+                            <p class="integration-card__sub">Team communication</p>
+                        </div>
+                    </div>
+                    <span class="status-badge status-badge--green">Active</span>
+                </div>
+                <p class="integration-card__desc">Get notifications and updates in your Slack workspace</p>
+                <div class="integration-card__actions">
+                    <button class="integration-card__btn">Configure</button>
+                    <button class="integration-card__btn integration-card__btn--disconnect">Disconnect</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available -->
+    <div class="settings-section">
+        <p class="section-label">Available</p>
+        <div class="integration-grid">
+            <div class="integration-card">
+                <div class="integration-card__header">
+                    <div class="integration-card__brand">
+                        <div class="integration-card__icon integration-card__icon--ms">
+                            <i class="fa-brands fa-microsoft"></i>
+                        </div>
+                        <div>
+                            <p class="integration-card__name">Microsoft 365</p>
+                            <p class="integration-card__sub">Outlook, Teams, OneDrive</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="integration-card__desc">Integrate with Microsoft ecosystem for seamless workflow</p>
+                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
+            </div>
+            <div class="integration-card">
+                <div class="integration-card__header">
+                    <div class="integration-card__brand">
+                        <div class="integration-card__icon integration-card__icon--orange">
+                            <i class="fa-brands fa-hubspot"></i>
+                        </div>
+                        <div>
+                            <p class="integration-card__name">HubSpot</p>
+                            <p class="integration-card__sub">Marketing automation</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="integration-card__desc">Sync contacts and marketing campaigns with HubSpot</p>
+                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
+            </div>
+            <div class="integration-card">
+                <div class="integration-card__header">
+                    <div class="integration-card__brand">
+                        <div class="integration-card__icon integration-card__icon--sf">
+                            <i class="fa-brands fa-salesforce"></i>
+                        </div>
+                        <div>
+                            <p class="integration-card__name">Salesforce</p>
+                            <p class="integration-card__sub">CRM integration</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="integration-card__desc">Bi-directional sync with Salesforce CRM data</p>
+                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
+            </div>
+            <div class="integration-card">
+                <div class="integration-card__header">
+                    <div class="integration-card__brand">
+                        <div class="integration-card__icon integration-card__icon--mc">
+                            <i class="fa-brands fa-mailchimp"></i>
+                        </div>
+                        <div>
+                            <p class="integration-card__name">Mailchimp</p>
+                            <p class="integration-card__sub">Email marketing</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="integration-card__desc">Manage email campaigns and subscriber lists</p>
+                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
+            </div>
+            <div class="integration-card">
+                <div class="integration-card__header">
+                    <div class="integration-card__brand">
+                        <div class="integration-card__icon integration-card__icon--indigo">
+                            <i class="fa-brands fa-stripe"></i>
+                        </div>
+                        <div>
+                            <p class="integration-card__name">Stripe</p>
+                            <p class="integration-card__sub">Payment processing</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="integration-card__desc">Process payments and manage subscriptions</p>
+                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
+            </div>
+            <div class="integration-card">
+                <div class="integration-card__header">
+                    <div class="integration-card__brand">
+                        <div class="integration-card__icon integration-card__icon--github">
+                            <i class="fa-brands fa-github"></i>
+                        </div>
+                        <div>
+                            <p class="integration-card__name">GitHub</p>
+                            <p class="integration-card__sub">Development tracking</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="integration-card__desc">Link development work to opportunities and projects</p>
+                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
+            </div>
+        </div>
+    </div>
+
+</div>

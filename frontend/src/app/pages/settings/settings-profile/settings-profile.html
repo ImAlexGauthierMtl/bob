@@ -1,0 +1,107 @@
+<div class="settings-panel">
+
+    @if (isLoading) {
+    <div class="settings-panel__header">
+        <h3 class="settings-panel__title">Profile Settings</h3>
+        <p class="settings-panel__subtitle">Loading...</p>
+    </div>
+    } @else {
+
+    <div class="settings-panel__header">
+        <h3 class="settings-panel__title">Profile Settings</h3>
+        <p class="settings-panel__subtitle">Manage your personal information and preferences</p>
+    </div>
+
+    <!-- Profile Banner -->
+    <div class="info-banner info-banner--blue">
+        <div class="profile-hero">
+            <div class="profile-photo">
+                <div class="profile-photo__img team-card__avatar">{{ getInitials() }}</div>
+                <button class="profile-photo__btn">
+                    <i class="fa-solid fa-camera"></i>
+                </button>
+            </div>
+            <div>
+                <h4 class="profile-hero__name">{{ firstName }} {{ lastName }}</h4>
+                <p class="profile-hero__role">{{ jobTitle || 'No title' }} • {{ location || 'No location' }}</p>
+                <div class="profile-hero__actions">
+                    <button class="btn btn-outline--accent">Change Photo</button>
+                    <button class="btn btn-outline">Remove Photo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success / Error Message -->
+    @if (saveMessage) {
+    <div class="save-toast save-toast--{{ saveType }}">
+        {{ saveMessage }}
+    </div>
+    }
+
+    <!-- Form Fields -->
+    <div class="form-row">
+        <div class="form-group">
+            <label class="form-label">First Name</label>
+            <input type="text" [(ngModel)]="firstName" class="form-input" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Last Name</label>
+            <input type="text" [(ngModel)]="lastName" class="form-input" />
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" [value]="email" class="form-input" disabled />
+        <p class="form-hint">Your primary email for notifications and login</p>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Job Title</label>
+        <input type="text" [(ngModel)]="jobTitle" class="form-input" placeholder="e.g. Sales Manager" />
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <input type="tel" [(ngModel)]="phone" class="form-input" placeholder="+1 (555) 123-4567" />
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Bio</label>
+        <textarea [(ngModel)]="bio" class="form-input form-input--textarea"
+            placeholder="Tell us about yourself..."></textarea>
+        <p class="form-hint">Brief description for your profile (max 500 characters)</p>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label class="form-label">Location</label>
+            <input type="text" [(ngModel)]="location" class="form-input" placeholder="San Francisco, CA" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Time Zone</label>
+            <select [(ngModel)]="timezone" class="form-input">
+                <option value="America/Montreal">Eastern Time (ET)</option>
+                <option value="America/Chicago">Central Time (CT)</option>
+                <option value="America/Denver">Mountain Time (MT)</option>
+                <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                <option value="Europe/Paris">Central European (CET)</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <div style="margin-top: 2rem; display: flex; gap: 0.75rem;">
+        <button class="btn btn-accent" (click)="saveProfile()" [disabled]="isSaving">
+            @if (isSaving) {
+            <i class="fa-solid fa-spinner fa-spin"></i> Saving...
+            } @else {
+            <i class="fa-solid fa-check"></i> Save Changes
+            }
+        </button>
+    </div>
+
+    }
+
+</div>

@@ -157,7 +157,7 @@
                     <i class="fa-solid fa-building-magnifying-glass"></i>
                 </div>
                 <h3 class="profile-empty__title">No profile data yet</h3>
-                <p class="profile-empty__desc">Run AI enrichment to generate a comprehensive company profile with
+                <p class="profile-empty__desc">Run Bob enrichment to generate a comprehensive company profile with
                     contacts, services, social media, and business intelligence.</p>
                 <button class="btn btn-accent" (click)="triggerEnrichment()" [disabled]="isEnriching">
                     @if (isEnriching) {
@@ -525,7 +525,7 @@
         <section class="tab-section">
             <div class="tab-section__header">
                 <h3 class="section-title">Related Contacts</h3>
-                <button class="btn btn-accent">
+                <button class="btn btn-accent" (click)="openAddContactDialog()">
                     <i class="fa-solid fa-plus"></i> Add Contact
                 </button>
             </div>
@@ -574,7 +574,7 @@
         <section class="tab-section">
             <div class="tab-section__header">
                 <h3 class="section-title">Related Opportunities</h3>
-                <button class="btn btn-accent">
+                <button class="btn btn-accent" (click)="openAddOppDialog()">
                     <i class="fa-solid fa-plus"></i> New Opportunity
                 </button>
             </div>
@@ -716,7 +716,7 @@
                 <span class="panel-tag">{{ org.industry }}</span>
                 }
                 @if (org.ai_enriched === 'Y') {
-                <span class="panel-tag">AI Enriched</span>
+                <span class="panel-tag">Bob Enriched</span>
                 }
                 <button class="panel-tag panel-tag--add">
                     <i class="fa-solid fa-plus"></i>
@@ -736,4 +736,182 @@
         }
     </aside>
 </main>
+
+<!-- ═══════════════ ADD CONTACT DIALOG ═══════════════ -->
+@if (showAddContactDialog) {
+<div class="dialog-overlay" (click)="closeAddContactDialog()">
+    <div class="dialog dialog--wide" (click)="$event.stopPropagation()">
+        <div class="dialog__header">
+            <h3 class="dialog__title">Add Contact to {{ org.name }}</h3>
+            <button class="dialog__close" (click)="closeAddContactDialog()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="dialog__body">
+
+            <!-- Hint -->
+            <div class="dialog__hint">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                Type or paste contact info — Bob will extract name, email, phone, and role automatically.
+            </div>
+
+            <!-- Single input -->
+            <div class="search-row">
+                <textarea class="input search-input search-input--textarea"
+                    placeholder="e.g. Sarah Johnson, VP Engineering, sarah@acme.com, (514) 555-1234"
+                    [(ngModel)]="contactInput" (keydown.enter)="processContactInput()" rows="2" autofocus></textarea>
+                <button class="btn btn-accent" (click)="processContactInput()"
+                    [disabled]="isProcessingContact || !contactInput.trim()">
+                    @if (isProcessingContact) {
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    } @else {
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Process
+                    }
+                </button>
+            </div>
+
+            <!-- Processing indicator -->
+            @if (isProcessingContact) {
+            <div class="search-loading">
+                <i class="fa-solid fa-brain fa-spin"></i>
+                Bob is extracting contact information...
+            </div>
+            }
+
+            <!-- Parsed preview -->
+            @if (parsedContactPreview) {
+            <div class="result-card" (click)="createContactFromParsed()"
+                [class.result-card--disabled]="isCreatingContact">
+                <div class="result-card__main">
+                    <p class="result-card__name">{{ parsedContactPreview.first_name }} {{ parsedContactPreview.last_name
+                        }}</p>
+                    <div class="result-card__tags">
+                        @if (parsedContactPreview.job_title) {
+                        <span class="result-tag"><i class="fa-solid fa-briefcase"></i> {{ parsedContactPreview.job_title
+                            }}</span>
+                        }
+                        @if (parsedContactPreview.email) {
+                        <span class="result-tag"><i class="fa-solid fa-envelope"></i> {{ parsedContactPreview.email
+                            }}</span>
+                        }
+                        @if (parsedContactPreview.phone) {
+                        <span class="result-tag"><i class="fa-solid fa-phone"></i> {{ parsedContactPreview.phone
+                            }}</span>
+                        }
+                        <span class="result-tag"><i class="fa-solid fa-building"></i> {{ org.name }}</span>
+                    </div>
+                </div>
+                <div class="result-card__action">
+                    @if (isCreatingContact) {
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    } @else {
+                    <i class="fa-solid fa-plus"></i>
+                    }
+                </div>
+            </div>
+            <p class="results-label">Click to create and link to this organization</p>
+            }
+
+            <!-- Status message -->
+            @if (contactStatusMessage) {
+            <div class="dialog__status dialog__status--error">
+                <p>{{ contactStatusMessage }}</p>
+            </div>
+            }
+
+        </div>
+    </div>
+</div>
+}
+
+<!-- ═══════════════ ADD OPPORTUNITY DIALOG ═══════════════ -->
+@if (showAddOppDialog) {
+<div class="dialog-overlay" (click)="closeAddOppDialog()">
+    <div class="dialog dialog--wide" (click)="$event.stopPropagation()">
+        <div class="dialog__header">
+            <h3 class="dialog__title">New Opportunity for {{ org.name }}</h3>
+            <button class="dialog__close" (click)="closeAddOppDialog()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="dialog__body">
+
+            <!-- Hint -->
+            <div class="dialog__hint">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                Describe the opportunity — include deal name, amount ($50K), stage (proposal, negotiation), and
+                priority. Bob will parse it.
+            </div>
+
+            <!-- Single input -->
+            <div class="search-row">
+                <textarea class="input search-input search-input--textarea"
+                    placeholder="e.g. Enterprise SaaS License $150K proposal high priority 60%" [(ngModel)]="oppInput"
+                    (keydown.enter)="processOppInput()" rows="2" autofocus></textarea>
+                <button class="btn btn-accent" (click)="processOppInput()"
+                    [disabled]="isProcessingOpp || !oppInput.trim()">
+                    @if (isProcessingOpp) {
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    } @else {
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Process
+                    }
+                </button>
+            </div>
+
+            <!-- Processing indicator -->
+            @if (isProcessingOpp) {
+            <div class="search-loading">
+                <i class="fa-solid fa-brain fa-spin"></i>
+                Bob is analyzing the opportunity...
+            </div>
+            }
+
+            <!-- Parsed preview -->
+            @if (parsedOppPreview) {
+            <div class="result-card" (click)="createOppFromParsed()" [class.result-card--disabled]="isCreatingOpp">
+                <div class="result-card__main">
+                    <p class="result-card__name">{{ parsedOppPreview.name }}</p>
+                    <div class="result-card__tags">
+                        @if (parsedOppPreview.amount) {
+                        <span class="result-tag"><i class="fa-solid fa-dollar-sign"></i> {{ parsedOppPreview.amount |
+                            number }}</span>
+                        }
+                        @if (parsedOppPreview.stage) {
+                        <span class="result-tag"><i class="fa-solid fa-layer-group"></i> {{ parsedOppPreview.stage
+                            }}</span>
+                        }
+                        @if (parsedOppPreview.priority) {
+                        <span class="result-tag"><i class="fa-solid fa-flag"></i> {{ parsedOppPreview.priority }}</span>
+                        }
+                        @if (parsedOppPreview.probability) {
+                        <span class="result-tag"><i class="fa-solid fa-chart-simple"></i> {{
+                            parsedOppPreview.probability }}%</span>
+                        }
+                        <span class="result-tag"><i class="fa-solid fa-building"></i> {{ org.name }}</span>
+                    </div>
+                </div>
+                <div class="result-card__action">
+                    @if (isCreatingOpp) {
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    } @else {
+                    <i class="fa-solid fa-plus"></i>
+                    }
+                </div>
+            </div>
+            <p class="results-label">Click to create this opportunity</p>
+            }
+
+            <!-- Status message -->
+            @if (oppStatusMessage) {
+            <div class="dialog__status dialog__status--error">
+                <p>{{ oppStatusMessage }}</p>
+            </div>
+            }
+
+        </div>
+    </div>
+</div>
+}
 }

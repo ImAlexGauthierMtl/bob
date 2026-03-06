@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>::-webkit-scrollbar { display: none;}</style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'accent': '#FF4500',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-white font-sans antialiased">
+
+<div id="main-container" class="flex min-h-screen">
+    
+    <aside id="sidebar" class="hidden lg:flex lg:flex-col w-72 border-r border-gray-100 bg-white fixed h-screen overflow-y-auto">
+        <div class="p-10 border-b border-gray-100">
+            <h1 class="text-3xl font-extralight tracking-tight leading-tight">Dynamics<br><span class="font-semibold">Nexus</span></h1>
+            <p class="text-xs text-gray-400 mt-3 tracking-wide">AI-ENHANCED CRM</p>
+        </div>
+        
+        <nav class="flex-1 p-8">
+            <div class="space-y-2">
+                <a href="#" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Dashboard</a>
+                <a href="#organizations" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Organizations</a>
+                <a href="#contacts" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Contacts</a>
+                <a href="#opportunities" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Opportunities</a>
+                <a href="#tasks" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Tasks</a>
+                <a href="#inbox" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Inbox</a>
+                <a href="#" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Analytics</a>
+            </div>
+            
+            <div class="mt-16 pt-8 border-t border-gray-100">
+                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4 px-5">AI Assistant</p>
+                <div class="bg-gradient-to-br from-gray-50 to-white border border-gray-100 p-6 mb-6">
+                    <div class="flex items-start gap-3 mb-4">
+                        <div class="w-8 h-8 bg-accent rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-wand-magic-sparkles text-white text-xs"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-black mb-1">System Optimization</p>
+                            <p class="text-xs text-gray-500 leading-relaxed">AI recommendations ready</p>
+                        </div>
+                    </div>
+                    <button class="w-full py-2 px-4 bg-black text-white text-xs font-medium hover:bg-gray-800 transition-colors">View Insights</button>
+                </div>
+                
+                <div class="space-y-2">
+                    <a href="#" class="block py-3 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Team</a>
+                    <a href="#settings" class="block py-3 px-5 text-sm font-medium text-black bg-gray-50 border-l-2 border-accent">Settings</a>
+                    <a href="#" class="block py-3 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Integrations</a>
+                </div>
+            </div>
+        </nav>
+        
+        <div class="p-8 border-t border-gray-100">
+            <div class="flex items-center gap-4">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="User" class="w-12 h-12 rounded-full object-cover">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-black truncate">Marcus Chen</p>
+                    <p class="text-xs text-gray-400 truncate">Sales Manager</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="main-content" class="flex-1 flex flex-col min-w-0 lg:ml-72">
+        
+        <header id="header" class="bg-white border-b border-gray-100 sticky top-0 z-20">
+            <div class="px-6 lg:px-16 py-8">
+                <div class="flex items-center justify-between gap-6 mb-6">
+                    <div class="flex items-center gap-6 flex-1">
+                        <button class="lg:hidden text-gray-600">
+                            <i class="fa-solid fa-bars text-xl"></i>
+                        </button>
+                        <div class="flex-1">
+                            <h2 class="text-3xl lg:text-4xl font-light tracking-tight text-black mb-2">Settings</h2>
+                            <p class="text-sm text-gray-500">Configure your workspace with intelligent recommendations</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        <button class="px-5 py-3 bg-accent text-white text-sm font-medium hover:bg-opacity-90 transition-colors hidden lg:flex items-center gap-2">
+                            <i class="fa-solid fa-floppy-disk text-xs"></i>
+                            Save Changes
+                        </button>
+                        <button class="w-10 h-10 border border-gray-200 flex items-center justify-center hover:border-accent hover:text-accent transition-all lg:hidden">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 bg-white">
+            <div class="flex flex-col lg:flex-row h-full">
+                
+                <div id="settings-nav" class="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-gray-100 bg-white overflow-y-auto">
+                    <div class="p-6">
+                        
+                        <div class="mb-8">
+                            <div class="bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 border border-purple-100 p-6 mb-6">
+                                <div class="flex items-start gap-3 mb-4">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-solid fa-brain text-white"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-purple-900 mb-1">AI Configuration</p>
+                                        <p class="text-xs text-purple-700 leading-relaxed">Optimize your AI assistant</p>
+                                    </div>
+                                </div>
+                                <button class="w-full py-2 px-4 bg-white text-purple-700 text-xs font-medium hover:bg-purple-50 transition-colors border border-purple-200">
+                                    Configure AI
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4 px-2">General</h3>
+                            <nav class="space-y-1">
+                                <button class="settings-tab-btn w-full flex items-center justify-between py-4 px-5 text-sm font-medium text-black bg-gray-50 border-l-2 border-accent transition-all" data-tab="profile">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-user text-gray-600"></i>
+                                        <span>Profile</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                                </button>
+                                <button class="settings-tab-btn w-full flex items-center justify-between py-4 px-5 text-sm font-light text-gray-600 hover:text-black hover:bg-gray-50 transition-all" data-tab="account">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-user-shield text-gray-400"></i>
+                                        <span>Account & Security</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                                </button>
+                                <button class="settings-tab-btn w-full flex items-center justify-between py-4 px-5 text-sm font-light text-gray-600 hover:text-black hover:bg-gray-50 transition-all" data-tab="notifications">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-bell text-gray-400"></i>
+                                        <span>Notifications</span>
+                                    </div>
+                                    <span class="px-2 py-1 bg-accent text-xs font-semibold text-white rounded-full">3</span>
+                                </button>
+                                <button class="settings-tab-btn w-full flex items-center justify-between py-4 px-5 text-sm font-light text-gray-600 hover:text-black hover:bg-gray-50 transition-all" data-tab="preferences">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-sliders text-gray-400"></i>
+                                        <span>Preferences</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                                </button>
+                            </nav>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4 px-2">AI Features</h3>
+                            <nav class="space-y-1">
+                                <button class="settings-tab-btn w-full flex items-center justify-between py-4 px-5 text-sm font-light text-gray-600 hover:text-black hover:bg-gray-50 transition-all" data-tab="ai-assistant">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-wand-magic-sparkles text-gray-400"></i>
+                                        <span>AI Assistant</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                                </button>
+                                <button class="settings-tab-btn w-full flex items-center justify-between py-4 px-5 text-sm font-light text-gray-600 hover:text-black hover:bg-gray-50 transition-all" data-tab="automation">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-robot text-gray-400"></i>
+                                        <span>Automation</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                                </button>
+                                <button class="settings-tab-btn w-full flex items-center justify-between py-4 px-5 text-sm font-light text-gray-600 hover:text-black hover:bg-gray-50 transition-all" data-tab="insights">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-chart-line text-gray-400"></i>
+                                        <span>Predictive Insights</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                                </button>
+                            </nav>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4 px-2">Organization</h3>
+                            <nav class="space-y-1">
+                                <button class="settings-tab-btn w-full flex items-center justify-between py-4 px-5 text-sm font-light text-gray-600 hover:text-black hover:bg-gray-50 transition-all" data-tab="team">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-users text-gray-400"></i>
+                                        <span>Team Members</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                                </button>
+                                <button class="settings-tab-btn w-full flex items-center justify-between py-4 px-5 text-sm font-light text-gray-600 hover:text-black hover:bg-gray-50 transition-all" data-tab="roles">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-user-tag text-gray-400"></i>
+                                        <span>Roles & Permissions</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                                </button>
+                                <button class="settings-tab-btn w-full flex items-center justify-between py-4 px-5 text-sm font-light text-gray-600 hover:text-black hover:bg-gray-50 transition-all" data-tab="billing">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-credit-card text-gray-400"></i>
+                                        <span>Billing & Plans</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                                </button>
+                            </nav>
+                        </div>
+
+                        <div class="mb-6">
+                            <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4 px-2">System</h3>
+                            <nav class="space-y-1">
+                                <button class="settings-tab-btn w-full flex items-center justify-between py-4 px-5 text-sm font-light text-gray-600 hover:text-black hover:bg-gray-50 transition-all" data-tab="integrations">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-plug text-gray-400"></i>
+                                        <span>Integrations</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                                </button>
+                                <button class="settings-tab-btn w-full flex items-center justify-between py-4 px-5 text-sm font-light text-gray-600 hover:text-black hover:bg-gray-50 transition-all" data-tab="api">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-code text-gray-400"></i>
+                                        <span>API & Webhooks</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                                </button>
+                                <button class="settings-tab-btn w-full flex items-center justify-between py-4 px-5 text-sm font-light text-gray-600 hover:text-black hover:bg-gray-50 transition-all" data-tab="data">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fa-solid fa-database text-gray-400"></i>
+                                        <span>Data & Privacy</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+                                </button>
+                            </nav>
+                        </div>
+
+                        <div class="pt-6 border-t border-gray-100">
+                            <button class="w-full flex items-center gap-3 py-3 px-5 text-sm font-light text-red-600 hover:bg-red-50 transition-all">
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                                <span>Sign Out</span>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div id="settings-content" class="flex-1 overflow-y-auto">
+                    
+                    <div class="settings-panel" data-panel="profile">
+                        <div class="p-6 lg:p-16 max-w-5xl">
+                            
+                            <div class="mb-12">
+                                <h3 class="text-2xl font-light text-black mb-2">Profile Settings</h3>
+                                <p class="text-sm text-gray-500">Manage your personal information and preferences</p>
+                            </div>
+
+                            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-8 mb-12">
+                                <div class="flex flex-col lg:flex-row items-start gap-6">
+                                    <div class="relative">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="Profile" class="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg">
+                                        <button class="absolute bottom-0 right-0 w-10 h-10 bg-accent text-white rounded-full flex items-center justify-center hover:bg-opacity-90 transition-colors shadow-lg">
+                                            <i class="fa-solid fa-camera text-sm"></i>
+                                        </button>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-xl font-medium text-black mb-2">Marcus Chen</h4>
+                                        <p class="text-sm text-gray-600 mb-4">Sales Manager • Dynamics Nexus</p>
+                                        <div class="flex flex-wrap gap-3">
+                                            <button class="px-5 py-2 bg-white text-accent border border-accent text-sm font-medium hover:bg-accent hover:text-white transition-colors">
+                                                Change Photo
+                                            </button>
+                                            <button class="px-5 py-2 bg-white text-gray-600 border border-gray-200 text-sm font-medium hover:border-gray-300 transition-colors">
+                                                Remove Photo
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-8">
+                                
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-black mb-2">First Name</label>
+                                        <input type="text" value="Marcus" class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-black mb-2">Last Name</label>
+                                        <input type="text" value="Chen" class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-black mb-2">Email Address</label>
+                                    <input type="email" value="marcus.chen@dynamicsnexus.com" class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                                    <p class="text-xs text-gray-500 mt-2">Your primary email for notifications and login</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-black mb-2">Job Title</label>
+                                    <input type="text" value="Sales Manager" class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-black mb-2">Phone Number</label>
+                                    <input type="tel" value="+1 (555) 123-4567" class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-black mb-2">Bio</label>
+                                    <textarea rows="4" class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors" placeholder="Tell us about yourself...">Results-driven sales manager with 8+ years of experience in enterprise software sales. Passionate about building long-term client relationships and driving revenue growth.</textarea>
+                                    <p class="text-xs text-gray-500 mt-2">Brief description for your profile (max 500 characters)</p>
+                                </div>
+
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-black mb-2">Location</label>
+                                        <input type="text" value="San Francisco, CA" class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-black mb-2">Time Zone</label>
+                                        <select class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                                            <option>Pacific Time (PT)</option>
+                                            <option>Eastern Time (ET)</option>
+                                            <option>Central Time (CT)</option>
+                                            <option>Mountain Time (MT)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="pt-8 border-t border-gray-100">
+                                    <h4 class="text-lg font-medium text-black mb-6">Social Profiles</h4>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-black mb-2">
+                                                <i class="fa-brands fa-linkedin text-blue-600 mr-2"></i>
+                                                LinkedIn
+                                            </label>
+                                            <input type="url" value="linkedin.com/in/marcuschen" class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-black mb-2">
+                                                <i class="fa-brands fa-twitter text-blue-400 mr-2"></i>
+                                                Twitter
+                                            </label>
+                                            <input type="url" placeholder="twitter.com/username" class="w-full px-4 py-3 border border-gray-200 text-sm text-gray-400 focus:outline-none focus:border-accent transition-colors">
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="settings-panel hidden" data-panel="account">
+                        <div class="p-6 lg:p-16 max-w-5xl">
+                            
+                            <div class="mb-12">
+                                <h3 class="text-2xl font-light text-black mb-2">Account & Security</h3>
+                                <p class="text-sm text-gray-500">Manage your account security and authentication settings</p>
+                            </div>
+
+                            <div class="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 p-8 mb-12">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-solid fa-shield-halved text-white text-xl"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-lg font-semibold text-green-900 mb-2">Your Account is Secure</h4>
+                                        <p class="text-sm text-green-700 mb-4">Two-factor authentication is enabled. Last security check: 2 days ago</p>
+                                        <button class="px-5 py-2 bg-white text-green-700 border border-green-200 text-sm font-medium hover:bg-green-50 transition-colors">
+                                            View Security Report
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-12">
+                                
+                                <div>
+                                    <h4 class="text-lg font-medium text-black mb-6">Change Password</h4>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-black mb-2">Current Password</label>
+                                            <input type="password" class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-black mb-2">New Password</label>
+                                            <input type="password" class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                                            <p class="text-xs text-gray-500 mt-2">Must be at least 8 characters with uppercase, lowercase, and numbers</p>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-black mb-2">Confirm New Password</label>
+                                            <input type="password" class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                                        </div>
+                                        <button class="px-6 py-3 bg-accent text-white text-sm font-medium hover:bg-opacity-90 transition-colors">
+                                            Update Password
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="pt-8 border-t border-gray-100">
+                                    <h4 class="text-lg font-medium text-black mb-6">Two-Factor Authentication</h4>
+                                    <div class="bg-white border border-gray-200 p-6">
+                                        <div class="flex items-start justify-between mb-4">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Authenticator App</p>
+                                                <p class="text-sm text-gray-500">Use an authenticator app to generate verification codes</p>
+                                            </div>
+                                            <div class="flex items-center gap-3">
+                                                <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Enabled</span>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" checked class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white border border-gray-200 p-6 mt-4">
+                                        <div class="flex items-start justify-between">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">SMS Verification</p>
+                                                <p class="text-sm text-gray-500">Receive verification codes via text message</p>
+                                            </div>
+                                            <div class="flex items-center gap-3">
+                                                <span class="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full">Disabled</span>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pt-8 border-t border-gray-100">
+                                    <h4 class="text-lg font-medium text-black mb-6">Active Sessions</h4>
+                                    <div class="space-y-4">
+                                        <div class="bg-white border border-gray-200 p-6">
+                                            <div class="flex items-start justify-between">
+                                                <div class="flex items-start gap-4 flex-1">
+                                                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                        <i class="fa-solid fa-desktop text-green-600"></i>
+                                                    </div>
+                                                    <div class="flex-1">
+                                                        <p class="text-sm font-medium text-black mb-1">MacBook Pro • San Francisco, CA</p>
+                                                        <p class="text-xs text-gray-500">Current session • Last active: Now</p>
+                                                        <p class="text-xs text-gray-400 mt-1">Chrome 120.0 • macOS Sonoma</p>
+                                                    </div>
+                                                </div>
+                                                <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Active</span>
+                                            </div>
+                                        </div>
+                                        <div class="bg-white border border-gray-200 p-6">
+                                            <div class="flex items-start justify-between">
+                                                <div class="flex items-start gap-4 flex-1">
+                                                    <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                        <i class="fa-solid fa-mobile-screen text-gray-600"></i>
+                                                    </div>
+                                                    <div class="flex-1">
+                                                        <p class="text-sm font-medium text-black mb-1">iPhone 15 Pro • San Francisco, CA</p>
+                                                        <p class="text-xs text-gray-500">Last active: 2 hours ago</p>
+                                                        <p class="text-xs text-gray-400 mt-1">Safari 17.2 • iOS 17.2</p>
+                                                    </div>
+                                                </div>
+                                                <button class="text-sm text-red-600 hover:underline font-medium">Revoke</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pt-8 border-t border-gray-100">
+                                    <h4 class="text-lg font-medium text-black mb-2">Delete Account</h4>
+                                    <p class="text-sm text-gray-500 mb-6">Permanently delete your account and all associated data. This action cannot be undone.</p>
+                                    <button class="px-6 py-3 bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">
+                                        Delete Account
+                                    </button>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="settings-panel hidden" data-panel="ai-assistant">
+                        <div class="p-6 lg:p-16 max-w-5xl">
+                            
+                            <div class="mb-12">
+                                <h3 class="text-2xl font-light text-black mb-2">AI Assistant Configuration</h3>
+                                <p class="text-sm text-gray-500">Customize how your AI assistant learns and interacts with you</p>
+                            </div>
+
+                            <div class="bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 border border-purple-100 p-8 mb-12">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-solid fa-brain text-white text-xl"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-lg font-semibold text-purple-900 mb-2">AI Learning Status</h4>
+                                        <p class="text-sm text-purple-700 mb-4">Your AI has analyzed 2,847 interactions and is 87% trained to your preferences</p>
+                                        <div class="w-full bg-white h-3 rounded-full overflow-hidden mb-4">
+                                            <div class="bg-gradient-to-r from-purple-500 to-indigo-500 h-full" style="width: 87%"></div>
+                                        </div>
+                                        <button class="px-5 py-2 bg-white text-purple-700 border border-purple-200 text-sm font-medium hover:bg-purple-50 transition-colors">
+                                            View Learning Report
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-12">
+                                
+                                <div>
+                                    <h4 class="text-lg font-medium text-black mb-6">Intelligence Level</h4>
+                                    <div class="space-y-4">
+                                        <label class="block bg-white border-2 border-gray-200 p-6 cursor-pointer hover:border-accent transition-colors">
+                                            <div class="flex items-start gap-4">
+                                                <input type="radio" name="ai-level" class="mt-1 w-5 h-5 text-accent">
+                                                <div class="flex-1">
+                                                    <p class="text-sm font-semibold text-black mb-1">Adaptive Assistant</p>
+                                                    <p class="text-sm text-gray-600">AI learns from your behavior and adapts suggestions automatically</p>
+                                                </div>
+                                                <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">Recommended</span>
+                                            </div>
+                                        </label>
+                                        <label class="block bg-white border-2 border-accent p-6 cursor-pointer">
+                                            <div class="flex items-start gap-4">
+                                                <input type="radio" name="ai-level" checked class="mt-1 w-5 h-5 text-accent">
+                                                <div class="flex-1">
+                                                    <p class="text-sm font-semibold text-black mb-1">Proactive Intelligence</p>
+                                                    <p class="text-sm text-gray-600">AI anticipates needs and provides suggestions before you ask</p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                        <label class="block bg-white border-2 border-gray-200 p-6 cursor-pointer hover:border-accent transition-colors">
+                                            <div class="flex items-start gap-4">
+                                                <input type="radio" name="ai-level" class="mt-1 w-5 h-5 text-accent">
+                                                <div class="flex-1">
+                                                    <p class="text-sm font-semibold text-black mb-1">Manual Mode</p>
+                                                    <p class="text-sm text-gray-600">AI only responds when explicitly requested</p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="pt-8 border-t border-gray-100">
+                                    <h4 class="text-lg font-medium text-black mb-6">AI Capabilities</h4>
+                                    <div class="space-y-4">
+                                        <div class="flex items-center justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Smart Email Prioritization</p>
+                                                <p class="text-xs text-gray-500">Automatically sort emails by importance and urgency</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" checked class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                        <div class="flex items-center justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Predictive Lead Scoring</p>
+                                                <p class="text-xs text-gray-500">AI analyzes patterns to predict deal success probability</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" checked class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                        <div class="flex items-center justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Auto-Response Suggestions</p>
+                                                <p class="text-xs text-gray-500">Generate contextual email reply recommendations</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" checked class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                        <div class="flex items-center justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Meeting Insights & Summaries</p>
+                                                <p class="text-xs text-gray-500">Automatically generate meeting notes and action items</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                        <div class="flex items-center justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Opportunity Risk Detection</p>
+                                                <p class="text-xs text-gray-500">Alert when deals show signs of stalling or risk</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" checked class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                        <div class="flex items-center justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Smart Task Prioritization</p>
+                                                <p class="text-xs text-gray-500">Organize tasks based on deadline, importance, and context</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" checked class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pt-8 border-t border-gray-100">
+                                    <h4 class="text-lg font-medium text-black mb-6">Data Privacy</h4>
+                                    <div class="space-y-4">
+                                        <div class="flex items-center justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Allow AI to learn from my interactions</p>
+                                                <p class="text-xs text-gray-500">Improve suggestions by analyzing your usage patterns</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" checked class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                        <div class="flex items-center justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Share anonymous usage data</p>
+                                                <p class="text-xs text-gray-500">Help improve AI models with anonymized data</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pt-8 border-t border-gray-100">
+                                    <h4 class="text-lg font-medium text-black mb-2">Reset AI Learning</h4>
+                                    <p class="text-sm text-gray-500 mb-6">Clear all learned preferences and start fresh. Your data will be preserved.</p>
+                                    <button class="px-6 py-3 bg-gray-100 text-black text-sm font-medium hover:bg-gray-200 transition-colors">
+                                        Reset AI Assistant
+                                    </button>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="settings-panel hidden" data-panel="notifications">
+                        <div class="p-6 lg:p-16 max-w-5xl">
+                            
+                            <div class="mb-12">
+                                <h3 class="text-2xl font-light text-black mb-2">Notification Preferences</h3>
+                                <p class="text-sm text-gray-500">Control how and when you receive notifications</p>
+                            </div>
+
+                            <div class="space-y-8">
+                                
+                                <div>
+                                    <h4 class="text-lg font-medium text-black mb-6">Email Notifications</h4>
+                                    <div class="space-y-4">
+                                        <div class="flex items-start justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">New opportunities assigned to me</p>
+                                                <p class="text-xs text-gray-500">Get notified when a new opportunity is assigned</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" checked class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                        <div class="flex items-start justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Task deadlines approaching</p>
+                                                <p class="text-xs text-gray-500">Reminders for tasks due within 24 hours</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" checked class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                        <div class="flex items-start justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Team mentions and replies</p>
+                                                <p class="text-xs text-gray-500">When someone mentions you or replies to your comments</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" checked class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                        <div class="flex items-start justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Weekly performance summary</p>
+                                                <p class="text-xs text-gray-500">Summary of your activities and achievements</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pt-8 border-t border-gray-100">
+                                    <h4 class="text-lg font-medium text-black mb-6">AI Assistant Notifications</h4>
+                                    <div class="space-y-4">
+                                        <div class="flex items-start justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Priority inbox alerts</p>
+                                                <p class="text-xs text-gray-500">When AI identifies urgent emails requiring attention</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" checked class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                        <div class="flex items-start justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Opportunity risk warnings</p>
+                                                <p class="text-xs text-gray-500">Alerts when AI detects deals at risk</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" checked class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                        <div class="flex items-start justify-between py-4 px-6 bg-white border border-gray-200">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-black mb-1">Smart recommendations</p>
+                                                <p class="text-xs text-gray-500">Suggestions for actions and optimizations</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" checked class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pt-8 border-t border-gray-100">
+                                    <h4 class="text-lg font-medium text-black mb-6">Notification Schedule</h4>
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div>
+                                            <label class="block text-sm font-medium text-black mb-2">Do Not Disturb Start</label>
+                                            <input type="time" value="22:00" class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-black mb-2">Do Not Disturb End</label>
+                                            <input type="time" value="08:00" class="w-full px-4 py-3 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="settings-panel hidden" data-panel="integrations">
+                        <div class="p-6 lg:p-16 max-w-5xl">
+                            
+                            <div class="mb-12">
+                                <h3 class="text-2xl font-light text-black mb-2">Integrations</h3>
+                                <p class="text-sm text-gray-500">Connect your favorite tools and services</p>
+                            </div>
+
+                            <div class="mb-12">
+                                <div class="relative">
+                                    <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                                    <input type="text" placeholder="Search integrations..." class="w-full py-3 pl-12 pr-4 border border-gray-200 text-sm text-black placeholder-gray-400 focus:outline-none focus:border-accent transition-colors">
+                                </div>
+                            </div>
+
+                            <div class="space-y-8">
+                                
+                                <div>
+                                    <h4 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">Connected</h4>
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                        <div class="bg-white border border-gray-200 p-6">
+                                            <div class="flex items-start justify-between mb-4">
+                                                <div class="flex items-center gap-4">
+                                                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                                        <i class="fa-brands fa-google text-blue-600 text-xl"></i>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm font-semibold text-black">Google Workspace</p>
+                                                        <p class="text-xs text-gray-500">Gmail, Calendar, Drive</p>
+                                                    </div>
+                                                </div>
+                                                <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Active</span>
+                                            </div>
+                                            <p class="text-xs text-gray-600 mb-4">Sync emails, calendar events, and files automatically</p>
+                                            <div class="flex gap-2">
+                                                <button class="flex-1 py-2 px-3 border border-gray-200 text-xs font-medium text-gray-600 hover:border-accent hover:text-accent transition-colors">
+                                                    Configure
+                                                </button>
+                                                <button class="py-2 px-3 border border-gray-200 text-xs font-medium text-red-600 hover:border-red-600 transition-colors">
+                                                    Disconnect
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="bg-white border border-gray-200 p-6">
+                                            <div class="flex items-start justify-between mb-4">
+                                                <div class="flex items-center gap-4">
+                                                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                                        <i class="fa-brands fa-slack text-purple-600 text-xl"></i>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm font-semibold text-black">Slack</p>
+                                                        <p class="text-xs text-gray-500">Team communication</p>
+                                                    </div>
+                                                </div>
+                                                <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Active</span>
+                                            </div>
+                                            <p class="text-xs text-gray-600 mb-4">Get notifications and updates in your Slack workspace</p>
+                                            <div class="flex gap-2">
+                                                <button class="flex-1 py-2 px-3 border border-gray-200 text-xs font-medium text-gray-600 hover:border-accent hover:text-accent transition-colors">
+                                                    Configure
+                                                </button>
+                                                <button class="py-2 px-3 border border-gray-200 text-xs font-medium text-red-600 hover:border-red-600 transition-colors">
+                                                    Disconnect
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pt-8 border-t border-gray-100">
+                                    <h4 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">Available</h4>
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                        <div class="bg-white border border-gray-200 p-6 hover:border-accent transition-colors">
+                                            <div class="flex items-start justify-between mb-4">
+                                                <div class="flex items-center gap-4">
+                                                    <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                                                        <i class="fa-brands fa-microsoft text-blue-600 text-xl"></i>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm font-semibold text-black">Microsoft 365</p>
+                                                        <p class="text-xs text-gray-500">Outlook, Teams, OneDrive</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p class="text-xs text-gray-600 mb-4">Integrate with Microsoft ecosystem for seamless workflow</p>
+                                            <button class="w-full py-2 px-3 bg-accent text-white text-xs font-medium hover:bg-opacity-90 transition-colors">
+                                                Connect
+                                            </button>
+                                        </div>
+                                        <div class="bg-white border border-gray-200 p-6 hover:border-accent transition-colors">
+                                            <div class="flex items-start justify-between mb-4">
+                                                <div class="flex items-center gap-4">
+                                                    <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
+                                                        <i class="fa-brands fa-hubspot text-orange-600 text-xl"></i>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm font-semibold text-black">HubSpot</p>
+                                                        <p class="text-xs text-gray-500">Marketing automation</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p class="text-xs text-gray-600 mb-4">Sync contacts and marketing campaigns with HubSpot</p>
+                                            <button class="w-full py-2 px-3 bg-accent text-white text-xs font-medium hover:bg-opacity-90 transition-colors">
+                                                Connect
+                                            </button>
+                                        </div>
+                                        <div class="bg-white border border-gray-200 p-6 hover:border-accent transition-colors">
+                                            <div class="flex items-start justify-between mb-4">
+                                                <div class="flex items-center gap-4">
+                                                    <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                                                        <i class="fa-brands fa-salesforce text-blue-500 text-xl"></i>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm font-semibold text-black">Salesforce</p>
+                                                        <p class="text-xs text-gray-500">CRM integration</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p class="text-xs text-gray-600 mb-4">Bi-directional sync with Salesforce CRM data</p>
+                                            <button class="w-full py-2 px-3 bg-accent text-white text-xs font-medium hover:bg-opacity-90 transition-colors">
+                                                Connect
+                                            </button>
+                                        </div>
+                                        <div class="bg-white border border-gray-200 p-6 hover:border-accent transition-colors">
+                                            <div class="flex items-start justify-between mb-4">
+                                                <div class="flex items-center gap-4">
+                                                    <div class="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
+                                                        <i class="fa-brands fa-mailchimp text-yellow-600 text-xl"></i>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm font-semibold text-black">Mailchimp</p>
+                                                        <p class="text-xs text-gray-500">Email marketing</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p class="text-xs text-gray-600 mb-4">Manage email campaigns and subscriber lists</p>
+                                            <button class="w-full py-2 px-3 bg-accent text-white text-xs font-medium hover:bg-opacity-90 transition-colors">
+                                                Connect
+                                            </button>
+                                        </div>
+                                        <div class="bg-white border border-gray-200 p-6 hover:border-accent transition-colors">
+                                            <div class="flex items-start justify-between mb-4">
+                                                <div class="flex items-center gap-4">
+                                                    <div class="w-12 h-12 bg-indigo-50 rounded-lg flex items-center justify-center">
+                                                        <i class="fa-brands fa-stripe text-indigo-600 text-xl"></i>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm font-semibold text-black">Stripe</p>
+                                                        <p class="text-xs text-gray-500">Payment processing</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p class="text-xs text-gray-600 mb-4">Process payments and manage subscriptions</p>
+                                            <button class="w-full py-2 px-3 bg-accent text-white text-xs font-medium hover:bg-opacity-90 transition-colors">
+                                                Connect
+                                            </button>
+                                        </div>
+                                        <div class="bg-white border border-gray-200 p-6 hover:border-accent transition-colors">
+                                            <div class="flex items-start justify-between mb-4">
+                                                <div class="flex items-center gap-4">
+                                                    <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                                                        <i class="fa-brands fa-github text-black text-xl"></i>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm font-semibold text-black">GitHub</p>
+                                                        <p class="text-xs text-gray-500">Development tracking</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p class="text-xs text-gray-600 mb-4">Link development work to opportunities and projects</p>
+                                            <button class="w-full py-2 px-3 bg-accent text-white text-xs font-medium hover:bg-opacity-90 transition-colors">
+                                                Connect
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="settings-panel hidden" data-panel="team">
+                        <div class="p-6 lg:p-16 max-w-5xl">
+                            
+                            <div class="mb-12">
+                                <div class="flex items-center justify-between gap-6">
+                                    <div>
+                                        <h3 class="text-2xl font-light text-black mb-2">Team Members</h3>
+                                        <p class="text-sm text-gray-500">Manage your team and their access levels</p>
+                                    </div>
+                                    <button class="px-5 py-3 bg-accent text-white text-sm font-medium hover:bg-opacity-90 transition-colors whitespace-nowrap">
+                                        <i class="fa-solid fa-user-plus mr-2"></i>
+                                        Invite Member
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mb-8">
+                                <div class="relative">
+                                    <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                                    <input type="text" placeholder="Search team members..." class="w-full py-3 pl-12 pr-4 border border-gray-200 text-sm text-black placeholder-gray-400 focus:outline-none focus:border-accent transition-colors">
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div class="bg-white border border-gray-200 p-6">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-4 flex-1">
+                                            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="User" class="w-12 h-12 rounded-full object-cover">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-semibold text-black mb-1">Marcus Chen</p>
+                                                <p class="text-xs text-gray-500">marcus.chen@dynamicsnexus.com</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-4">
+                                            <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">Admin</span>
+                                            <span class="text-xs text-gray-500">You</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white border border-gray-200 p-6">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-4 flex-1">
+                                            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg" alt="User" class="w-12 h-12 rounded-full object-cover">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-semibold text-black mb-1">Jennifer Williams</p>
+                                                <p class="text-xs text-gray-500">jennifer.w@dynamicsnexus.com</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-4">
+                                            <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">Manager</span>
+                                            <button class="text-gray-400 hover:text-accent transition-colors">
+                                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white border border-gray-200 p-6">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-4 flex-1">
+                                            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="User" class="w-12 h-12 rounded-full object-cover">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-semibold text-black mb-1">Robert Martinez</p>
+                                                <p class="text-xs text-gray-500">robert.m@dynamicsnexus.com</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-4">
+                                            <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Sales Rep</span>
+                                            <button class="text-gray-400 hover:text-accent transition-colors">
+                                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white border border-gray-200 p-6">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-4 flex-1">
+                                            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="User" class="w-12 h-12 rounded-full object-cover">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-semibold text-black mb-1">Sarah Johnson</p>
+                                                <p class="text-xs text-gray-500">sarah.j@dynamicsnexus.com</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-4">
+                                            <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Sales Rep</span>
+                                            <button class="text-gray-400 hover:text-accent transition-colors">
+                                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white border border-gray-200 p-6">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-4 flex-1">
+                                            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="User" class="w-12 h-12 rounded-full object-cover">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-semibold text-black mb-1">David Chen</p>
+                                                <p class="text-xs text-gray-500">david.c@dynamicsnexus.com</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-4">
+                                            <span class="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">Support</span>
+                                            <button class="text-gray-400 hover:text-accent transition-colors">
+                                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </main>
+
+    </div>
+
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabButtons = document.querySelectorAll('.settings-tab-btn');
+        const panels = document.querySelectorAll('.settings-panel');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const targetTab = this.getAttribute('data-tab');
+                
+                tabButtons.forEach(btn => {
+                    btn.classList.remove('text-black', 'bg-gray-50', 'border-l-2', 'border-accent', 'font-medium');
+                    btn.classList.add('text-gray-600', 'font-light');
+                });
+                
+                this.classList.remove('text-gray-600', 'font-light');
+                this.classList.add('text-black', 'bg-gray-50', 'border-l-2', 'border-accent', 'font-medium');
+                
+                panels.forEach(panel => {
+                    const panelTab = panel.getAttribute('data-panel');
+                    if (panelTab === targetTab) {
+                        panel.classList.remove('hidden');
+                    } else {
+                        panel.classList.add('hidden');
+                    }
+                });
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

@@ -1,6 +1,6 @@
 """User entity for authentication."""
 
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Text
 import bcrypt
 
 from app.domain.entities.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
@@ -16,6 +16,15 @@ class User(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
     password_hash = Column(String(255), nullable=False)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
+
+    # Profile fields
+    job_title = Column(String(150), nullable=True)
+    phone = Column(String(30), nullable=True)
+    bio = Column(Text, nullable=True)
+    location = Column(String(150), nullable=True)
+    timezone = Column(String(50), nullable=True, default="America/Montreal")
+    role = Column(String(30), nullable=False, default="member")
+
 
     @staticmethod
     def hash_password(password: str) -> str:

@@ -1,15 +1,16 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DecimalPipe, UpperCasePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { OrganizationService, Organization, OrganizationProfile } from '../../shared/services/organization.service';
-import { ContactService, Contact } from '../../shared/services/contact.service';
-import { OpportunityService, Opportunity } from '../../shared/services/opportunity.service';
+import { ContactService, Contact, CreateContactRequest } from '../../shared/services/contact.service';
+import { OpportunityService, Opportunity, CreateOpportunityRequest } from '../../shared/services/opportunity.service';
 import { ActivityService, Activity } from '../../shared/services/activity.service';
 
 @Component({
     selector: 'croo-organization-detail',
     standalone: true,
-    imports: [RouterLink, UpperCasePipe, DecimalPipe],
+    imports: [RouterLink, UpperCasePipe, DecimalPipe, FormsModule],
     templateUrl: './organization-detail.html',
     styleUrl: './organization-detail.css',
 })
@@ -21,6 +22,22 @@ export class OrganizationDetailComponent implements OnInit {
     isLoading = true;
     isEnriching = false;
     activeTab = 'overview';
+
+    // Add Contact dialog
+    showAddContactDialog = false;
+    contactInput = '';
+    isProcessingContact = false;
+    isCreatingContact = false;
+    contactStatusMessage = '';
+    parsedContactPreview: Partial<CreateContactRequest> | null = null;
+
+    // Add Opportunity dialog
+    showAddOppDialog = false;
+    oppInput = '';
+    isProcessingOpp = false;
+    isCreatingOpp = false;
+    oppStatusMessage = '';
+    parsedOppPreview: Partial<CreateOpportunityRequest> | null = null;
 
     constructor(
         private route: ActivatedRoute,
@@ -150,5 +167,231 @@ export class OrganizationDetailComponent implements OnInit {
             address.country,
         ].filter(Boolean);
         return parts.join(', ') || '—';
+    }
+
+    // ── Add Contact Dialog ──────────────────────────────
+
+    openAddContactDialog(): void {
+        this.showAddContactDialog = true;
+        this.contactInput = '';
+        this.isProcessingContact = false;
+        this.isCreatingContact = false;
+        this.contactStatusMessage = '';
+        this.parsedContactPreview = null;
+    }
+
+    closeAddContactDialog(): void {
+        this.showAddContactDialog = false;
+    }
+
+    processContactInput(): void {
+        if (!this.contactInput.trim()) return;
+        this.isProcessingContact = true;
+        this.contactStatusMessage = '';
+        this.parsedContactPreview = null;
+
+        setTimeout(() => {
+            this.parsedContactPreview = this.parseContactText(this.contactInput);
+            this.isProcessingContact = false;
+        }, 600);
+    }
+
+    createContactFromParsed(): void {
+        if (!this.parsedContactPreview?.first_name || !this.parsedContactPreview?.last_name || !this.org) return;
+        this.isCreatingContact = true;
+
+        const data: CreateContactRequest = {
+            first_name: this.parsedContactPreview.first_name,
+            last_name: this.parsedContactPreview.last_name,
+            email: this.parsedContactPreview.email,
+            phone: this.parsedContactPreview.phone,
+            job_title: this.parsedContactPreview.job_title,
+            department: this.parsedContactPreview.department,
+            organization_id: this.org.id,
+            status: 'ACTIVE',
+        };
+
+        this.contactService.create(data).subscribe({
+            next: () => {
+                this.showAddContactDialog = false;
+                // Refresh contacts list
+                this.contactService.list(0, 10, this.org!.id).subscribe({
+                    next: (res) => (this.contacts = res.items),
+                });
+            },
+            error: () => {
+                this.isCreatingContact = false;
+                this.contactStatusMessage = '❌ Failed to create contact.';
+            },
+        });
+    }
+
+    private parseContactText(text: string): Partial<CreateContactRequest> {
+        const result: Partial<CreateContactRequest> = {};
+
+        const emailMatch = text.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
+        if (emailMatch) {
+            result.email = emailMatch[0];
+            text = text.replace(emailMatch[0], '');
+        }
+
+        const phoneMatch = text.match(/(?:\+?1?\s*)?(?:\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}/);
+        if (phoneMatch) {
+            result.phone = phoneMatch[0].trim();
+            text = text.replace(phoneMatch[0], '');
+        }
+
+        text = text.replace(/[,;|·•—–-]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+        const titleKeywords = /\b(CEO|CTO|CFO|COO|CMO|CIO|VP|Director|Manager|Engineer|Developer|Designer|Analyst|Coordinator|Specialist|Lead|Head|Chief|Senior|Junior|Sr\.|Jr\.|President|Founder|Partner|Associate|Consultant|Advisor|Officer)\b/i;
+        const words = text.split(' ');
+        let titleStartIdx = -1;
+        for (let i = 0; i < words.length; i++) {
+            if (titleKeywords.test(words[i])) {
+                titleStartIdx = i;
+                break;
+            }
+        }
+
+        if (titleStartIdx >= 0) {
+            const namePart = words.slice(0, titleStartIdx).join(' ').trim();
+            const titlePart = words.slice(titleStartIdx).join(' ').trim();
+            if (namePart) {
+                const nameParts = namePart.split(' ');
+                result.first_name = nameParts[0];
+                result.last_name = nameParts.slice(1).join(' ') || 'Unknown';
+            }
+            if (titlePart) result.job_title = titlePart;
+        } else {
+            const cleanedWords = words.filter(w => w.length > 0 && !(/(^\d+$)/.test(w)));
+            if (cleanedWords.length >= 2) {
+                result.first_name = cleanedWords[0];
+                result.last_name = cleanedWords.slice(1).join(' ');
+            } else if (cleanedWords.length === 1) {
+                result.first_name = cleanedWords[0];
+                result.last_name = 'Unknown';
+            }
+        }
+
+        return result;
+    }
+
+    // ── Add Opportunity Dialog ───────────────────────────
+
+    openAddOppDialog(): void {
+        this.showAddOppDialog = true;
+        this.oppInput = '';
+        this.isProcessingOpp = false;
+        this.isCreatingOpp = false;
+        this.oppStatusMessage = '';
+        this.parsedOppPreview = null;
+    }
+
+    closeAddOppDialog(): void {
+        this.showAddOppDialog = false;
+    }
+
+    processOppInput(): void {
+        if (!this.oppInput.trim()) return;
+        this.isProcessingOpp = true;
+        this.oppStatusMessage = '';
+        this.parsedOppPreview = null;
+
+        setTimeout(() => {
+            this.parsedOppPreview = this.parseOppText(this.oppInput);
+            this.isProcessingOpp = false;
+        }, 600);
+    }
+
+    createOppFromParsed(): void {
+        if (!this.parsedOppPreview?.name || !this.org) return;
+        this.isCreatingOpp = true;
+
+        const data: CreateOpportunityRequest = {
+            name: this.parsedOppPreview.name,
+            description: this.parsedOppPreview.description,
+            stage: this.parsedOppPreview.stage || 'PROSPECTING',
+            priority: this.parsedOppPreview.priority || 'MEDIUM',
+            amount: this.parsedOppPreview.amount,
+            probability: this.parsedOppPreview.probability,
+            close_date: this.parsedOppPreview.close_date,
+            source: this.parsedOppPreview.source,
+            organization_id: this.org.id,
+        };
+
+        this.oppService.create(data).subscribe({
+            next: () => {
+                this.showAddOppDialog = false;
+                this.oppService.list(0, 10, this.org!.id).subscribe({
+                    next: (res) => (this.opportunities = res.items),
+                });
+            },
+            error: () => {
+                this.isCreatingOpp = false;
+                this.oppStatusMessage = '❌ Failed to create opportunity.';
+            },
+        });
+    }
+
+    private parseOppText(text: string): Partial<CreateOpportunityRequest> {
+        const result: Partial<CreateOpportunityRequest> = {};
+
+        // Extract dollar amounts
+        const amountMatch = text.match(/\$([\d,]+(?:\.\d{1,2})?)\s*([KkMm])?/);
+        if (amountMatch) {
+            let amount = parseFloat(amountMatch[1].replace(/,/g, ''));
+            const suffix = amountMatch[2]?.toUpperCase();
+            if (suffix === 'K') amount *= 1_000;
+            if (suffix === 'M') amount *= 1_000_000;
+            result.amount = amount;
+            text = text.replace(amountMatch[0], '');
+        }
+
+        // Extract probability
+        const probMatch = text.match(/(\d{1,3})\s*%/);
+        if (probMatch) {
+            result.probability = parseInt(probMatch[1], 10);
+            text = text.replace(probMatch[0], '');
+        }
+
+        // Extract stage keywords
+        const stageMap: Record<string, string> = {
+            'prospecting': 'PROSPECTING', 'prospect': 'PROSPECTING',
+            'qualification': 'QUALIFICATION', 'qualified': 'QUALIFICATION',
+            'proposal': 'PROPOSAL', 'negotiation': 'NEGOTIATION', 'negotiate': 'NEGOTIATION',
+            'closed won': 'CLOSED_WON', 'won': 'CLOSED_WON',
+            'closed lost': 'CLOSED_LOST', 'lost': 'CLOSED_LOST',
+        };
+        for (const [keyword, stage] of Object.entries(stageMap)) {
+            if (text.toLowerCase().includes(keyword)) {
+                result.stage = stage;
+                text = text.replace(new RegExp(keyword, 'gi'), '');
+                break;
+            }
+        }
+
+        // Extract priority
+        const priorityMap: Record<string, string> = {
+            'high priority': 'HIGH', 'high': 'HIGH', 'urgent': 'HIGH',
+            'low priority': 'LOW', 'low': 'LOW',
+            'medium': 'MEDIUM', 'normal': 'MEDIUM',
+        };
+        for (const [keyword, priority] of Object.entries(priorityMap)) {
+            if (text.toLowerCase().includes(keyword)) {
+                result.priority = priority;
+                text = text.replace(new RegExp(keyword, 'gi'), '');
+                break;
+            }
+        }
+
+        // Clean and use remaining as name
+        text = text.replace(/[,;|·•—–]+/g, ' ').replace(/\s+/g, ' ').trim();
+        if (text) {
+            result.name = text;
+        } else {
+            result.name = 'New Opportunity';
+        }
+
+        return result;
     }
 }

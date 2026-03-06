@@ -41,6 +41,12 @@ class UserResponse(BaseModel):
     email: str
     first_name: str
     last_name: str
+    job_title: str | None = None
+    phone: str | None = None
+    bio: str | None = None
+    location: str | None = None
+    timezone: str | None = None
+    role: str = "member"
     created_at: datetime
     updated_at: datetime
 

@@ -84,6 +84,62 @@ export const routes: Routes = [
                     ),
             },
             {
+                path: 'settings',
+                loadComponent: () =>
+                    import('./pages/settings/settings').then(
+                        (m) => m.SettingsComponent
+                    ),
+                children: [
+                    {
+                        path: 'profile',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-profile/settings-profile').then(
+                                (m) => m.SettingsProfileComponent
+                            ),
+                    },
+                    {
+                        path: 'security',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-security/settings-security').then(
+                                (m) => m.SettingsSecurityComponent
+                            ),
+                    },
+                    {
+                        path: 'bob',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-bob/settings-bob').then(
+                                (m) => m.SettingsBobComponent
+                            ),
+                    },
+                    {
+                        path: 'notifications',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-notifications/settings-notifications').then(
+                                (m) => m.SettingsNotificationsComponent
+                            ),
+                    },
+                    {
+                        path: 'integrations',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-integrations/settings-integrations').then(
+                                (m) => m.SettingsIntegrationsComponent
+                            ),
+                    },
+                    {
+                        path: 'team',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-team/settings-team').then(
+                                (m) => m.SettingsTeamComponent
+                            ),
+                    },
+                    {
+                        path: '',
+                        redirectTo: 'profile',
+                        pathMatch: 'full',
+                    },
+                ],
+            },
+            {
                 path: '',
                 redirectTo: 'dashboard',
                 pathMatch: 'full',
