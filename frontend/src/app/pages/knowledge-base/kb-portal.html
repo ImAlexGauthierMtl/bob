@@ -1,148 +1,346 @@
 <div class="kb-portal">
 
-    <!-- ═══════ Hero / Search ═══════ -->
-    <section class="kb-hero" id="kb-hero">
-        <div class="kb-hero__inner">
-            <div class="kb-hero__badge">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                <span>AI-Powered Knowledge Base</span>
+    <!-- ═══════ Header ═══════ -->
+    <header class="kb-header" id="kb-header">
+        <div class="kb-header__top">
+            <div class="kb-header__title-group">
+                <div class="kb-header__icon">
+                    <i class="fa-solid fa-book"></i>
+                </div>
+                <div>
+                    <h2 class="kb-header__title">Knowledge Base</h2>
+                    <p class="kb-header__subtitle">Your centralized hub for documentation, guides, and best practices
+                    </p>
+                </div>
             </div>
-            <h1 class="kb-hero__title">How can we <span class="kb-hero__accent">help</span> you?</h1>
-            <p class="kb-hero__subtitle">Search our knowledge base for guides, tutorials, and best practices</p>
-
-            <div class="kb-hero__search">
-                <i class="fa-solid fa-search kb-hero__search-icon"></i>
-                <input type="text" class="kb-hero__search-input" placeholder="Search articles, guides, and tutorials..."
-                    [(ngModel)]="searchQuery" (input)="onSearch()" id="kb-search" />
-                @if (searchQuery) {
-                <button class="kb-hero__search-clear" (click)="clearSearch()">
-                    <i class="fa-solid fa-xmark"></i>
+            <div class="kb-header__actions">
+                <button class="kb-btn kb-btn--outline">
+                    <i class="fa-solid fa-upload"></i> Import
                 </button>
+                <button class="kb-btn kb-btn--primary">
+                    <i class="fa-solid fa-plus"></i> New Article
+                </button>
+            </div>
+        </div>
+
+        <div class="kb-header__search">
+            <div class="kb-search">
+                <i class="fa-solid fa-search kb-search__icon"></i>
+                <input type="text" class="kb-search__input" placeholder="Ask AI or search knowledge base..."
+                    [(ngModel)]="searchQuery" (input)="onSearch()" id="kb-search" />
+                <button class="kb-search__ai-btn">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Ask AI
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="kb-layout">
+
+        <!-- ═══════ Content Area ═══════ -->
+        <div class="kb-content" id="content-area">
+
+            <!-- ═══════ Search Results Overlay ═══════ -->
+            @if (isSearching) {
+            <section class="kb-section" id="search-results">
+                <div class="kb-section__header">
+                    <h3 class="kb-section__title">Search Results</h3>
+                    <button class="kb-link" (click)="clearSearch()">Clear</button>
+                </div>
+
+                @if (searchResults.length === 0) {
+                <div class="kb-empty">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <p>No articles match your search.</p>
+                </div>
                 }
-            </div>
-        </div>
 
-        <!-- Quick Stats -->
-        <div class="kb-hero__stats">
-            <div class="kb-stat">
-                <span class="kb-stat__value">{{ stats.published_articles }}</span>
-                <span class="kb-stat__label">Articles</span>
-            </div>
-            <div class="kb-stat">
-                <span class="kb-stat__value">{{ stats.total_categories }}</span>
-                <span class="kb-stat__label">Categories</span>
-            </div>
-            <div class="kb-stat">
-                <span class="kb-stat__value">{{ stats.total_views | number }}</span>
-                <span class="kb-stat__label">Total Views</span>
-            </div>
-            <div class="kb-stat">
-                <span class="kb-stat__value">{{ stats.avg_helpfulness }}%</span>
-                <span class="kb-stat__label">Helpful</span>
-            </div>
-        </div>
-    </section>
-
-    <!-- ═══════ Search Results ═══════ -->
-    @if (isSearching) {
-    <section class="kb-section" id="search-results">
-        <h2 class="kb-section__title">
-            Search Results
-            <span class="kb-section__count">{{ searchResults.length }} found</span>
-        </h2>
-
-        @if (searchResults.length === 0) {
-        <div class="kb-empty">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <p>No articles match your search.</p>
-        </div>
-        }
-
-        <div class="kb-article-list">
-            @for (article of searchResults; track article.id) {
-            <a [routerLink]="['/knowledge-base', article.slug]" class="kb-article-card">
-                <div class="kb-article-card__header">
-                    <span class="kb-badge" [class]="getVisibilityClass(article.visibility)">
-                        {{ getVisibilityLabel(article.visibility) }}
-                    </span>
-                    <span class="kb-article-card__time">
-                        <i class="fa-solid fa-clock"></i>
-                        {{ article.read_time_minutes }} min
-                    </span>
-                </div>
-                <h3 class="kb-article-card__title">{{ article.title }}</h3>
-                <p class="kb-article-card__excerpt">{{ article.excerpt }}</p>
-                <div class="kb-article-card__meta">
-                    <span class="kb-article-card__author">{{ article.author_name || 'Team' }}</span>
-                    <span class="kb-article-card__views">
-                        <i class="fa-solid fa-eye"></i> {{ article.view_count }}
-                    </span>
-                </div>
-            </a>
-            }
-        </div>
-    </section>
-    }
-
-    <!-- ═══════ Browse by Category ═══════ -->
-    @if (!isSearching) {
-    <section class="kb-section" id="categories">
-        <h2 class="kb-section__title">Browse by Category</h2>
-        <div class="kb-category-grid">
-            @for (cat of categories; track cat.id) {
-            <a [routerLink]="[]" [queryParams]="{category: cat.id}" class="kb-category-card">
-                <div class="kb-category-card__icon" [style.background-color]="getCategoryColor(cat) + '15'"
-                    [style.color]="getCategoryColor(cat)">
-                    <i [class]="getCategoryIcon(cat)"></i>
-                </div>
-                <h3 class="kb-category-card__name">{{ cat.name }}</h3>
-                <p class="kb-category-card__desc">{{ cat.description }}</p>
-                <span class="kb-category-card__count">{{ cat.article_count }} articles</span>
-            </a>
-            }
-        </div>
-    </section>
-
-    <!-- ═══════ Popular Articles ═══════ -->
-    <section class="kb-section" id="popular">
-        <h2 class="kb-section__title">
-            <i class="fa-solid fa-fire-flame-curved" style="color: var(--accent)"></i>
-            Popular Articles
-        </h2>
-        <div class="kb-article-list">
-            @for (article of popularArticles; track article.id) {
-            <a [routerLink]="['/knowledge-base', article.slug]" class="kb-article-card">
-                <div class="kb-article-card__header">
-                    <span class="kb-badge" [class]="getVisibilityClass(article.visibility)">
-                        {{ getVisibilityLabel(article.visibility) }}
-                    </span>
-                    @for (tag of article.tags; track tag) {
-                    <span class="kb-tag">{{ tag }}</span>
+                <div class="kb-popular-list">
+                    @for (article of searchResults; track article.id; let i = $index) {
+                    <a [routerLink]="['/knowledge-base', article.slug]" class="kb-popular-item">
+                        <div class="kb-popular-item__rank">
+                            <div class="kb-popular-item__num" [class.kb-popular-item__num--first]="i === 0">
+                                {{ i + 1 }}
+                            </div>
+                            <div class="kb-popular-item__views">
+                                <i class="fa-solid fa-eye"></i>
+                                <span>{{ article.view_count }}</span>
+                            </div>
+                        </div>
+                        <div class="kb-popular-item__body">
+                            <h4 class="kb-popular-item__title">{{ article.title }}</h4>
+                            <p class="kb-popular-item__excerpt">{{ article.excerpt }}</p>
+                            <div class="kb-popular-item__meta">
+                                <span><i class="fa-solid fa-clock"></i> {{ article.read_time_minutes }} min read</span>
+                                <span class="kb-popular-item__author">{{ article.author_name || 'Team' }}</span>
+                            </div>
+                        </div>
+                    </a>
                     }
-                    <span class="kb-article-card__time">
-                        <i class="fa-solid fa-clock"></i>
-                        {{ article.read_time_minutes }} min
-                    </span>
                 </div>
-                <h3 class="kb-article-card__title">{{ article.title }}</h3>
-                <p class="kb-article-card__excerpt">{{ article.excerpt }}</p>
-                <div class="kb-article-card__meta">
-                    <span class="kb-article-card__author">{{ article.author_name || 'Team' }}</span>
-                    <span class="kb-article-card__views">
-                        <i class="fa-solid fa-eye"></i> {{ article.view_count }}
-                    </span>
-                </div>
-            </a>
+            </section>
             }
+
+            @if (!isSearching) {
+
+            <!-- ═══════ AI Knowledge Assistant ═══════ -->
+            <section class="kb-section" id="ai-insights">
+                <div class="kb-ai-banner">
+                    <div class="kb-ai-banner__header">
+                        <div class="kb-ai-banner__icon">
+                            <i class="fa-solid fa-brain"></i>
+                        </div>
+                        <div>
+                            <h3 class="kb-ai-banner__title">AI Knowledge Assistant</h3>
+                            <p class="kb-ai-banner__desc">Get instant answers, discover related content, and receive
+                                personalized recommendations</p>
+                        </div>
+                    </div>
+
+                    <div class="kb-ai-cards">
+                        <div class="kb-ai-card">
+                            <div class="kb-ai-card__header">
+                                <i class="fa-solid fa-lightbulb kb-ai-card__icon kb-ai-card__icon--yellow"></i>
+                                <p class="kb-ai-card__title">Suggested for You</p>
+                            </div>
+                            <p class="kb-ai-card__desc">Based on your role and recent activities</p>
+                            @for (article of popularArticles.slice(0, 3); track article.id) {
+                            <a [routerLink]="['/knowledge-base', article.slug]" class="kb-ai-card__link">{{
+                                article.title }}</a>
+                            }
+                        </div>
+
+                        <div class="kb-ai-card">
+                            <div class="kb-ai-card__header">
+                                <i class="fa-solid fa-fire kb-ai-card__icon kb-ai-card__icon--orange"></i>
+                                <p class="kb-ai-card__title">Trending Now</p>
+                            </div>
+                            <p class="kb-ai-card__desc">Most viewed this week</p>
+                            @for (article of popularArticles.slice(0, 3); track article.id) {
+                            <a [routerLink]="['/knowledge-base', article.slug]" class="kb-ai-card__link">{{
+                                article.title }}</a>
+                            }
+                        </div>
+
+                        <div class="kb-ai-card">
+                            <div class="kb-ai-card__header">
+                                <i class="fa-solid fa-clock-rotate-left kb-ai-card__icon kb-ai-card__icon--blue"></i>
+                                <p class="kb-ai-card__title">Recently Updated</p>
+                            </div>
+                            <p class="kb-ai-card__desc">Fresh content and updates</p>
+                            @for (article of recentArticles.slice(0, 3); track article.id) {
+                            <a [routerLink]="['/knowledge-base', article.slug]" class="kb-ai-card__link">{{
+                                article.title }}</a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════ Quick Stats ═══════ -->
+            <section class="kb-section" id="quick-stats">
+                <div class="kb-stats-grid">
+                    <div class="kb-stat-card">
+                        <div class="kb-stat-card__header">
+                            <p class="kb-stat-card__label">Total Articles</p>
+                            <i class="fa-solid fa-file-lines kb-stat-card__icon"></i>
+                        </div>
+                        <p class="kb-stat-card__value">{{ stats.total_articles }}</p>
+                    </div>
+                    <div class="kb-stat-card">
+                        <div class="kb-stat-card__header">
+                            <p class="kb-stat-card__label">Categories</p>
+                            <i class="fa-solid fa-folder kb-stat-card__icon"></i>
+                        </div>
+                        <p class="kb-stat-card__value">{{ stats.total_categories }}</p>
+                    </div>
+                    <div class="kb-stat-card">
+                        <div class="kb-stat-card__header">
+                            <p class="kb-stat-card__label">Total Views</p>
+                            <i class="fa-solid fa-eye kb-stat-card__icon"></i>
+                        </div>
+                        <p class="kb-stat-card__value">{{ stats.total_views }}</p>
+                    </div>
+                    <div class="kb-stat-card">
+                        <div class="kb-stat-card__header">
+                            <p class="kb-stat-card__label">Helpfulness</p>
+                            <i class="fa-solid fa-arrow-trend-up kb-stat-card__icon"></i>
+                        </div>
+                        <p class="kb-stat-card__value">{{ stats.avg_helpfulness }}%</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════ Browse by Category ═══════ -->
+            <section class="kb-section" id="categories-section">
+                <div class="kb-section__header">
+                    <h3 class="kb-section__title">Browse by Category</h3>
+                    <button class="kb-link">View All</button>
+                </div>
+
+                <div class="kb-category-grid">
+                    @for (cat of categories; track cat.id) {
+                    <a [routerLink]="[]" [queryParams]="{category: cat.id}" class="kb-category-card">
+                        <div class="kb-category-card__top">
+                            <div class="kb-category-card__icon" [style.background-color]="getCategoryColor(cat) + '20'"
+                                [style.color]="getCategoryColor(cat)">
+                                <i [class]="getCategoryIcon(cat)"></i>
+                            </div>
+                            <div class="kb-category-card__info">
+                                <h4 class="kb-category-card__name">{{ cat.name }}</h4>
+                                <p class="kb-category-card__desc">{{ cat.description }}</p>
+                            </div>
+                        </div>
+                        <div class="kb-category-card__footer">
+                            <span class="kb-category-card__count">{{ cat.article_count }} articles</span>
+                            <i class="fa-solid fa-arrow-right kb-category-card__arrow"></i>
+                        </div>
+                    </a>
+                    }
+                </div>
+            </section>
+
+            <!-- ═══════ Popular Articles ═══════ -->
+            <section class="kb-section" id="popular-articles">
+                <div class="kb-section__header">
+                    <h3 class="kb-section__title">Popular Articles</h3>
+                    <div class="kb-section__filters">
+                        <button class="kb-filter kb-filter--active">All</button>
+                        <span class="kb-filter-sep">|</span>
+                        <button class="kb-filter">This Week</button>
+                        <span class="kb-filter-sep">|</span>
+                        <button class="kb-filter">This Month</button>
+                    </div>
+                </div>
+
+                <div class="kb-popular-list">
+                    @for (article of popularArticles; track article.id; let i = $index) {
+                    <a [routerLink]="['/knowledge-base', article.slug]" class="kb-popular-item">
+                        <div class="kb-popular-item__rank">
+                            <div class="kb-popular-item__num" [class.kb-popular-item__num--first]="i === 0">
+                                {{ i + 1 }}
+                            </div>
+                            <div class="kb-popular-item__views">
+                                <i class="fa-solid fa-eye"></i>
+                                <span>{{ article.view_count }}</span>
+                            </div>
+                        </div>
+                        <div class="kb-popular-item__body">
+                            <div class="kb-popular-item__top">
+                                <h4 class="kb-popular-item__title">{{ article.title }}</h4>
+                                @if (article.is_featured) {
+                                <span class="kb-badge kb-badge--green">Featured</span>
+                                }
+                            </div>
+                            <p class="kb-popular-item__excerpt">{{ article.excerpt }}</p>
+                            <div class="kb-popular-item__meta">
+                                <span class="kb-popular-item__category">
+                                    <i class="fa-solid fa-folder"></i>
+                                    {{ getCategoryName(article.category_id) }}
+                                </span>
+                                <span>•</span>
+                                <span>{{ article.read_time_minutes }} min read</span>
+                                <span>•</span>
+                                <span>{{ article.updated_at | date:'mediumDate' }}</span>
+                                <span class="kb-popular-item__author">
+                                    {{ article.author_name || 'Team' }}
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                    }
+                </div>
+
+                @if (popularArticles.length === 0) {
+                <div class="kb-empty">
+                    <i class="fa-solid fa-book-open"></i>
+                    <p>No articles published yet. Check back soon!</p>
+                </div>
+                }
+            </section>
+
+            <!-- ═══════ Community ═══════ -->
+            <section class="kb-section" id="community-section">
+                <div class="kb-community">
+                    <div class="kb-community__icon">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="kb-community__content">
+                        <h3 class="kb-community__title">Join Our Community</h3>
+                        <p class="kb-community__desc">Connect with other users, share best practices, and get help from
+                            our expert community members.</p>
+                        <div class="kb-community__actions">
+                            <button class="kb-btn kb-btn--primary">Join Discussion Forum</button>
+                            <button class="kb-btn kb-btn--outline">Browse Q&A</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            }
+
         </div>
 
-        @if (popularArticles.length === 0) {
-        <div class="kb-empty">
-            <i class="fa-solid fa-book-open"></i>
-            <p>No articles published yet. Check back soon!</p>
-        </div>
-        }
-    </section>
-    }
+        <!-- ═══════ Right Sidebar ═══════ -->
+        <aside class="kb-sidebar" id="sidebar-right">
+            <div class="kb-sidebar__sticky">
+
+                <!-- Quick Links -->
+                <div class="kb-sidebar-section">
+                    <h3 class="kb-sidebar-section__title">Quick Links</h3>
+                    <div class="kb-sidebar-links">
+                        <a href="#" class="kb-sidebar-link">
+                            <i class="fa-solid fa-question-circle"></i> FAQ
+                        </a>
+                        <a href="#" class="kb-sidebar-link">
+                            <i class="fa-solid fa-headset"></i> Contact Support
+                        </a>
+                        <a href="#" class="kb-sidebar-link">
+                            <i class="fa-solid fa-graduation-cap"></i> Training Resources
+                        </a>
+                        <a href="#" class="kb-sidebar-link">
+                            <i class="fa-solid fa-file-contract"></i> Release Notes
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Your Progress -->
+                <div class="kb-sidebar-card">
+                    <h3 class="kb-sidebar-card__title">Your Progress</h3>
+                    <div class="kb-progress">
+                        <div class="kb-progress__row">
+                            <span class="kb-progress__label">Articles Read</span>
+                            <span class="kb-progress__value">{{ stats.total_views }}/{{ stats.total_articles }}</span>
+                        </div>
+                        <div class="kb-progress__bar">
+                            <div class="kb-progress__fill kb-progress__fill--accent"
+                                [style.width.%]="stats.total_articles ? (stats.total_views / stats.total_articles * 100) : 0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kb-progress">
+                        <div class="kb-progress__row">
+                            <span class="kb-progress__label">Helpfulness</span>
+                            <span class="kb-progress__value">{{ stats.avg_helpfulness }}%</span>
+                        </div>
+                        <div class="kb-progress__bar">
+                            <div class="kb-progress__fill kb-progress__fill--green"
+                                [style.width.%]="stats.avg_helpfulness"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Need Help -->
+                <div class="kb-sidebar-card">
+                    <h3 class="kb-sidebar-card__title">Need Help?</h3>
+                    <p class="kb-sidebar-card__desc">Can't find what you're looking for? Our support team is here to
+                        help.</p>
+                    <button class="kb-btn kb-btn--primary kb-btn--full">Chat with Support</button>
+                </div>
+
+            </div>
+        </aside>
+
+    </main>
 
 </div>

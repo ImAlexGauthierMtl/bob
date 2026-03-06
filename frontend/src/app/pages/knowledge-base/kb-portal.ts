@@ -20,6 +20,7 @@ import {
 export class KBPortalComponent implements OnInit {
     categories: KBCategory[] = [];
     popularArticles: KBArticleSummary[] = [];
+    recentArticles: KBArticleSummary[] = [];
     searchResults: KBArticleSummary[] = [];
     stats: KBStats = {
         total_articles: 0,
@@ -31,7 +32,6 @@ export class KBPortalComponent implements OnInit {
 
     searchQuery = '';
     isSearching = false;
-    selectedCategory: KBCategory | null = null;
 
     // Category icon map (fallback if not stored in DB)
     iconMap: Record<string, string> = {
@@ -39,6 +39,9 @@ export class KBPortalComponent implements OnInit {
         'sales-crm': 'fa-solid fa-chart-line',
         'ai-features': 'fa-solid fa-wand-magic-sparkles',
         'automation': 'fa-solid fa-gears',
+        'team-management': 'fa-solid fa-users-gear',
+        'security-privacy': 'fa-solid fa-shield-halved',
+        'api-integrations': 'fa-solid fa-code',
         'admin': 'fa-solid fa-shield-halved',
         'api': 'fa-solid fa-code',
     };
@@ -48,6 +51,9 @@ export class KBPortalComponent implements OnInit {
         'sales-crm': '#10b981',
         'ai-features': '#a855f7',
         'automation': '#f59e0b',
+        'team-management': '#f97316',
+        'security-privacy': '#ef4444',
+        'api-integrations': '#eab308',
         'admin': '#ef4444',
         'api': '#6366f1',
     };
@@ -57,6 +63,7 @@ export class KBPortalComponent implements OnInit {
     ngOnInit(): void {
         this.loadCategories();
         this.loadPopular();
+        this.loadRecent();
         this.loadStats();
     }
 
@@ -69,6 +76,12 @@ export class KBPortalComponent implements OnInit {
     loadPopular(): void {
         this.kbService.popularArticles(8).subscribe({
             next: (articles) => (this.popularArticles = articles),
+        });
+    }
+
+    loadRecent(): void {
+        this.kbService.listArticles({ limit: 3 }).subscribe({
+            next: (res) => (this.recentArticles = res.items),
         });
     }
 
@@ -106,11 +119,9 @@ export class KBPortalComponent implements OnInit {
         return cat.color || this.colorMap[cat.slug] || '#6b7280';
     }
 
-    getVisibilityLabel(v: string): string {
-        return v === 'internal' ? 'Internal' : v === 'shared' ? 'Shared' : 'Public';
-    }
-
-    getVisibilityClass(v: string): string {
-        return v === 'internal' ? 'badge--internal' : v === 'shared' ? 'badge--shared' : 'badge--public';
+    getCategoryName(categoryId: string | null): string {
+        if (!categoryId) return 'General';
+        const cat = this.categories.find(c => c.id === categoryId);
+        return cat?.name || 'General';
     }
 }
