@@ -1,0 +1,148 @@
+<div class="kb-portal">
+
+    <!-- ═══════ Hero / Search ═══════ -->
+    <section class="kb-hero" id="kb-hero">
+        <div class="kb-hero__inner">
+            <div class="kb-hero__badge">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>AI-Powered Knowledge Base</span>
+            </div>
+            <h1 class="kb-hero__title">How can we <span class="kb-hero__accent">help</span> you?</h1>
+            <p class="kb-hero__subtitle">Search our knowledge base for guides, tutorials, and best practices</p>
+
+            <div class="kb-hero__search">
+                <i class="fa-solid fa-search kb-hero__search-icon"></i>
+                <input type="text" class="kb-hero__search-input" placeholder="Search articles, guides, and tutorials..."
+                    [(ngModel)]="searchQuery" (input)="onSearch()" id="kb-search" />
+                @if (searchQuery) {
+                <button class="kb-hero__search-clear" (click)="clearSearch()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                }
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="kb-hero__stats">
+            <div class="kb-stat">
+                <span class="kb-stat__value">{{ stats.published_articles }}</span>
+                <span class="kb-stat__label">Articles</span>
+            </div>
+            <div class="kb-stat">
+                <span class="kb-stat__value">{{ stats.total_categories }}</span>
+                <span class="kb-stat__label">Categories</span>
+            </div>
+            <div class="kb-stat">
+                <span class="kb-stat__value">{{ stats.total_views | number }}</span>
+                <span class="kb-stat__label">Total Views</span>
+            </div>
+            <div class="kb-stat">
+                <span class="kb-stat__value">{{ stats.avg_helpfulness }}%</span>
+                <span class="kb-stat__label">Helpful</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════ Search Results ═══════ -->
+    @if (isSearching) {
+    <section class="kb-section" id="search-results">
+        <h2 class="kb-section__title">
+            Search Results
+            <span class="kb-section__count">{{ searchResults.length }} found</span>
+        </h2>
+
+        @if (searchResults.length === 0) {
+        <div class="kb-empty">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <p>No articles match your search.</p>
+        </div>
+        }
+
+        <div class="kb-article-list">
+            @for (article of searchResults; track article.id) {
+            <a [routerLink]="['/knowledge-base', article.slug]" class="kb-article-card">
+                <div class="kb-article-card__header">
+                    <span class="kb-badge" [class]="getVisibilityClass(article.visibility)">
+                        {{ getVisibilityLabel(article.visibility) }}
+                    </span>
+                    <span class="kb-article-card__time">
+                        <i class="fa-solid fa-clock"></i>
+                        {{ article.read_time_minutes }} min
+                    </span>
+                </div>
+                <h3 class="kb-article-card__title">{{ article.title }}</h3>
+                <p class="kb-article-card__excerpt">{{ article.excerpt }}</p>
+                <div class="kb-article-card__meta">
+                    <span class="kb-article-card__author">{{ article.author_name || 'Team' }}</span>
+                    <span class="kb-article-card__views">
+                        <i class="fa-solid fa-eye"></i> {{ article.view_count }}
+                    </span>
+                </div>
+            </a>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ═══════ Browse by Category ═══════ -->
+    @if (!isSearching) {
+    <section class="kb-section" id="categories">
+        <h2 class="kb-section__title">Browse by Category</h2>
+        <div class="kb-category-grid">
+            @for (cat of categories; track cat.id) {
+            <a [routerLink]="[]" [queryParams]="{category: cat.id}" class="kb-category-card">
+                <div class="kb-category-card__icon" [style.background-color]="getCategoryColor(cat) + '15'"
+                    [style.color]="getCategoryColor(cat)">
+                    <i [class]="getCategoryIcon(cat)"></i>
+                </div>
+                <h3 class="kb-category-card__name">{{ cat.name }}</h3>
+                <p class="kb-category-card__desc">{{ cat.description }}</p>
+                <span class="kb-category-card__count">{{ cat.article_count }} articles</span>
+            </a>
+            }
+        </div>
+    </section>
+
+    <!-- ═══════ Popular Articles ═══════ -->
+    <section class="kb-section" id="popular">
+        <h2 class="kb-section__title">
+            <i class="fa-solid fa-fire-flame-curved" style="color: var(--accent)"></i>
+            Popular Articles
+        </h2>
+        <div class="kb-article-list">
+            @for (article of popularArticles; track article.id) {
+            <a [routerLink]="['/knowledge-base', article.slug]" class="kb-article-card">
+                <div class="kb-article-card__header">
+                    <span class="kb-badge" [class]="getVisibilityClass(article.visibility)">
+                        {{ getVisibilityLabel(article.visibility) }}
+                    </span>
+                    @for (tag of article.tags; track tag) {
+                    <span class="kb-tag">{{ tag }}</span>
+                    }
+                    <span class="kb-article-card__time">
+                        <i class="fa-solid fa-clock"></i>
+                        {{ article.read_time_minutes }} min
+                    </span>
+                </div>
+                <h3 class="kb-article-card__title">{{ article.title }}</h3>
+                <p class="kb-article-card__excerpt">{{ article.excerpt }}</p>
+                <div class="kb-article-card__meta">
+                    <span class="kb-article-card__author">{{ article.author_name || 'Team' }}</span>
+                    <span class="kb-article-card__views">
+                        <i class="fa-solid fa-eye"></i> {{ article.view_count }}
+                    </span>
+                </div>
+            </a>
+            }
+        </div>
+
+        @if (popularArticles.length === 0) {
+        <div class="kb-empty">
+            <i class="fa-solid fa-book-open"></i>
+            <p>No articles published yet. Check back soon!</p>
+        </div>
+        }
+    </section>
+    }
+
+</div>

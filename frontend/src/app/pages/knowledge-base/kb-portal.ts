@@ -1,0 +1,116 @@
+import { Component, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { DatePipe, DecimalPipe } from '@angular/common';
+
+import {
+    KnowledgeBaseService,
+    KBCategory,
+    KBArticleSummary,
+    KBStats,
+} from '../../shared/services/kb.service';
+
+@Component({
+    selector: 'app-kb-portal',
+    standalone: true,
+    imports: [FormsModule, RouterLink, DatePipe, DecimalPipe],
+    templateUrl: './kb-portal.html',
+    styleUrl: './kb-portal.css',
+})
+export class KBPortalComponent implements OnInit {
+    categories: KBCategory[] = [];
+    popularArticles: KBArticleSummary[] = [];
+    searchResults: KBArticleSummary[] = [];
+    stats: KBStats = {
+        total_articles: 0,
+        published_articles: 0,
+        total_categories: 0,
+        total_views: 0,
+        avg_helpfulness: 0,
+    };
+
+    searchQuery = '';
+    isSearching = false;
+    selectedCategory: KBCategory | null = null;
+
+    // Category icon map (fallback if not stored in DB)
+    iconMap: Record<string, string> = {
+        'getting-started': 'fa-solid fa-rocket',
+        'sales-crm': 'fa-solid fa-chart-line',
+        'ai-features': 'fa-solid fa-wand-magic-sparkles',
+        'automation': 'fa-solid fa-gears',
+        'admin': 'fa-solid fa-shield-halved',
+        'api': 'fa-solid fa-code',
+    };
+
+    colorMap: Record<string, string> = {
+        'getting-started': '#3b82f6',
+        'sales-crm': '#10b981',
+        'ai-features': '#a855f7',
+        'automation': '#f59e0b',
+        'admin': '#ef4444',
+        'api': '#6366f1',
+    };
+
+    constructor(private kbService: KnowledgeBaseService) { }
+
+    ngOnInit(): void {
+        this.loadCategories();
+        this.loadPopular();
+        this.loadStats();
+    }
+
+    loadCategories(): void {
+        this.kbService.listCategories().subscribe({
+            next: (res) => (this.categories = res.items),
+        });
+    }
+
+    loadPopular(): void {
+        this.kbService.popularArticles(8).subscribe({
+            next: (articles) => (this.popularArticles = articles),
+        });
+    }
+
+    loadStats(): void {
+        this.kbService.getStats().subscribe({
+            next: (s) => (this.stats = s),
+        });
+    }
+
+    onSearch(): void {
+        if (!this.searchQuery.trim()) {
+            this.isSearching = false;
+            this.searchResults = [];
+            return;
+        }
+        this.isSearching = true;
+        this.kbService
+            .listArticles({ search: this.searchQuery, limit: 20 })
+            .subscribe({
+                next: (res) => (this.searchResults = res.items),
+            });
+    }
+
+    clearSearch(): void {
+        this.searchQuery = '';
+        this.isSearching = false;
+        this.searchResults = [];
+    }
+
+    getCategoryIcon(cat: KBCategory): string {
+        return cat.icon || this.iconMap[cat.slug] || 'fa-solid fa-book';
+    }
+
+    getCategoryColor(cat: KBCategory): string {
+        return cat.color || this.colorMap[cat.slug] || '#6b7280';
+    }
+
+    getVisibilityLabel(v: string): string {
+        return v === 'internal' ? 'Internal' : v === 'shared' ? 'Shared' : 'Public';
+    }
+
+    getVisibilityClass(v: string): string {
+        return v === 'internal' ? 'badge--internal' : v === 'shared' ? 'badge--shared' : 'badge--public';
+    }
+}

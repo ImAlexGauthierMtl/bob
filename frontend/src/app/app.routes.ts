@@ -154,6 +154,20 @@ export const routes: Routes = [
                 ],
             },
             {
+                path: 'knowledge-base',
+                loadComponent: () =>
+                    import('./pages/knowledge-base/kb-portal').then(
+                        (m) => m.KBPortalComponent
+                    ),
+            },
+            {
+                path: 'knowledge-base/:slug',
+                loadComponent: () =>
+                    import('./pages/knowledge-base/kb-article').then(
+                        (m) => m.KBArticleComponent
+                    ),
+            },
+            {
                 path: '',
                 redirectTo: 'dashboard',
                 pathMatch: 'full',
