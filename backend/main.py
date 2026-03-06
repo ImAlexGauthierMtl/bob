@@ -30,11 +30,19 @@ from app.presentation.routes.auth_routes import router as auth_router
 from app.presentation.routes.search_routes import router as search_router
 from app.presentation.routes.enrichment_routes import router as enrichment_router
 from app.presentation.routes.organization_routes import router as organization_router
+from app.presentation.routes.contact_routes import router as contact_router
+from app.presentation.routes.opportunity_routes import router as opportunity_router
+from app.presentation.routes.quote_routes import router as quote_router
+from app.presentation.routes.activity_routes import router as activity_router
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(search_router, tags=["search"])
 app.include_router(enrichment_router, tags=["enrichment"])
 app.include_router(organization_router, tags=["organizations"])
+app.include_router(contact_router, tags=["contacts"])
+app.include_router(opportunity_router, tags=["opportunities"])
+app.include_router(quote_router, tags=["quotes"])
+app.include_router(activity_router, tags=["activities"])
 
 
 @app.get("/health", tags=["monitoring"])
@@ -49,7 +57,7 @@ async def startup_event():
     from app.infrastructure.database import engine, SessionLocal
     from app.domain.entities.base import Base
     # Import entities so they register with Base.metadata
-    from app.domain.entities import user, organization  # noqa: F401
+    from app.domain.entities import user, organization, contact, opportunity, quote, activity  # noqa: F401
     from app.infrastructure.seed import run_seed
 
     # Create tables
