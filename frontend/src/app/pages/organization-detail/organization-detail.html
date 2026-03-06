@@ -1,204 +1,207 @@
-<div class="detail-header" id="org-detail-header">
-    <div class="detail-header__top">
-        <a routerLink="/organizations" class="back-link"><i class="fa-solid fa-arrow-left"></i> Organizations</a>
-        <div class="detail-header__actions">
-            <button class="btn btn-outline"><i class="fa-solid fa-pen"></i> Edit</button>
-            <button class="btn btn-accent"><i class="fa-solid fa-plus"></i> New Opportunity</button>
-        </div>
-    </div>
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Loading organization...</span>
+</div>
+}
 
-    <div class="detail-identity">
-        <div class="detail-avatar">AC</div>
-        <div class="detail-info">
-            <h2 class="detail-name">Acme Corporation</h2>
-            <p class="detail-meta">Technology · San Francisco, CA · Enterprise</p>
-            <div class="detail-tags">
-                <span class="tag">Strategic Partner</span>
-                <span class="tag">High Value</span>
-                <span class="tag tag--accent">Active</span>
+@if (org) {
+<!-- Header -->
+<div class="detail-header">
+    <a routerLink="/organizations" class="back-link">
+        <i class="fa-solid fa-arrow-left"></i> Organizations
+    </a>
+    <div class="detail-header__main">
+        <div class="avatar-lg">{{ getInitials(org.name) }}</div>
+        <div class="detail-header__info">
+            <h2 class="detail-header__name">{{ org.name }}</h2>
+            <p class="detail-header__meta">
+                {{ org.industry || 'No industry' }}
+                @if (org.address_city) {
+                · {{ org.address_city }}@if (org.address_country) {, {{ org.address_country }}}
+                }
+            </p>
+            <div class="detail-header__badges">
+                <span class="status-badge status-badge--{{ org.status.toLowerCase() }}">{{ org.status }}</span>
+                @if (org.ai_enriched === 'Y') {
+                <span class="ai-badge ai-badge--done"><i class="fa-solid fa-check"></i> AI Enriched</span>
+                } @else {
+                <span class="ai-badge ai-badge--pending"><i class="fa-solid fa-spinner fa-spin"></i> Enriching...</span>
+                }
             </div>
-        </div>
-    </div>
-
-    <div class="detail-ai-summary" id="ai-summary">
-        <div class="detail-ai-summary__icon">
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
-        </div>
-        <div>
-            <p class="detail-ai-summary__title">AI Summary</p>
-            <p class="detail-ai-summary__text">Acme Corp has shown consistent growth of 18% YoY. Their contract renewal
-                is approaching in Q2 2025. Recent engagement metrics suggest strong satisfaction. Recommended action:
-                Schedule strategic review meeting and explore expansion into their APAC operations.</p>
         </div>
     </div>
 </div>
 
-<!-- Metrics -->
-<section class="detail-metrics" id="org-detail-metrics">
-    <div class="metric-card">
-        <p class="metric-card__label">Annual Revenue</p>
-        <p class="metric-card__value">$1.2M</p>
-        <span class="metric-card__change--up">+18% YoY</span>
-    </div>
-    <div class="metric-card">
-        <p class="metric-card__label">Open Opportunities</p>
-        <p class="metric-card__value">7</p>
-        <span class="metric-card__change--up">$458K pipeline</span>
-    </div>
-    <div class="metric-card">
-        <p class="metric-card__label">Total Contacts</p>
-        <p class="metric-card__value">24</p>
-        <span class="metric-card__change-period">Across 5 departments</span>
-    </div>
-    <div class="metric-card">
-        <p class="metric-card__label">Health Score</p>
-        <p class="metric-card__value">92%</p>
-        <span class="metric-card__change--up">Excellent</span>
-    </div>
-</section>
-
 <!-- Tabs -->
-<div class="tabs" id="tabs">
+<div class="tabs">
     <button class="tab" [class.tab--active]="activeTab === 'overview'"
         (click)="setActiveTab('overview')">Overview</button>
-    <button class="tab" [class.tab--active]="activeTab === 'contacts'"
-        (click)="setActiveTab('contacts')">Contacts</button>
+    <button class="tab" [class.tab--active]="activeTab === 'contacts'" (click)="setActiveTab('contacts')">Contacts ({{
+        contacts.length }})</button>
     <button class="tab" [class.tab--active]="activeTab === 'opportunities'"
-        (click)="setActiveTab('opportunities')">Opportunities</button>
-    <button class="tab" [class.tab--active]="activeTab === 'activities'"
-        (click)="setActiveTab('activities')">Activities</button>
-    <button class="tab" [class.tab--active]="activeTab === 'notes'" (click)="setActiveTab('notes')">Notes</button>
+        (click)="setActiveTab('opportunities')">Opportunities ({{ opportunities.length }})</button>
+    <button class="tab" [class.tab--active]="activeTab === 'activities'" (click)="setActiveTab('activities')">Activities
+        ({{ activities.length }})</button>
 </div>
 
 <!-- Overview Tab -->
 @if (activeTab === 'overview') {
-<section class="tab-content">
-    <div class="detail-grid">
-        <!-- Left column -->
-        <div class="detail-column">
-            <div class="detail-card">
-                <h3 class="detail-card__title">Revenue Trend</h3>
-                <div class="chart-placeholder">
-                    <i class="fa-solid fa-chart-line"></i>
-                    <span>Chart coming soon</span>
-                </div>
+<div class="detail-grid">
+    <div class="info-card">
+        <h3 class="info-card__title">Company Information</h3>
+        <div class="info-card__grid">
+            <div class="info-field">
+                <span class="info-field__label">Industry</span>
+                <span class="info-field__value">{{ org.industry || '—' }}</span>
             </div>
-
-            <div class="detail-card">
-                <h3 class="detail-card__title">Recent Activity</h3>
-                <div class="activity-list">
-                    <div class="activity-item">
-                        <div class="activity-dot activity-dot--accent"></div>
-                        <div>
-                            <p class="activity-text">Call with <strong>Sarah Johnson</strong> — Discussed Q2 expansion
-                                plans</p>
-                            <p class="activity-time">Today, 2:30 PM</p>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-dot"></div>
-                        <div>
-                            <p class="activity-text">Email sent to <strong>Michael Chen</strong> — Contract renewal
-                                proposal</p>
-                            <p class="activity-time">Yesterday</p>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-dot"></div>
-                        <div>
-                            <p class="activity-text">Meeting with <strong>Lisa Park</strong> — Product demo for APAC
-                                team</p>
-                            <p class="activity-time">3 days ago</p>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-dot"></div>
-                        <div>
-                            <p class="activity-text">Deal <strong>#OPP-2847</strong> moved to Negotiation stage</p>
-                            <p class="activity-time">1 week ago</p>
-                        </div>
-                    </div>
-                </div>
+            <div class="info-field">
+                <span class="info-field__label">Type</span>
+                <span class="info-field__value">{{ org.org_type || '—' }}</span>
             </div>
-        </div>
-
-        <!-- Right column -->
-        <div class="detail-column">
-            <div class="detail-card">
-                <h3 class="detail-card__title">Key Contacts</h3>
-                <div class="contacts-list">
-                    <div class="contact-item"><img
-                            src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg"
-                            class="contact-avatar" alt="" />
-                        <div class="contact-info">
-                            <p class="contact-name">Sarah Johnson</p>
-                            <p class="contact-role">VP of Technology</p>
-                        </div><span class="contact-badge">Primary</span>
-                    </div>
-                    <div class="contact-item"><img
-                            src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
-                            class="contact-avatar" alt="" />
-                        <div class="contact-info">
-                            <p class="contact-name">Michael Chen</p>
-                            <p class="contact-role">Procurement Director</p>
-                        </div><span class="contact-badge">Decision Maker</span>
-                    </div>
-                    <div class="contact-item"><img
-                            src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg"
-                            class="contact-avatar" alt="" />
-                        <div class="contact-info">
-                            <p class="contact-name">Lisa Park</p>
-                            <p class="contact-role">CTO</p>
-                        </div><span class="contact-badge">Executive</span>
-                    </div>
-                </div>
+            <div class="info-field">
+                <span class="info-field__label">Employees</span>
+                <span class="info-field__value">{{ org.employee_count || '—' }}</span>
             </div>
-
-            <div class="detail-card">
-                <h3 class="detail-card__title">Documents</h3>
-                <div class="documents-list">
-                    <div class="document-item">
-                        <div class="document-icon"><i class="fa-regular fa-file-pdf"></i></div>
-                        <div>
-                            <p class="document-name">Q4 Proposal 2024.pdf</p>
-                            <p class="document-meta">Uploaded 2 weeks ago · 2.4 MB</p>
-                        </div>
-                    </div>
-                    <div class="document-item">
-                        <div class="document-icon"><i class="fa-regular fa-file-lines"></i></div>
-                        <div>
-                            <p class="document-name">Service Agreement v3.docx</p>
-                            <p class="document-meta">Uploaded 1 month ago · 890 KB</p>
-                        </div>
-                    </div>
-                    <div class="document-item">
-                        <div class="document-icon"><i class="fa-regular fa-file-excel"></i></div>
-                        <div>
-                            <p class="document-name">Revenue Analysis.xlsx</p>
-                            <p class="document-meta">Uploaded 2 months ago · 1.1 MB</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="detail-card">
-                <h3 class="detail-card__title">Organization Info</h3>
-                <div class="info-grid">
-                    <div class="info-row"><span class="info-label">Website</span><span
-                            class="info-value link-accent">www.acmecorp.com</span></div>
-                    <div class="info-row"><span class="info-label">Industry</span><span
-                            class="info-value">Technology</span></div>
-                    <div class="info-row"><span class="info-label">Employees</span><span
-                            class="info-value">5,000-10,000</span></div>
-                    <div class="info-row"><span class="info-label">Founded</span><span class="info-value">1998</span>
-                    </div>
-                    <div class="info-row"><span class="info-label">Account Owner</span><span class="info-value">Marcus
-                            Chen</span></div>
-                    <div class="info-row"><span class="info-label">Last Contact</span><span
-                            class="info-value">Today</span></div>
-                </div>
+            <div class="info-field">
+                <span class="info-field__label">Annual Revenue</span>
+                <span class="info-field__value">{{ formatRevenue(org.annual_revenue) }}</span>
             </div>
         </div>
     </div>
-</section>
+
+    <div class="info-card">
+        <h3 class="info-card__title">Contact Details</h3>
+        <div class="info-card__grid">
+            <div class="info-field">
+                <span class="info-field__label">Phone</span>
+                <span class="info-field__value">{{ org.phone || '—' }}</span>
+            </div>
+            <div class="info-field">
+                <span class="info-field__label">Email</span>
+                <span class="info-field__value">{{ org.email || '—' }}</span>
+            </div>
+            <div class="info-field">
+                <span class="info-field__label">Website</span>
+                @if (org.website) {
+                <a [href]="org.website" target="_blank" class="info-field__link">{{ org.website }}</a>
+                } @else {
+                <span class="info-field__value">—</span>
+                }
+            </div>
+            <div class="info-field">
+                <span class="info-field__label">LinkedIn</span>
+                @if (org.linkedin_url) {
+                <a [href]="org.linkedin_url" target="_blank" class="info-field__link">View Profile</a>
+                } @else {
+                <span class="info-field__value">—</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="info-card">
+        <h3 class="info-card__title">Address</h3>
+        <p class="info-card__text">{{ getFullAddress() }}</p>
+    </div>
+
+    @if (org.description) {
+    <div class="info-card info-card--wide">
+        <h3 class="info-card__title">Description</h3>
+        <p class="info-card__text">{{ org.description }}</p>
+    </div>
+    }
+</div>
+}
+
+<!-- Contacts Tab -->
+@if (activeTab === 'contacts') {
+<div class="tab-content">
+    @if (contacts.length === 0) {
+    <div class="empty-tab">No contacts linked to this organization yet.</div>
+    } @else {
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Job Title</th>
+                <th>Email</th>
+                <th>Phone</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (c of contacts; track c.id) {
+            <tr>
+                <td><a [routerLink]="'/contacts/' + c.id" class="org-link">{{ c.first_name }} {{ c.last_name }}</a></td>
+                <td>{{ c.job_title || '—' }}</td>
+                <td>{{ c.email || '—' }}</td>
+                <td>{{ c.phone || '—' }}</td>
+            </tr>
+            }
+        </tbody>
+    </table>
+    }
+</div>
+}
+
+<!-- Opportunities Tab -->
+@if (activeTab === 'opportunities') {
+<div class="tab-content">
+    @if (opportunities.length === 0) {
+    <div class="empty-tab">No opportunities linked to this organization yet.</div>
+    } @else {
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Stage</th>
+                <th>Amount</th>
+                <th>Close Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (o of opportunities; track o.id) {
+            <tr>
+                <td><a [routerLink]="'/opportunities/' + o.id" class="org-link">{{ o.name }}</a></td>
+                <td><span class="status-badge">{{ o.stage }}</span></td>
+                <td>{{ o.amount ? '$' + o.amount.toLocaleString() : '—' }}</td>
+                <td>{{ o.close_date || '—' }}</td>
+            </tr>
+            }
+        </tbody>
+    </table>
+    }
+</div>
+}
+
+<!-- Activities Tab -->
+@if (activeTab === 'activities') {
+<div class="tab-content">
+    @if (activities.length === 0) {
+    <div class="empty-tab">No activities yet.</div>
+    } @else {
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Type</th>
+                <th>Priority</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (a of activities; track a.id) {
+            <tr>
+                <td>{{ a.subject }}</td>
+                <td>{{ a.activity_type }}</td>
+                <td>{{ a.priority }}</td>
+                <td><span class="status-badge">{{ a.status }}</span></td>
+            </tr>
+            }
+        </tbody>
+    </table>
+    }
+</div>
+}
+
 }
