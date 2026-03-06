@@ -36,6 +36,8 @@ from app.presentation.routes.quote_routes import router as quote_router
 from app.presentation.routes.activity_routes import router as activity_router
 from app.presentation.routes.user_routes import router as user_router
 from app.presentation.routes.contact_ai_routes import router as contact_ai_router
+from app.presentation.routes.department_routes import router as department_router
+from app.presentation.routes.capability_routes import router as capability_router
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(search_router, tags=["search"])
@@ -47,6 +49,8 @@ app.include_router(opportunity_router, tags=["opportunities"])
 app.include_router(quote_router, tags=["quotes"])
 app.include_router(activity_router, tags=["activities"])
 app.include_router(user_router, tags=["users"])
+app.include_router(department_router, tags=["departments"])
+app.include_router(capability_router, tags=["capabilities"])
 
 
 @app.get("/health", tags=["monitoring"])
@@ -61,17 +65,19 @@ async def startup_event():
     from app.infrastructure.database import engine, SessionLocal
     from app.domain.entities.base import Base
     # Import entities so they register with Base.metadata
-    from app.domain.entities import user, organization, contact, opportunity, quote, activity  # noqa: F401
+    from app.domain.entities import user, organization, contact, opportunity, quote, activity, department, capability  # noqa: F401
     from app.infrastructure.seed import run_seed
+    from app.infrastructure.seed_capabilities import seed_capabilities
 
     # Create tables
     Base.metadata.create_all(bind=engine)
     logger.info("database_tables_created")
 
-    # Seed admin
+    # Seed admin + capabilities
     db = SessionLocal()
     try:
         run_seed(db)
+        seed_capabilities(db)
     finally:
         db.close()
     logger.info("api_started", environment=settings.environment)
