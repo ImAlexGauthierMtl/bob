@@ -24,10 +24,15 @@ updated: "2026-03-05"
 
 | Couche | Technologies |
 |---|---|
+| **Frontend** | Angular 20+ (standalone components, native CSS) |
 | **Backend APIs** | FastAPI + Python 3.11+ |
-| **Frontend** | Angular 20+ |
-| **Base de données** | PostgreSQL |
+| **Agent Orchestration** | LangGraph |
+| **LLM principal** | Groq (Llama 3.3 70B, Whisper) |
+| **LLM fallback** | OpenRouter (Claude, GPT — quand nécessaire) |
+| **Base de données** | PostgreSQL + pgvector (embeddings) + Apache AGE (graph) |
 | **Auth** | JWT centralisé |
+| **Search / Scraping** | Serper.dev + Groq LLM extraction |
+| **Async / Queue** | Redis + Celery |
 | **Logging** | Structlog JSON |
 | **Conteneurisation** | Docker + Docker Compose |
 | **CI/CD** | GitLab CI/CD |
@@ -35,38 +40,50 @@ updated: "2026-03-05"
 ## 3. Architecture
 
 ```
-Frontend (Angular 20+)
-    │
-    ▼
-[BFF Layer]  ← Backend-for-Frontend
-    │
-    ├──▶ [Auth Service]
-    ├──▶ [Core CRM Service]
-    ├──▶ [AI Orchestrator]  ← OpenRouter / Groq / Alibaba
-    └──▶ [Integration Service]  ← Zoho, Stripe, Email, Calendar
-              │
-              ▼
-         [PostgreSQL]
+   🎙️ Voice / ✏️ Chat (Angular 20+)
+            │
+            ▼
+   [Groq Whisper] ─── transcription (si voice)
+            │
+            ▼
+   [Intent Parser] ─── Groq LLM → action + paramètres
+            │
+            ▼
+   [LangGraph Orchestrator] ─── graphs d'état, parallélisme, checkpointing
+            │
+   ┌────────┼────────────────────────────┐
+   │        │                            │
+   ▼        ▼                            ▼
+[Search]  [Scraper]  [Email]  [RAG]   [Drive]   ← Agents spécialisés
+ Serper    Groq      IMAP/    pgvec   GDrive
+ .dev               Gmail     tor    OneDrive
+                    Outlook          Box / S3
+            │
+            ▼
+   [PostgreSQL + pgvector + Apache AGE]
+     Relations   Embeddings   Graph
+     tenant_id   RAG search   Cartographie
 ```
 
-### APIs actives
+### Services
 
-| API | Port | Rôle | Intégration externe |
-|---|---|---|---|
-| bff | TBD | Backend-for-Frontend | — |
-| auth | TBD | Authentification JWT | — |
-| ai-orchestrator | TBD | Orchestration IA | OpenRouter, Groq, Alibaba |
-| integrations | TBD | Connecteurs externes | Zoho, Stripe, Email, Calendar |
+| Service | Rôle | Intégrations |
+|---|---|---|
+| **BFF** | Backend-for-Frontend | — |
+| **Auth** | JWT + tenant isolation | — |
+| **AI Orchestrator** | LangGraph agent chains | Groq, OpenRouter |
+| **Connectors** | Ingestion données externes | Serper, Email, Drive, Whisper |
 
 ## 4. Intégrations externes
 
 | Service | Usage | Variable |
 |---|---|---|
-| OpenRouter | LLM routing multi-provider | OPENROUTER_API_KEY |
-| Groq | Inférence LLM rapide | GROQ_API_KEY |
-| Alibaba | IA / Cloud services | ALIBABA_API_KEY |
-| Zoho | CRM, Desk, Mail | ZOHO_* |
-| Stripe | Paiements | STRIPE_* |
+| Groq | LLM principal + Whisper voice | GROQ_API_KEY |
+| OpenRouter | LLM premium (fallback) | OPENROUTER_API_KEY |
+| Serper.dev | Web search API | SERPER_API_KEY |
+| Gmail / Outlook | Email IMAP/SMTP + API | EMAIL_* |
+| Google Drive | Ingestion fichiers clients | GDRIVE_* |
+| OneDrive / Box / S3 | Ingestion fichiers alternatifs | STORAGE_* |
 
 ## 5. Environnements
 
