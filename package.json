@@ -1,0 +1,25 @@
+{
+  "name": "croo-digital-experience-v.2.0",
+  "version": "1.0.0",
+  "description": "> Source de vérité pour le développement assisté par IA chez The Smart Crew.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "kb:screenshots": "node tools/kb-screenshots.mjs",
+    "kb:annotate": "node tools/kb-annotate.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@gitlab.tools.thesmartcrew.com:alexandre/croo-digital-experience-v.2.0.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "sharp": "^0.34.5"
+  }
+}
