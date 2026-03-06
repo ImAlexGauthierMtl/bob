@@ -1,10 +1,15 @@
 # Dependencies
 node_modules/
 .angular/
+venv/
 
 # Build
 dist/
 tmp/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
 
 # IDE
 .idea/
@@ -19,3 +24,4 @@ Thumbs.db
 # Env
 .env
 .env.local
+

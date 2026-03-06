@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: croo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: croo
+      POSTGRES_PASSWORD: croo
+      POSTGRES_DB: croo_digital_experience
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U croo -d croo_digital_experience" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Backend API
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: croo-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://croo:croo@db:5432/croo_digital_experience
+      ENVIRONMENT: development
+      DEBUG: "true"
+      API_PORT: "8001"
+      SECRET_KEY: dev-secret-key-change-in-production
+      CORS_ORIGINS: '["http://localhost:4200"]'
+      ADMIN_EMAIL: admin@croo.digital
+      ADMIN_PASSWORD: Admin123!
+    ports:
+      - "8001:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

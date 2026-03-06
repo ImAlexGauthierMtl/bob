@@ -1,0 +1,36 @@
+"""User entity for authentication."""
+
+from sqlalchemy import Column, String
+import bcrypt
+
+from app.domain.entities.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
+
+
+class User(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
+    """User entity for authentication and authorization."""
+
+    __tablename__ = "users"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    first_name = Column(String(100), nullable=False)
+    last_name = Column(String(100), nullable=False)
+
+    @staticmethod
+    def hash_password(password: str) -> str:
+        """Hash a password with bcrypt."""
+        password_bytes = password.encode("utf-8")
+        if len(password_bytes) > 72:
+            password_bytes = password_bytes[:72]
+        salt = bcrypt.gensalt(rounds=12)
+        hashed = bcrypt.hashpw(password_bytes, salt)
+        return hashed.decode("utf-8")
+
+    def verify_password(self, password: str) -> bool:
+        """Verify a password against the stored hash."""
+        password_bytes = password.encode("utf-8")
+        if len(password_bytes) > 72:
+            password_bytes = password_bytes[:72]
+        hash_bytes = self.password_hash.encode("utf-8")
+        return bcrypt.checkpw(password_bytes, hash_bytes)
