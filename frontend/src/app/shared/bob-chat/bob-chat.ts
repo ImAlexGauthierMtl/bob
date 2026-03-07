@@ -278,29 +278,23 @@ export class BobChatComponent implements AfterViewChecked, OnDestroy {
             });
 
             this.pipecatClient.on(RTVIEvent.BotTranscript, (data: any) => {
-                this.ngZone.run(() => {
-                    if (data?.text) {
-                        this.messages.push({
-                            role: 'bob',
-                            text: data.text,
-                            time: new Date(),
-                        });
-                        this.shouldScrollToBottom = true;
-                    }
-                });
+                // Voice mode: user already hears Bob speak — don't show text in chat
+                // This prevents raw LLM output (with markdown/emotion tags) from cluttering the UI
+                console.log('[Bob] BotTranscript (hidden):', data?.text);
             });
 
             this.pipecatClient.on(RTVIEvent.UserTranscript, (data: any) => {
-                this.ngZone.run(() => {
-                    if (data?.text && data?.final) {
+                // Only show final user transcriptions (not interim) as light confirmations
+                if (data?.text && data?.final) {
+                    this.ngZone.run(() => {
                         this.messages.push({
                             role: 'user',
                             text: data.text,
                             time: new Date(),
                         });
                         this.shouldScrollToBottom = true;
-                    }
-                });
+                    });
+                }
             });
 
             this.pipecatClient.on(RTVIEvent.Disconnected, () => {
