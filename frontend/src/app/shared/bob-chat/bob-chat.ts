@@ -1,10 +1,16 @@
-import { Component } from '@angular/core';
+import { Component, inject, ViewChild, ElementRef, AfterViewChecked, OnDestroy, NgZone } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { BobService } from '../services/bob.service';
+import { AuthService } from '../services/auth.service';
+import { BobActionService, BobAction } from '../services/bob-action.service';
+import { PipecatClient, RTVIEvent } from '@pipecat-ai/client-js';
+import { WebSocketTransport } from '@pipecat-ai/websocket-transport';
 
 interface ChatMessage {
     role: 'user' | 'bob';
     text: string;
     time: Date;
+    isLoading?: boolean;
 }
 
 interface QuickWorkflow {
@@ -13,6 +19,12 @@ interface QuickWorkflow {
     description: string;
 }
 
+type VoiceState = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking';
+
+const WS_URL = 'ws://localhost:8555';
+const VOICE_CONSENT_KEY = 'croo_voice_consent';
+const MAX_RECONNECT_ATTEMPTS = 3;
+
 @Component({
     selector: 'croo-bob-chat',
     standalone: true,
@@ -20,10 +32,28 @@ interface QuickWorkflow {
     templateUrl: './bob-chat.html',
     styleUrl: './bob-chat.css',
 })
-export class BobChatComponent {
+export class BobChatComponent implements AfterViewChecked, OnDestroy {
+    @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
+
+    private bobService = inject(BobService);
+    private authService = inject(AuthService);
+    private bobActionService = inject(BobActionService);
+
     isOpen = false;
     message = '';
     hasUnread = true;
+    isLoading = false;
+    sessionId: string | undefined;
+    private shouldScrollToBottom = false;
+
+    // ── Voice state ─────────────────────────────────────
+    voiceState: VoiceState = 'idle';
+    showConsentDialog = false;
+    private pipecatClient: PipecatClient | null = null;
+    private reconnectAttempts = 0;
+    private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    private intentionalDisconnect = false;
+    private ngZone = inject(NgZone);
 
     messages: ChatMessage[] = [
         {
@@ -56,104 +86,360 @@ export class BobChatComponent {
         },
     ];
 
+    ngAfterViewChecked(): void {
+        if (this.shouldScrollToBottom) {
+            this.scrollToBottom();
+            this.shouldScrollToBottom = false;
+        }
+    }
+
+    ngOnDestroy(): void {
+        this.disconnectVoice();
+    }
+
     toggle(): void {
         this.isOpen = !this.isOpen;
         if (this.isOpen) {
             this.hasUnread = false;
+            this.shouldScrollToBottom = true;
+        } else {
+            this.disconnectVoice();
         }
     }
 
     close(): void {
         this.isOpen = false;
+        this.disconnectVoice();
     }
+
+    // ── Text chat ───────────────────────────────────────
 
     sendMessage(): void {
-        if (!this.message.trim()) return;
+        if (!this.message.trim() || this.isLoading) return;
+
+        const userMsg = this.message.trim();
         this.messages.push({
             role: 'user',
-            text: this.message,
+            text: userMsg,
             time: new Date(),
         });
-        const userMsg = this.message;
         this.message = '';
+        this.isLoading = true;
+        this.shouldScrollToBottom = true;
 
-        // Simulate Bob response
-        setTimeout(() => {
-            this.messages.push({
-                role: 'bob',
-                text: this.getBobResponse(userMsg),
-                time: new Date(),
-            });
-        }, 800);
+        // Add typing indicator
+        const loadingMsg: ChatMessage = {
+            role: 'bob',
+            text: '',
+            time: new Date(),
+            isLoading: true,
+        };
+        this.messages.push(loadingMsg);
+
+        this.bobService.chat(userMsg, this.sessionId).subscribe({
+            next: (response) => {
+                const idx = this.messages.indexOf(loadingMsg);
+                if (idx > -1) this.messages.splice(idx, 1);
+
+                this.messages.push({
+                    role: 'bob',
+                    text: response.response,
+                    time: new Date(),
+                });
+
+                this.sessionId = response.session_id;
+                this.isLoading = false;
+                this.shouldScrollToBottom = true;
+
+                // Dispatch any actions from tool calls
+                if (response.actions && response.actions.length > 0) {
+                    console.log('[Bob] Text chat actions:', response.actions);
+                    for (const action of response.actions) {
+                        this.bobActionService.dispatch(action as BobAction);
+                    }
+                }
+            },
+            error: (err) => {
+                const idx = this.messages.indexOf(loadingMsg);
+                if (idx > -1) this.messages.splice(idx, 1);
+
+                this.messages.push({
+                    role: 'bob',
+                    text: 'Sorry, I encountered an error. Please try again.',
+                    time: new Date(),
+                });
+
+                this.isLoading = false;
+                this.shouldScrollToBottom = true;
+                console.error('Bob chat error:', err);
+            },
+        });
     }
 
-    launchWorkflow(wf: QuickWorkflow): void {
-        this.messages.push({
-            role: 'user',
-            text: `Launch: ${wf.label}`,
-            time: new Date(),
-        });
-        setTimeout(() => {
+    // ── Voice ───────────────────────────────────────────
+
+    get isVoiceActive(): boolean {
+        return this.voiceState !== 'idle';
+    }
+
+    get voiceButtonIcon(): string {
+        switch (this.voiceState) {
+            case 'connecting': return 'fa-solid fa-spinner fa-spin';
+            case 'listening': return 'fa-solid fa-microphone';
+            case 'processing': return 'fa-solid fa-spinner fa-spin';
+            case 'speaking': return 'fa-solid fa-volume-high';
+            default: return 'fa-solid fa-microphone';
+        }
+    }
+
+    get voiceStatusText(): string {
+        switch (this.voiceState) {
+            case 'connecting': return 'Connecting...';
+            case 'listening': return 'Listening...';
+            case 'processing': return 'Thinking...';
+            case 'speaking': return 'Bob is speaking...';
+            default: return '';
+        }
+    }
+
+    async toggleVoice(): Promise<void> {
+        if (this.isVoiceActive) {
+            this.intentionalDisconnect = true;
+            this.disconnectVoice();
+        } else {
+            // Check consent first
+            if (!localStorage.getItem(VOICE_CONSENT_KEY)) {
+                this.showConsentDialog = true;
+                return;
+            }
+            this.intentionalDisconnect = false;
+            this.reconnectAttempts = 0;
+            await this.connectVoice();
+        }
+    }
+
+    acceptVoiceConsent(): void {
+        localStorage.setItem(VOICE_CONSENT_KEY, 'true');
+        this.showConsentDialog = false;
+        this.intentionalDisconnect = false;
+        this.reconnectAttempts = 0;
+        this.connectVoice();
+    }
+
+    declineVoiceConsent(): void {
+        this.showConsentDialog = false;
+    }
+
+    private async connectVoice(): Promise<void> {
+        const token = this.authService.getToken();
+        if (!token) {
+            console.error('No auth token for voice');
+            return;
+        }
+
+        this.voiceState = 'connecting';
+
+        try {
+            this.pipecatClient = new PipecatClient({
+                transport: new WebSocketTransport(),
+                enableMic: true,
+                enableCam: false,
+            });
+
+            // ── RTVI Events ─────────────────────────────
+            this.pipecatClient.on(RTVIEvent.Connected, () => {
+                this.ngZone.run(() => {
+                    this.voiceState = 'listening';
+                    this.messages.push({
+                        role: 'bob',
+                        text: '🎤 Voice mode activated — speak naturally, I\'m listening.',
+                        time: new Date(),
+                    });
+                    this.shouldScrollToBottom = true;
+                });
+            });
+
+            this.pipecatClient.on(RTVIEvent.BotStartedSpeaking, () => {
+                this.ngZone.run(() => {
+                    this.voiceState = 'speaking';
+                });
+            });
+
+            this.pipecatClient.on(RTVIEvent.BotStoppedSpeaking, () => {
+                this.ngZone.run(() => {
+                    this.voiceState = 'listening';
+                });
+            });
+
+            this.pipecatClient.on(RTVIEvent.UserStartedSpeaking, () => {
+                this.ngZone.run(() => {
+                    this.voiceState = 'processing';
+                });
+            });
+
+            this.pipecatClient.on(RTVIEvent.BotTranscript, (data: any) => {
+                this.ngZone.run(() => {
+                    if (data?.text) {
+                        this.messages.push({
+                            role: 'bob',
+                            text: data.text,
+                            time: new Date(),
+                        });
+                        this.shouldScrollToBottom = true;
+                    }
+                });
+            });
+
+            this.pipecatClient.on(RTVIEvent.UserTranscript, (data: any) => {
+                this.ngZone.run(() => {
+                    if (data?.text && data?.final) {
+                        this.messages.push({
+                            role: 'user',
+                            text: data.text,
+                            time: new Date(),
+                        });
+                        this.shouldScrollToBottom = true;
+                    }
+                });
+            });
+
+            this.pipecatClient.on(RTVIEvent.Disconnected, () => {
+                this.ngZone.run(() => {
+                    if (!this.intentionalDisconnect && this.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                        this.reconnectAttempts++;
+                        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 8000);
+                        this.voiceState = 'connecting';
+                        this.messages.push({
+                            role: 'bob',
+                            text: `Connection lost. Reconnecting (${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`,
+                            time: new Date(),
+                        });
+                        this.shouldScrollToBottom = true;
+                        this.reconnectTimer = setTimeout(() => this.connectVoice(), delay);
+                    } else {
+                        this.voiceState = 'idle';
+                    }
+                });
+            });
+
+            this.pipecatClient.on(RTVIEvent.Error, (error: any) => {
+                console.error('RTVI error:', error);
+            });
+
+            // ── Function call actions (voice navigation) ──
+            this.pipecatClient.on(RTVIEvent.LLMFunctionCallInProgress, (data: any) => {
+                console.log('[Bob] LLMFunctionCallInProgress:', JSON.stringify(data));
+                this.ngZone.run(() => {
+                    const fnName = data?.function_name;
+                    const args = data?.arguments || {};
+                    console.log(`[Bob] Function call: ${fnName}`, args);
+
+                    if (fnName === 'navigate_to') {
+                        this.bobActionService.dispatch({
+                            type: 'navigate',
+                            page: args.page,
+                        });
+                    } else if (fnName === 'open_create_dialog') {
+                        this.bobActionService.dispatch({
+                            type: 'open_create_dialog',
+                            entity: args.entity,
+                            name: args.name,
+                        });
+                    }
+                });
+            });
+
+            // Also listen for LLMFunctionCall (deprecated) for compatibility
+            this.pipecatClient.on(RTVIEvent.LLMFunctionCall, (data: any) => {
+                console.log('[Bob] LLMFunctionCall (deprecated):', JSON.stringify(data));
+                this.ngZone.run(() => {
+                    const fnName = data?.function_name;
+                    const args = data?.args || data?.arguments || {};
+                    console.log(`[Bob] Function call (deprecated): ${fnName}`, args);
+
+                    if (fnName === 'navigate_to') {
+                        this.bobActionService.dispatch({
+                            type: 'navigate',
+                            page: args.page,
+                        });
+                    } else if (fnName === 'open_create_dialog') {
+                        this.bobActionService.dispatch({
+                            type: 'open_create_dialog',
+                            entity: args.entity,
+                            name: args.name,
+                        });
+                    }
+                });
+            });
+
+            // ── Server messages (reliable action dispatch from voice) ──
+            this.pipecatClient.on(RTVIEvent.ServerMessage, (data: any) => {
+                console.log('[Bob] ServerMessage:', JSON.stringify(data));
+                this.ngZone.run(() => {
+                    if (data?.type === 'bob_action' && data?.action) {
+                        const action = data.action;
+                        console.log('[Bob] Voice action via ServerMessage:', action);
+                        this.bobActionService.dispatch({
+                            type: action.type,
+                            page: action.page,
+                            entity: action.entity,
+                            name: action.name,
+                        });
+                    }
+                });
+            });
+
+            // ── Connect ─────────────────────────────────
+            await this.pipecatClient.connect({
+                wsUrl: `${WS_URL}/ws/bob/voice?token=${token}`,
+            });
+
+        } catch (err) {
+            console.error('Failed to connect voice:', err);
+            this.voiceState = 'idle';
+            this.pipecatClient = null;
+
             this.messages.push({
                 role: 'bob',
-                text: `I'm starting the "${wf.label}" workflow. I'll ${wf.description.toLowerCase()} and notify you when it's done.`,
+                text: 'Could not access microphone. Please check permissions.',
                 time: new Date(),
             });
-        }, 600);
+            this.shouldScrollToBottom = true;
+        }
+    }
+
+    disconnectVoice(): void {
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
+        if (this.pipecatClient) {
+            this.pipecatClient.disconnect();
+            this.pipecatClient = null;
+        }
+        this.voiceState = 'idle';
+        this.reconnectAttempts = 0;
+    }
+
+    // ── Shared ──────────────────────────────────────────
+
+    launchWorkflow(wf: QuickWorkflow): void {
+        this.message = wf.label;
+        this.sendMessage();
     }
 
     formatTime(date: Date): string {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    private getBobResponse(msg: string): string {
-        const lower = msg.toLowerCase();
-
-        // ── Intent: Add account/organization ──
-        const addAccountMatch = msg.match(/(?:ajouter|créer|creer|nouveau|nouvelle)\s+(?:un\s+)?(?:compte|organisation|organization|client|entreprise)\s*[:\-–]?\s*(.*)/i);
-        if (addAccountMatch) {
-            const name = addAccountMatch[1]?.trim();
-            if (name) {
-                return `🏢 J'ai détecté que tu veux ajouter "${name}" comme nouvelle organisation. Je lance le workflow **Ajouter un compte** :\n\n✓ Création de l'organisation "${name}"\n✓ Enrichissement automatique des données\n✓ Recherche de contacts associés\n\nVeux-tu que je procède ?`;
+    private scrollToBottom(): void {
+        try {
+            if (this.messagesContainer) {
+                this.messagesContainer.nativeElement.scrollTop =
+                    this.messagesContainer.nativeElement.scrollHeight;
             }
-            return '🏢 Je peux t\'aider à ajouter une nouvelle organisation. Donne-moi le nom du compte et je lancerai le workflow de création.';
+        } catch (e) {
+            // Ignore scroll errors
         }
-
-        // ── Intent: Add contact ──
-        if (/(?:ajouter|créer|creer|nouveau|nouvelle)\s+(?:un\s+)?(?:contact|personne)/i.test(lower)) {
-            const nameMatch = msg.match(/(?:contact|personne)\s*[:\-–]?\s*(.*)/i);
-            const contactName = nameMatch?.[1]?.trim();
-            if (contactName) {
-                return `👤 Je crée le contact "${contactName}" et je lance l'enrichissement automatique. Je te notifie quand c'est prêt.`;
-            }
-            return '👤 Je peux ajouter un nouveau contact. Donne-moi le nom et je m\'occupe du reste.';
-        }
-
-        // ── Intent: Create task ──
-        if (/(?:ajouter|créer|creer|nouvelle?)\s+(?:une?\s+)?(?:tâche|tache|task|todo)/i.test(lower)) {
-            return '✅ Je peux créer une tâche pour toi. Précise le titre et je l\'assigne automatiquement.';
-        }
-
-        // ── Intent: Follow-up / relance ──
-        if (/(?:relancer|follow.?up|rappel|suivi)/i.test(lower)) {
-            return '🔔 Je peux configurer une relance automatique. Sur quel contact ou opportunité ?';
-        }
-
-        // ── Intent: Workflow / automation ──
-        if (lower.includes('workflow') || lower.includes('automation') || lower.includes('automatiser')) {
-            return 'Je peux t\'aider à créer ou exécuter des workflows. Utilise les actions rapides ou dis-moi ce que tu veux automatiser.';
-        }
-
-        // ── Intent: Contacts / organizations ──
-        if (lower.includes('contact') || lower.includes('organization') || lower.includes('organisation')) {
-            return 'Je peux enrichir les contacts et organisations avec des données IA. Veux-tu lancer un enrichissement ?';
-        }
-
-        // ── Intent: Opportunities / deals ──
-        if (lower.includes('opportunit') || lower.includes('deal') || lower.includes('prospect')) {
-            return 'Je peux scorer tes leads et signaler les opportunités dormantes. Veux-tu lancer une analyse ?';
-        }
-
-        return 'Je suis là pour t\'aider ! Tu peux me demander d\'ajouter un compte, créer un contact, automatiser une tâche, ou utiliser les actions rapides ci-dessous.';
     }
 }

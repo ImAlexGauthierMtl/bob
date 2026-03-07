@@ -23,7 +23,12 @@
             <div>
                 <p class="bob-panel__name">Bob</p>
                 <p class="bob-panel__status">
+                    @if (isVoiceActive) {
+                    <span class="bob-panel__dot bob-panel__dot--voice"></span>
+                    {{ voiceStatusText }}
+                    } @else {
                     <span class="bob-panel__dot"></span> Online
+                    }
                 </p>
             </div>
         </div>
@@ -33,7 +38,7 @@
     </div>
 
     <!-- Messages -->
-    <div class="bob-panel__messages">
+    <div class="bob-panel__messages" #messagesContainer>
         @for (msg of messages; track msg.time) {
         <div class="bob-msg" [class.bob-msg--user]="msg.role === 'user'" [class.bob-msg--bob]="msg.role === 'bob'">
             @if (msg.role === 'bob') {
@@ -42,8 +47,16 @@
             </div>
             }
             <div class="bob-msg__bubble">
+                @if (msg.isLoading) {
+                <div class="bob-msg__typing">
+                    <span class="bob-msg__dot"></span>
+                    <span class="bob-msg__dot"></span>
+                    <span class="bob-msg__dot"></span>
+                </div>
+                } @else {
                 <p class="bob-msg__text">{{ msg.text }}</p>
                 <span class="bob-msg__time">{{ formatTime(msg.time) }}</span>
+                }
             </div>
         </div>
         }
@@ -54,7 +67,7 @@
         <p class="bob-panel__quick-title">Quick Actions</p>
         <div class="bob-panel__quick-list">
             @for (wf of quickWorkflows; track wf.label) {
-            <button class="bob-quick" (click)="launchWorkflow(wf)">
+            <button class="bob-quick" (click)="launchWorkflow(wf)" [disabled]="isLoading || isVoiceActive">
                 <i [class]="wf.icon"></i>
                 <span>{{ wf.label }}</span>
             </button>
@@ -64,12 +77,47 @@
 
     <!-- Input -->
     <div class="bob-panel__input">
+        <!-- Mic button -->
+        <button class="bob-panel__mic" (click)="toggleVoice()" [class.bob-panel__mic--active]="isVoiceActive"
+            [class.bob-panel__mic--listening]="voiceState === 'listening'"
+            [class.bob-panel__mic--speaking]="voiceState === 'speaking'" [disabled]="isLoading">
+            <i [class]="voiceButtonIcon"></i>
+        </button>
+
         <input type="text" [(ngModel)]="message" (keydown.enter)="sendMessage()" placeholder="Ask Bob anything..."
-            class="bob-panel__field" />
-        <button class="bob-panel__send" (click)="sendMessage()" [disabled]="!message.trim()">
+            class="bob-panel__field" [disabled]="isLoading || isVoiceActive" />
+        <button class="bob-panel__send" (click)="sendMessage()"
+            [disabled]="!message.trim() || isLoading || isVoiceActive">
+            @if (isLoading) {
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            } @else {
             <i class="fa-solid fa-paper-plane"></i>
+            }
         </button>
     </div>
+    <!-- Voice Consent Dialog -->
+    @if (showConsentDialog) {
+    <div class="bob-consent-overlay">
+        <div class="bob-consent-dialog">
+            <div class="bob-consent-icon">
+                <i class="fa-solid fa-microphone"></i>
+            </div>
+            <h3 class="bob-consent-title">Enable Voice Mode</h3>
+            <p class="bob-consent-text">
+                Bob will use your microphone to listen and respond with voice.
+                Your audio is processed in real-time and is not stored.
+            </p>
+            <div class="bob-consent-actions">
+                <button class="bob-consent-btn bob-consent-btn--decline" (click)="declineVoiceConsent()">
+                    Cancel
+                </button>
+                <button class="bob-consent-btn bob-consent-btn--accept" (click)="acceptVoiceConsent()">
+                    <i class="fa-solid fa-microphone"></i> Enable Voice
+                </button>
+            </div>
+        </div>
+    </div>
+    }
 
 </div>
 }
