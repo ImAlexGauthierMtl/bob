@@ -184,6 +184,11 @@
     background-color: #fef2f2;
 }
 
+/* ── Full Width Mode (Automation) ─────────────────────────── */
+.settings-layout--full .settings-content {
+    max-width: 100%;
+}
+
 /* ── Content Area ─────────────────────────────────────────── */
 .settings-content {
     flex: 1;

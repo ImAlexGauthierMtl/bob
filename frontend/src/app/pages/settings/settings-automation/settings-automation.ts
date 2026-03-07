@@ -1,13 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TitleCasePipe } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { WorkflowService, Workflow, WorkflowExecution, UserCapabilities } from '../../../shared/services/workflow.service';
 
 @Component({
     selector: 'croo-settings-automation',
     standalone: true,
-    imports: [FormsModule, TitleCasePipe],
+    imports: [FormsModule, TitleCasePipe, RouterLink],
     templateUrl: './settings-automation.html',
     styleUrls: ['../settings-shared.css'],
 })

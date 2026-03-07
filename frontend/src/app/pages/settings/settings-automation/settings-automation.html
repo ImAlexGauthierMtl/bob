@@ -1,5 +1,17 @@
 <div class="settings-panel">
 
+    <!-- ═══════ Back to Settings ═══════ -->
+    <div class="auto-back">
+        <a routerLink="/settings/profile" class="auto-back__link">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Settings</span>
+        </a>
+        <div class="auto-back__title">
+            <h2 class="auto-back__heading">Automation</h2>
+            <p class="auto-back__subtitle">Configure and manage your workflow automations</p>
+        </div>
+    </div>
+
     <!-- ═══════ Bob Recommendation Banner ═══════ -->
     @if (showBanner && capabilities) {
     <div class="ai-banner">

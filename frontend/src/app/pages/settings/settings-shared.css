@@ -1612,3 +1612,53 @@
         justify-content: space-between;
     }
 }
+
+/* ── Automation Back Header ──────────────────────────────── */
+
+.auto-back {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.auto-back__link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-500);
+    text-decoration: none;
+    transition: color var(--transition-base);
+    flex-shrink: 0;
+}
+
+.auto-back__link:hover {
+    color: var(--color-accent);
+}
+
+.auto-back__link i {
+    font-size: 0.75rem;
+}
+
+.auto-back__title {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.auto-back__heading {
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-light);
+    color: var(--color-black);
+    margin: 0;
+}
+
+.auto-back__subtitle {
+    font-size: 0.875rem;
+    color: var(--color-gray-500);
+    margin: 0;
+}
