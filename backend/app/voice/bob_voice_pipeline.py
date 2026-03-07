@@ -36,11 +36,32 @@ After calling a tool, confirm what you did briefly (e.g. "Done, I've opened the 
 Communication style for VOICE:
 - Keep responses SHORT (1-3 sentences max for voice)
 - Be conversational and natural
-- Avoid bullet points and markdown — you are speaking, not writing
+- ABSOLUTELY NO MARKDOWN: never use *, **, #, ##, bullet points, or any formatting characters.
+  The TTS engine reads them literally as spoken text — "asterisk asterisk name asterisk asterisk"
+  sounds terrible. Use plain text only.
 - If a question needs a long answer, give the key point first, then offer to elaborate
 - Use natural language fillers when appropriate ("Sure thing", "Let me check", etc.)
 - NEVER use <think> tags or internal reasoning — respond directly
 - Do NOT think out loud — go straight to your answer
+
+EMOTIONAL EXPRESSIVENESS (Orpheus TTS vocal directions):
+Your text output is spoken aloud by an expressive TTS engine. You can make your voice more
+natural and human-like by embedding vocal direction tags in your responses.
+
+Available tags:
+- Bracket directions: [cheerful], [warm], [friendly], [excited], [whisper], [professionally],
+  [confidently], [concerned], [sympathetic], [sarcastic], [dramatic]
+- Inline sounds: <laugh>, <chuckle>, <sigh>, <gasp>
+- Combined: [cheerful] text [dropping tone] more text
+
+Rules for using emotion tags:
+- Place tags BEFORE the text they should affect
+- Use them SPARINGLY — max 1-2 tags per response for natural feel
+- NEVER explain the tags; they are invisible to the user
+- Match emotions to CONTEXT: good news → [cheerful], confirmations → [warm],
+  errors → [concerned], greetings → [friendly], jokes → <chuckle>
+- Omit tags entirely when the default conversational tone is appropriate
+- Do NOT force emotions — natural > theatrical
 
 Language: Match the user's language. French if they speak French, English if English.
 
@@ -245,18 +266,76 @@ async def create_bob_voice_pipeline(
     llm.register_function("open_create_dialog", handle_create_dialog)
 
     # ── TTS (Orpheus on Groq) ────────────────────────────
-    # Read user's saved voice preference from bob settings
+    # Read user's saved voice/personality preferences from DB
     tts_voice = settings.groq_tts_voice  # default from config
+    tts_speed = 1.0
+    personality_directives = ""
     try:
-        from app.presentation.routes.bob_settings_routes import _user_settings
-        user_settings = _user_settings.get(user_id)
-        if user_settings and user_settings.voice.voice:
-            tts_voice = user_settings.voice.voice
+        from app.infrastructure.database import SessionLocal
+        from app.domain.entities.bob_settings import BobUserSettings
+        db = SessionLocal()
+        try:
+            user_settings = BobUserSettings.get_or_create(db, user_id)
+            tts_voice = user_settings.voice or tts_voice
+            tts_speed = user_settings.speed or 1.0
+
+            # Build personality directives from saved settings
+            tone_map = {
+                "professional": "Professional and clear",
+                "friendly": "Warm, friendly and approachable",
+                "casual": "Casual and relaxed",
+                "formal": "Formal and polished",
+            }
+            length_map = {
+                "concise": "Keep responses very short (1 sentence when possible).",
+                "balanced": "Keep responses short (1-3 sentences for voice).",
+                "detailed": "Give thorough responses but stay conversational.",
+            }
+            # Emotion expressiveness mapped to tone
+            emotion_map = {
+                "professional": (
+                    "Use emotion tags very sparingly — only [professionally] or [confidently] "
+                    "when appropriate. Keep a composed, polished tone. Avoid laughs or sighs."
+                ),
+                "friendly": (
+                    "Use emotion tags naturally to create warmth: [cheerful] for good news, "
+                    "[warm] for greetings, <chuckle> when lighthearted, [concerned] when "
+                    "there's a problem. Aim for 1-2 tags per response."
+                ),
+                "casual": (
+                    "Be expressive and lively! Use [excited] for great news, <laugh> or <chuckle> "
+                    "freely, [whisper] for secrets, <sigh> when something is tedious, "
+                    "[sarcastic] when the moment fits. Feel like a fun colleague."
+                ),
+                "formal": (
+                    "Use emotion tags rarely. Only [formally] or [authoritatively] "
+                    "when needed. Maintain a dignified, restrained vocal presence."
+                ),
+            }
+            tone_desc = tone_map.get(user_settings.tone, "Professional and clear")
+            length_desc = length_map.get(user_settings.response_length, "Keep responses short (1-3 sentences for voice).")
+            emotion_desc = emotion_map.get(user_settings.tone, emotion_map["professional"])
+            emoji_note = " You may use emoji when appropriate." if user_settings.emoji_usage else " Do NOT use emoji."
+
+            personality_directives = f"""
+Personality settings (from user preferences):
+- Tone: {tone_desc}
+- {length_desc}
+- Formality level: {user_settings.formality:.1f}/1.0 (higher = more formal)
+- Creativity: {user_settings.creativity:.1f}/1.0 (higher = more creative/varied responses){emoji_note}
+
+Emotion expressiveness for your current tone:
+{emotion_desc}
+"""
             logger.info(
-                "voice_using_user_setting",
+                "voice_using_user_settings",
                 voice=tts_voice,
+                speed=tts_speed,
+                tone=user_settings.tone,
                 user_id=user_id,
             )
+        finally:
+            db.close()
     except Exception as e:
         logger.warning("voice_settings_lookup_failed", error=str(e))
 
@@ -264,11 +343,13 @@ async def create_bob_voice_pipeline(
         api_key=settings.groq_api_key,
         voice_id=tts_voice,
         model_name=settings.groq_tts_model,
+        params=GroqTTSService.InputParams(speed=tts_speed),
     )
 
     # ── LLM Context with system prompt ───────────────────
+    system_prompt = BOB_VOICE_SYSTEM_PROMPT + personality_directives
     messages = [
-        {"role": "system", "content": BOB_VOICE_SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
     ]
 
     # Inject any existing conversation history from text chat

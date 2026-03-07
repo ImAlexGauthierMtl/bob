@@ -194,8 +194,53 @@ class BobChatAgent:
 
         session.add_user_message(user_message)
 
-        # Build messages with full conversation history
-        messages = [{"role": "system", "content": BOB_SYSTEM_PROMPT}]
+        # Build system prompt with user's personality settings
+        personality_directives = ""
+        llm_temperature = settings.bob_temperature
+        try:
+            from app.infrastructure.database import SessionLocal
+            from app.domain.entities.bob_settings import BobUserSettings
+            db = SessionLocal()
+            try:
+                user_settings = BobUserSettings.get_or_create(db, session.user_id)
+                tone_map = {
+                    "professional": "Professional but friendly",
+                    "friendly": "Warm, friendly and approachable",
+                    "casual": "Casual and relaxed, like chatting with a colleague",
+                    "formal": "Formal and polished",
+                }
+                length_map = {
+                    "concise": "Keep responses very concise — short sentences, bullet points.",
+                    "balanced": "Keep responses balanced — concise but informative.",
+                    "detailed": "Give thorough, detailed responses when helpful.",
+                }
+                lang_map = {
+                    "auto": "Respond in the same language as the user's message.",
+                    "en": "Always respond in English.",
+                    "fr": "Always respond in French (Français).",
+                    "es": "Always respond in Spanish (Español).",
+                    "de": "Always respond in German (Deutsch).",
+                }
+                tone_desc = tone_map.get(user_settings.tone, "Professional but friendly")
+                length_desc = length_map.get(user_settings.response_length, "Keep responses balanced.")
+                lang_desc = lang_map.get(user_settings.language, "Respond in the same language as the user's message.")
+                emoji_note = " You may use emoji when appropriate." if user_settings.emoji_usage else ""
+
+                personality_directives = f"""
+Personality (from user preferences):
+- Communication style: {tone_desc}
+- {length_desc}
+- {lang_desc}{emoji_note}
+"""
+                # Map creativity (0-1) to temperature (0.1-1.0)
+                llm_temperature = max(0.1, min(1.0, user_settings.creativity))
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning("bob_settings_lookup_failed", error=str(e))
+
+        system_prompt = BOB_SYSTEM_PROMPT + personality_directives
+        messages = [{"role": "system", "content": system_prompt}]
         max_history = settings.bob_max_history
         messages.extend(session.messages[-max_history:])
 
@@ -207,7 +252,7 @@ class BobChatAgent:
                 messages=messages,
                 tools=self.TOOLS,
                 tool_choice="auto",
-                temperature=settings.bob_temperature,
+                temperature=llm_temperature,
                 max_tokens=2048,
             )
 
