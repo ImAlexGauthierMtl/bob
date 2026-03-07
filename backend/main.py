@@ -41,6 +41,9 @@ from app.presentation.routes.capability_routes import router as capability_route
 from app.presentation.routes.workflow_routes import router as workflow_router
 from app.presentation.routes.webhook_routes import router as webhook_router
 from app.presentation.routes.kb_routes import router as kb_router
+from app.presentation.routes.bob_routes import router as bob_router
+from app.presentation.routes.bob_settings_routes import router as bob_settings_router
+from app.presentation.routes.voice_routes import router as voice_router
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(search_router, tags=["search"])
@@ -57,6 +60,9 @@ app.include_router(capability_router, tags=["capabilities"])
 app.include_router(workflow_router, tags=["workflows"])
 app.include_router(webhook_router, tags=["webhooks"])
 app.include_router(kb_router, tags=["knowledge-base"])
+app.include_router(bob_router, tags=["bob"])
+app.include_router(bob_settings_router, tags=["bob-settings"])
+app.include_router(voice_router, tags=["voice"])
 
 
 @app.get("/health", tags=["monitoring"])
@@ -71,7 +77,7 @@ async def startup_event():
     from app.infrastructure.database import engine, SessionLocal
     from app.domain.entities.base import Base
     # Import entities so they register with Base.metadata
-    from app.domain.entities import user, organization, contact, opportunity, quote, activity, department, capability  # noqa: F401
+    from app.domain.entities import user, organization, contact, opportunity, quote, activity, department, capability, bob_settings  # noqa: F401
     from app.domain.entities import workflow, workflow_execution  # noqa: F401
     from app.infrastructure.seed import run_seed
     from app.infrastructure.seed_capabilities import seed_capabilities
