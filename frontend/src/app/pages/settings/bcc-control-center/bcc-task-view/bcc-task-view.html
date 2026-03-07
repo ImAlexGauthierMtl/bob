@@ -1,0 +1,174 @@
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Loading task module...</span>
+</div>
+}
+
+@if (task) {
+<!-- ═══ Header ═══ -->
+<header class="role-header">
+    <div class="role-header__top">
+        <div class="role-header__identity">
+            <a [routerLink]="['/settings/bob-control-center', orgId, 'roles', roleId]" class="role-header__back">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div class="role-header__icon" [style.background]="frequencyColor">
+                <i class="fa-solid fa-list-check"></i>
+            </div>
+            <div class="role-header__info">
+                <h2 class="role-header__name">{{ task.name }}</h2>
+                <p class="role-header__meta">
+                    {{ frequencyLabel }} · {{ stageLabel }}
+                    @if (task.category) { · {{ task.category }} }
+                </p>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ═══ Content ═══ -->
+<main class="role-content">
+
+    <!-- ══ Description ══ -->
+    @if (task.description) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-file-alt"></i>
+            <h3>Description</h3>
+        </div>
+        <p class="detail-section__text">{{ task.description }}</p>
+
+        <div class="detail-section__tags" style="margin-top: 12px">
+            <span class="detail-tag" [style.background]="frequencyColor" [style.color]="'white'">
+                {{ task.frequency | uppercase }}
+            </span>
+            @if (task.category) {
+            <span class="detail-tag detail-tag--outline">{{ task.category }}</span>
+            }
+            @if (task.required_skills && task.required_skills.length > 0) {
+            @for (rs of task.required_skills; track rs) {
+            <span class="detail-tag detail-tag--outline">Requis: {{ rs }}</span>
+            }
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ══ Standard Operating Procedure (Steps) ══ -->
+    @if (task.steps.length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-shoe-prints"></i>
+            <h3>Procédure opérationnelle ({{ task.steps.length }} étapes)</h3>
+        </div>
+        <div class="sop-list">
+            @for (step of task.steps; track step.id) {
+            <div class="sop-step">
+                <span class="sop-step__number">{{ step.step_number }}</span>
+                <div class="sop-step__content">
+                    <span class="sop-step__instruction">{{ step.instruction }}</span>
+                    @if (step.details) {
+                    <p class="sop-step__details">{{ step.details }}</p>
+                    }
+                </div>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ══ CRM Modules Used ══ -->
+    @if (getCrmModules().length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-cubes"></i>
+            <h3>Modules CRM utilisés</h3>
+        </div>
+        <div class="crm-modules-grid">
+            @for (mod of getCrmModules(); track mod.module) {
+            <div class="crm-module-card">
+                <div class="crm-module-card__icon">
+                    <i [class]="getCrmModuleIcon(mod.module)"></i>
+                </div>
+                <div class="crm-module-card__content">
+                    <h5 class="crm-module-card__name">{{ getCrmModuleLabel(mod.module) }}</h5>
+                    <p class="crm-module-card__usage">{{ mod.usage }}</p>
+                </div>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ══ Bob Assistance ══ -->
+    @if (asArray(meta['bob_assistance']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-robot"></i>
+            <h3>Comment Bob vous aide</h3>
+        </div>
+        <div class="bob-starters">
+            @for (item of asArray(meta['bob_assistance']); track $index) {
+            <div class="bob-starter-card">
+                <i class="fa-solid fa-sparkles bob-starter-card__icon"></i>
+                <span class="bob-starter-card__text">{{ item }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ══ Success Metrics ══ -->
+    @if (getObjectKeys(meta['success_metrics']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-chart-bar"></i>
+            <h3>Métriques de succès</h3>
+        </div>
+        <div class="assessment-grid">
+            @for (key of getObjectKeys(meta['success_metrics']); track key) {
+            <div class="assessment-card">
+                <span class="assessment-card__label">{{ formatKey(key) }}</span>
+                <span class="assessment-card__value">{{ asRecord(meta['success_metrics'])[key] }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ══ Compliance Notes ══ -->
+    @if (asArray(meta['compliance_notes']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-shield-halved"></i>
+            <h3>Notes de conformité</h3>
+        </div>
+        <div class="compliance-list">
+            @for (note of asArray(meta['compliance_notes']); track $index) {
+            <div class="compliance-item">
+                <i class="fa-solid fa-exclamation-triangle compliance-item__icon"></i>
+                <span>{{ note }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ══ Tools Required ══ -->
+    @if (asArray(meta['tools_required']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-toolbox"></i>
+            <h3>Outils requis</h3>
+        </div>
+        <div class="detail-chips">
+            @for (tool of asArray(meta['tools_required']); track $index) {
+            <span class="detail-chip">{{ tool }}</span>
+            }
+        </div>
+    </section>
+    }
+
+</main>
+}

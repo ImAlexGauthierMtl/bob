@@ -28,6 +28,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     private checkRoute(url: string): void {
-        this.isFullWidth = url.includes('/settings/automation') || url.includes('/settings/bob/capabilities');
+        this.isFullWidth = url.includes('/settings/automation') || url.includes('/settings/bob/capabilities') || url.includes('/settings/bob-control-center');
     }
 }

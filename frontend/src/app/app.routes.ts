@@ -154,6 +154,62 @@ export const routes: Routes = [
                             ),
                     },
                     {
+                        path: 'bob-control-center',
+                        loadComponent: () =>
+                            import('./pages/settings/bcc-control-center/bcc-control-center').then(
+                                (m) => m.BccControlCenterComponent
+                            ),
+                    },
+                    {
+                        path: 'bob-control-center/:roleId',
+                        loadComponent: () =>
+                            import('./pages/settings/bcc-control-center/bcc-role-detail/bcc-role-detail').then(
+                                (m) => m.BccRoleDetailComponent
+                            ),
+                    },
+                    {
+                        path: 'bob-control-center/:orgId/departments/:deptId',
+                        loadComponent: () =>
+                            import('./pages/settings/bcc-control-center/bcc-child-profile/bcc-child-profile').then(
+                                (m) => m.BccChildProfileComponent
+                            ),
+                    },
+                    {
+                        path: 'bob-control-center/:orgId/teams/:teamId',
+                        loadComponent: () =>
+                            import('./pages/settings/bcc-control-center/bcc-child-profile/bcc-child-profile').then(
+                                (m) => m.BccChildProfileComponent
+                            ),
+                    },
+                    {
+                        path: 'bob-control-center/:orgId/roles/:roleId',
+                        loadComponent: () =>
+                            import('./pages/settings/bcc-control-center/bcc-role-view/bcc-role-view').then(
+                                (m) => m.BccRoleViewComponent
+                            ),
+                    },
+                    {
+                        path: 'bob-control-center/:orgId/roles/:roleId/skills/:skillId',
+                        loadComponent: () =>
+                            import('./pages/settings/bcc-control-center/bcc-skill-view/bcc-skill-view').then(
+                                (m) => m.BccSkillViewComponent
+                            ),
+                    },
+                    {
+                        path: 'bob-control-center/:orgId/roles/:roleId/tasks/:taskId',
+                        loadComponent: () =>
+                            import('./pages/settings/bcc-control-center/bcc-task-view/bcc-task-view').then(
+                                (m) => m.BccTaskViewComponent
+                            ),
+                    },
+                    {
+                        path: 'bob-control-center/library/:type/:id',
+                        loadComponent: () =>
+                            import('./pages/settings/bcc-control-center/bcc-library-detail/bcc-library-detail').then(
+                                (m) => m.BccLibraryDetailComponent
+                            ),
+                    },
+                    {
                         path: '',
                         redirectTo: 'profile',
                         pathMatch: 'full',

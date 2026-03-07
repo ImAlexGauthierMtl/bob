@@ -4,6 +4,8 @@ These tools let Bob perform CRM actions during conversation:
 - Search contacts/organizations
 - Create new records
 - Get pipeline stats
+- Update BCC knowledge profiles (versioned, multi-perspective)
+- Read BCC knowledge profiles
 
 Tools are defined as Pydantic models and converted to OpenAI-compatible
 tool definitions for Qwen3's function calling capability.
@@ -148,6 +150,85 @@ BOB_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "bcc_update_profile",
+            "description": (
+                "Add or update a knowledge profile entry for a BCC entity. "
+                "This creates a new versioned entry — previous versions are preserved. "
+                "Supports multi-perspective knowledge: CEO, CFO, Director, Employee viewpoints. "
+                "Use sections like: description, vision, mission, culture, competition, "
+                "best_practices, expectations, deliverables, sop, kpis."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entity_type": {
+                        "type": "string",
+                        "description": (
+                            "Type of BCC entity: industry, career, skill_template, "
+                            "task_template, organization, department, team, role, regulation"
+                        ),
+                        "enum": [
+                            "industry", "career", "skill_template", "task_template",
+                            "organization", "department", "team", "role", "regulation",
+                        ],
+                    },
+                    "entity_id": {
+                        "type": "string",
+                        "description": "UUID of the entity to update",
+                    },
+                    "section": {
+                        "type": "string",
+                        "description": (
+                            "Profile section to update (e.g. description, vision, mission, "
+                            "culture, competition, best_practices, expectations, sop, kpis)"
+                        ),
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "The text content to store for this section",
+                    },
+                    "perspective": {
+                        "type": "string",
+                        "description": "Viewpoint perspective (default: general)",
+                        "enum": ["general", "ceo", "cfo", "director", "employee"],
+                        "default": "general",
+                    },
+                },
+                "required": ["entity_type", "entity_id", "section", "content"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "bcc_get_profile",
+            "description": (
+                "Get the knowledge profile for a BCC entity. Returns all active "
+                "profile sections with their content and perspectives."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entity_type": {
+                        "type": "string",
+                        "description": "Type of BCC entity",
+                        "enum": [
+                            "industry", "career", "skill_template", "task_template",
+                            "organization", "department", "team", "role", "regulation",
+                        ],
+                    },
+                    "entity_id": {
+                        "type": "string",
+                        "description": "UUID of the entity",
+                    },
+                },
+                "required": ["entity_type", "entity_id"],
+            },
+        },
+    },
 ]
 
 
@@ -190,6 +271,10 @@ async def execute_tool(
             return await _create_organization(db_session, user_id=user_id, **arguments)
         elif tool_name == "get_recent_activities":
             return await _get_recent_activities(db_session, **arguments)
+        elif tool_name == "bcc_update_profile":
+            return await _bcc_update_profile(db_session, user_id=user_id, **arguments)
+        elif tool_name == "bcc_get_profile":
+            return await _bcc_get_profile(db_session, **arguments)
         else:
             return f"Unknown tool: {tool_name}"
     except Exception as e:
@@ -325,4 +410,118 @@ async def _get_recent_activities(db_session, limit: int = 10) -> str:
     lines = [f"Last {len(results)} activities:"]
     for a in results:
         lines.append(f"- [{a.activity_type}] {a.subject}")
+    return "\n".join(lines)
+
+
+async def _bcc_update_profile(
+    db_session,
+    user_id: str,
+    entity_type: str,
+    entity_id: str,
+    section: str,
+    content: str,
+    perspective: str = "general",
+    conversation_id: Optional[str] = None,
+) -> str:
+    """Add a versioned profile entry to a BCC entity."""
+    from app.domain.entities.bcc_entities import BccProfileEntry
+    from app.domain.entities.base import generate_uuid
+    from sqlalchemy import and_
+
+    # Get user name for contributor display
+    from app.domain.entities.user import User
+    user = db_session.query(User).filter(User.id == user_id).first()
+    contributor_name = "Bob" if not user else f"{user.first_name} {user.last_name} (via Bob)"
+
+    # Find latest version for this entity+section+perspective
+    latest = (
+        db_session.query(BccProfileEntry)
+        .filter(
+            and_(
+                BccProfileEntry.entity_type == entity_type,
+                BccProfileEntry.entity_id == entity_id,
+                BccProfileEntry.section == section,
+                BccProfileEntry.perspective == perspective,
+            )
+        )
+        .order_by(BccProfileEntry.version.desc())
+        .first()
+    )
+
+    new_version = (latest.version + 1) if latest else 1
+
+    # Deactivate previous active version
+    if latest and latest.is_active:
+        latest.is_active = False
+
+    # Create new entry
+    entry = BccProfileEntry(
+        id=generate_uuid(),
+        entity_type=entity_type,
+        entity_id=entity_id,
+        section=section,
+        content=content,
+        perspective=perspective,
+        version=new_version,
+        is_active=True,
+        contributed_by=user_id,
+        contributor_name=contributor_name,
+        contribution_method="conversation",
+        conversation_id=conversation_id,
+    )
+    db_session.add(entry)
+    db_session.commit()
+
+    logger.info(
+        "bcc_profile_updated",
+        entity_type=entity_type,
+        entity_id=entity_id,
+        section=section,
+        perspective=perspective,
+        version=new_version,
+        user_id=user_id,
+    )
+
+    return (
+        f"Profile updated: {entity_type}/{entity_id} → "
+        f"section='{section}', perspective='{perspective}', "
+        f"version={new_version}. The knowledge base has been enriched."
+    )
+
+
+async def _bcc_get_profile(
+    db_session,
+    entity_type: str,
+    entity_id: str,
+) -> str:
+    """Get all active profile entries for a BCC entity."""
+    from app.domain.entities.bcc_entities import BccProfileEntry
+    from sqlalchemy import and_
+
+    entries = (
+        db_session.query(BccProfileEntry)
+        .filter(
+            and_(
+                BccProfileEntry.entity_type == entity_type,
+                BccProfileEntry.entity_id == entity_id,
+                BccProfileEntry.is_active == True,
+            )
+        )
+        .order_by(BccProfileEntry.section)
+        .all()
+    )
+
+    if not entries:
+        return f"No profile data found for {entity_type}/{entity_id}. The profile is empty."
+
+    lines = [f"Profile for {entity_type}/{entity_id} ({len(entries)} entries):"]
+    current_section = None
+    for e in entries:
+        if e.section != current_section:
+            current_section = e.section
+            lines.append(f"\n## {current_section.replace('_', ' ').title()}")
+        perspective_label = f"[{e.perspective.upper()}]" if e.perspective != "general" else ""
+        content_preview = (e.content[:200] + "...") if e.content and len(e.content) > 200 else (e.content or "(structured data)")
+        lines.append(f"  {perspective_label} v{e.version}: {content_preview}")
+
     return "\n".join(lines)

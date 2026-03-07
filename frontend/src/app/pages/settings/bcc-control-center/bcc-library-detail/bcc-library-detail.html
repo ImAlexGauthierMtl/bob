@@ -1,0 +1,247 @@
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Loading…</span>
+</div>
+}
+
+@if (!isLoading && item) {
+
+<!-- ═══ Header ═══ -->
+<header class="role-header">
+    <div class="role-header__top">
+        <div class="role-header__identity">
+            <a routerLink="/settings/bob-control-center" class="role-header__back">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div class="role-header__icon" [style.background]="typeColor">
+                <i [class]="typeIcon"></i>
+            </div>
+            <div class="role-header__info">
+                <h2 class="role-header__name">{{ item?.name }}</h2>
+                <p class="role-header__meta">{{ typeLabel | uppercase }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Perspective Filter Bar -->
+    @if (profile && profile.sections.length > 0) {
+    <div class="perspective-bar">
+        @for (p of perspectives; track p.value) {
+        <button class="perspective-btn" [class.perspective-btn--active]="selectedPerspective === p.value"
+            [style.--accent]="p.value === 'all' ? '#6B7280' : getPerspectiveColor(p.value)"
+            (click)="selectPerspective(p.value)">
+            {{ p.label }}
+        </button>
+        }
+        <button class="perspective-btn perspective-btn--history" [class.perspective-btn--active]="showHistory"
+            (click)="toggleHistory()">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            History
+        </button>
+    </div>
+    }
+</header>
+
+<!-- ═══ Content ═══ -->
+<main class="role-content">
+
+    <!-- ══════════════════════════════════════════════════════
+         VERSIONED PROFILE SECTIONS (replaces hardcoded per-type sections)
+         ══════════════════════════════════════════════════════ -->
+    @if (!showHistory) {
+
+    <!-- Type-specific metadata (badges, categories) -->
+    @if (asSkillTemplate; as sk) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-file-alt"></i>
+            <h3>Overview</h3>
+        </div>
+        <div class="detail-section__tags" style="margin-top: 12px">
+            <span class="detail-tag"
+                [style.background]="sk.type === 'soft' ? '#F59E0B' : sk.type === 'tool' ? '#8B5CF6' : '#EF4444'"
+                style="color: white">
+                {{ sk.type | uppercase }}
+            </span>
+            @if (sk.category) {
+            <span class="detail-tag detail-tag--outline">{{ sk.category }}</span>
+            }
+        </div>
+    </section>
+    }
+
+    @if (asTaskTemplate; as tsk) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-file-alt"></i>
+            <h3>Overview</h3>
+        </div>
+        <div class="detail-section__tags" style="margin-top: 12px">
+            <span class="detail-tag" style="background: #10B981; color: white;">{{ tsk.frequency | uppercase }}</span>
+            @if (tsk.category) {
+            <span class="detail-tag detail-tag--outline">{{ tsk.category }}</span>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Dynamic profile sections from versioned entries -->
+    @for (section of filteredSections; track section.section) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i [class]="getSectionIcon(section.section)"></i>
+            <h3>{{ formatKey(section.section) }}</h3>
+        </div>
+
+        @for (entry of section.perspectives; track entry.id) {
+        <div class="profile-entry">
+            <!-- Perspective badge -->
+            <div class="profile-entry__meta">
+                <span class="perspective-badge" [style.background]="getPerspectiveColor(entry.perspective)">
+                    {{ getPerspectiveLabel(entry.perspective) }}
+                </span>
+                <span class="version-badge">v{{ entry.version }}</span>
+                <span class="contributor-info">
+                    <i [class]="getMethodIcon(entry.contribution_method)"></i>
+                    {{ entry.contributor_name }}
+                </span>
+            </div>
+
+            <!-- Content -->
+            @if (entry.content) {
+            <p class="detail-section__text">{{ entry.content }}</p>
+            }
+
+            <!-- Structured data: array → list -->
+            @if (isArray(entry.structured_data)) {
+            <div class="detail-list">
+                @for (item of asArray(entry.structured_data); track $index) {
+                @if (!isObject(item)) {
+                <div class="detail-list__item">
+                    <span class="detail-list__bullet" [style.background]="typeColor"></span>
+                    <span>{{ item }}</span>
+                </div>
+                }
+                }
+            </div>
+            }
+
+            <!-- Structured data: object → assessment grid -->
+            @if (isObject(entry.structured_data)) {
+            <div class="assessment-grid">
+                @for (key of getObjectKeys(asRecord(entry.structured_data)); track key) {
+
+                @if (isArray(asRecord(entry.structured_data)[key])) {
+                <div class="assessment-card" style="grid-column: 1 / -1;">
+                    <span class="assessment-card__label">{{ formatKey(key) }}</span>
+                    <div class="detail-chips" style="margin-top: 8px">
+                        @for (val of asArray(asRecord(entry.structured_data)[key]); track $index) {
+                        <span class="detail-chip">{{ val }}</span>
+                        }
+                    </div>
+                </div>
+                } @else if (isObject(asRecord(entry.structured_data)[key])) {
+                <div class="assessment-card" style="grid-column: 1 / -1;">
+                    <span class="assessment-card__label">{{ formatKey(key) }}</span>
+                    <div class="assessment-grid" style="margin-top: 8px">
+                        @for (subKey of getObjectKeys(asRecord(asRecord(entry.structured_data)[key])); track subKey) {
+                        <div class="assessment-card">
+                            <span class="assessment-card__label">{{ formatKey(subKey) }}</span>
+                            <span class="assessment-card__value">{{
+                                asRecord(asRecord(entry.structured_data)[key])[subKey] }}</span>
+                        </div>
+                        }
+                    </div>
+                </div>
+                } @else {
+                <div class="assessment-card">
+                    <span class="assessment-card__label">{{ formatKey(key) }}</span>
+                    <span class="assessment-card__value">{{ asRecord(entry.structured_data)[key] }}</span>
+                </div>
+                }
+
+                }
+            </div>
+            }
+        </div>
+        }
+    </section>
+    }
+
+    <!-- Empty state -->
+    @if (filteredSections.length === 0 && profile) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-circle-info"></i>
+            <h3>No profile data</h3>
+        </div>
+        <p class="detail-section__text" style="opacity: 0.6">
+            @if (selectedPerspective !== 'all') {
+            No entries found for the <strong>{{ getPerspectiveLabel(selectedPerspective) }}</strong> perspective.
+            Try switching to "All" to see all available content.
+            } @else {
+            This {{ typeLabel | lowercase }} doesn't have any profile entries yet.
+            Chat with Bob to start building the knowledge base.
+            }
+        </p>
+    </section>
+    }
+
+    }
+
+    <!-- ══════════════════════════════════════════════════════
+         VERSION HISTORY
+         ══════════════════════════════════════════════════════ -->
+    @if (showHistory) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <h3>Version History</h3>
+        </div>
+
+        @if (profileHistory.length === 0) {
+        <p class="detail-section__text" style="opacity: 0.6">No version history available.</p>
+        }
+
+        <div class="history-timeline">
+            @for (entry of profileHistory; track entry.id) {
+            <div class="history-entry" [class.history-entry--inactive]="!entry.is_active">
+                <div class="history-entry__dot"
+                    [style.background]="entry.is_active ? getPerspectiveColor(entry.perspective) : '#374151'">
+                </div>
+                <div class="history-entry__content">
+                    <div class="history-entry__header">
+                        <span class="perspective-badge perspective-badge--sm"
+                            [style.background]="getPerspectiveColor(entry.perspective)">
+                            {{ getPerspectiveLabel(entry.perspective) }}
+                        </span>
+                        <strong>{{ formatKey(entry.section) }}</strong>
+                        <span class="version-badge">v{{ entry.version }}</span>
+                        @if (!entry.is_active) {
+                        <span class="version-badge version-badge--inactive">superseded</span>
+                        }
+                    </div>
+                    <p class="history-entry__body">
+                        @if (entry.content) {
+                        {{ entry.content.length > 120 ? entry.content.substring(0, 120) + '...' : entry.content }}
+                        } @else {
+                        <em style="opacity: 0.5">Structured data</em>
+                        }
+                    </p>
+                    <div class="history-entry__footer">
+                        <i [class]="getMethodIcon(entry.contribution_method)"></i>
+                        <span>{{ entry.contributor_name }}</span>
+                        @if (entry.created_at) {
+                        <span>· {{ entry.created_at | date:'short' }}</span>
+                        }
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+</main>
+}

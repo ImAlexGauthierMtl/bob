@@ -1,0 +1,450 @@
+/* =============================================================
+   Bob's Control Center — List Page
+   Norms: angles droits, Inter, noir+blanc+accent #FF4500
+   ============================================================= */
+
+:host {
+    display: block;
+}
+
+/* ── Header ────────────────────────────────────────── */
+
+.bcc-header {
+    margin-bottom: var(--space-8);
+}
+
+.bcc-header__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-6);
+}
+
+.bcc-header__identity {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.bcc-header__avatar {
+    width: 3.5rem;
+    height: 3.5rem;
+    background: linear-gradient(135deg, var(--color-accent), #e03e00);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-white);
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.bcc-header__name {
+    font-size: 1.875rem;
+    font-weight: var(--font-weight-light);
+    letter-spacing: -0.025em;
+    color: var(--color-black);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.bcc-header__meta {
+    font-size: 0.875rem;
+    color: var(--color-gray-400);
+    margin: var(--space-1) 0 0;
+}
+
+/* ── Metrics ───────────────────────────────────────── */
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
+}
+
+.metric-card {
+    border: 1px solid var(--color-gray-100);
+    padding: var(--space-6);
+    transition: border-color var(--transition-base);
+}
+
+.metric-card:hover {
+    border-color: var(--color-accent);
+}
+
+.metric-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-3);
+}
+
+.metric-card__label {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0;
+}
+
+.metric-card__icon {
+    color: var(--color-gray-300);
+}
+
+.metric-card__value {
+    font-size: 1.875rem;
+    font-weight: var(--font-weight-light);
+    color: var(--color-black);
+    margin: 0 0 var(--space-1) 0;
+}
+
+.metric-card__sub {
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+    margin: 0;
+}
+
+/* ── Toolbar ───────────────────────────────────────── */
+
+.bcc-toolbar {
+    margin-bottom: var(--space-6);
+}
+
+.bcc-search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    border: 1px solid var(--color-gray-200);
+    padding: var(--space-3) var(--space-4);
+    transition: border-color var(--transition-base);
+}
+
+.bcc-search:focus-within {
+    border-color: var(--color-accent);
+}
+
+.bcc-search i {
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+}
+
+.bcc-search input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: var(--font-family);
+    font-size: 0.875rem;
+    color: var(--color-black);
+    outline: none;
+}
+
+.bcc-search input::placeholder {
+    color: var(--color-gray-400);
+}
+
+/* ── Loading ───────────────────────────────────────── */
+
+.loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-16) 0;
+    font-size: 0.875rem;
+    color: var(--color-gray-400);
+}
+
+/* ── Role Cards ────────────────────────────────────── */
+
+.bcc-roles {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.bcc-role-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-6);
+    border: 1px solid var(--color-gray-100);
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: border-color var(--transition-base);
+}
+
+.bcc-role-card:hover {
+    border-color: var(--color-accent);
+}
+
+.bcc-role-card__left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex: 1;
+    min-width: 0;
+}
+
+.bcc-role-card__icon {
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-white);
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.bcc-role-card__name {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    margin: 0;
+}
+
+.bcc-role-card__dept {
+    font-size: 0.75rem;
+    color: var(--color-accent);
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin: var(--space-1) 0 0;
+}
+
+.bcc-role-card__desc {
+    font-size: 0.875rem;
+    color: var(--color-gray-500);
+    font-weight: var(--font-weight-light);
+    margin: var(--space-1) 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 500px;
+}
+
+.bcc-role-card__metrics {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    flex-shrink: 0;
+}
+
+.bcc-role-card__metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.bcc-role-card__metric-value {
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-light);
+    color: var(--color-black);
+}
+
+.bcc-role-card__metric-label {
+    font-size: 0.625rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.bcc-role-card__arrow {
+    color: var(--color-gray-300);
+    margin-left: var(--space-2);
+    transition: color var(--transition-base);
+}
+
+.bcc-role-card:hover .bcc-role-card__arrow {
+    color: var(--color-accent);
+}
+
+/* ── Empty ─────────────────────────────────────────── */
+
+.empty-state {
+    border: 1px solid var(--color-gray-100);
+    padding: var(--space-16) var(--space-8);
+    text-align: center;
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-light);
+}
+
+/* ── Dialog ────────────────────────────────────────── */
+
+.dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.dialog {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    width: min(480px, 90vw);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-6);
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.dialog__title {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    margin: 0;
+}
+
+.dialog__close {
+    background: none;
+    border: none;
+    color: var(--color-gray-400);
+    cursor: pointer;
+    padding: var(--space-2);
+    font-size: 1rem;
+    transition: color var(--transition-base);
+}
+
+.dialog__close:hover {
+    color: var(--color-black);
+}
+
+.dialog__body {
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.dialog__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-6);
+    border-top: 1px solid var(--color-gray-100);
+}
+
+/* ── Form Fields ──────────────────────────────────── */
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.form-label {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-input,
+.form-textarea {
+    border: 1px solid var(--color-gray-200);
+    padding: var(--space-3) var(--space-4);
+    color: var(--color-black);
+    font-family: var(--font-family);
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color var(--transition-base);
+}
+
+.form-input:focus,
+.form-textarea:focus {
+    border-color: var(--color-accent);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* ── Responsive ──────────────────────────────────── */
+
+@media (max-width: 768px) {
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .bcc-role-card {
+        flex-direction: column;
+        gap: var(--space-4);
+        align-items: flex-start;
+    }
+
+    .bcc-role-card__metrics {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .bcc-role-card__arrow {
+        display: none;
+    }
+}
+
+/* ── Card Icons ───────────────────────────────────── */
+
+.opp-card__icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-white);
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-right: var(--space-4);
+}
+
+/* ── Card Description ─────────────────────────────── */
+
+.opp-card__desc {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500);
+    font-weight: var(--font-weight-light);
+    line-height: 1.6;
+    margin: var(--space-3) 0 0;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-gray-50);
+}
+
+/* ── Badge Variants ───────────────────────────────── */
+
+.stage-badge--alt {
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+
+.stage-badge--kit {
+    background-color: #f0fdf4;
+    color: #16a34a;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.025em;
+}
+
+/* ── Empty State ──────────────────────────────────── */
+
+.empty-state i {
+    font-size: 2rem;
+    color: var(--color-gray-200);
+}
+
+.btn--sm {
+    font-size: 0.75rem;
+    padding: var(--space-2) var(--space-4);
+}

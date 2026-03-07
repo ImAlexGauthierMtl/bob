@@ -44,6 +44,7 @@ from app.presentation.routes.kb_routes import router as kb_router
 from app.presentation.routes.bob_routes import router as bob_router
 from app.presentation.routes.bob_settings_routes import router as bob_settings_router
 from app.presentation.routes.voice_routes import router as voice_router
+from app.presentation.routes.bcc_routes import router as bcc_router
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(search_router, tags=["search"])
@@ -63,6 +64,7 @@ app.include_router(kb_router, tags=["knowledge-base"])
 app.include_router(bob_router, tags=["bob"])
 app.include_router(bob_settings_router, tags=["bob-settings"])
 app.include_router(voice_router, tags=["voice"])
+app.include_router(bcc_router, tags=["bcc"])
 
 
 @app.get("/health", tags=["monitoring"])
@@ -79,9 +81,11 @@ async def startup_event():
     # Import entities so they register with Base.metadata
     from app.domain.entities import user, organization, contact, opportunity, quote, activity, department, capability, bob_settings  # noqa: F401
     from app.domain.entities import workflow, workflow_execution  # noqa: F401
+    from app.domain.entities import bcc_entities  # noqa: F401
     from app.infrastructure.seed import run_seed
     from app.infrastructure.seed_capabilities import seed_capabilities
     from app.infrastructure.seed_workflows import seed_workflows
+    from app.infrastructure.seed_bcc import seed_bcc
 
     # Create tables
     Base.metadata.create_all(bind=engine)
@@ -96,6 +100,7 @@ async def startup_event():
         admin = db.query(user.User).filter(user.User.email == settings.admin_email).first()
         if admin:
             seed_workflows(db, tenant_id=admin.tenant_id)
+            seed_bcc(db, tenant_id=admin.tenant_id)
     finally:
         db.close()
     logger.info("api_started", environment=settings.environment)

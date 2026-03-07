@@ -1,0 +1,279 @@
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Loading Control Center...</span>
+</div>
+}
+
+@if (!isLoading) {
+<!-- ═══ Sticky Header ═══ -->
+<header class="org-header">
+    <div class="org-header__top">
+        <div class="org-header__identity">
+            <div class="org-header__identity-inner">
+                <div class="org-header__avatar" style="background: linear-gradient(135deg, #FF4500, #e03e00)">
+                    <i class="fa-solid fa-sliders"></i>
+                </div>
+                <div class="org-header__info">
+                    <div class="org-header__name-row">
+                        <h2 class="org-header__name">Bob's Control Center</h2>
+                    </div>
+                    <p class="org-header__meta">MULTI-DIMENSIONAL · ROLE MANAGEMENT</p>
+                </div>
+            </div>
+        </div>
+        <div class="org-header__actions lg-only">
+            <button class="btn btn-accent" (click)="openAddDialog()">
+                <i class="fa-solid fa-plus"></i> New Organization
+            </button>
+        </div>
+    </div>
+
+    <div class="org-header__tabs">
+        <nav class="tabs">
+            <button class="tab" [class.tab--active]="activeTab === 'organizations'"
+                (click)="setActiveTab('organizations')">Organizations ({{ organizations.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'industries'"
+                (click)="setActiveTab('industries')">Industries ({{ industries.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'careers'" (click)="setActiveTab('careers')">Careers
+                ({{ careers.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'skills'" (click)="setActiveTab('skills')">Skills ({{
+                skillTemplates.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'tasks'" (click)="setActiveTab('tasks')">Tasks ({{
+                taskTemplates.length }})</button>
+        </nav>
+    </div>
+</header>
+
+<!-- ═══ Main Content ═══ -->
+<main class="org-main">
+    <div class="org-content">
+
+        <!-- ══ Organizations Tab ══ -->
+        @if (activeTab === 'organizations') {
+        <section class="tab-section">
+            @if (organizations.length === 0) {
+            <div class="empty-state">No organizations yet</div>
+            } @else {
+            <div class="opp-list">
+                @for (org of organizations; track org.id) {
+                <a [routerLink]="['/settings/bob-control-center', org.id]" class="opp-card"
+                    style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
+                    <div class="opp-card__main">
+                        <div class="opp-card__info">
+                            <h4 class="opp-card__name">{{ org.name }}</h4>
+                            <div class="opp-card__tags">
+                                @if (org.profile?.country) {
+                                <span class="stage-badge">{{ org.profile?.country }}</span>
+                                }
+                                @if (org.profile?.state_province) {
+                                <span class="stage-badge">{{ org.profile?.state_province }}</span>
+                                }
+                                <span class="opp-card__meta">{{ org.department_count }} depts · {{ org.industry_count }}
+                                    industries</span>
+                            </div>
+                        </div>
+                        <div class="opp-card__value">
+                            <p class="opp-card__amount">{{ org.department_count }}</p>
+                            <p class="opp-card__amount-label">Departments</p>
+                        </div>
+                    </div>
+                </a>
+                }
+            </div>
+            }
+        </section>
+        }
+
+        <!-- ══ Industries Tab ══ -->
+        @if (activeTab === 'industries') {
+        <section class="tab-section">
+            @if (industries.length === 0) {
+            <div class="empty-state">No industries defined</div>
+            } @else {
+            <div class="opp-list">
+                @for (ind of industries; track ind.id) {
+                <a [routerLink]="['/settings/bob-control-center/library/industry', ind.id]" class="opp-card"
+                    style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
+                    <div class="opp-card__main">
+                        <div class="opp-card__info">
+                            <h4 class="opp-card__name">{{ ind.name }}</h4>
+                            <div class="opp-card__tags">
+                                <span class="stage-badge">Library Kit</span>
+                                @if (ind.description) {
+                                <span class="opp-card__meta">{{ ind.description }}</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                }
+            </div>
+            }
+        </section>
+        }
+
+        <!-- ══ Careers Tab ══ -->
+        @if (activeTab === 'careers') {
+        <section class="tab-section">
+            @if (careers.length === 0) {
+            <div class="empty-state">No careers defined</div>
+            } @else {
+            <div class="opp-list">
+                @for (career of careers; track career.id) {
+                <a [routerLink]="['/settings/bob-control-center/library/career', career.id]" class="opp-card"
+                    style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
+                    <div class="opp-card__main">
+                        <div class="opp-card__info">
+                            <h4 class="opp-card__name">{{ career.name }}</h4>
+                            <div class="opp-card__tags">
+                                <span class="stage-badge">Library Kit</span>
+                                @if (career.typical_skills) {
+                                <span class="opp-card__meta">{{ career.typical_skills!.length }} skills · {{
+                                    career.typical_tasks?.length || 0 }} tasks</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                }
+            </div>
+            }
+        </section>
+        }
+
+        <!-- ══ Skills Tab ══ -->
+        @if (activeTab === 'skills') {
+        <section class="tab-section">
+            @if (skillTemplates.length === 0) {
+            <div class="empty-state">No skill templates defined</div>
+            } @else {
+            <div class="opp-list">
+                @for (skill of skillTemplates; track skill.id) {
+                <a [routerLink]="['/settings/bob-control-center/library/skill-template', skill.id]" class="opp-card"
+                    style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
+                    <div class="opp-card__main">
+                        <div class="opp-card__info">
+                            <h4 class="opp-card__name">{{ skill.name }}</h4>
+                            <div class="opp-card__tags">
+                                <span class="stage-badge">{{ skill.type }}</span>
+                                @if (skill.category) {
+                                <span class="opp-card__meta">{{ skill.category }}</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                }
+            </div>
+            }
+        </section>
+        }
+
+        <!-- ══ Tasks Tab ══ -->
+        @if (activeTab === 'tasks') {
+        <section class="tab-section">
+            @if (taskTemplates.length === 0) {
+            <div class="empty-state">No task templates defined</div>
+            } @else {
+            <div class="opp-list">
+                @for (task of taskTemplates; track task.id) {
+                <a [routerLink]="['/settings/bob-control-center/library/task-template', task.id]" class="opp-card"
+                    style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
+                    <div class="opp-card__main">
+                        <div class="opp-card__info">
+                            <h4 class="opp-card__name">{{ task.name }}</h4>
+                            <div class="opp-card__tags">
+                                @if (task.frequency) {
+                                <span class="stage-badge">{{ task.frequency }}</span>
+                                }
+                                @if (task.category) {
+                                <span class="opp-card__meta">{{ task.category }}</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                }
+            </div>
+            }
+        </section>
+        }
+
+    </div>
+
+    <!-- Right Panel -->
+    <aside class="org-panel">
+        <div class="panel-section">
+            <h4 class="panel-section__title">Key Information</h4>
+            <div class="panel-fields">
+                <div class="panel-field">
+                    <p class="panel-field__label">Organizations</p>
+                    <p class="panel-field__value">{{ organizations.length }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Industries</p>
+                    <p class="panel-field__value">{{ industries.length }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Careers</p>
+                    <p class="panel-field__value">{{ careers.length }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Skill Templates</p>
+                    <p class="panel-field__value">{{ skillTemplates.length }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Task Templates</p>
+                    <p class="panel-field__value">{{ taskTemplates.length }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h4 class="panel-section__title">Quick Actions</h4>
+            <div class="panel-actions">
+                <button class="panel-action" (click)="openAddDialog()">
+                    <i class="fa-solid fa-plus"></i> Add Organization
+                </button>
+            </div>
+        </div>
+    </aside>
+</main>
+
+<!-- ═══ Add Organization Dialog ═══ -->
+@if (showAddDialog) {
+<div class="dialog-overlay" (click)="closeAddDialog()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+        <div class="dialog__header">
+            <h3 class="dialog__title">New Organization</h3>
+            <button class="dialog__close" (click)="closeAddDialog()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="dialog__body">
+            <div class="form-group">
+                <label class="form-label">Organization Name *</label>
+                <input type="text" [(ngModel)]="newOrgName" placeholder="e.g. The Croo Group" class="form-input" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea [(ngModel)]="newOrgDesc" placeholder="What does this organization do?" class="form-textarea"
+                    rows="3"></textarea>
+            </div>
+        </div>
+        <div class="dialog__footer">
+            <button class="btn btn-outline" (click)="closeAddDialog()">Cancel</button>
+            <button class="btn btn-accent" (click)="createOrganization()" [disabled]="isCreating || !newOrgName.trim()">
+                @if (isCreating) {
+                <i class="fa-solid fa-spinner fa-spin"></i> Creating...
+                } @else {
+                <i class="fa-solid fa-plus"></i> Create
+                }
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+}
