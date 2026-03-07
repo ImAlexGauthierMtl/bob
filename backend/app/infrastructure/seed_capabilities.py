@@ -63,6 +63,8 @@ CAPABILITY_CATALOG = [
     {"code": "bob.auto_execute", "name": "Bob Can Auto-Execute", "scope": "agent", "default_enabled": False, "risk_level": "high"},
     {"code": "bob.bulk_action", "name": "Bob Can Bulk Action", "scope": "agent", "default_enabled": False, "risk_level": "high"},
     {"code": "bob.ai_parse", "name": "Bob Can AI-Parse Text", "scope": "agent", "default_enabled": True, "risk_level": "low"},
+    {"code": "bob.navigate", "name": "Bob Can Navigate Pages", "scope": "agent", "default_enabled": True, "risk_level": "low"},
+    {"code": "bob.open_create_dialog", "name": "Bob Can Open Create Dialogs", "scope": "agent", "default_enabled": True, "risk_level": "low"},
 ]
 
 
