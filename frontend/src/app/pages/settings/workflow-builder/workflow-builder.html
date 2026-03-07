@@ -61,61 +61,175 @@
     <!-- ═══════ New Workflow Form ═══════ -->
     @if (isNewWorkflow) {
     <div class="builder__new-form">
-        <div class="form-card">
-            <h3 class="form-card__title"><i class="fa-solid fa-wand-magic-sparkles"></i> Create New Workflow</h3>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Name</label>
-                    <input type="text" [(ngModel)]="newWorkflow.name" class="form-input" placeholder="My Workflow" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Level</label>
-                    <select [(ngModel)]="newWorkflow.level" class="form-input">
-                        <option value="user">User</option>
-                        <option value="company">Company</option>
-                        <option value="department">Department</option>
-                    </select>
-                </div>
+        <!-- ── Name & Description ── -->
+        <div class="create-section">
+            <div class="create-section__header">
+                <h3 class="create-section__title">Workflow Details</h3>
+                <p class="create-section__subtitle">Give your workflow a name and description</p>
             </div>
-
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" [(ngModel)]="newWorkflow.name" class="form-input"
+                    placeholder="e.g. Follow-up nouveau prospect" />
+            </div>
             <div class="form-group">
                 <label class="form-label">Description</label>
                 <textarea [(ngModel)]="newWorkflow.description" class="form-input form-input--textarea"
                     placeholder="What does this workflow do?"></textarea>
             </div>
+        </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Trigger Type</label>
-                    <select [(ngModel)]="newWorkflow.trigger_type" class="form-input">
-                        <option value="manual">Manual</option>
-                        <option value="event">Event</option>
-                        <option value="schedule">Schedule</option>
-                        <option value="webhook">Webhook</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Execution Mode</label>
-                    <select [(ngModel)]="newWorkflow.execution_mode" class="form-input">
-                        <option value="suggest">Suggest — Bob recommends</option>
-                        <option value="approval">Approval — Needs human OK</option>
-                        <option value="auto">Auto — Runs immediately</option>
-                    </select>
-                </div>
+        <!-- ── Level Selection (Cards) ── -->
+        <div class="create-section">
+            <div class="create-section__header">
+                <h3 class="create-section__title">Automation Level</h3>
+                <p class="create-section__subtitle">Choose the scope and impact of this workflow</p>
             </div>
+            <div class="level-grid">
+                <button class="level-card" [class.level-card--active]="newWorkflow.level === 'user'"
+                    (click)="newWorkflow.level = 'user'">
+                    <div class="level-card__icon level-card__icon--blue">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <span class="level-card__tag">Personal</span>
+                    <h4 class="level-card__name">User Level</h4>
+                    <p class="level-card__desc">Personal automations that enhance your daily productivity</p>
+                    <ul class="level-card__features">
+                        <li><i class="fa-solid fa-check"></i> Personal task automation</li>
+                        <li><i class="fa-solid fa-check"></i> Custom notifications</li>
+                    </ul>
+                </button>
 
-            <div class="form-actions">
-                <a routerLink="../automation" class="btn btn--outline">Cancel</a>
-                <button class="btn btn--primary" (click)="createWorkflow()" [disabled]="!newWorkflow.name || isSaving">
-                    @if (isSaving) {
-                    <i class="fa-solid fa-spinner fa-spin"></i> Creating...
-                    } @else {
-                    <i class="fa-solid fa-plus"></i> Create Workflow
-                    }
+                <button class="level-card" [class.level-card--active]="newWorkflow.level === 'company'"
+                    (click)="newWorkflow.level = 'company'">
+                    <div class="level-card__icon level-card__icon--accent">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <span class="level-card__tag level-card__tag--recommended">Recommended</span>
+                    <h4 class="level-card__name">Company Level</h4>
+                    <p class="level-card__desc">Team-wide workflows that coordinate across departments</p>
+                    <ul class="level-card__features">
+                        <li><i class="fa-solid fa-check"></i> Cross-team workflows</li>
+                        <li><i class="fa-solid fa-check"></i> Lead assignment rules</li>
+                        <li><i class="fa-solid fa-check"></i> Approval processes</li>
+                    </ul>
+                </button>
+
+                <button class="level-card" [class.level-card--active]="newWorkflow.level === 'department'"
+                    (click)="newWorkflow.level = 'department'">
+                    <div class="level-card__icon level-card__icon--gray">
+                        <i class="fa-solid fa-sitemap"></i>
+                    </div>
+                    <span class="level-card__tag">Department</span>
+                    <h4 class="level-card__name">Department Level</h4>
+                    <p class="level-card__desc">Department-specific automations for team workflows</p>
+                    <ul class="level-card__features">
+                        <li><i class="fa-solid fa-check"></i> Department-scoped rules</li>
+                        <li><i class="fa-solid fa-check"></i> Team notifications</li>
+                    </ul>
                 </button>
             </div>
         </div>
+
+        <!-- ── Trigger Type (Radio Cards) ── -->
+        <div class="create-section">
+            <div class="create-section__header">
+                <h3 class="create-section__title">Trigger</h3>
+                <p class="create-section__subtitle">How should this workflow start?</p>
+            </div>
+            <div class="radio-list">
+                <button class="radio-option" [class.radio-option--active]="newWorkflow.trigger_type === 'manual'"
+                    (click)="newWorkflow.trigger_type = 'manual'">
+                    <div class="radio-option__dot"></div>
+                    <div class="radio-option__icon"><i class="fa-solid fa-hand-pointer"></i></div>
+                    <div class="radio-option__text">
+                        <span class="radio-option__label">Manual</span>
+                        <span class="radio-option__desc">Run on demand with a button click</span>
+                    </div>
+                </button>
+                <button class="radio-option" [class.radio-option--active]="newWorkflow.trigger_type === 'event'"
+                    (click)="newWorkflow.trigger_type = 'event'">
+                    <div class="radio-option__dot"></div>
+                    <div class="radio-option__icon"><i class="fa-solid fa-bolt"></i></div>
+                    <div class="radio-option__text">
+                        <span class="radio-option__label">Event</span>
+                        <span class="radio-option__desc">Fires when a record is created, updated, or deleted</span>
+                    </div>
+                </button>
+                <button class="radio-option" [class.radio-option--active]="newWorkflow.trigger_type === 'schedule'"
+                    (click)="newWorkflow.trigger_type = 'schedule'">
+                    <div class="radio-option__dot"></div>
+                    <div class="radio-option__icon"><i class="fa-solid fa-clock"></i></div>
+                    <div class="radio-option__text">
+                        <span class="radio-option__label">Schedule</span>
+                        <span class="radio-option__desc">Runs on a recurring schedule (daily, weekly, etc.)</span>
+                    </div>
+                </button>
+                <button class="radio-option" [class.radio-option--active]="newWorkflow.trigger_type === 'webhook'"
+                    (click)="newWorkflow.trigger_type = 'webhook'">
+                    <div class="radio-option__dot"></div>
+                    <div class="radio-option__icon"><i class="fa-solid fa-globe"></i></div>
+                    <div class="radio-option__text">
+                        <span class="radio-option__label">Webhook</span>
+                        <span class="radio-option__desc">Triggered by an external HTTP request</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- ── Execution Mode (Radio Cards) ── -->
+        <div class="create-section">
+            <div class="create-section__header">
+                <h3 class="create-section__title">Execution Mode</h3>
+                <p class="create-section__subtitle">How should Bob handle this workflow?</p>
+            </div>
+            <div class="radio-list">
+                <button class="radio-option" [class.radio-option--active]="newWorkflow.execution_mode === 'suggest'"
+                    (click)="newWorkflow.execution_mode = 'suggest'">
+                    <div class="radio-option__dot"></div>
+                    <div class="radio-option__icon"><i class="fa-solid fa-lightbulb"></i></div>
+                    <div class="radio-option__text">
+                        <span class="radio-option__label">Suggest</span>
+                        <span class="radio-option__desc">Bob recommends actions — you decide what to execute</span>
+                    </div>
+                    <span class="radio-option__badge">Recommended</span>
+                </button>
+                <button class="radio-option" [class.radio-option--active]="newWorkflow.execution_mode === 'approval'"
+                    (click)="newWorkflow.execution_mode = 'approval'">
+                    <div class="radio-option__dot"></div>
+                    <div class="radio-option__icon"><i class="fa-solid fa-user-shield"></i></div>
+                    <div class="radio-option__text">
+                        <span class="radio-option__label">Approval</span>
+                        <span class="radio-option__desc">Bob executes but pauses before critical steps for your
+                            OK</span>
+                    </div>
+                </button>
+                <button class="radio-option" [class.radio-option--active]="newWorkflow.execution_mode === 'auto'"
+                    (click)="newWorkflow.execution_mode = 'auto'">
+                    <div class="radio-option__dot"></div>
+                    <div class="radio-option__icon"><i class="fa-solid fa-robot"></i></div>
+                    <div class="radio-option__text">
+                        <span class="radio-option__label">Auto Execute</span>
+                        <span class="radio-option__desc">Bob runs everything automatically without human
+                            intervention</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- ── Actions ── -->
+        <div class="create-actions">
+            <a routerLink="../automation" class="btn btn--outline">Cancel</a>
+            <button class="btn btn--primary" (click)="createWorkflow()" [disabled]="!newWorkflow.name || isSaving">
+                @if (isSaving) {
+                <i class="fa-solid fa-spinner fa-spin"></i> Creating...
+                } @else {
+                <i class="fa-solid fa-plus"></i> Create Workflow
+                }
+            </button>
+        </div>
+
     </div>
     }
 
