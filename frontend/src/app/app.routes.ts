@@ -147,6 +147,13 @@ export const routes: Routes = [
                             ),
                     },
                     {
+                        path: 'bob/capabilities',
+                        loadComponent: () =>
+                            import('./pages/settings/bob-capabilities/bob-capabilities').then(
+                                (m) => m.BobCapabilitiesComponent
+                            ),
+                    },
+                    {
                         path: '',
                         redirectTo: 'profile',
                         pathMatch: 'full',
