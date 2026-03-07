@@ -35,6 +35,11 @@ export class BobChatComponent {
 
     quickWorkflows: QuickWorkflow[] = [
         {
+            icon: 'fa-solid fa-building',
+            label: 'Ajouter un compte',
+            description: 'Créer une organisation et enrichir automatiquement',
+        },
+        {
             icon: 'fa-solid fa-user-plus',
             label: 'Enrich Contacts',
             description: 'Auto-enrich new contacts with AI',
@@ -103,15 +108,52 @@ export class BobChatComponent {
 
     private getBobResponse(msg: string): string {
         const lower = msg.toLowerCase();
-        if (lower.includes('workflow') || lower.includes('automation')) {
-            return 'I can help you create or run workflows. Use the quick actions below or tell me what you\'d like to automate.';
+
+        // ── Intent: Add account/organization ──
+        const addAccountMatch = msg.match(/(?:ajouter|créer|creer|nouveau|nouvelle)\s+(?:un\s+)?(?:compte|organisation|organization|client|entreprise)\s*[:\-–]?\s*(.*)/i);
+        if (addAccountMatch) {
+            const name = addAccountMatch[1]?.trim();
+            if (name) {
+                return `🏢 J'ai détecté que tu veux ajouter "${name}" comme nouvelle organisation. Je lance le workflow **Ajouter un compte** :\n\n✓ Création de l'organisation "${name}"\n✓ Enrichissement automatique des données\n✓ Recherche de contacts associés\n\nVeux-tu que je procède ?`;
+            }
+            return '🏢 Je peux t\'aider à ajouter une nouvelle organisation. Donne-moi le nom du compte et je lancerai le workflow de création.';
         }
-        if (lower.includes('contact') || lower.includes('organization')) {
-            return 'I can enrich contacts and organizations with AI-powered data. Would you like me to start an enrichment workflow?';
+
+        // ── Intent: Add contact ──
+        if (/(?:ajouter|créer|creer|nouveau|nouvelle)\s+(?:un\s+)?(?:contact|personne)/i.test(lower)) {
+            const nameMatch = msg.match(/(?:contact|personne)\s*[:\-–]?\s*(.*)/i);
+            const contactName = nameMatch?.[1]?.trim();
+            if (contactName) {
+                return `👤 Je crée le contact "${contactName}" et je lance l'enrichissement automatique. Je te notifie quand c'est prêt.`;
+            }
+            return '👤 Je peux ajouter un nouveau contact. Donne-moi le nom et je m\'occupe du reste.';
         }
-        if (lower.includes('opportunity') || lower.includes('deal')) {
-            return 'I can score your leads and flag stale opportunities. Want me to run a lead scoring analysis?';
+
+        // ── Intent: Create task ──
+        if (/(?:ajouter|créer|creer|nouvelle?)\s+(?:une?\s+)?(?:tâche|tache|task|todo)/i.test(lower)) {
+            return '✅ Je peux créer une tâche pour toi. Précise le titre et je l\'assigne automatiquement.';
         }
-        return 'I\'m here to help! You can ask me about workflows, contacts, opportunities, or use the quick actions below.';
+
+        // ── Intent: Follow-up / relance ──
+        if (/(?:relancer|follow.?up|rappel|suivi)/i.test(lower)) {
+            return '🔔 Je peux configurer une relance automatique. Sur quel contact ou opportunité ?';
+        }
+
+        // ── Intent: Workflow / automation ──
+        if (lower.includes('workflow') || lower.includes('automation') || lower.includes('automatiser')) {
+            return 'Je peux t\'aider à créer ou exécuter des workflows. Utilise les actions rapides ou dis-moi ce que tu veux automatiser.';
+        }
+
+        // ── Intent: Contacts / organizations ──
+        if (lower.includes('contact') || lower.includes('organization') || lower.includes('organisation')) {
+            return 'Je peux enrichir les contacts et organisations avec des données IA. Veux-tu lancer un enrichissement ?';
+        }
+
+        // ── Intent: Opportunities / deals ──
+        if (lower.includes('opportunit') || lower.includes('deal') || lower.includes('prospect')) {
+            return 'Je peux scorer tes leads et signaler les opportunités dormantes. Veux-tu lancer une analyse ?';
+        }
+
+        return 'Je suis là pour t\'aider ! Tu peux me demander d\'ajouter un compte, créer un contact, automatiser une tâche, ou utiliser les actions rapides ci-dessous.';
     }
 }
