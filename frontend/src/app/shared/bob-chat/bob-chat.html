@@ -1,0 +1,75 @@
+<!-- Bob FAB Button -->
+<button class="bob-fab" (click)="toggle()" [class.bob-fab--open]="isOpen">
+    @if (!isOpen) {
+    <i class="fa-solid fa-wand-magic-sparkles"></i>
+    @if (hasUnread) {
+    <span class="bob-fab__badge"></span>
+    }
+    } @else {
+    <i class="fa-solid fa-xmark"></i>
+    }
+</button>
+
+<!-- Chat Panel -->
+@if (isOpen) {
+<div class="bob-panel">
+
+    <!-- Header -->
+    <div class="bob-panel__header">
+        <div class="bob-panel__header-left">
+            <div class="bob-panel__avatar">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+            <div>
+                <p class="bob-panel__name">Bob</p>
+                <p class="bob-panel__status">
+                    <span class="bob-panel__dot"></span> Online
+                </p>
+            </div>
+        </div>
+        <button class="bob-panel__close" (click)="close()">
+            <i class="fa-solid fa-minus"></i>
+        </button>
+    </div>
+
+    <!-- Messages -->
+    <div class="bob-panel__messages">
+        @for (msg of messages; track msg.time) {
+        <div class="bob-msg" [class.bob-msg--user]="msg.role === 'user'" [class.bob-msg--bob]="msg.role === 'bob'">
+            @if (msg.role === 'bob') {
+            <div class="bob-msg__avatar">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+            }
+            <div class="bob-msg__bubble">
+                <p class="bob-msg__text">{{ msg.text }}</p>
+                <span class="bob-msg__time">{{ formatTime(msg.time) }}</span>
+            </div>
+        </div>
+        }
+    </div>
+
+    <!-- Quick Workflows -->
+    <div class="bob-panel__quick">
+        <p class="bob-panel__quick-title">Quick Actions</p>
+        <div class="bob-panel__quick-list">
+            @for (wf of quickWorkflows; track wf.label) {
+            <button class="bob-quick" (click)="launchWorkflow(wf)">
+                <i [class]="wf.icon"></i>
+                <span>{{ wf.label }}</span>
+            </button>
+            }
+        </div>
+    </div>
+
+    <!-- Input -->
+    <div class="bob-panel__input">
+        <input type="text" [(ngModel)]="message" (keydown.enter)="sendMessage()" placeholder="Ask Bob anything..."
+            class="bob-panel__field" />
+        <button class="bob-panel__send" (click)="sendMessage()" [disabled]="!message.trim()">
+            <i class="fa-solid fa-paper-plane"></i>
+        </button>
+    </div>
+
+</div>
+}
