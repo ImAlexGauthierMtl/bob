@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
@@ -7,6 +7,8 @@ import {
     PlaceResult,
     CreateOrganizationRequest,
 } from '../../shared/services/organization.service';
+import { BobActionService } from '../../shared/services/bob-action.service';
+import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'croo-organizations',
@@ -15,7 +17,7 @@ import {
     templateUrl: './organizations.html',
     styleUrl: './organizations.css',
 })
-export class OrganizationsComponent implements OnInit {
+export class OrganizationsComponent implements OnInit, OnDestroy {
     organizations: Organization[] = [];
     total = 0;
     isLoading = true;
@@ -39,13 +41,29 @@ export class OrganizationsComponent implements OnInit {
     statusMessage = '';
     statusType: 'info' | 'success' | 'error' = 'info';
 
+    private bobActionSub?: Subscription;
+
     constructor(
         private orgService: OrganizationService,
         private router: Router,
+        private bobActionService: BobActionService,
     ) { }
 
     ngOnInit(): void {
         this.loadOrganizations();
+
+        console.log('[Organizations] subscribing to BobActionService.action$');
+        this.bobActionSub = this.bobActionService.action$.subscribe(action => {
+            console.log('[Organizations] received action:', JSON.stringify(action));
+            if (action.type === 'open_create_dialog' && action.entity === 'organization') {
+                console.log('[Organizations] ✅ match! calling openAddDialog()');
+                this.openAddDialog(action.name);
+            }
+        });
+    }
+
+    ngOnDestroy(): void {
+        this.bobActionSub?.unsubscribe();
     }
 
     loadOrganizations(): void {
@@ -64,9 +82,15 @@ export class OrganizationsComponent implements OnInit {
 
     // ── Dialog ──────────────────────────────
 
-    openAddDialog(): void {
+    openAddDialog(name?: string): void {
         this.showAddDialog = true;
         this.resetDialog();
+        // If a name was provided (from Bob), pre-fill and auto-search
+        if (name) {
+            this.searchQuery = name;
+            // Let Angular detect the change before searching
+            setTimeout(() => this.searchMaps(), 100);
+        }
     }
 
     closeAddDialog(): void {

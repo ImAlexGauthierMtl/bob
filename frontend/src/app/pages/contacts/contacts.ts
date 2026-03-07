@@ -1,8 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ContactService, Contact, CreateContactRequest } from '../../shared/services/contact.service';
 import { OrganizationService } from '../../shared/services/organization.service';
+import { BobActionService } from '../../shared/services/bob-action.service';
+import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'croo-contacts',
@@ -11,7 +13,7 @@ import { OrganizationService } from '../../shared/services/organization.service'
     templateUrl: './contacts.html',
     styleUrl: './contacts.css',
 })
-export class ContactsComponent implements OnInit {
+export class ContactsComponent implements OnInit, OnDestroy {
     contacts: Contact[] = [];
     total = 0;
     isLoading = true;
@@ -30,14 +32,28 @@ export class ContactsComponent implements OnInit {
     // Org name resolution
     orgNames: Record<string, string> = {};
 
+    private bobActionSub?: Subscription;
+
     constructor(
         private contactService: ContactService,
         private orgService: OrganizationService,
         private router: Router,
+        private bobActionService: BobActionService,
     ) { }
 
     ngOnInit(): void {
         this.loadContacts();
+
+        // Listen for Bob voice actions
+        this.bobActionSub = this.bobActionService.action$.subscribe(action => {
+            if (action.type === 'open_create_dialog' && action.entity === 'contact') {
+                this.openAddDialog();
+            }
+        });
+    }
+
+    ngOnDestroy(): void {
+        this.bobActionSub?.unsubscribe();
     }
 
     loadContacts(): void {

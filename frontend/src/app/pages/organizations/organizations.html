@@ -161,8 +161,9 @@
             @if (hasSearched && searchResults.length > 0) {
             <p class="results-label">{{ searchResults.length }} results found — select the right one:</p>
             <div class="results-list">
-                @for (place of searchResults; track place.place_id) {
+                @for (place of searchResults; track place.place_id; let i = $index) {
                 <div class="result-card" (click)="selectPlace(place)" [class.result-card--disabled]="isCreating">
+                    <div class="result-card__number">#{{ i + 1 }}</div>
                     <div class="result-card__main">
                         <p class="result-card__name">{{ place.title }}</p>
                         <p class="result-card__address"><i class="fa-solid fa-location-dot"></i> {{ place.address }}</p>

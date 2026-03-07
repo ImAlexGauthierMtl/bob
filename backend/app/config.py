@@ -32,6 +32,19 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     groq_default_model: str = "llama-3.3-70b-versatile"
 
+    # Bob Agent
+    bob_model: str = "qwen/qwen3-32b"
+    bob_temperature: float = 0.3
+    bob_max_history: int = 20
+    bob_session_ttl_minutes: int = 60
+
+    # Voice (Phase 2 — Pipecat)
+    groq_whisper_model: str = "whisper-large-v3-turbo"
+    groq_tts_model: str = "canopylabs/orpheus-v1-english"
+    groq_tts_voice: str = "autumn"
+    voice_vad_threshold: float = 0.5
+    voice_max_session_minutes: int = 30
+
     # Serper.dev (Search)
     serper_api_key: str = ""
 

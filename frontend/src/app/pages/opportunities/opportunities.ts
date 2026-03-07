@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DecimalPipe, SlicePipe } from '@angular/common';
 import { OpportunityService, Opportunity, CreateOpportunityRequest } from '../../shared/services/opportunity.service';
 import { OrganizationService } from '../../shared/services/organization.service';
+import { BobActionService } from '../../shared/services/bob-action.service';
+import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'croo-opportunities',
@@ -12,7 +14,7 @@ import { OrganizationService } from '../../shared/services/organization.service'
     templateUrl: './opportunities.html',
     styleUrl: './opportunities.css',
 })
-export class OpportunitiesComponent implements OnInit {
+export class OpportunitiesComponent implements OnInit, OnDestroy {
     opportunities: Opportunity[] = [];
     total = 0;
     isLoading = true;
@@ -31,14 +33,27 @@ export class OpportunitiesComponent implements OnInit {
     statusMessage = '';
     parsedPreview: Partial<CreateOpportunityRequest> | null = null;
 
+    private bobActionSub?: Subscription;
+
     constructor(
         private oppService: OpportunityService,
         private orgService: OrganizationService,
         private router: Router,
+        private bobActionService: BobActionService,
     ) { }
 
     ngOnInit(): void {
         this.loadOpportunities();
+
+        this.bobActionSub = this.bobActionService.action$.subscribe(action => {
+            if (action.type === 'open_create_dialog' && action.entity === 'opportunity') {
+                this.openAddDialog();
+            }
+        });
+    }
+
+    ngOnDestroy(): void {
+        this.bobActionSub?.unsubscribe();
     }
 
     loadOpportunities(): void {
