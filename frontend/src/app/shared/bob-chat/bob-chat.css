@@ -17,10 +17,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    font-size: 1.1rem;
+    font-family: var(--font-family);
     z-index: 1000;
     transition: all var(--transition-base);
     box-shadow: 0 4px 16px rgba(255, 69, 0, 0.35);
+}
+
+.bob-fab__text {
+    font-size: 0.9rem;
+    font-weight: var(--font-weight-bold, 700);
+    letter-spacing: 0.02em;
 }
 
 .bob-fab:hover {

@@ -1,7 +1,7 @@
 <!-- Bob FAB Button -->
 <button class="bob-fab" (click)="toggle()" [class.bob-fab--open]="isOpen">
     @if (!isOpen) {
-    <i class="fa-solid fa-wand-magic-sparkles"></i>
+    <span class="bob-fab__text">Bob</span>
     @if (hasUnread) {
     <span class="bob-fab__badge"></span>
     }
@@ -18,7 +18,7 @@
     <div class="bob-panel__header">
         <div class="bob-panel__header-left">
             <div class="bob-panel__avatar">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>B</span>
             </div>
             <div>
                 <p class="bob-panel__name">Bob</p>
@@ -38,7 +38,7 @@
         <div class="bob-msg" [class.bob-msg--user]="msg.role === 'user'" [class.bob-msg--bob]="msg.role === 'bob'">
             @if (msg.role === 'bob') {
             <div class="bob-msg__avatar">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>B</span>
             </div>
             }
             <div class="bob-msg__bubble">
