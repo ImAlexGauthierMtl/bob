@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://croo:croo@localhost:5432/croo_digital_experience"
 
     # JWT
-    secret_key: str = "CHANGE-ME-IN-PRODUCTION-USE-LONG-RANDOM-STRING"
+    secret_key: str = ""  # MUST be set via .env — use: openssl rand -hex 64
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
@@ -50,12 +50,12 @@ class Settings(BaseSettings):
 
     # Admin seed
     admin_email: str = "admin@croo.digital"
-    admin_password: str = "Admin123!"
+    admin_password: str = ""  # MUST be set via .env
     admin_first_name: str = "Admin"
     admin_last_name: str = "Croo"
 
     # Webhooks
-    webhook_api_key: str = "croo-webhook-dev-key"
+    webhook_api_key: str = ""  # MUST be set via .env
 
     class Config:
         env_file = ".env"
