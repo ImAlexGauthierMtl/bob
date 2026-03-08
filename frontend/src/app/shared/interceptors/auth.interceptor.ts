@@ -2,6 +2,7 @@ import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { BehaviorSubject, catchError, filter, switchMap, take, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { Router } from '@angular/router';
 
 // Module-level state for token refresh queuing
 let isRefreshing = false;
@@ -70,6 +71,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
                         }),
                     );
                 }
+            }
+            if (error.status === 403) {
+                // Insufficient permissions — navigate to dashboard
+                const router = inject(Router);
+                console.warn('[RBAC] Access denied:', error.error?.detail || 'Insufficient permissions');
+                router.navigate(['/dashboard']);
+                return throwError(() => error);
             }
             return throwError(() => error);
         }),
