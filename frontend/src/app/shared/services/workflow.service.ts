@@ -1,3 +1,4 @@
+import { environment } from '../../../environments/environment';
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -117,7 +118,7 @@ export interface UserCapability {
     source: string;
 }
 
-const API_URL = 'http://localhost:8555/api/v1';
+const API_URL = `${environment.apiUrl}`;
 
 @Injectable({ providedIn: 'root' })
 export class WorkflowService {

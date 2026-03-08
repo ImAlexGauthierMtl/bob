@@ -21,8 +21,9 @@ interface QuickWorkflow {
 }
 
 type VoiceState = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking';
+import { environment } from '../../../environments/environment';
 
-const WS_URL = 'ws://localhost:8555';
+const WS_URL = environment.wsUrl;
 const VOICE_CONSENT_KEY = 'croo_voice_consent';
 const MAX_RECONNECT_ATTEMPTS = 3;
 

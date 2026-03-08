@@ -1,3 +1,4 @@
+import { environment } from '../../../environments/environment';
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -30,7 +31,7 @@ export interface User {
     updated_at: string;
 }
 
-const API_URL = 'http://localhost:8555/api/v1/auth';
+const API_URL = `${environment.apiUrl}/auth`;
 const TOKEN_KEY = 'croo_access_token';
 const REFRESH_KEY = 'croo_refresh_token';
 

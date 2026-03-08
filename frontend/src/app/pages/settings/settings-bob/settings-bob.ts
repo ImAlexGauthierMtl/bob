@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../shared/services/auth.service';
+import { environment } from '../../../../environments/environment';
 
 interface VoiceOption {
     id: string;
@@ -69,7 +70,7 @@ export class SettingsBobComponent implements OnInit {
     isSaving = false;
     saveMessage = '';
 
-    private apiUrl = 'http://localhost:8555/api/v1/bob/settings';
+    private apiUrl = `${environment.apiUrl}/bob/settings`;
 
     ngOnInit(): void {
         this.loadSettings();

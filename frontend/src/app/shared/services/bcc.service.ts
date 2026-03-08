@@ -1,3 +1,4 @@
+import { environment } from '../../../environments/environment';
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -180,7 +181,7 @@ export interface BccRoleDetail extends BccRole {
 // SERVICE
 // ═══════════════════════════════════════════════════════════════
 
-const API_URL = 'http://localhost:8555/api/v1/bcc';
+const API_URL = `${environment.apiUrl}/bcc`;
 
 @Injectable({ providedIn: 'root' })
 export class BccService {

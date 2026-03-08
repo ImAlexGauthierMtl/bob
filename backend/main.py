@@ -1,5 +1,7 @@
 """Main FastAPI application for Croo Digital Experience API."""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,20 +11,57 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan — startup and shutdown."""
+    from app.infrastructure.database import engine, SessionLocal
+    from app.domain.entities.base import Base
+    # Import entities so they register with Base.metadata
+    from app.domain.entities import user, organization, contact, opportunity, quote, activity, department, capability, bob_settings  # noqa: F401
+    from app.domain.entities import workflow, workflow_execution  # noqa: F401
+    from app.domain.entities import bcc_entities  # noqa: F401
+    from app.domain.entities import training_models  # noqa: F401
+    from app.infrastructure.seed import run_seed
+    from app.infrastructure.seed_capabilities import seed_capabilities
+    from app.infrastructure.seed_workflows import seed_workflows
+    from app.infrastructure.seed_bcc import seed_bcc
+
+    # Create tables (will be replaced by alembic upgrade in production)
+    Base.metadata.create_all(bind=engine)
+    logger.info("database_tables_created")
+
+    # Seed admin + capabilities + workflows
+    db = SessionLocal()
+    try:
+        run_seed(db)
+        seed_capabilities(db)
+        admin = db.query(user.User).filter(user.User.email == settings.admin_email).first()
+        if admin:
+            seed_workflows(db, tenant_id=admin.tenant_id)
+            seed_bcc(db, tenant_id=admin.tenant_id)
+    finally:
+        db.close()
+    logger.info("api_started", environment=settings.environment)
+
+    yield  # App runs here
+
+    logger.info("api_shutdown")
+
 # Create FastAPI app
 app = FastAPI(
     title="Croo Digital Experience API",
     description="Agent-First CRM/ERP — AI-powered digital experience platform",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
-# CORS
+# CORS — strict methods & headers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
 # Import and include routers
@@ -74,43 +113,4 @@ async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "service": "croo-digital-experience-api"}
 
-
-@app.on_event("startup")
-async def startup_event():
-    """Startup event — create tables and seed admin user."""
-    from app.infrastructure.database import engine, SessionLocal
-    from app.domain.entities.base import Base
-    # Import entities so they register with Base.metadata
-    from app.domain.entities import user, organization, contact, opportunity, quote, activity, department, capability, bob_settings  # noqa: F401
-    from app.domain.entities import workflow, workflow_execution  # noqa: F401
-    from app.domain.entities import bcc_entities  # noqa: F401
-    from app.domain.entities import training_models  # noqa: F401
-    from app.infrastructure.seed import run_seed
-    from app.infrastructure.seed_capabilities import seed_capabilities
-    from app.infrastructure.seed_workflows import seed_workflows
-    from app.infrastructure.seed_bcc import seed_bcc
-
-    # Create tables
-    Base.metadata.create_all(bind=engine)
-    logger.info("database_tables_created")
-
-    # Seed admin + capabilities + workflows
-    db = SessionLocal()
-    try:
-        run_seed(db)
-        seed_capabilities(db)
-        # Seed workflows — use admin user's tenant for default tenant
-        admin = db.query(user.User).filter(user.User.email == settings.admin_email).first()
-        if admin:
-            seed_workflows(db, tenant_id=admin.tenant_id)
-            seed_bcc(db, tenant_id=admin.tenant_id)
-    finally:
-        db.close()
-    logger.info("api_started", environment=settings.environment)
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Shutdown event."""
-    logger.info("api_shutdown")
 
