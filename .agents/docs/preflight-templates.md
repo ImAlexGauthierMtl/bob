@@ -39,7 +39,16 @@ Chaque template contient une section **Règles NON-NÉGOCIABLES**. Les lister av
 | Catégorie | Action |
 |-----------|--------|
 | ✅ **RULED** | Template trouvé → suivre **pas-à-pas** |
-| ⚠️ **UNRULED** | Pas de template → signaler clairement à l'utilisateur, ajouter dans `docs/gaps.md` |
+| ⚠️ **UNRULED** | Pas de template → **obligatoire** : ajouter une entrée dans `docs/gaps.md` section "Décisions UNRULED" avec le format imposé |
+
+> [!CAUTION]
+> **Pour chaque action UNRULED**, documenter dans `docs/gaps.md` :
+> 1. Quel template a été cherché (et n'existait pas)
+> 2. Quel template existant est le plus proche (utilisé comme base)
+> 3. Quelle décision le LLM a prise
+> 4. **Justification** : pourquoi cette approche, alignement avec les patterns existants
+> 5. **Règles respectées** : quelles règles NON-NÉGOCIABLES d'autres templates ont été suivies
+> 6. **Écart assumé** : ce qui diffère et pourquoi c'est acceptable
 
 ### 5. Coder en suivant le template
 
@@ -67,12 +76,17 @@ Chaque template contient une section **Règles NON-NÉGOCIABLES**. Les lister av
 
 ### 6. Signaler le résultat
 
-À la fin de chaque implémentation, indiquer :
+À la fin de chaque implémentation, indiquer dans le message de livraison :
 ```
 📋 Conformité templates :
   ✅ RULED : [liste des templates suivis]
   ⚠️ UNRULED : [liste des actions sans template + raison]
+  📝 Gaps documentés : [N entrées ajoutées dans docs/gaps.md]
 ```
+
+> [!IMPORTANT]
+> Si des actions UNRULED existent, vérifier que `docs/gaps.md` a bien été mis à jour
+> **avant** le commit. Le commit ne doit PAS se faire sans la documentation des gaps.
 
 ---
 
