@@ -14,6 +14,7 @@ import {
         '../../settings-shared.css',
         '../../../organization-detail/organization-detail.css',
         '../bcc-role-detail/bcc-role-detail.css',
+        './bcc-role-view.css',
     ],
 })
 export class BccRoleViewComponent implements OnInit {
@@ -23,6 +24,8 @@ export class BccRoleViewComponent implements OnInit {
     orgId = '';
     expandedSkills = new Set<string>();
     expandedTasks = new Set<string>();
+    sessionNotes = '';
+    missingElements = '';
 
     readonly stages = ['onboarding', 'foundation', 'practice', 'mastery'];
     readonly stageLabels: Record<string, string> = {
