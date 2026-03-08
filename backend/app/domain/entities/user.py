@@ -1,6 +1,7 @@
 """User entity for authentication."""
 
 from sqlalchemy import Column, String, Text, Float
+from sqlalchemy.orm import relationship
 import bcrypt
 
 from app.domain.entities.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
@@ -25,6 +26,9 @@ class User(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
     timezone = Column(String(50), nullable=True, default="America/Montreal")
     role = Column(String(30), nullable=False, default="member")
     trust_score = Column(Float, nullable=False, default=0.1)
+
+    # Relationships — owned entities
+    bob_settings = relationship("BobUserSettings", foreign_keys="BobUserSettings.user_id", uselist=False, passive_deletes=True)
 
 
     @staticmethod

@@ -43,8 +43,11 @@ class Quote(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
 
     # FK → Opportunity
     opportunity_id = Column(String(36), ForeignKey("opportunities.id"), nullable=True, index=True)
-    opportunity = relationship("Opportunity", backref="quotes")
+    opportunity = relationship("Opportunity", back_populates="quotes")
 
     # FK → Organization
     organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
-    organization = relationship("Organization", backref="quotes")
+    organization = relationship("Organization", back_populates="quotes")
+
+    # Owner (RBAC)
+    owner_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)

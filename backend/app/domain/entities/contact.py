@@ -41,4 +41,11 @@ class Contact(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
 
     # FK → Organization
     organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
-    organization = relationship("Organization", backref="contacts")
+    organization = relationship("Organization", back_populates="contacts")
+
+    # Owner (RBAC)
+    owner_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+
+    # Child relations
+    opportunities = relationship("Opportunity", back_populates="contact", passive_deletes=True)
+    activities = relationship("Activity", back_populates="contact", passive_deletes=True)

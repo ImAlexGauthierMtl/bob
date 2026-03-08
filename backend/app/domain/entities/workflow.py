@@ -27,7 +27,7 @@ class Workflow(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
 
     # Hierarchy
     level = Column(String(20), nullable=False)  # system | company | department | user
-    owner_id = Column(String(36), nullable=True)  # user_id or department_id
+    owner_id = Column(String(36), ForeignKey("users.id"), nullable=True)  # user who owns this workflow
     owner_type = Column(String(20), nullable=True)  # user | department
 
     # Trigger

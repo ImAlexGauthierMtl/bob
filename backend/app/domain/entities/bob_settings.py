@@ -1,6 +1,6 @@
 """Bob user settings entity — persisted per-user Bob configuration."""
 
-from sqlalchemy import Column, String, Float, Boolean, Text
+from sqlalchemy import Column, String, Float, Boolean, Text, ForeignKey
 from sqlalchemy.orm import Session
 
 from app.domain.entities.base import Base, TenantMixin, AuditMixin, generate_uuid
@@ -17,7 +17,7 @@ class BobUserSettings(Base, TenantMixin, AuditMixin):
     __tablename__ = "bob_user_settings"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(100), nullable=False, unique=True, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True, index=True)
 
     # Personality
     tone = Column(String(20), default="professional", nullable=False)

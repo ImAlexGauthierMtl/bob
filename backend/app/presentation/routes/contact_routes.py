@@ -95,6 +95,8 @@ async def delete_contact(
     contact = repo.get_by_id(contact_id, current_user["tenant_id"])
     if not contact:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found")
+    from app.middleware.dependency_guard import guard_delete
+    guard_delete(db, "contacts", contact_id, current_user["tenant_id"])
     repo.soft_delete(contact, current_user["email"])
     # Fire event for workflow triggers
     import asyncio

@@ -27,7 +27,7 @@ class TrainingSession(Base, TenantMixin):
     completed_at = Column(DateTime(timezone=True), nullable=True)
 
 
-class TrainingNote(Base):
+class TrainingNote(Base, TenantMixin):
     """A note captured during training (by Bob or manually)."""
 
     __tablename__ = "training_notes"
@@ -41,7 +41,7 @@ class TrainingNote(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
-class TrainingMissingElement(Base):
+class TrainingMissingElement(Base, TenantMixin):
     """A missing feature/integration identified during training."""
 
     __tablename__ = "training_missing_elements"

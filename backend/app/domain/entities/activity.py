@@ -50,15 +50,18 @@ class Activity(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
 
     # FK → Organization
     organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
-    organization = relationship("Organization", backref="activities")
+    organization = relationship("Organization", back_populates="activities")
 
     # FK → Contact
     contact_id = Column(String(36), ForeignKey("contacts.id"), nullable=True, index=True)
-    contact = relationship("Contact", backref="activities")
+    contact = relationship("Contact", back_populates="activities")
 
     # FK → Opportunity
     opportunity_id = Column(String(36), ForeignKey("opportunities.id"), nullable=True, index=True)
-    opportunity = relationship("Opportunity", backref="activities")
+    opportunity = relationship("Opportunity", back_populates="activities")
 
     # Assigned to
     assigned_to = Column(String(100), nullable=True)
+
+    # Owner (RBAC)
+    owner_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)

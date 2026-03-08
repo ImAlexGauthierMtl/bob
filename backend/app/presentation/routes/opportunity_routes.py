@@ -100,6 +100,8 @@ async def delete_opportunity(
     opp = repo.get_by_id(opp_id, current_user["tenant_id"])
     if not opp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found")
+    from app.middleware.dependency_guard import guard_delete
+    guard_delete(db, "opportunities", opp_id, current_user["tenant_id"])
     repo.soft_delete(opp, current_user["email"])
     import asyncio
     from app.agents.event_bus import event_bus

@@ -2,7 +2,7 @@
 
 import enum
 
-from sqlalchemy import Column, String, Text, Enum as SAEnum, Integer, Float, JSON
+from sqlalchemy import Column, String, Text, Enum as SAEnum, Integer, Float, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 
 from app.domain.entities.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
@@ -63,6 +63,11 @@ class Organization(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
     logo_url = Column(String(500), nullable=True)
     organization_profile = Column(JSON, nullable=True, comment="Deep enrichment profile (services, contacts, social, etc.)")
 
-    # Relations (future)
-    # contacts = relationship("Contact", back_populates="organization")
-    # opportunities = relationship("Opportunity", back_populates="organization")
+    # Owner (RBAC)
+    owner_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+
+    # Relations
+    contacts = relationship("Contact", back_populates="organization", passive_deletes=True)
+    opportunities = relationship("Opportunity", back_populates="organization", passive_deletes=True)
+    quotes = relationship("Quote", back_populates="organization", passive_deletes=True)
+    activities = relationship("Activity", back_populates="organization", passive_deletes=True)
