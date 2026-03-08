@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RoleService, Role, Permission } from '../../../shared/services/role.service';
+import { RoleService } from '../../../shared/services/role.service';
+import { Role, Permission } from '../../../shared/models/role.model';
 
 @Component({
     selector: 'croo-settings-roles',
@@ -10,9 +11,12 @@ import { RoleService, Role, Permission } from '../../../shared/services/role.ser
     styleUrls: ['../settings-shared.css'],
 })
 export class SettingsRolesComponent implements OnInit {
+    private roleService = inject(RoleService);
+
     roles: Role[] = [];
     permissions: Permission[] = [];
-    isLoading = true;
+    loading = true;
+    error = '';
 
     // Create dialog
     showCreateDialog = false;
@@ -37,22 +41,24 @@ export class SettingsRolesComponent implements OnInit {
     statusMessage = '';
     statusType: 'info' | 'success' | 'error' = 'info';
 
-    constructor(private roleService: RoleService) { }
-
     ngOnInit(): void {
-        this.loadData();
+        this.loadItems();
     }
 
-    loadData(): void {
-        this.isLoading = true;
-        this.roleService.listRoles().subscribe({
+    loadItems(): void {
+        this.loading = true;
+        this.error = '';
+        this.roleService.getAll().subscribe({
             next: (res) => {
                 this.roles = res.items;
-                this.isLoading = false;
+                this.loading = false;
             },
-            error: () => (this.isLoading = false),
+            error: () => {
+                this.error = 'Impossible de charger les rôles.';
+                this.loading = false;
+            },
         });
-        this.roleService.listPermissions().subscribe({
+        this.roleService.getPermissions().subscribe({
             next: (perms) => (this.permissions = perms),
         });
     }
@@ -88,7 +94,7 @@ export class SettingsRolesComponent implements OnInit {
         return resource.charAt(0).toUpperCase() + resource.slice(1);
     }
 
-    // ── Create Role ─────────────────────────────
+    // ── Créer un rôle ───────────────────────────
 
     openCreateDialog(): void {
         this.newRoleName = '';
@@ -101,28 +107,28 @@ export class SettingsRolesComponent implements OnInit {
         this.showCreateDialog = false;
     }
 
-    createRole(): void {
+    createItem(): void {
         if (!this.newRoleName.trim()) return;
         this.isCreating = true;
 
-        this.roleService.createRole({
+        this.roleService.create({
             name: this.newRoleName.trim(),
             description: this.newRoleDescription.trim() || undefined,
         }).subscribe({
             next: () => {
                 this.isCreating = false;
                 this.showCreateDialog = false;
-                this.loadData();
+                this.loadItems();
             },
             error: (err) => {
                 this.isCreating = false;
-                this.statusMessage = err?.error?.detail || 'Failed to create role';
+                this.statusMessage = err?.error?.detail || 'Échec de la création du rôle';
                 this.statusType = 'error';
             },
         });
     }
 
-    // ── Edit Role ───────────────────────────────
+    // ── Modifier un rôle ────────────────────────
 
     openEditDialog(role: Role): void {
         this.editingRole = role;
@@ -141,38 +147,38 @@ export class SettingsRolesComponent implements OnInit {
         if (!this.editingRole || !this.editName.trim()) return;
         this.isSavingEdit = true;
 
-        this.roleService.updateRole(this.editingRole.id, {
+        this.roleService.update(this.editingRole.id, {
             name: this.editName.trim(),
             description: this.editDescription.trim() || undefined,
         }).subscribe({
             next: () => {
                 this.isSavingEdit = false;
                 this.showEditDialog = false;
-                this.loadData();
+                this.loadItems();
             },
             error: (err) => {
                 this.isSavingEdit = false;
-                this.statusMessage = err?.error?.detail || 'Failed to update role';
+                this.statusMessage = err?.error?.detail || 'Échec de la mise à jour';
                 this.statusType = 'error';
             },
         });
     }
 
-    // ── Delete Role ─────────────────────────────
+    // ── Supprimer un rôle ───────────────────────
 
-    deleteRole(role: Role): void {
+    deleteItem(role: Role): void {
         if (role.is_system) return;
-        if (!confirm(`Delete role "${role.name}"? Users assigned this role will lose these permissions.`)) return;
+        if (!confirm(`Supprimer le rôle « ${role.name} » ? Les utilisateurs assignés perdront ces permissions.`)) return;
 
-        this.roleService.deleteRole(role.id).subscribe({
-            next: () => this.loadData(),
+        this.roleService.delete(role.id).subscribe({
+            next: () => this.loadItems(),
             error: (err) => {
-                alert(err?.error?.detail || 'Failed to delete role');
+                alert(err?.error?.detail || 'Échec de la suppression du rôle');
             },
         });
     }
 
-    // ── Permissions Management ──────────────────
+    // ── Gestion des permissions ─────────────────
 
     openPermDialog(role: Role): void {
         this.permRole = role;
@@ -216,18 +222,18 @@ export class SettingsRolesComponent implements OnInit {
         if (!this.permRole) return;
         this.isSavingPerms = true;
 
-        this.roleService.setRolePermissions(
+        this.roleService.setPermissions(
             this.permRole.id,
             Array.from(this.selectedPermIds),
         ).subscribe({
             next: () => {
                 this.isSavingPerms = false;
                 this.showPermDialog = false;
-                this.loadData();
+                this.loadItems();
             },
             error: (err) => {
                 this.isSavingPerms = false;
-                this.statusMessage = err?.error?.detail || 'Failed to update permissions';
+                this.statusMessage = err?.error?.detail || 'Échec de la mise à jour des permissions';
                 this.statusType = 'error';
             },
         });

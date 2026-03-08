@@ -2,25 +2,36 @@
 
     <div class="team-header">
         <div class="settings-panel__header" style="margin-bottom:0">
-            <h3 class="settings-panel__title">Roles & Permissions</h3>
-            <p class="settings-panel__subtitle">Create custom roles and assign granular permissions for your
-                organization</p>
+            <h3 class="settings-panel__title">Rôles et permissions</h3>
+            <p class="settings-panel__subtitle">Créez des rôles personnalisés et assignez des permissions granulaires
+            </p>
         </div>
         <button class="btn btn-accent" (click)="openCreateDialog()">
-            <i class="fa-solid fa-plus"></i> New Role
+            <i class="fa-solid fa-plus"></i> Nouveau rôle
         </button>
     </div>
 
-    <!-- Loading -->
-    @if (isLoading) {
+    <!-- Chargement -->
+    @if (loading) {
     <div style="text-align:center;padding:3rem;color:var(--color-gray-500)">
         <i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem"></i>
-        <p style="margin-top:1rem">Loading roles...</p>
+        <p style="margin-top:1rem">Chargement des rôles...</p>
     </div>
     }
 
-    <!-- Role List -->
-    @if (!isLoading) {
+    <!-- Erreur -->
+    @if (error) {
+    <div style="text-align:center;padding:3rem;color:#dc2626">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size:2rem;margin-bottom:1rem"></i>
+        <p>{{ error }}</p>
+        <button class="btn btn-outline" style="margin-top:1rem" (click)="loadItems()">
+            <i class="fa-solid fa-rotate-right"></i> Réessayer
+        </button>
+    </div>
+    }
+
+    <!-- Liste des rôles -->
+    @if (!loading && !error) {
     @for (role of roles; track role.id) {
     <div class="team-card team-card--clickable">
         <div class="team-card__left" (click)="openPermDialog(role)">
@@ -29,22 +40,23 @@
             </div>
             <div>
                 <p class="team-card__name">{{ role.name }}</p>
-                <p class="team-card__email">{{ role.description || 'No description' }} · {{ getRolePermCount(role) }}
-                    permissions</p>
+                <p class="team-card__email">{{ role.description || 'Aucune description' }} · {{ getRolePermCount(role)
+                    }} permissions</p>
             </div>
         </div>
         <div class="team-card__right">
-            <span class="status-badge {{ getRoleBadgeClass(role) }}">{{ role.is_system ? 'System' : 'Custom' }}</span>
+            <span class="status-badge {{ getRoleBadgeClass(role) }}">{{ role.is_system ? 'Système' : 'Personnalisé'
+                }}</span>
             @if (!role.is_system) {
-            <button class="team-card__action" title="Edit role" (click)="openEditDialog(role)">
+            <button class="team-card__action" title="Modifier le rôle" (click)="openEditDialog(role)">
                 <i class="fa-solid fa-pen"></i>
             </button>
-            <button class="team-card__action" title="Delete role" (click)="deleteRole(role)">
+            <button class="team-card__action" title="Supprimer le rôle" (click)="deleteItem(role)">
                 <i class="fa-solid fa-trash" style="color:#dc2626"></i>
             </button>
             }
             @if (role.is_system) {
-            <button class="team-card__action" title="View permissions" (click)="openPermDialog(role)">
+            <button class="team-card__action" title="Voir les permissions" (click)="openPermDialog(role)">
                 <i class="fa-solid fa-eye"></i>
             </button>
             }
@@ -55,14 +67,14 @@
     @if (roles.length === 0) {
     <div style="text-align:center;padding:3rem;color:var(--color-gray-500)">
         <i class="fa-solid fa-shield-halved" style="font-size:2rem;margin-bottom:1rem"></i>
-        <p>No roles configured yet</p>
-        <p style="font-size:0.8125rem;margin-top:0.5rem;">Create your first custom role to start managing permissions.
-        </p>
+        <p>Aucun rôle configuré</p>
+        <p style="font-size:0.8125rem;margin-top:0.5rem;">Créez votre premier rôle personnalisé pour gérer les
+            permissions.</p>
     </div>
     }
     }
 
-    <!-- ═══════ Create Role Dialog ═══════ -->
+    <!-- ═══════ Dialog Créer un rôle ═══════ -->
     @if (showCreateDialog) {
     <div class="dialog-overlay" (click)="closeCreateDialog()">
         <div class="dialog-modal dialog-modal--sm" (click)="$event.stopPropagation()">
@@ -72,8 +84,8 @@
                         <i class="fa-solid fa-shield-halved"></i>
                     </div>
                     <div>
-                        <h3 class="dialog-header__title">Create Role</h3>
-                        <p class="dialog-header__subtitle">Define a new role for your organization</p>
+                        <h3 class="dialog-header__title">Créer un rôle</h3>
+                        <p class="dialog-header__subtitle">Définissez un nouveau rôle pour votre organisation</p>
                     </div>
                 </div>
                 <button class="dialog-close" (click)="closeCreateDialog()">
@@ -82,13 +94,14 @@
             </div>
             <div class="dialog-body">
                 <div class="form-group">
-                    <label class="form-label">Role Name</label>
-                    <input type="text" class="form-input" [(ngModel)]="newRoleName" placeholder="e.g. Sales Manager" />
+                    <label class="form-label">Nom du rôle</label>
+                    <input type="text" class="form-input" [(ngModel)]="newRoleName"
+                        placeholder="ex. Directeur des ventes" />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Description</label>
                     <input type="text" class="form-input" [(ngModel)]="newRoleDescription"
-                        placeholder="What can this role do?" />
+                        placeholder="Que peut faire ce rôle ?" />
                 </div>
 
                 @if (statusMessage) {
@@ -96,19 +109,19 @@
                 }
 
                 <div class="dialog-result__actions" style="margin-top:1rem">
-                    <button class="btn btn-accent" (click)="createRole()"
+                    <button class="btn btn-accent" (click)="createItem()"
                         [disabled]="isCreating || !newRoleName.trim()">
-                        @if (isCreating) { <i class="fa-solid fa-spinner fa-spin"></i> Creating... }
-                        @else { <i class="fa-solid fa-plus"></i> Create Role }
+                        @if (isCreating) { <i class="fa-solid fa-spinner fa-spin"></i> Création... }
+                        @else { <i class="fa-solid fa-plus"></i> Créer le rôle }
                     </button>
-                    <button class="btn btn-outline" (click)="closeCreateDialog()">Cancel</button>
+                    <button class="btn btn-outline" (click)="closeCreateDialog()">Annuler</button>
                 </div>
             </div>
         </div>
     </div>
     }
 
-    <!-- ═══════ Edit Role Dialog ═══════ -->
+    <!-- ═══════ Dialog Modifier un rôle ═══════ -->
     @if (showEditDialog && editingRole) {
     <div class="dialog-overlay" (click)="closeEditDialog()">
         <div class="dialog-modal dialog-modal--sm" (click)="$event.stopPropagation()">
@@ -118,7 +131,7 @@
                         <i class="fa-solid fa-pen"></i>
                     </div>
                     <div>
-                        <h3 class="dialog-header__title">Edit Role</h3>
+                        <h3 class="dialog-header__title">Modifier le rôle</h3>
                         <p class="dialog-header__subtitle">{{ editingRole.name }}</p>
                     </div>
                 </div>
@@ -128,7 +141,7 @@
             </div>
             <div class="dialog-body">
                 <div class="form-group">
-                    <label class="form-label">Role Name</label>
+                    <label class="form-label">Nom du rôle</label>
                     <input type="text" class="form-input" [(ngModel)]="editName" />
                 </div>
                 <div class="form-group">
@@ -142,17 +155,17 @@
 
                 <div class="dialog-result__actions" style="margin-top:1rem">
                     <button class="btn btn-accent" (click)="saveEdit()" [disabled]="isSavingEdit || !editName.trim()">
-                        @if (isSavingEdit) { <i class="fa-solid fa-spinner fa-spin"></i> Saving... }
-                        @else { <i class="fa-solid fa-check"></i> Save Changes }
+                        @if (isSavingEdit) { <i class="fa-solid fa-spinner fa-spin"></i> Sauvegarde... }
+                        @else { <i class="fa-solid fa-check"></i> Sauvegarder }
                     </button>
-                    <button class="btn btn-outline" (click)="closeEditDialog()">Cancel</button>
+                    <button class="btn btn-outline" (click)="closeEditDialog()">Annuler</button>
                 </div>
             </div>
         </div>
     </div>
     }
 
-    <!-- ═══════ Permissions Dialog ═══════ -->
+    <!-- ═══════ Dialog Permissions ═══════ -->
     @if (showPermDialog && permRole) {
     <div class="dialog-overlay" (click)="closePermDialog()">
         <div class="dialog-modal" style="max-width:640px" (click)="$event.stopPropagation()">
@@ -162,8 +175,9 @@
                         <i class="fa-solid fa-key"></i>
                     </div>
                     <div>
-                        <h3 class="dialog-header__title">{{ permRole.is_system ? 'View' : 'Edit' }} Permissions</h3>
-                        <p class="dialog-header__subtitle">Role: {{ permRole.name }}</p>
+                        <h3 class="dialog-header__title">{{ permRole.is_system ? 'Consulter' : 'Gérer' }} les
+                            permissions</h3>
+                        <p class="dialog-header__subtitle">Rôle : {{ permRole.name }}</p>
                     </div>
                 </div>
                 <button class="dialog-close" (click)="closePermDialog()">
@@ -204,7 +218,7 @@
 
                 @if (permissions.length === 0) {
                 <div style="text-align:center;padding:2rem;color:var(--color-gray-400)">
-                    <p>No permissions defined in the system yet.</p>
+                    <p>Aucune permission définie dans le système.</p>
                 </div>
                 }
 
@@ -216,10 +230,10 @@
                 @if (!permRole.is_system) {
                 <div class="dialog-result__actions" style="margin-top:1.5rem">
                     <button class="btn btn-accent" (click)="savePermissions()" [disabled]="isSavingPerms">
-                        @if (isSavingPerms) { <i class="fa-solid fa-spinner fa-spin"></i> Saving... }
-                        @else { <i class="fa-solid fa-check"></i> Save Permissions }
+                        @if (isSavingPerms) { <i class="fa-solid fa-spinner fa-spin"></i> Sauvegarde... }
+                        @else { <i class="fa-solid fa-check"></i> Sauvegarder les permissions }
                     </button>
-                    <button class="btn btn-outline" (click)="closePermDialog()">Cancel</button>
+                    <button class="btn btn-outline" (click)="closePermDialog()">Annuler</button>
                 </div>
                 }
             </div>

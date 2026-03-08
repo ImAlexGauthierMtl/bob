@@ -1,80 +1,41 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-
-/* ── Interfaces ───────────────────────────────────────────── */
-
-export interface Permission {
-    id: string;
-    resource: string;
-    action: string;
-    description: string | null;
-}
-
-export interface Role {
-    id: string;
-    name: string;
-    description: string | null;
-    is_system: boolean;
-    permissions: Permission[];
-}
-
-export interface RoleListResponse {
-    items: Role[];
-    total: number;
-}
-
-export interface RoleCreate {
-    name: string;
-    description?: string;
-}
-
-export interface RoleUpdate {
-    name?: string;
-    description?: string;
-}
-
-const API_URL = `${environment.apiUrl}/roles`;
-
-/* ── Service ──────────────────────────────────────────────── */
+import { Role, CreateRoleDto, UpdateRoleDto, RoleListResponse, Permission } from '../models/role.model';
 
 @Injectable({ providedIn: 'root' })
 export class RoleService {
-    constructor(private http: HttpClient) { }
+    private http = inject(HttpClient);
+    private readonly API = `${environment.apiUrl}/roles`;
 
-    /** GET /roles — list all roles for tenant */
-    listRoles(): Observable<RoleListResponse> {
-        return this.http.get<RoleListResponse>(API_URL);
+    getAll(): Observable<RoleListResponse> {
+        return this.http.get<RoleListResponse>(this.API);
     }
 
-    /** GET /roles/permissions — list all system permissions */
-    listPermissions(): Observable<Permission[]> {
-        return this.http.get<Permission[]>(`${API_URL}/permissions`);
+    getById(id: string): Observable<Role> {
+        return this.http.get<Role>(`${this.API}/${id}`);
     }
 
-    /** POST /roles — create custom role */
-    createRole(data: RoleCreate): Observable<Role> {
-        return this.http.post<Role>(API_URL, data);
+    create(dto: CreateRoleDto): Observable<Role> {
+        return this.http.post<Role>(this.API, dto);
     }
 
-    /** PATCH /roles/:id — update role */
-    updateRole(id: string, data: RoleUpdate): Observable<Role> {
-        return this.http.patch<Role>(`${API_URL}/${id}`, data);
+    update(id: string, dto: UpdateRoleDto): Observable<Role> {
+        return this.http.patch<Role>(`${this.API}/${id}`, dto);
     }
 
-    /** DELETE /roles/:id — delete custom role */
-    deleteRole(id: string): Observable<void> {
-        return this.http.delete<void>(`${API_URL}/${id}`);
+    delete(id: string): Observable<void> {
+        return this.http.delete<void>(`${this.API}/${id}`);
     }
 
-    /** PUT /roles/:id/permissions — replace all permissions */
-    setRolePermissions(roleId: string, permissionIds: string[]): Observable<Role> {
-        return this.http.put<Role>(`${API_URL}/${roleId}/permissions`, { permission_ids: permissionIds });
+    /** GET /roles/permissions — toutes les permissions système */
+    getPermissions(): Observable<Permission[]> {
+        return this.http.get<Permission[]>(`${this.API}/permissions`);
     }
 
-    /** GET /roles/:id — get single role */
-    getRole(id: string): Observable<Role> {
-        return this.http.get<Role>(`${API_URL}/${id}`);
+    /** PUT /roles/:id/permissions — remplacer les permissions d'un rôle */
+    setPermissions(roleId: string, permissionIds: string[]): Observable<Role> {
+        return this.http.put<Role>(`${this.API}/${roleId}/permissions`, { permission_ids: permissionIds });
     }
 }
