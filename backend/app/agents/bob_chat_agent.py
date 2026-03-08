@@ -121,13 +121,20 @@ class BobChatAgent:
         mission_prompt: Optional[str] = None,
         mission_context: Optional[dict] = None,
     ) -> ChatSession:
-        """Get existing session or create a new one."""
+        """Get existing session or create a new one.
+
+        Session isolation: sessions are scoped to tenant_id:user_id.
+        A user can only access their own sessions within their tenant.
+        """
+        # Build isolation key: tenant:user:session
+        isolation_key = f"{tenant_id}:{user_id}:{session_id}"
+
         with self._lock:
             # Cleanup expired sessions
             self._cleanup_expired()
 
-            if session_id not in self._sessions:
-                self._sessions[session_id] = ChatSession(
+            if isolation_key not in self._sessions:
+                self._sessions[isolation_key] = ChatSession(
                     user_id=user_id,
                     tenant_id=tenant_id,
                     user_email=user_email,
@@ -137,11 +144,12 @@ class BobChatAgent:
                 logger.info(
                     "bob_session_created",
                     session_id=session_id,
+                    isolation_key=isolation_key,
                     user=user_email,
                     has_mission=mission_prompt is not None,
                 )
 
-            return self._sessions[session_id]
+            return self._sessions[isolation_key]
 
     # Removed local TOOLS list; imported dynamically in chat()
 
@@ -149,17 +157,22 @@ class BobChatAgent:
         self,
         session_id: str,
         user_message: str,
+        tenant_id: str = "",
+        user_id: str = "",
     ) -> tuple[str, list[dict]]:
         """Send a message to Bob and get a response + optional actions.
 
         Args:
             session_id: Session identifier
             user_message: The user's message text
+            tenant_id: Optional tenant for isolation key
+            user_id: Optional user for isolation key
 
         Returns:
             Tuple of (response_text, actions_list)
         """
-        session = self._sessions.get(session_id)
+        isolation_key = f"{tenant_id}:{user_id}:{session_id}" if tenant_id and user_id else session_id
+        session = self._sessions.get(isolation_key)
         if not session:
             raise ValueError(f"Session {session_id} not found")
 
@@ -613,18 +626,20 @@ Retourne SEULEMENT ce JSON, rien d'autre:
         except Exception as e:
             logger.warning("insight_extraction_error", error=str(e))
 
-    def delete_session(self, session_id: str) -> bool:
-        """Delete a specific session."""
+    def delete_session(self, session_id: str, tenant_id: str = "", user_id: str = "") -> bool:
+        """Delete a specific session (with isolation check)."""
+        isolation_key = f"{tenant_id}:{user_id}:{session_id}" if tenant_id and user_id else session_id
         with self._lock:
-            if session_id in self._sessions:
-                del self._sessions[session_id]
-                logger.info("bob_session_deleted", session_id=session_id)
+            if isolation_key in self._sessions:
+                del self._sessions[isolation_key]
+                logger.info("bob_session_deleted", session_id=session_id, isolation_key=isolation_key)
                 return True
             return False
 
-    def get_session_info(self, session_id: str) -> Optional[dict]:
-        """Get session metadata."""
-        session = self._sessions.get(session_id)
+    def get_session_info(self, session_id: str, tenant_id: str = "", user_id: str = "") -> Optional[dict]:
+        """Get session metadata (with isolation check)."""
+        isolation_key = f"{tenant_id}:{user_id}:{session_id}" if tenant_id and user_id else session_id
+        session = self._sessions.get(isolation_key)
         if not session:
             return None
         return {
@@ -637,15 +652,23 @@ Retourne SEULEMENT ce JSON, rien d'autre:
             "message_count": len(session.messages),
         }
 
-    def list_sessions(self, user_id: str) -> list[dict]:
-        """List all active sessions for a user."""
+    def list_sessions(self, user_id: str, tenant_id: str = "") -> list[dict]:
+        """List all active sessions for a user within their tenant."""
+        prefix = f"{tenant_id}:{user_id}:" if tenant_id else ""
         with self._lock:
             self._cleanup_expired()
-            return [
-                self.get_session_info(sid)
-                for sid, s in self._sessions.items()
-                if s.user_id == user_id
-            ]
+            results = []
+            for key, s in self._sessions.items():
+                if prefix and key.startswith(prefix):
+                    original_sid = key[len(prefix):]
+                    info = self.get_session_info(original_sid, tenant_id, user_id)
+                    if info:
+                        results.append(info)
+                elif not prefix and s.user_id == user_id:
+                    info = self.get_session_info(key)
+                    if info:
+                        results.append(info)
+            return results
 
     def _cleanup_expired(self) -> None:
         """Remove expired sessions."""

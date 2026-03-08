@@ -98,6 +98,8 @@ async def bob_chat(
         response_text, actions = bob_agent.chat(
             session_id=session_id,
             user_message=request.message,
+            tenant_id=current_user["tenant_id"],
+            user_id=current_user["user_id"],
         )
 
         return ChatResponse(
@@ -125,7 +127,10 @@ async def list_sessions(
     current_user: dict = Depends(get_current_user),
 ):
     """List all active Bob chat sessions for the current user."""
-    sessions = bob_agent.list_sessions(current_user["user_id"])
+    sessions = bob_agent.list_sessions(
+        user_id=current_user["user_id"],
+        tenant_id=current_user["tenant_id"],
+    )
     return sessions
 
 
@@ -135,17 +140,20 @@ async def delete_session(
     current_user: dict = Depends(get_current_user),
 ):
     """Close and delete a Bob chat session."""
-    # Verify the session belongs to this user
-    info = bob_agent.get_session_info(session_id)
+    # Verify the session belongs to this user (isolation key handles this)
+    info = bob_agent.get_session_info(
+        session_id,
+        tenant_id=current_user["tenant_id"],
+        user_id=current_user["user_id"],
+    )
     if not info:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found",
         )
-    if info["user_id"] != current_user["user_id"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot delete another user's session",
-        )
 
-    bob_agent.delete_session(session_id)
+    bob_agent.delete_session(
+        session_id,
+        tenant_id=current_user["tenant_id"],
+        user_id=current_user["user_id"],
+    )
