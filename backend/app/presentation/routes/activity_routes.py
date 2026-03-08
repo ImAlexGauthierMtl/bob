@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.infrastructure.database import get_db
 from app.presentation.routes.auth_routes import get_current_user
+from app.middleware.authorization import require_permission
 from app.domain.entities.activity import Activity
 from app.infrastructure.persistence.activity_repository import ActivityRepository
 from app.presentation.schemas.activity_schemas import (
@@ -34,7 +35,8 @@ async def list_activities(
     )
 
 
-@router.post("", response_model=ActivityResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ActivityResponse, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(require_permission("activity:write"))])
 async def create_activity(
     data: ActivityCreate,
     current_user: dict = Depends(get_current_user),
@@ -64,7 +66,8 @@ async def get_activity(
     return ActivityResponse.model_validate(activity)
 
 
-@router.patch("/{activity_id}", response_model=ActivityResponse)
+@router.patch("/{act_id}", response_model=ActivityResponse,
+              dependencies=[Depends(require_permission("activity:write"))])
 async def update_activity(
     activity_id: str,
     data: ActivityUpdate,
@@ -92,7 +95,8 @@ async def update_activity(
     return ActivityResponse.model_validate(updated)
 
 
-@router.delete("/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{act_id}", status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(require_permission("activity:delete"))])
 async def delete_activity(
     activity_id: str,
     current_user: dict = Depends(get_current_user),

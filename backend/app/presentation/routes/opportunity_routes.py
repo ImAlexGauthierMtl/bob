@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.infrastructure.database import get_db
 from app.presentation.routes.auth_routes import get_current_user
+from app.middleware.authorization import require_permission
 from app.domain.entities.opportunity import Opportunity
 from app.infrastructure.persistence.opportunity_repository import OpportunityRepository
 from app.presentation.schemas.opportunity_schemas import (
@@ -33,7 +34,8 @@ async def list_opportunities(
     )
 
 
-@router.post("", response_model=OpportunityResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=OpportunityResponse, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(require_permission("opportunity:write"))])
 async def create_opportunity(
     data: OpportunityCreate,
     current_user: dict = Depends(get_current_user),
@@ -63,7 +65,8 @@ async def get_opportunity(
     return OpportunityResponse.model_validate(opp)
 
 
-@router.patch("/{opp_id}", response_model=OpportunityResponse)
+@router.patch("/{opp_id}", response_model=OpportunityResponse,
+              dependencies=[Depends(require_permission("opportunity:write"))])
 async def update_opportunity(
     opp_id: str,
     data: OpportunityUpdate,
@@ -86,7 +89,8 @@ async def update_opportunity(
     return OpportunityResponse.model_validate(updated)
 
 
-@router.delete("/{opp_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{opp_id}", status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(require_permission("opportunity:delete"))])
 async def delete_opportunity(
     opp_id: str,
     current_user: dict = Depends(get_current_user),

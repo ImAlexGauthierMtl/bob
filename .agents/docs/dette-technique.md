@@ -10,3 +10,6 @@
 
 
 A vérifier : que chaques éléments tel que organisation, contact, opportunité, devis, activité, département, capability, bob_settings, workflow, workflow_execution, bcc_entities, training_models, role est bien dans la base de données et que les relations sont bien établies. et que les éléments est un owner, pour permettre des droits et permission efficace.
+
+
+Un usager ne peut pas 

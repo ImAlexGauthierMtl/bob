@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.infrastructure.database import get_db
 from app.presentation.routes.auth_routes import get_current_user
+from app.middleware.authorization import require_permission
 from app.domain.entities.quote import Quote
 from app.infrastructure.persistence.quote_repository import QuoteRepository
 from app.presentation.schemas.quote_schemas import (
@@ -33,7 +34,8 @@ async def list_quotes(
     )
 
 
-@router.post("", response_model=QuoteResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=QuoteResponse, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(require_permission("quote:write"))])
 async def create_quote(
     data: QuoteCreate,
     current_user: dict = Depends(get_current_user),
@@ -63,7 +65,8 @@ async def get_quote(
     return QuoteResponse.model_validate(quote)
 
 
-@router.patch("/{quote_id}", response_model=QuoteResponse)
+@router.patch("/{quo_id}", response_model=QuoteResponse,
+              dependencies=[Depends(require_permission("quote:write"))])
 async def update_quote(
     quote_id: str,
     data: QuoteUpdate,
@@ -86,7 +89,8 @@ async def update_quote(
     return QuoteResponse.model_validate(updated)
 
 
-@router.delete("/{quote_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{quo_id}", status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(require_permission("quote:delete"))])
 async def delete_quote(
     quote_id: str,
     current_user: dict = Depends(get_current_user),

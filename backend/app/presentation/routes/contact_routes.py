@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.infrastructure.database import get_db
 from app.presentation.routes.auth_routes import get_current_user
+from app.middleware.authorization import require_permission
 from app.domain.entities.contact import Contact
 from app.agents.event_bus import event_bus
 from app.infrastructure.persistence.contact_repository import ContactRepository
@@ -34,7 +35,8 @@ async def list_contacts(
     )
 
 
-@router.post("", response_model=ContactResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ContactResponse, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(require_permission("contact:write"))])
 async def create_contact(
     data: ContactCreate,
     current_user: dict = Depends(get_current_user),
@@ -64,7 +66,8 @@ async def get_contact(
     return ContactResponse.model_validate(contact)
 
 
-@router.patch("/{contact_id}", response_model=ContactResponse)
+@router.patch("/{con_id}", response_model=ContactResponse,
+              dependencies=[Depends(require_permission("contact:write"))])
 async def update_contact(
     contact_id: str,
     data: ContactUpdate,
@@ -81,7 +84,8 @@ async def update_contact(
     return ContactResponse.model_validate(repo.update(contact))
 
 
-@router.delete("/{contact_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{con_id}", status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(require_permission("contact:delete"))])
 async def delete_contact(
     contact_id: str,
     current_user: dict = Depends(get_current_user),
