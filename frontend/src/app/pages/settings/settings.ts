@@ -44,6 +44,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
                     'bcc': 'bob-control-center',
                     'team': 'team',
                     'member': 'team',
+                    'roles': 'roles',
+                    'permissions': 'roles',
                     'integration': 'integrations',
                     'integrations': 'integrations'
                 };

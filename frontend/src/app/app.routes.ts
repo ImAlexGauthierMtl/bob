@@ -140,6 +140,13 @@ export const routes: Routes = [
                             ),
                     },
                     {
+                        path: 'roles',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-roles/settings-roles').then(
+                                (m) => m.SettingsRolesComponent
+                            ),
+                    },
+                    {
                         path: 'automation',
                         loadComponent: () =>
                             import('./pages/settings/settings-automation/settings-automation').then(

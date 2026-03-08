@@ -1968,3 +1968,78 @@
     flex-direction: column;
     gap: 0.5rem;
 }
+
+/* ── Permission Matrix ───────────────────────────────────── */
+.perm-group {
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--color-gray-200);
+}
+
+.perm-group__header {
+    padding: 0.75rem 1rem;
+    background-color: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.perm-group__toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-black);
+}
+
+.perm-group__toggle input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--color-accent);
+}
+
+.perm-group__resource {
+    display: flex;
+    align-items: center;
+}
+
+.perm-group__perms {
+    padding: 0.5rem 0;
+}
+
+.perm-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    cursor: pointer;
+    transition: background-color var(--transition-base);
+}
+
+.perm-item:hover {
+    background-color: var(--color-gray-50);
+}
+
+.perm-item--disabled {
+    cursor: default;
+    opacity: 0.7;
+}
+
+.perm-item input[type="checkbox"] {
+    width: 0.875rem;
+    height: 0.875rem;
+    accent-color: var(--color-accent);
+    flex-shrink: 0;
+}
+
+.perm-item__action {
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    text-transform: capitalize;
+}
+
+.perm-item__desc {
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+    margin-left: 0.5rem;
+}
