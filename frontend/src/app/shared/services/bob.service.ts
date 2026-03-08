@@ -5,6 +5,8 @@ import { Observable } from 'rxjs';
 export interface BobChatRequest {
     message: string;
     session_id?: string;
+    mission_prompt?: string;
+    mission_context?: Record<string, unknown>;
 }
 
 export interface BobChatAction {
@@ -37,9 +39,11 @@ const API_URL = 'http://localhost:8555/api/v1';
 export class BobService {
     constructor(private http: HttpClient) { }
 
-    chat(message: string, sessionId?: string): Observable<BobChatResponse> {
+    chat(message: string, sessionId?: string, missionPrompt?: string, missionContext?: Record<string, unknown>): Observable<BobChatResponse> {
         const body: BobChatRequest = { message };
         if (sessionId) body.session_id = sessionId;
+        if (missionPrompt) body.mission_prompt = missionPrompt;
+        if (missionContext) body.mission_context = missionContext;
         return this.http.post<BobChatResponse>(`${API_URL}/bob/chat`, body);
     }
 

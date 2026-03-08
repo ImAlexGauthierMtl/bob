@@ -58,9 +58,9 @@ class RateLimiter:
         self._chat_buckets: dict[str, _UserBucket] = defaultdict(
             lambda: _UserBucket(max_calls=30, window_seconds=60)
         )
-        # Voice sessions: 5 new sessions/hour per user
+        # Voice sessions: 500 new sessions/hour per user (increased for dev)
         self._voice_buckets: dict[str, _UserBucket] = defaultdict(
-            lambda: _UserBucket(max_calls=5, window_seconds=3600)
+            lambda: _UserBucket(max_calls=500, window_seconds=3600)
         )
 
     def check_chat(self, user_id: str) -> None:

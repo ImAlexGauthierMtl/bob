@@ -30,6 +30,42 @@
     padding: var(--space-8) var(--space-6);
 }
 
+/* ── Interview CEO Button ─────────────────────── */
+
+.btn-interview-ceo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background: linear-gradient(135deg, #FF4500, #e03e00);
+    color: #fff;
+    border: none;
+    border-radius: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(255, 69, 0, 0.25);
+}
+
+.btn-interview-ceo:hover {
+    background: linear-gradient(135deg, #e03e00, #c53000);
+    box-shadow: 0 4px 16px rgba(255, 69, 0, 0.35);
+    transform: translateY(-1px);
+}
+
+.btn-interview-ceo:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(255, 69, 0, 0.2);
+}
+
+.btn-interview-ceo i {
+    font-size: 0.875rem;
+}
+
 .role-header__top {
     display: flex;
     align-items: flex-start;

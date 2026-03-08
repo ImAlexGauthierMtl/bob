@@ -1,0 +1,147 @@
+<!-- ═══ Fullscreen Overlay ═══ -->
+<div class="interview-overlay">
+    <!-- ── Header ── -->
+    <header class="iw-header">
+        <div class="iw-header__left">
+            <div class="iw-header__icon">
+                <i class="fa-solid fa-microphone-lines"></i>
+            </div>
+            <div class="iw-header__title">
+                <h1>Interview CEO</h1>
+                <span class="iw-header__org">{{ orgName }}</span>
+            </div>
+        </div>
+        <div class="iw-header__center">
+            <div class="iw-header__progress">
+                <div class="iw-header__progress-bar">
+                    <div class="iw-header__progress-fill" [style.width.%]="(filledCount / totalCount) * 100"></div>
+                </div>
+                <span class="iw-header__progress-text">{{ filledCount }}/{{ totalCount }}</span>
+            </div>
+            @if (lastSaveTime) {
+            <span class="iw-header__saved">
+                <i class="fa-solid fa-circle-check"></i> {{ timeSince(lastSaveTime) }}
+            </span>
+            }
+        </div>
+        <button class="iw-header__close" (click)="closeOverlay()" title="Fermer">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </header>
+
+    <!-- ── Split Layout ── -->
+    <main class="iw-main">
+        <!-- Left: Chat -->
+        <section class="iw-chat">
+            @if (!interviewStarted) {
+            <div class="iw-chat__start">
+                <div class="iw-chat__start-icon">
+                    <i class="fa-solid fa-comments"></i>
+                </div>
+                <h3>Prêt à explorer l'ADN de {{ orgName }}</h3>
+                <p>Bob va vous guider dans une conversation approfondie<br>pour définir l'essence de votre marque.</p>
+                <div class="iw-chat__start-actions">
+                    <button class="btn-start" (click)="startInterview()">
+                        <i class="fa-solid fa-keyboard"></i>
+                        Écrire
+                    </button>
+                    <button class="btn-start btn-start--voice" (click)="startInterviewWithVoice()">
+                        <i class="fa-solid fa-microphone"></i>
+                        Parler
+                    </button>
+                </div>
+            </div>
+            }
+
+            @if (interviewStarted) {
+            <!-- Voice status bar -->
+            @if (isVoiceActive) {
+            <div class="iw-voice-bar" [class.iw-voice-bar--listening]="voiceState === 'listening'"
+                [class.iw-voice-bar--speaking]="voiceState === 'speaking'"
+                [class.iw-voice-bar--processing]="voiceState === 'processing'">
+                <div class="iw-voice-bar__pulse"></div>
+                <i [class]="voiceButtonIcon"></i>
+                <span>{{ voiceStatusText }}</span>
+                <button class="iw-voice-bar__stop" (click)="stopVoice()" title="Arrêter la voix">
+                    <i class="fa-solid fa-stop"></i>
+                </button>
+            </div>
+            }
+
+            <div class="iw-chat__messages" #chatMessages>
+                @for (msg of messages; track $index) {
+                <div class="iw-msg" [class.iw-msg--user]="msg.role === 'user'" [class.iw-msg--bob]="msg.role === 'bob'">
+                    @if (msg.role === 'bob') {
+                    <div class="iw-msg__avatar">B</div>
+                    }
+                    <div class="iw-msg__content">
+                        @if (msg.isLoading) {
+                        <div class="iw-msg__typing">
+                            <span></span><span></span><span></span>
+                        </div>
+                        } @else {
+                        <p>{{ msg.text }}</p>
+                        }
+                        <span class="iw-msg__time">{{ formatTime(msg.time) }}</span>
+                    </div>
+                </div>
+                }
+            </div>
+
+            <div class="iw-chat__input">
+                <textarea [(ngModel)]="message" (keydown)="onKeydown($event)" placeholder="Votre réponse..." rows="2"
+                    [disabled]="isSending"></textarea>
+                <button class="iw-chat__voice-toggle" (click)="toggleVoice()"
+                    [class.iw-chat__voice-toggle--active]="isVoiceActive"
+                    [title]="isVoiceActive ? 'Désactiver la voix' : 'Activer la voix'">
+                    <i [class]="voiceButtonIcon"></i>
+                </button>
+                <button class="iw-chat__send" (click)="sendMessage()" [disabled]="isSending || !message.trim()">
+                    @if (isSending) {
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    } @else {
+                    <i class="fa-solid fa-arrow-up"></i>
+                    }
+                </button>
+            </div>
+            }
+        </section>
+
+        <!-- Right: Insights -->
+        <section class="iw-insights">
+            <div class="iw-insights__grid">
+                @for (block of blocks; track block.id) {
+                <div class="iw-block" [class.iw-block--empty]="block.state === 'empty'"
+                    [class.iw-block--filled]="block.state === 'populated'"
+                    [class.iw-block--saving]="block.state === 'updating'" [class.iw-block--wide]="block.wide">
+                    <div class="iw-block__head">
+                        <div class="iw-block__label">
+                            <i [class]="block.icon"></i>
+                            {{ block.label }}
+                        </div>
+                        @if (block.version > 0) {
+                        <span class="iw-block__badge">v{{ block.version }}</span>
+                        }
+                    </div>
+                    <div class="iw-block__body">
+                        @if (block.state === 'empty') {
+                        <div class="iw-block__placeholder">
+                            <div class="iw-block__placeholder-line"></div>
+                            <div class="iw-block__placeholder-line iw-block__placeholder-line--short"></div>
+                        </div>
+                        }
+                        @if (block.state === 'updating') {
+                        <div class="iw-block__saving-indicator">
+                            <i class="fa-solid fa-pen-nib"></i>
+                        </div>
+                        }
+                        @if (block.content) {
+                        <p class="iw-block__text">{{ block.content }}</p>
+                        }
+                    </div>
+                </div>
+                }
+            </div>
+        </section>
+    </main>
+</div>

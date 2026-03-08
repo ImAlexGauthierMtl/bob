@@ -27,14 +27,21 @@ class ChatRequest(BaseModel):
     """Request to send a message to Bob."""
     message: str
     session_id: Optional[str] = None
+    mission_prompt: Optional[str] = None
+    mission_context: Optional[dict] = None
 
 
 class BobAction(BaseModel):
     """An action Bob wants the UI to perform."""
-    type: str          # 'navigate' | 'open_create_dialog'
+    type: str          # 'navigate' | 'open_create_dialog' | 'ui_update_input' | 'ui_select_result' | 'change_slide'
     page: Optional[str] = None
     entity: Optional[str] = None
     name: Optional[str] = None
+    direction: Optional[str] = None
+    slide_number: Optional[int] = None
+    text: Optional[str] = None
+    submit: Optional[bool] = None
+    index: Optional[int] = None
 
 
 class ChatResponse(BaseModel):
@@ -83,6 +90,8 @@ async def bob_chat(
         user_id=current_user["user_id"],
         tenant_id=current_user["tenant_id"],
         user_email=current_user["email"],
+        mission_prompt=request.mission_prompt,
+        mission_context=request.mission_context,
     )
 
     try:

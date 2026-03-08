@@ -133,6 +133,7 @@ class TestBobChatAgent:
                 "content": "Got it!",
                 "tool_calls": None,
             })(),
+            "finish_reason": "stop",
         })()
         mock_response = type("Response", (), {
             "choices": [mock_choice],
@@ -172,6 +173,7 @@ class TestBobRoutes:
                 "content": "Hello from Bob!",
                 "tool_calls": None,
             })(),
+            "finish_reason": "stop",
         })()
         mock_response = type("Response", (), {
             "choices": [mock_choice],
@@ -226,6 +228,7 @@ class TestBobRoutes:
                 "content": "Got it!",
                 "tool_calls": None,
             })(),
+            "finish_reason": "stop",
         })()
         mock_response = type("Response", (), {
             "choices": [mock_choice],
@@ -258,6 +261,7 @@ class TestBobRoutes:
                 "content": "Hello!",
                 "tool_calls": None,
             })(),
+            "finish_reason": "stop",
         })()
         mock_response = type("Response", (), {
             "choices": [mock_choice],

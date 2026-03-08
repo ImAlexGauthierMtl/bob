@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DecimalPipe, UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -6,6 +6,8 @@ import { OrganizationService, Organization, OrganizationProfile } from '../../sh
 import { ContactService, Contact, CreateContactRequest } from '../../shared/services/contact.service';
 import { OpportunityService, Opportunity, CreateOpportunityRequest } from '../../shared/services/opportunity.service';
 import { ActivityService, Activity } from '../../shared/services/activity.service';
+import { BobActionService } from '../../shared/services/bob-action.service';
+import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'croo-organization-detail',
@@ -14,7 +16,7 @@ import { ActivityService, Activity } from '../../shared/services/activity.servic
     templateUrl: './organization-detail.html',
     styleUrl: './organization-detail.css',
 })
-export class OrganizationDetailComponent implements OnInit {
+export class OrganizationDetailComponent implements OnInit, OnDestroy {
     org: Organization | null = null;
     contacts: Contact[] = [];
     opportunities: Opportunity[] = [];
@@ -39,12 +41,15 @@ export class OrganizationDetailComponent implements OnInit {
     oppStatusMessage = '';
     parsedOppPreview: Partial<CreateOpportunityRequest> | null = null;
 
+    private bobActionSub?: Subscription;
+
     constructor(
         private route: ActivatedRoute,
         private orgService: OrganizationService,
         private contactService: ContactService,
         private oppService: OpportunityService,
         private actService: ActivityService,
+        private bobAction: BobActionService,
     ) { }
 
     ngOnInit(): void {
@@ -52,6 +57,25 @@ export class OrganizationDetailComponent implements OnInit {
         if (id) {
             this.loadOrganization(id);
         }
+
+        this.bobActionSub = this.bobAction.action$.subscribe(action => {
+            if (action.type === 'ui_switch_tab' && action.name) {
+                const validTabs = ['overview', 'profile', 'contacts', 'opportunities', 'activities'];
+                // Clean the tab name given by LLM
+                let targetTab = action.name.toLowerCase().trim();
+
+                // Try to find a match (e.g. if the user says "activity", map it to "activities")
+                const matchedTab = validTabs.find(t => t.includes(targetTab) || targetTab.includes(t));
+
+                if (matchedTab) {
+                    this.setActiveTab(matchedTab);
+                }
+            }
+        });
+    }
+
+    ngOnDestroy(): void {
+        this.bobActionSub?.unsubscribe();
     }
 
     loadOrganization(id: string): void {

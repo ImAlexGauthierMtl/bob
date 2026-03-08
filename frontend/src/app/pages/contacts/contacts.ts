@@ -48,6 +48,17 @@ export class ContactsComponent implements OnInit, OnDestroy {
         this.bobActionSub = this.bobActionService.action$.subscribe(action => {
             if (action.type === 'open_create_dialog' && action.entity === 'contact') {
                 this.openAddDialog();
+            } else if (action.type === 'ui_update_input' && this.showAddDialog) {
+                if (action.text !== undefined) {
+                    this.contactInput = action.text;
+                }
+                if (action.submit) {
+                    this.processInput();
+                }
+            } else if (action.type === 'ui_select_result' && this.showAddDialog) {
+                if (action.index === 1 && this.parsedPreview) {
+                    this.createFromParsed();
+                }
             }
         });
     }

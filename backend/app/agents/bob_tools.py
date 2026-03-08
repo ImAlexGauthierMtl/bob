@@ -23,6 +23,142 @@ BOB_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "navigate_to",
+            "description": "Navigate the user to a page in the CRM application.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "page": {
+                        "type": "string",
+                        "enum": [
+                            "dashboard", "organizations", "contacts",
+                            "opportunities", "quotes", "activities",
+                            "settings", "settings/team", "knowledge-base",
+                            "template/crm-mastery",
+                        ],
+                        "description": "The page to navigate to.",
+                    },
+                },
+                "required": ["page"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "open_create_dialog",
+            "description": "CRITICAL: Navigate to an entity list page and open the create/add new item dialog. ALWAYS use this if the user says 'Add', 'Create', 'New', 'Ajouter', 'Créer' (e.g., 'Add TELUS mobility to my CRM'). If the user mentions a name, pass it so the search can be pre-filled.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entity": {
+                        "type": "string",
+                        "enum": [
+                            "organization", "contact", "opportunity",
+                            "quote", "activity",
+                        ],
+                        "description": "The entity type to create.",
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Optional name/company name mentioned by the user to pre-fill the search field.",
+                    },
+                },
+                "required": ["entity"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "ui_update_input",
+            "description": "CRITICAL: Update the text in an open search or creation dialog. Use this to correct spelling mistakes or initiate a search/parsing. Set submit=true if the user is finished dictating and wants to run the search or parsing process.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "description": "The text to input into the field.",
+                    },
+                    "submit": {
+                        "type": "boolean",
+                        "description": "Whether to auto-submit/search after changing the text.",
+                    },
+                },
+                "required": ["text", "submit"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "ui_select_result",
+            "description": "CRITICAL: Select a specific numbered result from a list in the UI. For example, if the user says 'choose number 2', you would pass 2.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "index": {
+                        "type": "integer",
+                        "description": "The 1-based index of the item to select (e.g. 1 for the first item).",
+                    },
+                },
+                "required": ["index"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "ui_switch_tab",
+            "description": "CRITICAL: Switch or open a specific tab inside the current view (or within an entity's profile). Usually used when a user asks to see 'Profile', 'Contacts', 'Activities', 'Account & Security', 'Notifications', 'Automation', etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tab_name": {
+                        "type": "string",
+                        "description": "The exact name or identifier of the tab to switch to (e.g., 'profile', 'contacts', 'overview', 'security', 'automation'). Should be lowercase.",
+                    },
+                },
+                "required": ["tab_name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "start_crm_training",
+            "description": "CRITICAL: Start the CRM Mastery training session. Navigate the user to the training page immediately. Call this whenever the user asks for training, says 'I want to do my training', 'start the CRM training', 'je veux faire ma formation', or complains that the presentation/training is not on screen (e.g. 'ne montre pas la présentation', 'you should bring it'). Do NOT answer verbally, JUST call this tool.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_and_open_entity",
+            "description": "CRITICAL: Used ONLY when the user asks to OPEN or ACCESS an existing entity (like 'open Bell', 'go to John Doe'). It searches for it, and if found, directly navigates the UI to its detailed page. Do NOT use this tool if the user says 'Add', 'Create', 'New'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entity": {
+                        "type": "string",
+                        "enum": ["organization", "contact", "opportunity"],
+                        "description": "The type of entity to find and open.",
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "The name or email of the entity to search for.",
+                    },
+                },
+                "required": ["entity", "query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "search_contacts",
             "description": "Search CRM contacts by name, email, or company. Returns matching contacts with their details.",
             "parameters": {
@@ -229,6 +365,101 @@ BOB_TOOLS = [
             },
         },
     },
+    # ── Training tools ───────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "save_training_note",
+            "description": (
+                "Save a note during training when the user asks to take a note, "
+                "write something down, or remember something. Capture the key insight."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Training session UUID",
+                    },
+                    "slide_id": {
+                        "type": "integer",
+                        "description": "Current slide number (0-indexed)",
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "The note content to save",
+                    },
+                    "note_type": {
+                        "type": "string",
+                        "description": "Type of note",
+                        "enum": ["insight", "action", "important"],
+                        "default": "insight",
+                    },
+                },
+                "required": ["session_id", "content"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "save_missing_element",
+            "description": (
+                "Log a missing feature, integration, or process that the user identifies "
+                "during training. For example: 'we need Zoho integration', "
+                "'there should be an auto-follow-up feature', etc."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Training session UUID",
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "Short label for the missing element (e.g. 'Zoho CRM Integration')",
+                    },
+                    "category": {
+                        "type": "string",
+                        "description": "Category of the missing element",
+                        "enum": ["integration", "feature", "process"],
+                        "default": "integration",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Detailed description of what's missing and why",
+                    },
+                },
+                "required": ["session_id", "label"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "change_training_slide",
+            "description": (
+                "Navigate training slides when the user says 'next slide', "
+                "'previous slide', 'go to slide 5', etc."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "direction": {
+                        "type": "string",
+                        "description": "Navigation direction",
+                        "enum": ["next", "previous", "goto"],
+                    },
+                    "slide_number": {
+                        "type": "integer",
+                        "description": "Target slide number (1-indexed, only for 'goto' direction)",
+                    },
+                },
+                "required": ["direction"],
+            },
+        },
+    },
 ]
 
 
@@ -275,6 +506,12 @@ async def execute_tool(
             return await _bcc_update_profile(db_session, user_id=user_id, **arguments)
         elif tool_name == "bcc_get_profile":
             return await _bcc_get_profile(db_session, **arguments)
+        elif tool_name == "save_training_note":
+            return await _save_training_note(db_session, user_id=user_id, **arguments)
+        elif tool_name == "save_missing_element":
+            return await _save_missing_element(db_session, user_id=user_id, **arguments)
+        elif tool_name == "change_training_slide":
+            return await _change_training_slide(**arguments)
         else:
             return f"Unknown tool: {tool_name}"
     except Exception as e:
@@ -525,3 +762,91 @@ async def _bcc_get_profile(
         lines.append(f"  {perspective_label} v{e.version}: {content_preview}")
 
     return "\n".join(lines)
+
+
+# ── Training tool implementations ────────────────────────────
+
+async def _save_training_note(
+    db_session,
+    user_id: str,
+    session_id: str,
+    content: str,
+    slide_id: int = 0,
+    note_type: str = "insight",
+) -> str:
+    """Save a training note to the database."""
+    import uuid
+    from app.domain.entities.training_models import TrainingNote
+
+    note = TrainingNote(
+        id=str(uuid.uuid4()),
+        session_id=session_id,
+        user_id=user_id,
+        slide_id=slide_id,
+        content=content,
+        note_type=note_type,
+    )
+    db_session.add(note)
+    db_session.commit()
+
+    logger.info(
+        "training_note_saved",
+        note_id=note.id,
+        session_id=session_id,
+        note_type=note_type,
+    )
+
+    return f"Note saved: '{content[:60]}...' (type: {note_type})"
+
+
+async def _save_missing_element(
+    db_session,
+    user_id: str,
+    session_id: str,
+    label: str,
+    category: str = "integration",
+    description: str = "",
+) -> str:
+    """Save a missing element to the database."""
+    import uuid
+    from app.domain.entities.training_models import TrainingMissingElement
+
+    item = TrainingMissingElement(
+        id=str(uuid.uuid4()),
+        session_id=session_id,
+        user_id=user_id,
+        label=label,
+        category=category,
+        description=description,
+    )
+    db_session.add(item)
+    db_session.commit()
+
+    logger.info(
+        "training_missing_saved",
+        item_id=item.id,
+        session_id=session_id,
+        label=label,
+        category=category,
+    )
+
+    return f"Missing element logged: '{label}' (category: {category})"
+
+
+async def _change_training_slide(
+    direction: str,
+    slide_number: int = 0,
+) -> str:
+    """Return a slide navigation action for the frontend.
+
+    The actual navigation happens on the frontend — this just returns
+    a JSON-serializable result that the chat agent sends as an action.
+    """
+    import json
+
+    result = {"action": "change_slide", "direction": direction}
+    if direction == "goto" and slide_number:
+        result["slide_number"] = slide_number
+
+    return json.dumps(result)
+

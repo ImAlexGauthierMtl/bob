@@ -24,6 +24,10 @@
                 </p>
             </div>
         </div>
+        <button class="btn-interview-ceo" (click)="launchCeoInterview()" title="Lancer l'interview CEO avec Bob">
+            <i class="fa-solid fa-microphone-lines"></i>
+            <span>Alex</span>
+        </button>
     </div>
 
     <div class="role-header__tabs">
@@ -367,4 +371,9 @@
     }
 
 </main>
+}
+
+@if (showInterview && org) {
+<croo-bcc-interview [orgId]="org.id" [orgName]="org.name" (close)="closeInterview()">
+</croo-bcc-interview>
 }

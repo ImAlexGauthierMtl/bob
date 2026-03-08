@@ -66,7 +66,7 @@
             <tbody>
                 @for (o of opportunities; track o.id) {
                 <tr>
-                    <td><a class="opp-link">
+                    <td><a class="opp-link" [routerLink]="'/opportunities/' + o.id">
                             <p class="opp-name">{{ o.name }}</p>
                             @if (o.description) {
                             <p class="opp-id">{{ o.description }}</p>

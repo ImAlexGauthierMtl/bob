@@ -58,6 +58,17 @@ export class OrganizationsComponent implements OnInit, OnDestroy {
             if (action.type === 'open_create_dialog' && action.entity === 'organization') {
                 console.log('[Organizations] ✅ match! calling openAddDialog()');
                 this.openAddDialog(action.name);
+            } else if (action.type === 'ui_update_input' && this.showAddDialog) {
+                if (action.text !== undefined) {
+                    this.searchQuery = action.text;
+                }
+                if (action.submit) {
+                    this.searchMaps();
+                }
+            } else if (action.type === 'ui_select_result' && this.showAddDialog) {
+                if (action.index !== undefined && action.index > 0 && this.searchResults.length >= action.index) {
+                    this.selectPlace(this.searchResults[action.index - 1]);
+                }
             }
         });
     }

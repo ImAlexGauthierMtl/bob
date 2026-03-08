@@ -6,11 +6,12 @@ import {
     BccIndustry, BccRegulation, BccOrgProfile,
     BccProfile, BccProfileSection, BccProfileEntry, BccPerspective,
 } from '../../../../shared/services/bcc.service';
+import { BccInterviewComponent } from '../bcc-interview/bcc-interview';
 
 @Component({
     selector: 'croo-bcc-role-detail',
     standalone: true,
-    imports: [RouterLink, UpperCasePipe, DatePipe, LowerCasePipe],
+    imports: [RouterLink, UpperCasePipe, DatePipe, LowerCasePipe, BccInterviewComponent],
     templateUrl: './bcc-role-detail.html',
     styleUrls: [
         '../../settings-shared.css',
@@ -54,6 +55,8 @@ export class BccRoleDetailComponent implements OnInit {
     private bccService = inject(BccService);
     private route = inject(ActivatedRoute);
 
+    showInterview = false;
+
     ngOnInit(): void {
         const orgId = this.route.snapshot.paramMap.get('roleId');
         if (orgId) {
@@ -72,6 +75,15 @@ export class BccRoleDetailComponent implements OnInit {
             },
             error: () => { this.isLoading = false; },
         });
+    }
+
+    launchCeoInterview(): void {
+        if (!this.org) return;
+        this.showInterview = true;
+    }
+
+    closeInterview(): void {
+        this.showInterview = false;
     }
 
     // ── Profile entries system ───────────────────────

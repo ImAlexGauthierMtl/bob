@@ -15,8 +15,11 @@ from app.voice.voice_session import VoiceSession
 
 logger = structlog.get_logger(__name__)
 
-BOB_VOICE_SYSTEM_PROMPT = """You are Bob, an intelligent CRM assistant for Croo Digital Experience.
-You are having a real-time voice conversation with a user.
+BOB_VOICE_SYSTEM_PROMPT = """# ── Role Context ─────────────────
+- You are Bob, an elite AI assistant for the Croo Digital Experience CRM.
+- Your capabilities include answering questions, navigating the CRM, creating records, and initiating training modules.
+- CRITICAL: If the user asks for their training (e.g. "ma formation CRM", "start training") or complains the presentation isn't showing ("ne montre pas la présentation", "I don't see the presentation"), you MUST immediately call the `start_crm_training` tool. Do NOT just say "I don't see it". Let the tool do the navigation.
+- You are having a real-time voice conversation with a user.
 
 Your capabilities:
 - Answer questions about CRM data and best practices
@@ -30,6 +33,14 @@ When the user asks to go somewhere or create something, USE YOUR TOOLS:
 - "go to contacts" → call navigate_to with page="contacts"
 - "add an organization" → call open_create_dialog with entity="organization"
 - "new opportunity" → call open_create_dialog with entity="opportunity"
+- "I want to do my CRM training" → call start_crm_training
+- "let's start the training" → call start_crm_training
+- "create a new user" → call navigate_to with page="settings" and explain that user management defaults to the UI for security reasons.
+
+UI Control & Chaining:
+- To correct a misheard spelling in a search/create dialog: call `ui_update_input` with the corrected text. Use submit=true if the user is done dictating.
+- To select a specific numbered result from a list (e.g., "choose number 2", "prends le premier"): call `ui_select_result` with index=2 or 1.
+- Chaining: if the user asks to create an organization and then add a contact to it, you can navigate them step by step or use multiple tool calls. Guide them fluidly.
 
 After calling a tool, confirm what you did briefly (e.g. "Done, I've opened the contacts page for you.").
 
@@ -130,64 +141,9 @@ async def create_bob_voice_pipeline(
         model=settings.groq_whisper_model,
     )
 
-    # ── LLM (Qwen3 32B on Groq) ─────────────────────────
-    tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": "navigate_to",
-                "description": "Navigate the user to a page in the CRM application.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "page": {
-                            "type": "string",
-                            "enum": [
-                                "dashboard",
-                                "organizations",
-                                "contacts",
-                                "opportunities",
-                                "quotes",
-                                "activities",
-                                "settings",
-                                "knowledge-base",
-                            ],
-                            "description": "The page to navigate to.",
-                        },
-                    },
-                    "required": ["page"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "open_create_dialog",
-                "description": "Navigate to an entity list page and open the create/add new item dialog. If the user mentions a name, pass it so the search can be pre-filled.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "entity": {
-                            "type": "string",
-                            "enum": [
-                                "organization",
-                                "contact",
-                                "opportunity",
-                                "quote",
-                                "activity",
-                            ],
-                            "description": "The entity type to create.",
-                        },
-                        "name": {
-                            "type": "string",
-                            "description": "Optional name/company name mentioned by the user to pre-fill the search field.",
-                        },
-                    },
-                    "required": ["entity"],
-                },
-            },
-        },
-    ]
+    # ── LLM (Llama 3.3 70B on Groq) ─────────────────────────
+    from app.agents.bob_tools import BOB_TOOLS
+    tools = BOB_TOOLS
 
     llm = GroqLLMService(
         api_key=settings.groq_api_key,
@@ -214,56 +170,131 @@ async def create_bob_voice_pipeline(
     llm._process_context = _debug_process_context
 
     # ── Function call handlers ───────────────────────────
-    # New Pipecat API: handler receives FunctionCallParams.
-    # MUST call params.result_callback(result) to push result back into pipeline.
-    # We also push RTVIServerMessageFrame so the frontend gets the action
-    # immediately via RTVIEvent.ServerMessage (RTVI function call events
-    # are unreliable with the WebSocket transport).
     task_ref: list = []  # mutable container — filled after PipelineTask creation
 
-    async def handle_navigate(params):
-        page = params.arguments.get("page", "dashboard")
-        logger.info("bob_action_navigate", page=page, session_id=session.session_id)
-        # Push action to frontend via server message
-        if task_ref:
-            from pipecat.processors.frameworks.rtvi import RTVIServerMessageFrame
-            action = {"type": "bob_action", "action": {"type": "navigate", "page": page}}
-            await task_ref[0].queue_frame(RTVIServerMessageFrame(data=action))
-        await params.result_callback({"status": "ok", "action": "navigate", "page": page})
+    async def handle_any_tool(params):
+        fn = params.function_name
+        args = params.arguments
+        logger.info("bob_voice_tool_call", session_id=session.session_id, function=fn, arguments=args)
 
-    async def handle_create_dialog(params):
-        entity = params.arguments.get("entity", "contact")
-        name = params.arguments.get("name")
-        page_map = {
-            "organization": "organizations",
-            "contact": "contacts",
-            "opportunity": "opportunities",
-            "quote": "quotes",
-            "activity": "activities",
-        }
-        page = page_map.get(entity, "contacts")
-        logger.info(
-            "bob_action_create_dialog",
-            entity=entity,
-            name=name,
-            page=page,
-            session_id=session.session_id,
-        )
-        action: dict = {"type": "open_create_dialog", "entity": entity, "page": page}
-        if name:
-            action["name"] = name
-        # Push action to frontend via server message
-        if task_ref:
-            from pipecat.processors.frameworks.rtvi import RTVIServerMessageFrame
-            server_msg = {"type": "bob_action", "action": action}
-            await task_ref[0].queue_frame(RTVIServerMessageFrame(data=server_msg))
-        result = {"status": "ok", "action": "open_create_dialog", "entity": entity, "page": page}
-        if name:
-            result["name"] = name
-        await params.result_callback(result)
+        if fn == "navigate_to":
+            page = args.get("page", "dashboard")
+            if task_ref:
+                from pipecat.processors.frameworks.rtvi import RTVIServerMessageFrame
+                action = {"type": "bob_action", "action": {"type": "navigate", "page": page}}
+                await task_ref[0].queue_frame(RTVIServerMessageFrame(data=action))
+            await params.result_callback({"status": "ok", "action": "navigate", "page": page})
+            
+        elif fn == "open_create_dialog":
+            entity = args.get("entity", "contact")
+            name = args.get("name")
+            page_map = {
+                "organization": "organizations", "contact": "contacts",
+                "opportunity": "opportunities", "quote": "quotes", "activity": "activities",
+            }
+            page = page_map.get(entity, "contacts")
+            action: dict = {"type": "open_create_dialog", "entity": entity, "page": page}
+            if name:
+                action["name"] = name
+            if task_ref:
+                from pipecat.processors.frameworks.rtvi import RTVIServerMessageFrame
+                server_msg = {"type": "bob_action", "action": action}
+                await task_ref[0].queue_frame(RTVIServerMessageFrame(data=server_msg))
+            result = {"status": "ok", "action": "open_create_dialog", "entity": entity, "page": page}
+            if name: result["name"] = name
+            await params.result_callback(result)
+            
+        elif fn == "start_crm_training":
+            page = "template/crm-mastery"
+            if task_ref:
+                from pipecat.processors.frameworks.rtvi import RTVIServerMessageFrame
+                action = {"type": "bob_action", "action": {"type": "navigate", "page": page}}
+                await task_ref[0].queue_frame(RTVIServerMessageFrame(data=action))
+            await params.result_callback({"status": "ok", "action": "navigate", "page": page})
+            
+        elif fn == "change_training_slide":
+            action_dict = {
+                "type": "change_slide",
+                "direction": args.get("direction", "next"),
+            }
+            slide_num = args.get("slide_number")
+            if slide_num is not None:
+                action_dict["slide_number"] = slide_num
+            if task_ref:
+                from pipecat.processors.frameworks.rtvi import RTVIServerMessageFrame
+                server_msg = {"type": "bob_action", "action": action_dict}
+                await task_ref[0].queue_frame(RTVIServerMessageFrame(data=server_msg))
+            await params.result_callback({"status": "ok"})
+            
+        elif fn == "ui_update_input":
+            action_dict = {
+                "type": "ui_update_input",
+                "text": args.get("text", ""),
+                "submit": args.get("submit", False)
+            }
+            if task_ref:
+                from pipecat.processors.frameworks.rtvi import RTVIServerMessageFrame
+                server_msg = {"type": "bob_action", "action": action_dict}
+                await task_ref[0].queue_frame(RTVIServerMessageFrame(data=server_msg))
+            await params.result_callback({"status": "ok"})
+            
+        elif fn == "ui_select_result":
+            action_dict = {
+                "type": "ui_select_result",
+                "index": args.get("index", 1)
+            }
+            if task_ref:
+                from pipecat.processors.frameworks.rtvi import RTVIServerMessageFrame
+                server_msg = {"type": "bob_action", "action": action_dict}
+                await task_ref[0].queue_frame(RTVIServerMessageFrame(data=server_msg))
+            await params.result_callback({"status": "ok"})
 
-    llm.register_function("navigate_to", handle_navigate)
-    llm.register_function("open_create_dialog", handle_create_dialog)
+        elif fn == "ui_switch_tab":
+            action_dict = {
+                "type": "ui_switch_tab",
+                "tab_name": args.get("tab_name", ""),
+            }
+            if task_ref:
+                from pipecat.processors.frameworks.rtvi import RTVIServerMessageFrame
+                server_msg = {"type": "bob_action", "action": action_dict}
+                await task_ref[0].queue_frame(RTVIServerMessageFrame(data=server_msg))
+            await params.result_callback({"status": "ok"})
+            
+        else:
+            # Execute backend CRM tool
+            from app.agents.tool_executor import execute_bob_tool
+            from app.infrastructure.database import SessionLocal
+            db = SessionLocal()
+            try:
+                user_context = {
+                    "user_id": user_id,
+                    "tenant_id": session.tenant_id,
+                    "session_id": session.session_id,
+                }
+                result = await execute_bob_tool(fn, args, user_context, db)
+
+                # Catch dynamic actions returned from tools (like navigate from search_and_open_entity)
+                if result and isinstance(result, dict) and result.get("status") == "ok" and "action" in result:
+                    if task_ref:
+                        from pipecat.processors.frameworks.rtvi import RTVIServerMessageFrame
+                        ui_action = result.copy()
+                        ui_action.pop("status", None)
+                        ui_action.pop("message", None)
+                        ui_action.pop("results", None)
+                        ui_action["type"] = ui_action.pop("action")
+                        server_msg = {"type": "bob_action", "action": ui_action}
+                        await task_ref[0].queue_frame(RTVIServerMessageFrame(data=server_msg))
+
+                await params.result_callback(result)
+            except Exception as e:
+                logger.error("voice_tool_error", error=str(e), function=fn)
+                await params.result_callback({"status": "error", "message": "Backend error"})
+            finally:
+                db.close()
+
+    for t in tools:
+        fn_name = t["function"]["name"]
+        llm.register_function(fn_name, handle_any_tool)
 
     # ── TTS (Orpheus on Groq) ────────────────────────────
     # Read user's saved voice/personality preferences from DB
@@ -346,8 +377,29 @@ Emotion expressiveness for your current tone:
         params=GroqTTSService.InputParams(speed=tts_speed),
     )
 
+    # ── BCC Context Injection ────────────────────────────
+    bcc_context = ""
+    try:
+        from app.infrastructure.database import SessionLocal
+        from app.agents.knowledge.knowledge_extractor import get_active_layer_profile_context
+        db = SessionLocal()
+        try:
+            bcc_context = await get_active_layer_profile_context(
+                db=db,
+                context_type="tenant",
+                context_id=session.tenant_id
+            )
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning("voice_bcc_context_lookup_failed", error=str(e))
+
     # ── LLM Context with system prompt ───────────────────
-    system_prompt = BOB_VOICE_SYSTEM_PROMPT + personality_directives
+    system_prompt = BOB_VOICE_SYSTEM_PROMPT
+    if bcc_context:
+        system_prompt += f"\n\n# ── Organizational Context (BCC Profile) ──\n{bcc_context}\n"
+    system_prompt += f"\n\n{personality_directives}"
+    
     messages = [
         {"role": "system", "content": system_prompt},
     ]
@@ -359,76 +411,7 @@ Emotion expressiveness for your current tone:
     context = OpenAILLMContext(messages, tools)
     context_aggregator = llm.create_context_aggregator(context)
 
-    # ── Think tag filter (Qwen3 chain-of-thought cleanup) ─
-    import re
-    from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
-    from pipecat.frames.frames import TextFrame
-
-    class ThinkTagFilter(FrameProcessor):
-        """Strip <think>...</think> blocks from streaming LLM text.
-
-        Robust approach: uses regex for complete blocks + state tracking
-        for streaming where tags arrive in separate tokens.
-        """
-
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
-            self._in_think = False
-            self._buffer = ""
-
-        async def process_frame(self, frame, direction: FrameDirection):
-            await super().process_frame(frame, direction)
-
-            if not isinstance(frame, TextFrame):
-                await self.push_frame(frame, direction)
-                return
-
-            text = frame.text
-
-            # If currently inside a think block, buffer until we see </think>
-            if self._in_think:
-                self._buffer += text
-                if "</think>" in self._buffer:
-                    # Extract everything after </think>
-                    after = self._buffer.split("</think>", 1)[1]
-                    self._in_think = False
-                    self._buffer = ""
-                    if after.strip():
-                        await self.push_frame(TextFrame(text=after), direction)
-                return
-
-            # Check if this text contains <think> (possibly partial)
-            if "<think>" in text:
-                # Split on <think> - keep before, discard after (until </think>)
-                before, after = text.split("<think>", 1)
-                if "</think>" in after:
-                    # Complete think block in one frame
-                    remainder = after.split("</think>", 1)[1]
-                    clean = before + remainder
-                else:
-                    # Open think block - enter buffering mode
-                    self._in_think = True
-                    self._buffer = after
-                    clean = before
-
-                if clean.strip():
-                    await self.push_frame(TextFrame(text=clean), direction)
-                return
-
-            # Also catch the <think tag arriving as a partial token
-            if "<think" in text and ">" not in text.split("<think", 1)[1]:
-                # Partial <think tag - might be "<think" without ">"
-                before = text.split("<think", 1)[0]
-                self._in_think = True
-                self._buffer = ""
-                if before.strip():
-                    await self.push_frame(TextFrame(text=before), direction)
-                return
-
-            # No think tags — pass through
-            await self.push_frame(frame, direction)
-
-    think_filter = ThinkTagFilter()
+    # (Think tag filter removed as Llama-3.3 doesn't output <think> tags like Qwen3)
 
     # ── Pipeline ─────────────────────────────────────────
     pipeline = Pipeline(
@@ -437,7 +420,6 @@ Emotion expressiveness for your current tone:
             stt,                        # Speech-to-text
             context_aggregator.user(),  # Aggregate user transcript
             llm,                        # LLM response
-            think_filter,               # Strip <think> tags
             tts,                        # Text-to-speech
             transport.output(),         # WebSocket audio out
             context_aggregator.assistant(),  # Store assistant response

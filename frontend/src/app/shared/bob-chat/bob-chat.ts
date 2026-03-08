@@ -1,8 +1,9 @@
-import { Component, inject, ViewChild, ElementRef, AfterViewChecked, OnDestroy, NgZone } from '@angular/core';
+import { Component, inject, ViewChild, ElementRef, AfterViewChecked, OnDestroy, OnInit, NgZone } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { BobService } from '../services/bob.service';
 import { AuthService } from '../services/auth.service';
-import { BobActionService, BobAction } from '../services/bob-action.service';
+import { BobActionService, BobAction, BobMission } from '../services/bob-action.service';
 import { PipecatClient, RTVIEvent } from '@pipecat-ai/client-js';
 import { WebSocketTransport } from '@pipecat-ai/websocket-transport';
 
@@ -32,12 +33,14 @@ const MAX_RECONNECT_ATTEMPTS = 3;
     templateUrl: './bob-chat.html',
     styleUrl: './bob-chat.css',
 })
-export class BobChatComponent implements AfterViewChecked, OnDestroy {
+export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
 
     private bobService = inject(BobService);
     private authService = inject(AuthService);
     private bobActionService = inject(BobActionService);
+    private missionSub!: Subscription;
+    private missionUpdateSub?: Subscription;
 
     isOpen = false;
     message = '';
@@ -45,6 +48,11 @@ export class BobChatComponent implements AfterViewChecked, OnDestroy {
     isLoading = false;
     sessionId: string | undefined;
     private shouldScrollToBottom = false;
+
+    // ── Mission state ───────────────────────────────────
+    activeMissionPrompt: string | undefined;
+    activeMissionContext: Record<string, unknown> | undefined;
+    isMissionActive = false;
 
     // ── Voice state ─────────────────────────────────────
     voiceState: VoiceState = 'idle';
@@ -86,6 +94,15 @@ export class BobChatComponent implements AfterViewChecked, OnDestroy {
         },
     ];
 
+    ngOnInit(): void {
+        this.missionSub = this.bobActionService.mission$.subscribe((mission: BobMission) => {
+            this.startMission(mission);
+        });
+        this.missionUpdateSub = this.bobActionService.missionUpdate$.subscribe((mission: BobMission) => {
+            this.updateMission(mission);
+        });
+    }
+
     ngAfterViewChecked(): void {
         if (this.shouldScrollToBottom) {
             this.scrollToBottom();
@@ -95,6 +112,8 @@ export class BobChatComponent implements AfterViewChecked, OnDestroy {
 
     ngOnDestroy(): void {
         this.disconnectVoice();
+        if (this.missionSub) this.missionSub.unsubscribe();
+        if (this.missionUpdateSub) this.missionUpdateSub.unsubscribe();
     }
 
     toggle(): void {
@@ -136,7 +155,7 @@ export class BobChatComponent implements AfterViewChecked, OnDestroy {
         };
         this.messages.push(loadingMsg);
 
-        this.bobService.chat(userMsg, this.sessionId).subscribe({
+        this.bobService.chat(userMsg, this.sessionId, this.activeMissionPrompt, this.activeMissionContext).subscribe({
             next: (response) => {
                 const idx = this.messages.indexOf(loadingMsg);
                 if (idx > -1) this.messages.splice(idx, 1);
@@ -150,6 +169,12 @@ export class BobChatComponent implements AfterViewChecked, OnDestroy {
                 this.sessionId = response.session_id;
                 this.isLoading = false;
                 this.shouldScrollToBottom = true;
+
+                // After first mission message is sent, clear the prompt
+                // (backend session already has it, no need to resend)
+                if (this.activeMissionPrompt) {
+                    this.activeMissionPrompt = undefined;
+                }
 
                 // Dispatch any actions from tool calls
                 if (response.actions && response.actions.length > 0) {
@@ -268,6 +293,10 @@ export class BobChatComponent implements AfterViewChecked, OnDestroy {
             this.pipecatClient.on(RTVIEvent.BotStoppedSpeaking, () => {
                 this.ngZone.run(() => {
                     this.voiceState = 'listening';
+                    // Auto-listen: reconnect mic after Bob finishes his response
+                    if (this.pipecatClient) {
+                        this.pipecatClient.enableMic(true);
+                    }
                 });
             });
 
@@ -378,6 +407,11 @@ export class BobChatComponent implements AfterViewChecked, OnDestroy {
                             page: action.page,
                             entity: action.entity,
                             name: action.name,
+                            direction: action.direction,
+                            slide_number: action.slide_number,
+                            text: action.text,
+                            submit: action.submit,
+                            index: action.index,
                         });
                     }
                 });
@@ -420,6 +454,58 @@ export class BobChatComponent implements AfterViewChecked, OnDestroy {
     launchWorkflow(wf: QuickWorkflow): void {
         this.message = wf.label;
         this.sendMessage();
+    }
+
+    /**
+     * Start a mission-driven conversation with Bob.
+     * Opens the chat panel, resets the session, and sends the initial message.
+     */
+    startMission(mission: BobMission): void {
+        // Open chat if not open
+        this.isOpen = true;
+        this.hasUnread = false;
+
+        // Reset session for fresh mission
+        this.sessionId = undefined;
+        this.activeMissionPrompt = mission.missionPrompt;
+        this.activeMissionContext = mission.missionContext;
+        this.isMissionActive = true;
+
+        // Add system-like message to indicate mission start
+        this.messages.push({
+            role: 'bob',
+            text: '🎯 **Mission activée** — Interview CEO en cours. Bob est maintenant en mode intervieweur psychodynamique.',
+            time: new Date(),
+        });
+        this.shouldScrollToBottom = true;
+
+        // Send the initial message
+        this.message = mission.initialMessage;
+        this.sendMessage();
+    }
+
+    /**
+     * Update an ongoing mission with new context (e.g. slide changed).
+     * Does NOT reset the session.
+     */
+    updateMission(mission: BobMission): void {
+        this.activeMissionPrompt = mission.missionPrompt;
+        this.activeMissionContext = mission.missionContext;
+
+        if (this.isVoiceActive && this.pipecatClient) {
+            // Inject new context directly into the running Pipecat Voice pipeline
+            // using the 'user' role with a system-like formatting to instruct Bob
+            console.log('[Bob Chat] Injecting mission update to Pipecat context');
+            this.pipecatClient.appendToContext({
+                role: 'user',
+                content: `[SYSTEM CONTEXT UPDATE] ${mission.initialMessage}`,
+                run_immediately: true,
+            });
+        } else if (this.isOpen) {
+            // Text chat is open, just post the message
+            this.message = `[SYSTEM CONTEXT UPDATE] ${mission.initialMessage}`;
+            this.sendMessage();
+        }
     }
 
     formatTime(date: Date): string {

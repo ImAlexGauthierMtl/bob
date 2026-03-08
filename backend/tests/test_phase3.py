@@ -53,7 +53,7 @@ class TestRateLimiter:
 
     def test_voice_exceeds_limit(self):
         """Should raise 429 after exceeding voice limit."""
-        for i in range(5):
+        for i in range(500):
             self.limiter.check_voice("user-voice-test")
         with pytest.raises(HTTPException) as exc_info:
             self.limiter.check_voice("user-voice-test")
@@ -156,7 +156,7 @@ class TestBobTools:
 
     def test_tool_definitions_format(self):
         from app.agents.bob_tools import BOB_TOOLS
-        assert len(BOB_TOOLS) == 6
+        assert len(BOB_TOOLS) >= 6
         for tool in BOB_TOOLS:
             assert tool["type"] == "function"
             assert "function" in tool

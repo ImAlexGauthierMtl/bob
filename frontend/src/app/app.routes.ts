@@ -84,6 +84,13 @@ export const routes: Routes = [
                     ),
             },
             {
+                path: 'tasks',
+                loadComponent: () =>
+                    import('./pages/activities/activities').then(
+                        (m) => m.ActivitiesComponent
+                    ),
+            },
+            {
                 path: 'settings',
                 loadComponent: () =>
                     import('./pages/settings/settings').then(
@@ -216,6 +223,7 @@ export const routes: Routes = [
                     },
                 ],
             },
+
             {
                 path: 'knowledge-base',
                 loadComponent: () =>
@@ -229,6 +237,25 @@ export const routes: Routes = [
                     import('./pages/knowledge-base/kb-article').then(
                         (m) => m.KBArticleComponent
                     ),
+            },
+            {
+                path: 'template',
+                children: [
+                    {
+                        path: '',
+                        loadComponent: () =>
+                            import('./pages/training-template/training-template').then(
+                                (m) => m.TrainingTemplateComponent
+                            ),
+                    },
+                    {
+                        path: 'crm-mastery',
+                        loadComponent: () =>
+                            import('./pages/training-template/training-crm-mastery/training-crm-mastery').then(
+                                (m) => m.TrainingCrmMasteryComponent
+                            ),
+                    },
+                ],
             },
             {
                 path: '',

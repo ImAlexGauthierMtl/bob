@@ -27,6 +27,12 @@ Your capabilities:
 - Provide insights about sales pipelines and opportunities
 - Assist with workflow automation and task management
 - Offer suggestions for follow-ups and engagement strategies
+- CRITICAL: If the user asks for their training (e.g. "ma formation CRM", "start training") or complains the presentation isn't showing ("ne montre pas la présentation", "I don't see the presentation"), you MUST immediately call the `start_crm_training` tool. Do NOT just say "I don't see it". Let the tool do the navigation.
+
+UI Controls & Chained Actions:
+- When the user asks to change the text in a search/create dialog, use `ui_update_input`. Set submit=true if they want to execute the search immediately.
+- When the user says "choose number X", "select the second one", use `ui_select_result` with the requested index.
+- You can CHAIN actions: if the user says "create organization Shopify, choose the first result, then create contact Tobi", you must generate multiple tool calls in sequence if possible, or accomplish them step by step. Do your best to guide them through the UI fluently.
 
 Communication style:
 - Professional but friendly
@@ -48,10 +54,19 @@ _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 class ChatSession:
     """A single user's chat session with Bob."""
 
-    def __init__(self, user_id: str, tenant_id: str, user_email: str):
+    def __init__(
+        self,
+        user_id: str,
+        tenant_id: str,
+        user_email: str,
+        mission_prompt: Optional[str] = None,
+        mission_context: Optional[dict] = None,
+    ):
         self.user_id = user_id
         self.tenant_id = tenant_id
         self.user_email = user_email
+        self.mission_prompt = mission_prompt
+        self.mission_context = mission_context or {}
         self.messages: list[dict[str, str]] = []
         self.created_at = time.time()
         self.last_activity = time.time()
@@ -103,6 +118,8 @@ class BobChatAgent:
         user_id: str,
         tenant_id: str,
         user_email: str,
+        mission_prompt: Optional[str] = None,
+        mission_context: Optional[dict] = None,
     ) -> ChatSession:
         """Get existing session or create a new one."""
         with self._lock:
@@ -114,65 +131,19 @@ class BobChatAgent:
                     user_id=user_id,
                     tenant_id=tenant_id,
                     user_email=user_email,
+                    mission_prompt=mission_prompt,
+                    mission_context=mission_context,
                 )
                 logger.info(
                     "bob_session_created",
                     session_id=session_id,
                     user=user_email,
+                    has_mission=mission_prompt is not None,
                 )
 
             return self._sessions[session_id]
 
-    # ── CRM action tools (same as voice pipeline) ───────
-    TOOLS = [
-        {
-            "type": "function",
-            "function": {
-                "name": "navigate_to",
-                "description": "Navigate the user to a page in the CRM application.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "page": {
-                            "type": "string",
-                            "enum": [
-                                "dashboard", "organizations", "contacts",
-                                "opportunities", "quotes", "activities",
-                                "settings", "knowledge-base",
-                            ],
-                            "description": "The page to navigate to.",
-                        },
-                    },
-                    "required": ["page"],
-                },
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "open_create_dialog",
-                "description": "Navigate to an entity list page and open the create/add new item dialog. If the user mentions a name, pass it so the search can be pre-filled.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "entity": {
-                            "type": "string",
-                            "enum": [
-                                "organization", "contact", "opportunity",
-                                "quote", "activity",
-                            ],
-                            "description": "The entity type to create.",
-                        },
-                        "name": {
-                            "type": "string",
-                            "description": "Optional name/company name mentioned by the user to pre-fill the search field.",
-                        },
-                    },
-                    "required": ["entity"],
-                },
-            },
-        },
-    ]
+    # Removed local TOOLS list; imported dynamically in chat()
 
     def chat(
         self,
@@ -240,9 +211,36 @@ Personality (from user preferences):
             logger.warning("bob_settings_lookup_failed", error=str(e))
 
         system_prompt = BOB_SYSTEM_PROMPT + personality_directives
+
+        # ── Inject mission prompt if active ──────────
+        if session.mission_prompt:
+            system_prompt += f"\n\n{session.mission_prompt}"
+            logger.info(
+                "mission_prompt_injected",
+                session_id=session_id,
+                prompt_length=len(session.mission_prompt),
+            )
+
         messages = [{"role": "system", "content": system_prompt}]
         max_history = settings.bob_max_history
         messages.extend(session.messages[-max_history:])
+
+        # ── Nudge tool calls when mission is active ──────
+        if session.mission_prompt and session.turn_count > 1:
+            messages.append({
+                "role": "system",
+                "content": (
+                    "RAPPEL IMPÉRATIF: Tu DOIS appeler bcc_update_profile à CHAQUE réponse "
+                    "pour sauvegarder les insights extraits de la conversation. "
+                    "D'abord appelle l'outil, PUIS donne ta réponse avec ta prochaine question. "
+                    "N'oublie pas: entity_type=organization, perspective=ceo. "
+                    "Sections disponibles: vision, mission, culture, competition, description, brand_dna."
+                ),
+            })
+
+        # ── Setup tools: UI actions + CRM data operations
+        from app.agents.bob_tools import BOB_TOOLS
+        active_tools = BOB_TOOLS
 
         try:
             client = Groq(api_key=settings.groq_api_key)
@@ -250,7 +248,7 @@ Personality (from user preferences):
             response = client.chat.completions.create(
                 model=settings.bob_model,
                 messages=messages,
-                tools=self.TOOLS,
+                tools=active_tools,
                 tool_choice="auto",
                 temperature=llm_temperature,
                 max_tokens=2048,
@@ -259,9 +257,24 @@ Personality (from user preferences):
             choice = response.choices[0]
             actions: list[dict] = []
 
+            # ── Debug: trace LLM tool behavior ──────────
+            finish_reason = choice.finish_reason
+            tool_calls = choice.message.tool_calls
+            logger.info(
+                "bob_llm_response",
+                session_id=session_id,
+                finish_reason=finish_reason,
+                has_tool_calls=bool(tool_calls),
+                tool_count=len(tool_calls) if tool_calls else 0,
+                tool_names=[tc.function.name for tc in tool_calls] if tool_calls else [],
+                has_mission=bool(session.mission_prompt),
+                content_preview=(choice.message.content or "")[:100],
+            )
+
             # Handle tool calls
             if choice.message.tool_calls:
                 # Process each tool call
+                tool_results: dict[str, str] = {}
                 for tc in choice.message.tool_calls:
                     args = json.loads(tc.function.arguments)
                     fn = tc.function.name
@@ -271,6 +284,7 @@ Personality (from user preferences):
                             "type": "navigate",
                             "page": args.get("page", "dashboard"),
                         })
+                        tool_results[tc.id] = '{"status": "ok"}'
                     elif fn == "open_create_dialog":
                         entity = args.get("entity", "contact")
                         name = args.get("name")
@@ -289,6 +303,109 @@ Personality (from user preferences):
                         if name:
                             action_dict["name"] = name
                         actions.append(action_dict)
+                        tool_results[tc.id] = '{"status": "ok"}'
+                    elif fn == "start_crm_training":
+                        actions.append({
+                            "type": "navigate",
+                            "page": "template/crm-mastery",
+                        })
+                        tool_results[tc.id] = '{"status": "ok"}'
+                    elif fn == "search_and_open_entity":
+                        import concurrent.futures
+                        import asyncio
+                        from app.agents.tool_executor import execute_bob_tool
+                        from app.infrastructure.database import SessionLocal
+
+                        def _run_open_entity():
+                            db = SessionLocal()
+                            try:
+                                loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(loop)
+                                user_ctx = {
+                                    "user_id": session.user_id,
+                                    "tenant_id": session.tenant_id,
+                                    "session_id": session_id,
+                                }
+                                res = loop.run_until_complete(
+                                    execute_bob_tool("search_and_open_entity", args, user_ctx, db)
+                                )
+                                loop.close()
+                                return res
+                            finally:
+                                db.close()
+
+                        with concurrent.futures.ThreadPoolExecutor() as executor:
+                            future = executor.submit(_run_open_entity)
+                            search_res = future.result(timeout=10)
+                            
+                        if search_res and search_res.get("status") == "ok":
+                            actions.append({
+                                "type": "navigate",
+                                "page": search_res.get("page")
+                            })
+                            tool_results[tc.id] = json.dumps({"status": "ok", "message": search_res.get("message")})
+                        else:
+                            tool_results[tc.id] = json.dumps({"status": "error", "message": search_res.get("message", "Not found.")})
+                            
+                    elif fn == "change_training_slide":
+                        action_dict = {
+                            "type": "change_slide",
+                            "direction": args.get("direction", "next"),
+                        }
+                        slide_num = args.get("slide_number")
+                        if slide_num is not None:
+                            action_dict["slide_number"] = slide_num
+                        actions.append(action_dict)
+                        tool_results[tc.id] = '{"status": "ok"}'
+                    elif fn == "ui_update_input":
+                        actions.append({
+                            "type": "ui_update_input",
+                            "text": args.get("text", ""),
+                            "submit": args.get("submit", False)
+                        })
+                        tool_results[tc.id] = '{"status": "ok"}'
+                    elif fn == "ui_select_result":
+                        actions.append({
+                            "type": "ui_select_result",
+                            "index": args.get("index", 1)
+                        })
+                        tool_results[tc.id] = '{"status": "ok"}'
+                    elif fn == "ui_switch_tab":
+                        actions.append({
+                            "type": "ui_switch_tab",
+                            "page": args.get("tab_name", ""),
+                        })
+                        tool_results[tc.id] = '{"status": "ok"}'
+                    else:
+                        # Execute BCC / CRM tools via tool_executor
+                        # Must run in a separate thread since we're inside
+                        # FastAPI's async event loop
+                        import concurrent.futures
+                        import asyncio
+                        from app.agents.tool_executor import execute_bob_tool
+                        from app.infrastructure.database import SessionLocal
+
+                        def _run_tool():
+                            db = SessionLocal()
+                            try:
+                                loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(loop)
+                                user_context = {
+                                    "user_id": session.user_id,
+                                    "tenant_id": session.tenant_id,
+                                    "session_id": session_id,
+                                }
+                                result = loop.run_until_complete(
+                                    execute_bob_tool(fn, args, user_context, db)
+                                )
+                                loop.close()
+                                return json.dumps(result)
+                            finally:
+                                db.close()
+
+                        with concurrent.futures.ThreadPoolExecutor() as executor:
+                            future = executor.submit(_run_tool)
+                            tool_results[tc.id] = future.result(timeout=30)
 
                     logger.info(
                         "bob_tool_call",
@@ -298,8 +415,6 @@ Personality (from user preferences):
                     )
 
                 # Add tool call + result to context, then get follow-up
-                # Build a clean assistant message (model_dump() includes
-                # unsupported fields like executed_tools that Groq rejects)
                 assistant_msg: dict = {
                     "role": "assistant",
                     "content": choice.message.content or "",
@@ -320,7 +435,7 @@ Personality (from user preferences):
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tc.id,
-                        "content": '{"status": "ok"}',
+                        "content": tool_results.get(tc.id, '{"status": "ok"}'),
                     })
 
                 # Get the follow-up text response
@@ -347,6 +462,17 @@ Personality (from user preferences):
                 actions=len(actions),
             )
 
+            # ── Post-response: extract & save insights for mission ──
+            if session.mission_prompt and session.turn_count >= 3:
+                try:
+                    self._extract_and_save_insights(
+                        client=client,
+                        session=session,
+                        session_id=session_id,
+                    )
+                except Exception as ex:
+                    logger.warning("insight_extraction_failed", error=str(ex))
+
             return response_text, actions
 
         except Exception as e:
@@ -356,6 +482,136 @@ Personality (from user preferences):
                 error=str(e),
             )
             raise
+
+    def _extract_and_save_insights(
+        self,
+        client,
+        session: "ChatSession",
+        session_id: str,
+    ) -> None:
+        """Extract structured insights from conversation and save to BCC."""
+        import re
+
+        # Extract entity_id from mission prompt
+        entity_id_match = re.search(
+            r"entity_id[=:]\s*([a-f0-9-]{36})",
+            session.mission_prompt or "",
+        )
+        if not entity_id_match:
+            logger.warning("insight_extraction_no_entity_id", session_id=session_id)
+            return
+
+        entity_id = entity_id_match.group(1)
+
+        # Get last 4 messages for context
+        recent = session.messages[-4:]
+        conversation_text = "\n".join(
+            f"{'CEO' if m['role'] == 'user' else 'Bob'}: {m['content']}"
+            for m in recent if m.get("content")
+        )
+
+        extraction_prompt = f"""Analyse cette conversation d'interview CEO et extrais les insights.
+
+CONVERSATION RÉCENTE:
+{conversation_text}
+
+INSTRUCTIONS:
+- Extrais UNIQUEMENT les informations que le CEO a réellement partagées
+- Retourne un JSON VALIDE avec les sections remplies
+- Si une section n'a pas d'info dans cette conversation, mets null
+- Sois concis mais capturer l'essentiel
+
+Retourne SEULEMENT ce JSON, rien d'autre:
+{{
+  "vision": "texte ou null",
+  "mission": "texte ou null",
+  "culture": "texte ou null",
+  "competition": "texte ou null",
+  "description": "texte ou null",
+  "brand_dna": "texte ou null"
+}}"""
+
+        try:
+            extraction = client.chat.completions.create(
+                model=settings.bob_model,
+                messages=[
+                    {"role": "system", "content": "Tu es un extracteur de données JSON. Retourne UNIQUEMENT du JSON valide, sans texte autour, sans commentaire, sans balise markdown."},
+                    {"role": "user", "content": extraction_prompt},
+                ],
+                temperature=0.1,
+                max_tokens=1024,
+            )
+
+            raw = extraction.choices[0].message.content or ""
+            # Strip think tags, markdown, and find JSON object
+            raw = _THINK_RE.sub("", raw).strip()
+            # Extract JSON between first { and last }
+            start_idx = raw.find("{")
+            end_idx = raw.rfind("}")
+            if start_idx == -1 or end_idx == -1:
+                logger.warning("insight_extraction_no_json", raw_preview=raw[:200])
+                return
+            raw = raw[start_idx:end_idx + 1]
+
+            insights = json.loads(raw)
+
+            # Save each non-null insight using ThreadPoolExecutor
+            # (we're inside FastAPI's async loop)
+            from app.infrastructure.database import SessionLocal
+            from app.agents.bob_tools import execute_tool
+            import asyncio
+            import concurrent.futures
+
+            def _save_insight(section_name: str, section_content: str):
+                db = SessionLocal()
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    result = loop.run_until_complete(
+                        execute_tool(
+                            "bcc_update_profile",
+                            {
+                                "entity_type": "organization",
+                                "entity_id": entity_id,
+                                "section": section_name,
+                                "content": section_content,
+                                "perspective": "ceo",
+                            },
+                            db,
+                            session.user_id,
+                        )
+                    )
+                    loop.close()
+                    return result
+                finally:
+                    db.close()
+
+            saved_count = 0
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = {}
+                for section, content in insights.items():
+                    if content and content != "null" and isinstance(content, str):
+                        futures[section] = executor.submit(_save_insight, section, content)
+
+                for section, future in futures.items():
+                    try:
+                        future.result(timeout=15)
+                        saved_count += 1
+                    except Exception as save_err:
+                        logger.warning("insight_save_error", section=section, error=str(save_err))
+
+            logger.info(
+                "insights_extracted_and_saved",
+                session_id=session_id,
+                entity_id=entity_id,
+                saved_count=saved_count,
+                sections=list(k for k, v in insights.items() if v and v != "null"),
+            )
+
+        except json.JSONDecodeError as je:
+            logger.warning("insight_extraction_json_error", error=str(je), raw=raw[:200] if raw else "empty")
+        except Exception as e:
+            logger.warning("insight_extraction_error", error=str(e))
 
     def delete_session(self, session_id: str) -> bool:
         """Delete a specific session."""
