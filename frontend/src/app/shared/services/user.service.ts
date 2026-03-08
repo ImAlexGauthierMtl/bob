@@ -26,6 +26,7 @@ export interface UserUpdateRequest {
     bio?: string;
     location?: string;
     timezone?: string;
+    role?: string;
 }
 
 export interface UserCreateRequest {
@@ -74,5 +75,10 @@ export class UserService {
     /** DELETE /users/:id — soft delete */
     deleteUser(id: string): Observable<void> {
         return this.http.delete<void>(`${API_URL}/users/${id}`);
+    }
+
+    /** PATCH /users/:id — admin update user */
+    updateUser(id: string, data: Partial<UserUpdateRequest>): Observable<User> {
+        return this.http.patch<User>(`${API_URL}/users/${id}`, data);
     }
 }

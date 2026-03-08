@@ -28,6 +28,24 @@ export class SettingsTeamComponent implements OnInit {
     // Search
     searchQuery = '';
 
+    // Dropdown menu
+    activeMenuUserId: string | null = null;
+
+    // Role dialog
+    showRoleDialog = false;
+    selectedUser: User | null = null;
+    selectedRole = '';
+    isSavingRole = false;
+    roleStatusMessage = '';
+    roleStatusType: 'info' | 'success' | 'error' = 'info';
+
+    roleOptions = [
+        { value: 'admin', label: 'Admin', icon: 'fa-solid fa-crown', desc: 'Full access — manage team, billing, and all settings' },
+        { value: 'manager', label: 'Manager', icon: 'fa-solid fa-user-tie', desc: 'Can manage team members and view analytics' },
+        { value: 'member', label: 'Member', icon: 'fa-solid fa-user', desc: 'Standard access — create and edit own records' },
+        { value: 'readonly', label: 'Read Only', icon: 'fa-solid fa-eye', desc: 'View-only access — cannot create or modify data' },
+    ];
+
     constructor(private userService: UserService) { }
 
     ngOnInit(): void {
@@ -46,7 +64,81 @@ export class SettingsTeamComponent implements OnInit {
         });
     }
 
-    // ── Dialog ──────────────────────────────
+    // ── Dropdown Menu ────────────────────────────
+
+    openUserMenu(user: User, event: Event): void {
+        event.stopPropagation();
+        this.activeMenuUserId = this.activeMenuUserId === user.id ? null : user.id;
+    }
+
+    closeAllMenus(): void {
+        this.activeMenuUserId = null;
+    }
+
+    // ── Role Dialog ─────────────────────────────
+
+    openRoleDialog(user: User): void {
+        this.selectedUser = user;
+        this.selectedRole = user.role;
+        this.showRoleDialog = true;
+        this.roleStatusMessage = '';
+        this.activeMenuUserId = null;
+    }
+
+    closeRoleDialog(): void {
+        this.showRoleDialog = false;
+        this.selectedUser = null;
+    }
+
+    saveRole(): void {
+        if (!this.selectedUser || this.selectedRole === this.selectedUser.role) return;
+        this.isSavingRole = true;
+        this.roleStatusMessage = '';
+
+        this.userService.updateUser(this.selectedUser.id, { role: this.selectedRole }).subscribe({
+            next: () => {
+                this.isSavingRole = false;
+                this.roleStatusMessage = '✅ Role updated successfully';
+                this.roleStatusType = 'success';
+                this.loadUsers();
+                setTimeout(() => this.closeRoleDialog(), 1000);
+            },
+            error: (err) => {
+                this.isSavingRole = false;
+                this.roleStatusMessage = err?.error?.detail || '❌ Failed to update role';
+                this.roleStatusType = 'error';
+            },
+        });
+    }
+
+    // ── Admin Actions ───────────────────────────
+
+    resetUserPassword(user: User): void {
+        this.activeMenuUserId = null;
+        const tempPassword = this.generateTempPassword();
+        this.userService.updateUser(user.id, {}).subscribe({
+            next: () => {
+                alert(`Password reset link would be sent to ${user.email}.\nTemp password: ${tempPassword}`);
+            },
+            error: () => {
+                alert('Failed to reset password.');
+            },
+        });
+    }
+
+    deactivateUser(user: User): void {
+        this.activeMenuUserId = null;
+        if (!confirm(`Are you sure you want to deactivate ${user.first_name} ${user.last_name}?`)) return;
+
+        this.userService.deleteUser(user.id).subscribe({
+            next: () => this.loadUsers(),
+            error: (err) => {
+                alert(err?.error?.detail || 'Failed to deactivate user.');
+            },
+        });
+    }
+
+    // ── Add User Dialog ─────────────────────────
 
     openAddDialog(): void {
         this.showAddDialog = true;
@@ -73,7 +165,6 @@ export class SettingsTeamComponent implements OnInit {
         this.statusMessage = '';
         this.parsedPreview = null;
 
-        // Simulate agent processing delay for UX
         setTimeout(() => {
             this.parsedPreview = this.parseUserText(this.userInput);
             this.isProcessing = false;
@@ -109,29 +200,24 @@ export class SettingsTeamComponent implements OnInit {
 
     /**
      * Smart text parser — extracts user fields from free-form text.
-     * Same Agent-First pattern as contacts.
      */
     private parseUserText(text: string): Partial<UserCreateRequest> {
         const result: Partial<UserCreateRequest> = {};
 
-        // Extract email
         const emailMatch = text.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
         if (emailMatch) {
             result.email = emailMatch[0];
             text = text.replace(emailMatch[0], '');
         }
 
-        // Extract phone
         const phoneMatch = text.match(/(?:\+?1?\s*)?(?:\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}/);
         if (phoneMatch) {
             result.phone = phoneMatch[0].trim();
             text = text.replace(phoneMatch[0], '');
         }
 
-        // Clean up
         text = text.replace(/[,;|·•—–-]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-        // Role detection
         const roleMap: Record<string, string> = {
             admin: 'admin',
             manager: 'manager',
@@ -149,7 +235,6 @@ export class SettingsTeamComponent implements OnInit {
             }
         }
 
-        // Title keywords for job title detection
         const titleKeywords = /\b(CEO|CTO|CFO|COO|CMO|CIO|VP|Director|Manager|Engineer|Developer|Designer|Analyst|Coordinator|Specialist|Lead|Head|Chief|Senior|Junior|Sr\.|Jr\.|President|Founder|Partner|Associate|Consultant|Advisor|Officer)\b/i;
 
         const words = text.split(' ').filter(w => w.length > 0);
@@ -212,6 +297,7 @@ export class SettingsTeamComponent implements OnInit {
             case 'manager': return 'Manager';
             case 'sales_rep': return 'Sales Rep';
             case 'support': return 'Support';
+            case 'readonly': return 'Read Only';
             default: return 'Member';
         }
     }

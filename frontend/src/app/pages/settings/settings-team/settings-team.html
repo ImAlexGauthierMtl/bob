@@ -1,4 +1,4 @@
-<div class="settings-panel">
+<div class="settings-panel" (click)="closeAllMenus()">
 
     <div class="team-header">
         <div class="settings-panel__header" style="margin-bottom:0">
@@ -27,7 +27,7 @@
     <!-- User List -->
     @if (!isLoading) {
     @for (user of filteredUsers; track user.id) {
-    <div class="team-card">
+    <div class="team-card" [class.team-card--clickable]="true" (click)="openUserMenu(user, $event)">
         <div class="team-card__left">
             <div class="team-card__avatar">{{ getInitials(user) }}</div>
             <div>
@@ -37,8 +37,26 @@
         </div>
         <div class="team-card__right">
             <span class="status-badge {{ getRoleBadgeClass(user.role) }}">{{ getRoleLabel(user.role) }}</span>
-            <button class="team-card__action"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+            <button class="team-card__action" (click)="openUserMenu(user, $event)">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
         </div>
+
+        <!-- Dropdown Menu -->
+        @if (activeMenuUserId === user.id) {
+        <div class="dropdown-menu" (click)="$event.stopPropagation()">
+            <button class="dropdown-menu__item" (click)="openRoleDialog(user)">
+                <i class="fa-solid fa-shield-halved"></i> Change Role
+            </button>
+            <button class="dropdown-menu__item" (click)="resetUserPassword(user)">
+                <i class="fa-solid fa-key"></i> Reset Password
+            </button>
+            <div class="dropdown-menu__divider"></div>
+            <button class="dropdown-menu__item dropdown-menu__item--danger" (click)="deactivateUser(user)">
+                <i class="fa-solid fa-user-slash"></i> Deactivate
+            </button>
+        </div>
+        }
     </div>
     }
 
@@ -48,6 +66,67 @@
         <p>No team members found</p>
     </div>
     }
+    }
+
+    <!-- ═══════ Change Role Dialog ═══════ -->
+    @if (showRoleDialog && selectedUser) {
+    <div class="dialog-overlay" (click)="closeRoleDialog()">
+        <div class="dialog-modal dialog-modal--sm" (click)="$event.stopPropagation()">
+            <div class="dialog-header">
+                <div class="dialog-header__left">
+                    <div class="dialog-header__icon" style="background:linear-gradient(135deg,#a855f7,#6366f1)">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div>
+                        <h3 class="dialog-header__title">Change Role</h3>
+                        <p class="dialog-header__subtitle">{{ selectedUser.first_name }} {{ selectedUser.last_name }}
+                        </p>
+                    </div>
+                </div>
+                <button class="dialog-close" (click)="closeRoleDialog()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="dialog-body">
+                <div class="role-options">
+                    @for (opt of roleOptions; track opt.value) {
+                    <label class="radio-card" [class.radio-card--active]="selectedRole === opt.value">
+                        <div class="radio-card__row">
+                            <input type="radio" name="userRole" class="radio-card__input" [value]="opt.value"
+                                [(ngModel)]="selectedRole" />
+                            <div>
+                                <p class="radio-card__name">
+                                    <i [class]="opt.icon" style="margin-right:0.5rem;color:var(--color-accent)"></i>
+                                    {{ opt.label }}
+                                </p>
+                                <p class="radio-card__desc">{{ opt.desc }}</p>
+                            </div>
+                        </div>
+                    </label>
+                    }
+                </div>
+
+                @if (roleStatusMessage) {
+                <div class="dialog-status dialog-status--{{ roleStatusType }}" style="margin-top:1rem">
+                    {{ roleStatusMessage }}
+                </div>
+                }
+
+                <div class="dialog-result__actions" style="margin-top:1.5rem">
+                    <button class="btn btn-accent" (click)="saveRole()"
+                        [disabled]="isSavingRole || selectedRole === selectedUser.role">
+                        @if (isSavingRole) {
+                        <i class="fa-solid fa-spinner fa-spin"></i> Saving...
+                        } @else {
+                        <i class="fa-solid fa-check"></i> Save Role
+                        }
+                    </button>
+                    <button class="btn btn-outline" (click)="closeRoleDialog()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
     }
 
     <!-- ═══════ Add User Dialog ═══════ -->

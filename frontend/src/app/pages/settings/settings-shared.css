@@ -1875,3 +1875,96 @@
     padding: 3rem;
     color: var(--color-gray-400);
 }
+
+/* ── Dropdown Menu (Team Card Action) ─────────────────────── */
+.team-card {
+    position: relative;
+}
+
+.team-card--clickable {
+    cursor: pointer;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.team-card--clickable:hover {
+    border-color: var(--color-gray-300);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% - 0.5rem);
+    right: 1rem;
+    min-width: 200px;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    z-index: 100;
+    padding: 0.5rem 0;
+    animation: dropdown-fade 0.15s ease-out;
+}
+
+@keyframes dropdown-fade {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.625rem 1rem;
+    background: none;
+    border: none;
+    font-family: var(--font-family);
+    font-size: 0.8125rem;
+    color: var(--color-gray-700);
+    cursor: pointer;
+    transition: background-color var(--transition-base), color var(--transition-base);
+    text-align: left;
+}
+
+.dropdown-menu__item:hover {
+    background-color: var(--color-gray-50);
+    color: var(--color-accent);
+}
+
+.dropdown-menu__item i {
+    width: 1rem;
+    text-align: center;
+    font-size: 0.75rem;
+}
+
+.dropdown-menu__item--danger {
+    color: #dc2626;
+}
+
+.dropdown-menu__item--danger:hover {
+    background-color: #fef2f2;
+    color: #b91c1c;
+}
+
+.dropdown-menu__divider {
+    height: 1px;
+    background-color: var(--color-gray-100);
+    margin: 0.375rem 0;
+}
+
+/* ── Small Dialog Variant ────────────────────────────────── */
+.dialog-modal--sm {
+    max-width: 480px;
+}
+
+.role-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}

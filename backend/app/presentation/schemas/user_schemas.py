@@ -15,6 +15,7 @@ class UserUpdateRequest(BaseModel):
     bio: Optional[str] = None
     location: Optional[str] = Field(None, max_length=150)
     timezone: Optional[str] = Field(None, max_length=50)
+    role: Optional[str] = Field(None, description="admin | manager | sales_rep | support | member")
 
 
 class UserCreateByAdminRequest(BaseModel):

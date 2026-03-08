@@ -86,6 +86,27 @@ async def create_user(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+@router.patch("/{user_id}", response_model=UserResponse)
+async def update_user_by_admin(
+    user_id: str,
+    data: UserUpdateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Admin update of another user's profile (role, job_title, etc.)."""
+    repo = UserRepository(db)
+    user = repo.get_by_id(user_id)
+    if not user or user.tenant_id != current_user["tenant_id"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    updates = data.model_dump(exclude_unset=True)
+    for key, value in updates.items():
+        setattr(user, key, value)
+    user.updated_by = current_user["email"]
+    db.commit()
+    db.refresh(user)
+    return UserResponse.model_validate(user)
+
+
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: str,
