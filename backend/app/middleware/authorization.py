@@ -56,7 +56,7 @@ def require_permission(*permissions: str):
             )
         return current_user
 
-    return Depends(_check)
+    return _check
 
 
 def require_role(*roles: str):
@@ -96,4 +96,4 @@ def require_role(*roles: str):
             )
         return current_user
 
-    return Depends(_check)
+    return _check
