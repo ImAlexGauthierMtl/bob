@@ -93,10 +93,19 @@ def get_current_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
+    # Load RBAC roles & permissions
+    from app.infrastructure.persistence.role_repository import RoleRepository
+    role_repo = RoleRepository(db)
+    user_roles = role_repo.get_user_roles(user_id)
+    role_names = [r.name for r in user_roles]
+    permission_keys = role_repo.get_user_permissions(user_id)
+
     return {
         "user_id": user_id,
         "email": payload.get("email"),
         "tenant_id": user.tenant_id,
+        "roles": role_names,
+        "permissions": permission_keys,
     }
 
 

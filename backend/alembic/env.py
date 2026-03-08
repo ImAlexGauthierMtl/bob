@@ -13,6 +13,7 @@ from app.domain.entities import (  # noqa: F401
     user, organization, contact, opportunity, quote,
     activity, department, capability, bob_settings,
     workflow, workflow_execution, bcc_entities, training_models,
+    role,
 )
 
 config = context.config
