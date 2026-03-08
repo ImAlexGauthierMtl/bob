@@ -23,8 +23,10 @@ from main import app
 # Import all entities so they register with Base.metadata
 from app.domain.entities import user, organization, contact, opportunity, quote, activity  # noqa: F401
 from app.domain.entities import department, capability, workflow, workflow_execution  # noqa: F401
-from app.domain.entities import kb_article  # noqa: F401
+from app.domain.entities import kb_article, tenant  # noqa: F401
 from app.domain.entities import training_models, bcc_entities  # noqa: F401
+from app.domain.entities import usage_transaction  # noqa: F401
+from app.domain.entities import product, opportunity_product  # noqa: F401
 
 # Create test engine pointing to test DB
 test_engine = create_engine(settings.database_url)

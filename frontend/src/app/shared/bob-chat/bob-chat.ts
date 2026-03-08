@@ -12,6 +12,7 @@ interface ChatMessage {
     text: string;
     time: Date;
     isLoading?: boolean;
+    toolSteps?: { tool: string; status: string }[];
 }
 
 interface QuickWorkflow {
@@ -165,6 +166,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
                     role: 'bob',
                     text: response.response,
                     time: new Date(),
+                    toolSteps: response.tool_steps?.length ? response.tool_steps : undefined,
                 });
 
                 this.sessionId = response.session_id;

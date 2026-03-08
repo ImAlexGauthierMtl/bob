@@ -2,7 +2,8 @@ import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { UpperCasePipe, NgFor, NgIf } from '@angular/common';
 import { Subscription, interval } from 'rxjs';
 import { BobActionService, BobAction } from '../../../shared/services/bob-action.service';
-import { TrainingService, TrainingNote, TrainingMissing } from '../../../shared/services/training.service';
+import { TrainingService } from '../../../shared/services/training.service';
+import { TrainingNote, TrainingMissing } from '../../../shared/models/training.model';
 
 export interface SlideCard {
     icon: string;

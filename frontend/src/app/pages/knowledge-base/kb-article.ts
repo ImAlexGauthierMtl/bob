@@ -1,12 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
-
-import {
-    KnowledgeBaseService,
-    KBArticle,
-    KBArticleSummary,
-} from '../../shared/services/kb.service';
+import { KnowledgeBaseService } from '../../shared/services/kb.service';
+import { KBArticle, KBArticleSummary } from '../../shared/models/kb.model';
 
 interface TocEntry {
     id: string;
@@ -28,10 +24,8 @@ export class KBArticleComponent implements OnInit {
     renderedContent = '';
     feedbackGiven = false;
 
-    constructor(
-        private route: ActivatedRoute,
-        private kbService: KnowledgeBaseService,
-    ) { }
+    private route = inject(ActivatedRoute);
+    private kbService = inject(KnowledgeBaseService);
 
     ngOnInit(): void {
         this.route.params.subscribe((params) => {

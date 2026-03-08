@@ -1,14 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import {
-    OrganizationService,
-    Organization,
-    PlaceResult,
-    CreateOrganizationRequest,
-} from '../../shared/services/organization.service';
-import { BobActionService } from '../../shared/services/bob-action.service';
 import { Subscription } from 'rxjs';
+import { OrganizationService } from '../../shared/services/organization.service';
+import { BobActionService } from '../../shared/services/bob-action.service';
+import { Organization, PlaceResult, CreateOrganizationDto } from '../../shared/models/organization.model';
 
 @Component({
     selector: 'croo-organizations',
@@ -21,6 +17,12 @@ export class OrganizationsComponent implements OnInit, OnDestroy {
     organizations: Organization[] = [];
     total = 0;
     isLoading = true;
+
+    // Pagination
+    currentPage = 1;
+    pageSize = 50;
+    totalPages = 1;
+    Math = Math;
 
     // Dialog state
     showAddDialog = false;
@@ -43,11 +45,9 @@ export class OrganizationsComponent implements OnInit, OnDestroy {
 
     private bobActionSub?: Subscription;
 
-    constructor(
-        private orgService: OrganizationService,
-        private router: Router,
-        private bobActionService: BobActionService,
-    ) { }
+    private orgService = inject(OrganizationService);
+    private router = inject(Router);
+    private bobActionService = inject(BobActionService);
 
     ngOnInit(): void {
         this.loadOrganizations();
@@ -79,16 +79,40 @@ export class OrganizationsComponent implements OnInit, OnDestroy {
 
     loadOrganizations(): void {
         this.isLoading = true;
-        this.orgService.list().subscribe({
+        const skip = (this.currentPage - 1) * this.pageSize;
+        this.orgService.getAll(skip, this.pageSize).subscribe({
             next: (res) => {
                 this.organizations = res.items;
                 this.total = res.total;
+                this.totalPages = Math.max(1, Math.ceil(this.total / this.pageSize));
                 this.isLoading = false;
             },
             error: () => {
                 this.isLoading = false;
             },
         });
+    }
+
+    goToPage(page: number): void {
+        if (page < 1 || page > this.totalPages) return;
+        this.currentPage = page;
+        this.loadOrganizations();
+    }
+
+    onPageSizeChange(event: Event): void {
+        this.pageSize = +(event.target as HTMLSelectElement).value;
+        this.currentPage = 1;
+        this.loadOrganizations();
+    }
+
+    getPages(): number[] {
+        const pages: number[] = [];
+        const max = Math.min(this.totalPages, 5);
+        let start = Math.max(1, this.currentPage - Math.floor(max / 2));
+        const end = Math.min(this.totalPages, start + max - 1);
+        start = Math.max(1, end - max + 1);
+        for (let i = start; i <= end; i++) pages.push(i);
+        return pages;
     }
 
     // ── Dialog ──────────────────────────────
@@ -159,7 +183,7 @@ export class OrganizationsComponent implements OnInit, OnDestroy {
         this.isCreating = true;
 
         const addressParts = place.address.split(', ');
-        const createData: CreateOrganizationRequest = {
+        const createData: CreateOrganizationDto = {
             name: place.title,
             industry: place.industry || undefined,
             website: place.website || undefined,
@@ -201,7 +225,7 @@ export class OrganizationsComponent implements OnInit, OnDestroy {
 
     // ── Create → fire enrich in background → redirect ──
 
-    private createAndRedirect(data: CreateOrganizationRequest): void {
+    private createAndRedirect(data: CreateOrganizationDto): void {
         this.orgService.create(data).subscribe({
             next: (org) => {
                 // Fire enrichment in background (non-blocking, returns immediately)

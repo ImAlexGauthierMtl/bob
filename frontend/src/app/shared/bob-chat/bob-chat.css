@@ -216,6 +216,31 @@
     opacity: 0.6;
 }
 
+/* ── Tool Steps ─────────────────────────────────────────── */
+
+.bob-msg__tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 0.5rem;
+}
+
+.bob-msg__tool-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.5rem;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.bob-msg__tool-badge i {
+    font-size: 0.55rem;
+}
+
 /* ── Quick Actions ───────────────────────────────────────── */
 
 .bob-panel__quick {

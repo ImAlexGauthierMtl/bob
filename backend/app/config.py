@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     groq_default_model: str = "llama-3.3-70b-versatile"
 
     # Bob Agent
-    bob_model: str = "llama-3.3-70b-versatile"
+    bob_model: str = "qwen/qwen3-32b"
     bob_temperature: float = 0.3
     bob_max_history: int = 20
     bob_session_ttl_minutes: int = 60

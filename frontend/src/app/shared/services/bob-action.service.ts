@@ -51,13 +51,23 @@ export class BobActionService {
             });
         }
         else if (page && action.type === 'open_create_dialog') {
-            console.log(`[BobAction] navigating to /${page}...`);
+            const isAlreadyOnPage = this.router.url.startsWith(`/${page}`);
+            console.log(`[BobAction] navigating to /${page}... (already on page: ${isAlreadyOnPage})`);
             this.ngZone.run(() => {
-                this.router.navigate([`/${page}`]).then((success) => {
-                    console.log(`[BobAction] navigation result: ${success}, now at: ${this.router.url}`);
-                    console.log(`[BobAction] emitting action$.next now`, JSON.stringify(action));
+                if (isAlreadyOnPage) {
+                    // Already on the right page — emit immediately
+                    console.log(`[BobAction] already on page, emitting action$.next now`);
                     this.action$.next(action);
-                });
+                } else {
+                    // Navigate first, then wait for component to initialize
+                    this.router.navigate([`/${page}`]).then((success) => {
+                        console.log(`[BobAction] navigation result: ${success}, waiting for component init...`);
+                        setTimeout(() => {
+                            console.log(`[BobAction] emitting action$.next after delay`, JSON.stringify(action));
+                            this.action$.next(action);
+                        }, 200);
+                    });
+                }
             });
         } else {
             console.log('[BobAction] no routing needed — emitting action$.next directly');

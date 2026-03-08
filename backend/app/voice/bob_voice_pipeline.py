@@ -465,6 +465,48 @@ Emotion expressiveness for your current tone:
             session_id=session.session_id,
             user=session.user_email,
         )
+        # ── Track voice session usage ──
+        try:
+            import time
+            from app.infrastructure.database import SessionLocal
+            from app.middleware.usage_tracker import UsageTracker
+            from app.domain.entities.usage_transaction import TriggerSource
+
+            session_duration = time.time() - session.created_at if hasattr(session, "created_at") else 0
+            _track_db = SessionLocal()
+            try:
+                _tracker = UsageTracker(_track_db)
+                # STT usage — approximate from session duration
+                if session_duration > 0:
+                    _tracker.track_stt(
+                        tenant_id=session.tenant_id,
+                        user_id=user_id,
+                        user_email=session.user_email,
+                        model=settings.groq_whisper_model,
+                        audio_seconds=session_duration,
+                        trigger_source=TriggerSource.BOB_VOICE,
+                        trigger_id=session.session_id,
+                        correlation_id=session.session_id,
+                    )
+                    # TTS usage — approximate characters from message count
+                    msg_count = len(session.messages) if hasattr(session, "messages") else 0
+                    est_chars = msg_count * 100  # rough estimate per response
+                    if est_chars > 0:
+                        _tracker.track_tts(
+                            tenant_id=session.tenant_id,
+                            user_id=user_id,
+                            user_email=session.user_email,
+                            model=settings.groq_tts_model,
+                            characters=est_chars,
+                            trigger_source=TriggerSource.BOB_VOICE,
+                            trigger_id=session.session_id,
+                            correlation_id=session.session_id,
+                        )
+            finally:
+                _track_db.close()
+        except Exception as _track_err:
+            logger.warning("voice_usage_tracking_failed", error=str(_track_err))
+
         session.close()
 
     runner = PipelineRunner()

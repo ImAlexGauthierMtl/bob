@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { ContactService, Contact, CreateContactRequest } from '../../shared/services/contact.service';
+import { Subscription } from 'rxjs';
+import { ContactService } from '../../shared/services/contact.service';
 import { OrganizationService } from '../../shared/services/organization.service';
 import { BobActionService } from '../../shared/services/bob-action.service';
-import { Subscription } from 'rxjs';
+import { Contact, CreateContactDto } from '../../shared/models/contact.model';
 
 @Component({
     selector: 'croo-contacts',
@@ -18,6 +19,12 @@ export class ContactsComponent implements OnInit, OnDestroy {
     total = 0;
     isLoading = true;
 
+    // Pagination
+    currentPage = 1;
+    pageSize = 50;
+    totalPages = 1;
+    Math = Math;
+
     // Dialog state
     showAddDialog = false;
     contactInput = '';
@@ -27,19 +34,17 @@ export class ContactsComponent implements OnInit, OnDestroy {
     statusType: 'info' | 'success' | 'error' = 'info';
 
     // Parsed preview
-    parsedPreview: Partial<CreateContactRequest> | null = null;
+    parsedPreview: Partial<CreateContactDto> | null = null;
 
     // Org name resolution
     orgNames: Record<string, string> = {};
 
     private bobActionSub?: Subscription;
 
-    constructor(
-        private contactService: ContactService,
-        private orgService: OrganizationService,
-        private router: Router,
-        private bobActionService: BobActionService,
-    ) { }
+    private contactService = inject(ContactService);
+    private orgService = inject(OrganizationService);
+    private router = inject(Router);
+    private bobActionService = inject(BobActionService);
 
     ngOnInit(): void {
         this.loadContacts();
@@ -69,15 +74,39 @@ export class ContactsComponent implements OnInit, OnDestroy {
 
     loadContacts(): void {
         this.isLoading = true;
-        this.contactService.list().subscribe({
+        const skip = (this.currentPage - 1) * this.pageSize;
+        this.contactService.getAll(skip, this.pageSize).subscribe({
             next: (res) => {
                 this.contacts = res.items;
                 this.total = res.total;
+                this.totalPages = Math.max(1, Math.ceil(this.total / this.pageSize));
                 this.isLoading = false;
                 this.resolveOrgNames();
             },
             error: () => (this.isLoading = false),
         });
+    }
+
+    goToPage(page: number): void {
+        if (page < 1 || page > this.totalPages) return;
+        this.currentPage = page;
+        this.loadContacts();
+    }
+
+    onPageSizeChange(event: Event): void {
+        this.pageSize = +(event.target as HTMLSelectElement).value;
+        this.currentPage = 1;
+        this.loadContacts();
+    }
+
+    getPages(): number[] {
+        const pages: number[] = [];
+        const max = Math.min(this.totalPages, 5);
+        let start = Math.max(1, this.currentPage - Math.floor(max / 2));
+        const end = Math.min(this.totalPages, start + max - 1);
+        start = Math.max(1, end - max + 1);
+        for (let i = start; i <= end; i++) pages.push(i);
+        return pages;
     }
 
     // ── Dialog ──────────────────────────────
@@ -126,7 +155,7 @@ export class ContactsComponent implements OnInit, OnDestroy {
         if (!this.parsedPreview || !this.parsedPreview.first_name || !this.parsedPreview.last_name) return;
         this.isCreating = true;
 
-        const data: CreateContactRequest = {
+        const data: CreateContactDto = {
             first_name: this.parsedPreview.first_name,
             last_name: this.parsedPreview.last_name,
             email: this.parsedPreview.email,

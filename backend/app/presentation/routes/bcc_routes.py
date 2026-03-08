@@ -16,6 +16,7 @@ from app.domain.entities.bcc_entities import (
     BccRole, BccSkill, BccTask, BccTaskStep, BccResource, BccMilestone,
     BccOrganization, BccOrgProfile, BccDepartment, BccTeam,
     BccIndustry, BccCareer, BccSkillTemplate, BccTaskTemplate,
+    BccIntent, BccIntentTask,
     BccRegulation, BccOrgIndustry, BccProfileEntry,
 )
 from app.presentation.schemas.bcc_schemas import (
@@ -31,6 +32,7 @@ from app.presentation.schemas.bcc_schemas import (
     BccCareerCreate, BccCareerUpdate, BccCareerResponse,
     BccSkillTemplateCreate, BccSkillTemplateUpdate, BccSkillTemplateResponse,
     BccTaskTemplateCreate, BccTaskTemplateUpdate, BccTaskTemplateResponse,
+    BccIntentCreate, BccIntentResponse, BccIntentTaskResponse,
     # Layer 2 — Organization
     BccOrganizationCreate, BccOrganizationUpdate, BccOrganizationResponse,
     BccOrgProfileCreate, BccOrgProfileUpdate, BccOrgProfileResponse,
@@ -651,6 +653,143 @@ async def delete_task_template(
     if not item:
         raise HTTPException(status_code=404, detail="Task template not found")
     db.delete(item)
+    db.commit()
+
+
+# ── Intents ──────────────────────────────────────────────────
+
+
+@router.get("/intents", response_model=list[BccIntentResponse])
+async def list_intents(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all intents with their linked tasks."""
+    items = db.query(BccIntent).filter(
+        BccIntent.tenant_id == current_user["tenant_id"],
+    ).order_by(BccIntent.name).all()
+    result = []
+    for intent in items:
+        tasks = [
+            BccIntentTaskResponse(
+                id=link.id,
+                task_template_id=link.task_template_id,
+                task_template_name=link.task_template.name if link.task_template else "",
+                sort_order=link.sort_order,
+            )
+            for link in intent.task_links
+        ]
+        result.append(BccIntentResponse(
+            id=intent.id,
+            name=intent.name,
+            description=intent.description,
+            trigger_phrases=intent.trigger_phrases,
+            category=intent.category,
+            task_count=len(tasks),
+            tasks=tasks,
+        ))
+    return result
+
+
+@router.get("/intents/{intent_id}", response_model=BccIntentResponse)
+async def get_intent(
+    intent_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get a single intent with its linked tasks."""
+    intent = db.query(BccIntent).filter(
+        BccIntent.id == intent_id,
+        BccIntent.tenant_id == current_user["tenant_id"],
+    ).first()
+    if not intent:
+        raise HTTPException(status_code=404, detail="Intent not found")
+    tasks = [
+        BccIntentTaskResponse(
+            id=link.id,
+            task_template_id=link.task_template_id,
+            task_template_name=link.task_template.name if link.task_template else "",
+            sort_order=link.sort_order,
+        )
+        for link in intent.task_links
+    ]
+    return BccIntentResponse(
+        id=intent.id,
+        name=intent.name,
+        description=intent.description,
+        trigger_phrases=intent.trigger_phrases,
+        category=intent.category,
+        task_count=len(tasks),
+        tasks=tasks,
+    )
+
+
+@router.post("/intents", status_code=status.HTTP_201_CREATED, response_model=BccIntentResponse)
+async def create_intent(
+    data: BccIntentCreate,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create an intent and link task templates."""
+    intent = BccIntent(
+        tenant_id=current_user["tenant_id"],
+        created_by=current_user["email"],
+        name=data.name,
+        description=data.description,
+        trigger_phrases=data.trigger_phrases,
+        category=data.category,
+    )
+    db.add(intent)
+    db.flush()
+
+    if data.task_template_ids:
+        for idx, tpl_id in enumerate(data.task_template_ids):
+            link = BccIntentTask(
+                intent_id=intent.id,
+                task_template_id=tpl_id,
+                sort_order=idx,
+                tenant_id=current_user["tenant_id"],
+            )
+            db.add(link)
+
+    db.commit()
+    db.refresh(intent)
+    logger.info("bcc_intent_created", id=intent.id, name=intent.name)
+
+    tasks = [
+        BccIntentTaskResponse(
+            id=link.id,
+            task_template_id=link.task_template_id,
+            task_template_name=link.task_template.name if link.task_template else "",
+            sort_order=link.sort_order,
+        )
+        for link in intent.task_links
+    ]
+    return BccIntentResponse(
+        id=intent.id,
+        name=intent.name,
+        description=intent.description,
+        trigger_phrases=intent.trigger_phrases,
+        category=intent.category,
+        task_count=len(tasks),
+        tasks=tasks,
+    )
+
+
+@router.delete("/intents/{intent_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_intent(
+    intent_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete an intent and its task links."""
+    intent = db.query(BccIntent).filter(
+        BccIntent.id == intent_id,
+        BccIntent.tenant_id == current_user["tenant_id"],
+    ).first()
+    if not intent:
+        raise HTTPException(status_code=404, detail="Intent not found")
+    db.delete(intent)
     db.commit()
 
 

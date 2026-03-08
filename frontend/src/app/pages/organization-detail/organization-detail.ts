@@ -1,13 +1,17 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DecimalPipe, UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { OrganizationService, Organization, OrganizationProfile } from '../../shared/services/organization.service';
-import { ContactService, Contact, CreateContactRequest } from '../../shared/services/contact.service';
-import { OpportunityService, Opportunity, CreateOpportunityRequest } from '../../shared/services/opportunity.service';
-import { ActivityService, Activity } from '../../shared/services/activity.service';
-import { BobActionService } from '../../shared/services/bob-action.service';
 import { Subscription } from 'rxjs';
+import { OrganizationService } from '../../shared/services/organization.service';
+import { ContactService } from '../../shared/services/contact.service';
+import { OpportunityService } from '../../shared/services/opportunity.service';
+import { ActivityService } from '../../shared/services/activity.service';
+import { BobActionService } from '../../shared/services/bob-action.service';
+import { Organization, OrganizationProfile } from '../../shared/models/organization.model';
+import { Contact, CreateContactDto } from '../../shared/models/contact.model';
+import { Opportunity, CreateOpportunityDto } from '../../shared/models/opportunity.model';
+import { Activity } from '../../shared/models/activity.model';
 
 @Component({
     selector: 'croo-organization-detail',
@@ -31,7 +35,7 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
     isProcessingContact = false;
     isCreatingContact = false;
     contactStatusMessage = '';
-    parsedContactPreview: Partial<CreateContactRequest> | null = null;
+    parsedContactPreview: Partial<CreateContactDto> | null = null;
 
     // Add Opportunity dialog
     showAddOppDialog = false;
@@ -39,18 +43,16 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
     isProcessingOpp = false;
     isCreatingOpp = false;
     oppStatusMessage = '';
-    parsedOppPreview: Partial<CreateOpportunityRequest> | null = null;
+    parsedOppPreview: Partial<CreateOpportunityDto> | null = null;
 
     private bobActionSub?: Subscription;
 
-    constructor(
-        private route: ActivatedRoute,
-        private orgService: OrganizationService,
-        private contactService: ContactService,
-        private oppService: OpportunityService,
-        private actService: ActivityService,
-        private bobAction: BobActionService,
-    ) { }
+    private route = inject(ActivatedRoute);
+    private orgService = inject(OrganizationService);
+    private contactService = inject(ContactService);
+    private oppService = inject(OpportunityService);
+    private actService = inject(ActivityService);
+    private bobAction = inject(BobActionService);
 
     ngOnInit(): void {
         const id = this.route.snapshot.paramMap.get('id');
@@ -97,13 +99,13 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
     }
 
     loadRelated(orgId: string): void {
-        this.contactService.list(0, 10, orgId).subscribe({
+        this.contactService.getAll(0, 10, orgId).subscribe({
             next: (res) => (this.contacts = res.items),
         });
-        this.oppService.list(0, 10, orgId).subscribe({
+        this.oppService.getAll(0, 10, orgId).subscribe({
             next: (res) => (this.opportunities = res.items),
         });
-        this.actService.list(0, 10, orgId).subscribe({
+        this.actService.getAll(0, 10, orgId).subscribe({
             next: (res) => (this.activities = res.items),
         });
     }
@@ -231,7 +233,7 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
         if (!this.parsedContactPreview?.first_name || !this.parsedContactPreview?.last_name || !this.org) return;
         this.isCreatingContact = true;
 
-        const data: CreateContactRequest = {
+        const data: CreateContactDto = {
             first_name: this.parsedContactPreview.first_name,
             last_name: this.parsedContactPreview.last_name,
             email: this.parsedContactPreview.email,
@@ -246,7 +248,7 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
             next: () => {
                 this.showAddContactDialog = false;
                 // Refresh contacts list
-                this.contactService.list(0, 10, this.org!.id).subscribe({
+                this.contactService.getAll(0, 10, this.org!.id).subscribe({
                     next: (res) => (this.contacts = res.items),
                 });
             },
@@ -291,7 +293,7 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
         if (!this.parsedOppPreview?.name || !this.org) return;
         this.isCreatingOpp = true;
 
-        const data: CreateOpportunityRequest = {
+        const data: CreateOpportunityDto = {
             name: this.parsedOppPreview.name,
             description: this.parsedOppPreview.description,
             stage: this.parsedOppPreview.stage || 'PROSPECTING',
@@ -306,7 +308,7 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
         this.oppService.create(data).subscribe({
             next: () => {
                 this.showAddOppDialog = false;
-                this.oppService.list(0, 10, this.org!.id).subscribe({
+                this.oppService.getAll(0, 10, this.org!.id).subscribe({
                     next: (res) => (this.opportunities = res.items),
                 });
             },
@@ -317,8 +319,8 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
         });
     }
 
-    private parseOppText(text: string): Partial<CreateOpportunityRequest> {
-        const result: Partial<CreateOpportunityRequest> = {};
+    private parseOppText(text: string): Partial<CreateOpportunityDto> {
+        const result: Partial<CreateOpportunityDto> = {};
 
         // Extract dollar amounts
         const amountMatch = text.match(/\$([\d,]+(?:\.\d{1,2})?)\s*([KkMm])?/);

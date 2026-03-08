@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { UserService, User, UserCreateRequest } from '../../../shared/services/user.service';
+import { UserService } from '../../../shared/services/user.service';
+import { User, CreateUserDto } from '../../../shared/models/user.model';
 
 @Component({
     selector: 'croo-settings-team',
@@ -23,7 +24,7 @@ export class SettingsTeamComponent implements OnInit {
     statusType: 'info' | 'success' | 'error' = 'info';
 
     // Parsed preview
-    parsedPreview: Partial<UserCreateRequest> | null = null;
+    parsedPreview: Partial<CreateUserDto> | null = null;
 
     // Search
     searchQuery = '';
@@ -46,7 +47,7 @@ export class SettingsTeamComponent implements OnInit {
         { value: 'readonly', label: 'Read Only', icon: 'fa-solid fa-eye', desc: 'View-only access — cannot create or modify data' },
     ];
 
-    constructor(private userService: UserService) { }
+    private userService = inject(UserService);
 
     ngOnInit(): void {
         this.loadUsers();
@@ -54,7 +55,7 @@ export class SettingsTeamComponent implements OnInit {
 
     loadUsers(): void {
         this.isLoading = true;
-        this.userService.listUsers().subscribe({
+        this.userService.getAll().subscribe({
             next: (res) => {
                 this.users = res.items;
                 this.total = res.total;
@@ -95,7 +96,7 @@ export class SettingsTeamComponent implements OnInit {
         this.isSavingRole = true;
         this.roleStatusMessage = '';
 
-        this.userService.updateUser(this.selectedUser.id, { role: this.selectedRole }).subscribe({
+        this.userService.update(this.selectedUser.id, { role: this.selectedRole }).subscribe({
             next: () => {
                 this.isSavingRole = false;
                 this.roleStatusMessage = '✅ Role updated successfully';
@@ -116,7 +117,7 @@ export class SettingsTeamComponent implements OnInit {
     resetUserPassword(user: User): void {
         this.activeMenuUserId = null;
         const tempPassword = this.generateTempPassword();
-        this.userService.updateUser(user.id, {}).subscribe({
+        this.userService.update(user.id, {}).subscribe({
             next: () => {
                 alert(`Password reset link would be sent to ${user.email}.\nTemp password: ${tempPassword}`);
             },
@@ -130,7 +131,7 @@ export class SettingsTeamComponent implements OnInit {
         this.activeMenuUserId = null;
         if (!confirm(`Are you sure you want to deactivate ${user.first_name} ${user.last_name}?`)) return;
 
-        this.userService.deleteUser(user.id).subscribe({
+        this.userService.delete(user.id).subscribe({
             next: () => this.loadUsers(),
             error: (err) => {
                 alert(err?.error?.detail || 'Failed to deactivate user.');
@@ -175,7 +176,7 @@ export class SettingsTeamComponent implements OnInit {
         if (!this.parsedPreview?.first_name || !this.parsedPreview?.last_name || !this.parsedPreview?.email) return;
         this.isCreating = true;
 
-        const data: UserCreateRequest = {
+        const data: CreateUserDto = {
             email: this.parsedPreview.email,
             password: this.generateTempPassword(),
             first_name: this.parsedPreview.first_name,
@@ -185,7 +186,7 @@ export class SettingsTeamComponent implements OnInit {
             phone: this.parsedPreview.phone,
         };
 
-        this.userService.createUser(data).subscribe({
+        this.userService.create(data).subscribe({
             next: () => {
                 this.showAddDialog = false;
                 this.loadUsers();
@@ -201,8 +202,8 @@ export class SettingsTeamComponent implements OnInit {
     /**
      * Smart text parser — extracts user fields from free-form text.
      */
-    private parseUserText(text: string): Partial<UserCreateRequest> {
-        const result: Partial<UserCreateRequest> = {};
+    private parseUserText(text: string): Partial<CreateUserDto> {
+        const result: Partial<CreateUserDto> = {};
 
         const emailMatch = text.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
         if (emailMatch) {

@@ -83,7 +83,202 @@
             <span class="detail-tag detail-tag--outline">{{ tsk.category }}</span>
             }
         </div>
+        @if (tsk.description) {
+        <p class="detail-section__text" style="margin-top: 12px">{{ tsk.description }}</p>
+        }
     </section>
+
+    <!-- Context: Procedure Steps -->
+    @if (tsk.context && isArray(tsk.context['procedure'])) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-list-ol"></i>
+            <h3>Procedure</h3>
+        </div>
+        <div class="detail-list" style="margin-top: 12px">
+            @for (step of asArray(tsk.context['procedure']); track $index) {
+            <div class="detail-list__item">
+                <span class="detail-list__bullet" style="background: #10B981"></span>
+                <span>{{ step }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Context: Tool Priority -->
+    @if (tsk.context && tsk.context['tool_priority']) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <h3>Tool Priority</h3>
+        </div>
+        <p class="detail-section__text" style="margin-top: 12px; color: #D97706; font-weight: 500">
+            ⚠ {{ tsk.context['tool_priority'] }}
+        </p>
+    </section>
+    }
+
+    <!-- Context: Required Info -->
+    @if (tsk.context && isObject(tsk.context['required_info'])) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-clipboard-check"></i>
+            <h3>Required Information</h3>
+        </div>
+        <div class="assessment-grid" style="margin-top: 12px">
+            @for (key of getObjectKeys(asRecord(tsk.context['required_info'])); track key) {
+            <div class="assessment-card">
+                <span class="assessment-card__label">{{ formatKey(key) }}</span>
+                @if (isObject(asRecord(tsk.context['required_info'])[key])) {
+                <div style="margin-top: 6px">
+                    @for (subKey of getObjectKeys(asRecord(asRecord(tsk.context['required_info'])[key])); track subKey)
+                    {
+                    <div style="margin-bottom: 4px">
+                        <span
+                            style="font-weight: 600; font-size: 0.7rem; text-transform: uppercase; color: var(--color-gray-400)">{{
+                            formatKey(subKey) }}:</span>
+                        @if (isArray(asRecord(asRecord(tsk.context['required_info'])[key])[subKey])) {
+                        <div class="detail-chips" style="margin-top: 4px">
+                            @for (val of asArray(asRecord(asRecord(tsk.context['required_info'])[key])[subKey]); track
+                            $index) {
+                            <span class="detail-chip">{{ val }}</span>
+                            }
+                        </div>
+                        } @else {
+                        <span style="font-size: 0.82rem">{{
+                            asRecord(asRecord(tsk.context['required_info'])[key])[subKey] }}</span>
+                        }
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Context: Other keys (SOP, compliance, success_metrics, etc.) -->
+    @if (tsk.context) {
+    @for (key of getObjectKeys(asRecord(tsk.context)); track key) {
+    @if (key !== 'procedure' && key !== 'tool_priority' && key !== 'required_info' && key !== 'expectations' && key !==
+    'deliverables') {
+    @if (isArray(asRecord(tsk.context)[key])) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i [class]="getContextIcon(key)"></i>
+            <h3>{{ formatKey(key) }}</h3>
+        </div>
+        <div class="detail-list" style="margin-top: 12px">
+            @for (item of asArray(asRecord(tsk.context)[key]); track $index) {
+            <div class="detail-list__item">
+                <span class="detail-list__bullet" style="background: #10B981"></span>
+                <span>{{ item }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+    @if (isObject(asRecord(tsk.context)[key]) && !isArray(asRecord(tsk.context)[key])) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i [class]="getContextIcon(key)"></i>
+            <h3>{{ formatKey(key) }}</h3>
+        </div>
+        <div class="assessment-grid" style="margin-top: 12px">
+            @for (subKey of getObjectKeys(asRecord(asRecord(tsk.context)[key])); track subKey) {
+            <div class="assessment-card">
+                <span class="assessment-card__label">{{ formatKey(subKey) }}</span>
+                <span class="assessment-card__value">{{ asRecord(asRecord(tsk.context)[key])[subKey] }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+    }
+    }
+    }
+
+    <!-- Context: Expectations -->
+    @if (tsk.context && tsk.context['expectations']) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-bullseye"></i>
+            <h3>Expectations</h3>
+        </div>
+        <p class="detail-section__text" style="margin-top: 12px">{{ tsk.context['expectations'] }}</p>
+    </section>
+    }
+
+    <!-- Context: Deliverables -->
+    @if (tsk.context && isArray(tsk.context['deliverables'])) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-box-check"></i>
+            <h3>Deliverables</h3>
+        </div>
+        <div class="detail-list" style="margin-top: 12px">
+            @for (item of asArray(tsk.context['deliverables']); track $index) {
+            <div class="detail-list__item">
+                <span class="detail-list__bullet" style="background: #6366F1"></span>
+                <span>{{ item }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+    }
+
+    @if (asIntent; as intent) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-bullseye"></i>
+            <h3>Overview</h3>
+        </div>
+        <div class="detail-section__tags" style="margin-top: 12px">
+            @if (intent.category) {
+            <span class="detail-tag" style="background: #6366F1; color: white;">{{ intent.category }}</span>
+            }
+            <span class="detail-tag detail-tag--outline">{{ intent.task_count }} tasks</span>
+        </div>
+        @if (intent.description) {
+        <p class="detail-section__text" style="margin-top: 12px">{{ intent.description }}</p>
+        }
+    </section>
+
+    <!-- Trigger Phrases -->
+    @if (intent.trigger_phrases && intent.trigger_phrases.length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-comment-dots"></i>
+            <h3>Trigger Phrases</h3>
+        </div>
+        <div class="detail-chips" style="margin-top: 12px">
+            @for (phrase of intent.trigger_phrases; track $index) {
+            <span class="detail-chip">{{ phrase }}</span>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Linked Tasks (ordered) -->
+    @if (intent.tasks && intent.tasks.length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-list-ol"></i>
+            <h3>Task Sequence</h3>
+        </div>
+        <div class="detail-list" style="margin-top: 12px">
+            @for (task of intent.tasks; track task.id) {
+            <div class="detail-list__item">
+                <span class="detail-list__bullet" style="background: #6366F1">{{ task.sort_order + 1 }}</span>
+                <span>{{ task.task_template_name }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
     }
 
     <!-- Dynamic profile sections from versioned entries -->

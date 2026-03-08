@@ -54,6 +54,15 @@
                     <span class="bob-msg__dot"></span>
                 </div>
                 } @else {
+                @if (msg.toolSteps && msg.toolSteps.length > 0) {
+                <div class="bob-msg__tools">
+                    @for (step of msg.toolSteps; track step.tool) {
+                    <span class="bob-msg__tool-badge">
+                        <i class="fa-solid fa-check"></i> {{ step.tool.replace('_', ' ') }}
+                    </span>
+                    }
+                </div>
+                }
                 <p class="bob-msg__text">{{ msg.text }}</p>
                 <span class="bob-msg__time">{{ formatTime(msg.time) }}</span>
                 }

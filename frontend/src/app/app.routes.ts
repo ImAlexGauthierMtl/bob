@@ -91,6 +91,27 @@ export const routes: Routes = [
                     ),
             },
             {
+                path: 'tenants',
+                loadComponent: () =>
+                    import('./pages/tenants/tenants').then(
+                        (m) => m.TenantsComponent
+                    ),
+            },
+            {
+                path: 'tenants/:id',
+                loadComponent: () =>
+                    import('./pages/tenant-detail/tenant-detail').then(
+                        (m) => m.TenantDetailComponent
+                    ),
+            },
+            {
+                path: 'usage-logs',
+                loadComponent: () =>
+                    import('./pages/usage-logs/usage-logs').then(
+                        (m) => m.UsageLogsComponent
+                    ),
+            },
+            {
                 path: 'settings',
                 loadComponent: () =>
                     import('./pages/settings/settings').then(
@@ -221,6 +242,20 @@ export const routes: Routes = [
                         loadComponent: () =>
                             import('./pages/settings/bcc-control-center/bcc-library-detail/bcc-library-detail').then(
                                 (m) => m.BccLibraryDetailComponent
+                            ),
+                    },
+                    {
+                        path: 'products',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-products/settings-products').then(
+                                (m) => m.SettingsProductsComponent
+                            ),
+                    },
+                    {
+                        path: 'products/:id',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-products/product-detail/product-detail').then(
+                                (m) => m.ProductDetailComponent
                             ),
                     },
                     {

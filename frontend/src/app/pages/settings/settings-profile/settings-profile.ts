@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { UserService, User, UserUpdateRequest } from '../../../shared/services/user.service';
+import { UserService } from '../../../shared/services/user.service';
+import { User, UpdateUserDto } from '../../../shared/models/user.model';
 
 @Component({
     selector: 'croo-settings-profile',
@@ -25,7 +26,7 @@ export class SettingsProfileComponent implements OnInit {
     location = '';
     timezone = 'America/Montreal';
 
-    constructor(private userService: UserService) { }
+    private userService = inject(UserService);
 
     ngOnInit(): void {
         this.loadProfile();
@@ -55,7 +56,7 @@ export class SettingsProfileComponent implements OnInit {
         this.isSaving = true;
         this.saveMessage = '';
 
-        const data: UserUpdateRequest = {
+        const data: UpdateUserDto = {
             first_name: this.firstName,
             last_name: this.lastName,
             job_title: this.jobTitle || undefined,

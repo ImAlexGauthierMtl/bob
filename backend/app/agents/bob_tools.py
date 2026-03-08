@@ -215,7 +215,7 @@ BOB_TOOLS = [
         "type": "function",
         "function": {
             "name": "create_contact",
-            "description": "Create a new contact in the CRM. Requires at least first name and email.",
+            "description": "PREFERRED: Create a new contact DIRECTLY in the CRM when the user provides name and/or email. Use this instead of open_create_dialog when you have the contact info. If a company name is provided, it will be linked to the matching organization.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -240,7 +240,7 @@ BOB_TOOLS = [
                         "description": "Company/organization name (optional)",
                     },
                 },
-                "required": ["first_name", "email"],
+                "required": ["first_name"],
             },
         },
     },
@@ -266,6 +266,71 @@ BOB_TOOLS = [
                     },
                 },
                 "required": ["name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_opportunity",
+            "description": "Create a new sales opportunity in the CRM. Link it to an organization and/or contact. Defaults to PROSPECTING stage.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Opportunity name (e.g. 'PSU - Service Integration')",
+                    },
+                    "organization_id": {
+                        "type": "string",
+                        "description": "UUID of the organization to link (optional)",
+                    },
+                    "contact_id": {
+                        "type": "string",
+                        "description": "UUID of the primary contact (optional)",
+                    },
+                    "stage": {
+                        "type": "string",
+                        "description": "Pipeline stage (default: PROSPECTING)",
+                        "enum": ["PROSPECTING", "QUALIFICATION", "PROPOSAL", "NEGOTIATION", "CLOSED_WON", "CLOSED_LOST"],
+                        "default": "PROSPECTING",
+                    },
+                    "source": {
+                        "type": "string",
+                        "description": "Lead source (e.g. 'Hunter', 'Inbound', 'Referral')",
+                    },
+                    "amount": {
+                        "type": "number",
+                        "description": "Estimated deal value (optional)",
+                    },
+                },
+                "required": ["name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "link_product_to_opportunity",
+            "description": "Attach a product from the catalog to an existing opportunity. Snapshots the current product price.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "opportunity_id": {
+                        "type": "string",
+                        "description": "UUID of the opportunity",
+                    },
+                    "product_id": {
+                        "type": "string",
+                        "description": "UUID of the product to link",
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "description": "Quantity (default: 1)",
+                        "default": 1,
+                    },
+                },
+                "required": ["opportunity_id", "product_id"],
             },
         },
     },
@@ -580,19 +645,32 @@ async def _create_contact(
     db_session,
     user_id: str,
     first_name: str,
-    email: str,
+    email: str = "",
     last_name: str = "",
     phone: str = "",
     company: str = "",
 ) -> str:
-    """Create a new contact."""
+    """Create a new contact, optionally linked to an organization."""
     from app.domain.entities.contact import Contact
+    from app.domain.entities.organization import Organization
+
+    # Find organization by name if company is provided
+    org_id = None
+    org_name = ""
+    if company:
+        org = db_session.query(Organization).filter(
+            Organization.name.ilike(f"%{company}%")
+        ).first()
+        if org:
+            org_id = org.id
+            org_name = org.name
 
     contact = Contact(
         first_name=first_name,
         last_name=last_name,
         email=email,
         phone=phone,
+        organization_id=org_id,
     )
     db_session.add(contact)
     db_session.commit()
@@ -601,10 +679,18 @@ async def _create_contact(
         "tool_contact_created",
         contact_id=str(contact.id),
         email=email,
+        organization=org_name or None,
         user_id=user_id,
     )
 
-    return f"Contact created: {first_name} {last_name} ({email})"
+    result = f"Contact created: {first_name} {last_name}"
+    if email:
+        result += f" ({email})"
+    if org_name:
+        result += f" — linked to organization '{org_name}'"
+    elif company:
+        result += f" — organization '{company}' not found, contact created without org link"
+    return result
 
 
 async def _create_organization(

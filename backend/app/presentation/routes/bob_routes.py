@@ -44,12 +44,19 @@ class BobAction(BaseModel):
     index: Optional[int] = None
 
 
+class ToolStep(BaseModel):
+    """A step Bob performed during tool execution."""
+    tool: str
+    status: str = "ok"
+
+
 class ChatResponse(BaseModel):
     """Bob's response to a chat message."""
     response: str
     session_id: str
     turn_count: int
     actions: list[BobAction] = []
+    tool_steps: list[ToolStep] = []
 
 
 class SessionInfo(BaseModel):
@@ -95,7 +102,7 @@ async def bob_chat(
     )
 
     try:
-        response_text, actions = bob_agent.chat(
+        response_text, actions, tool_steps = bob_agent.chat(
             session_id=session_id,
             user_message=request.message,
             tenant_id=current_user["tenant_id"],
@@ -107,6 +114,7 @@ async def bob_chat(
             session_id=session_id,
             turn_count=session.turn_count,
             actions=[BobAction(**a) for a in actions],
+            tool_steps=[ToolStep(**s) for s in tool_steps],
         )
 
     except ValueError as e:

@@ -1,0 +1,321 @@
+<!-- Back Link -->
+<a routerLink="/tenants" class="back-link" id="back-link"><i class="fa-solid fa-arrow-left"></i> Retour aux tenants</a>
+
+<!-- Loading -->
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Chargement...</span>
+</div>
+}
+
+<!-- Error -->
+@if (errorMessage) {
+<div class="error-state">
+    <i class="fa-solid fa-circle-exclamation"></i>
+    <span>{{ errorMessage }}</span>
+</div>
+}
+
+<!-- Detail -->
+@if (tenant && !isLoading) {
+<div class="detail-header" id="detail-header">
+    <div class="detail-header__left">
+        <h2 class="detail-title">{{ tenant.name }}</h2>
+        <p class="detail-subtitle">{{ tenant.slug }}</p>
+    </div>
+    <div class="detail-header__actions">
+        <span class="status-badge" [class]="getStatusClass(tenant.status)">{{ tenant.status }}</span>
+        <button class="btn btn-outline btn-sm" id="btn-change-status" (click)="openStatusDialog()"><i
+                class="fa-solid fa-rotate"></i> Changer statut</button>
+        <button class="btn btn-accent btn-sm" id="btn-provision" (click)="openProvisionDialog()"><i
+                class="fa-solid fa-user-plus"></i> Provisionner</button>
+    </div>
+</div>
+
+<!-- Save Status -->
+@if (saveMessage) {
+<div class="save-toast" [class.save-toast--error]="saveType === 'error'" id="save-toast">{{ saveMessage }}</div>
+}
+
+<!-- ═══════════════ TAB NAVIGATION ═══════════════ -->
+<nav class="tab-nav" id="tab-nav">
+    <button class="tab-nav__item" [class.tab-nav__item--active]="activeTab === 'info'" (click)="activeTab = 'info'"
+        id="tab-info">
+        <i class="fa-solid fa-circle-info"></i> Informations
+    </button>
+    <button class="tab-nav__item" [class.tab-nav__item--active]="activeTab === 'logs'" (click)="switchToLogs()"
+        id="tab-logs">
+        <i class="fa-solid fa-chart-line"></i> Logs d'utilisation
+    </button>
+</nav>
+
+<!-- ═══════════════ TAB: INFO ═══════════════ -->
+@if (activeTab === 'info') {
+<div class="detail-grid" id="detail-grid">
+    <section class="detail-section">
+        <h3 class="detail-section__title">Informations générales</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label">Nom</label>
+                <input type="text" class="input" id="field-name" [(ngModel)]="tenant.name" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Slug</label>
+                <input type="text" class="input" id="field-slug" [(ngModel)]="tenant.slug" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Plan</label>
+                <select class="input" id="field-plan" [(ngModel)]="tenant.plan">
+                    <option value="STARTER">Starter</option>
+                    <option value="PRO">Pro</option>
+                    <option value="ENTERPRISE">Enterprise</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Max utilisateurs</label>
+                <input type="number" class="input" id="field-max-users" [(ngModel)]="tenant.max_users" min="1" />
+            </div>
+        </div>
+    </section>
+
+    <section class="detail-section">
+        <h3 class="detail-section__title">Propriétaire</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label">Nom</label>
+                <input type="text" class="input" id="field-owner-name" [(ngModel)]="tenant.owner_name" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="input" id="field-owner-email" [(ngModel)]="tenant.owner_email" />
+            </div>
+        </div>
+    </section>
+
+    <section class="detail-section detail-section--full">
+        <h3 class="detail-section__title">Notes internes</h3>
+        <textarea class="input textarea" id="field-notes" [(ngModel)]="tenant.notes" rows="4"
+            placeholder="Notes de gestion..."></textarea>
+    </section>
+
+    <section class="detail-section detail-section--full">
+        <h3 class="detail-section__title">Métadonnées</h3>
+        <div class="meta-grid">
+            <div class="meta-item">
+                <span class="meta-label">ID</span>
+                <span class="meta-value">{{ tenant.id }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Créé le</span>
+                <span class="meta-value">{{ formatDate(tenant.created_at) }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Modifié le</span>
+                <span class="meta-value">{{ formatDate(tenant.updated_at) }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Abonnement début</span>
+                <span class="meta-value">{{ formatDate(tenant.subscription_start) }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Abonnement fin</span>
+                <span class="meta-value">{{ formatDate(tenant.subscription_end) }}</span>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Actions -->
+<div class="actions-bar" id="actions-bar">
+    <button class="btn btn-accent" id="btn-save" (click)="save()" [disabled]="isSaving">
+        @if (isSaving) {
+        <i class="fa-solid fa-spinner fa-spin"></i> Sauvegarde...
+        } @else {
+        <i class="fa-solid fa-check"></i> Sauvegarder
+        }
+    </button>
+    <button class="btn btn-danger" id="btn-delete" (click)="deleteTenant()"><i class="fa-solid fa-trash"></i>
+        Supprimer</button>
+</div>
+}
+
+<!-- ═══════════════ TAB: LOGS ═══════════════ -->
+@if (activeTab === 'logs') {
+<div class="logs-container" id="logs-container">
+
+    <!-- Filters -->
+    <div class="logs-filters" id="logs-filters">
+        <div class="logs-filters__group">
+            <select class="input input--sm" id="filter-service" [(ngModel)]="logFilterService"
+                (ngModelChange)="loadLogs()">
+                <option value="">Tous les services</option>
+                <option value="LLM">LLM</option>
+                <option value="STT">STT</option>
+                <option value="TTS">TTS</option>
+                <option value="SEARCH">Search</option>
+                <option value="TOOL">Tool</option>
+                <option value="ENRICHMENT">Enrichment</option>
+                <option value="WORKFLOW">Workflow</option>
+            </select>
+        </div>
+        <div class="logs-filters__stats">
+            <span class="logs-stat">{{ logTotal }} transactions</span>
+            <span class="logs-stat logs-stat--accent">COGS: ${{ logTotalCogs.toFixed(4) }}</span>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    @if (logsLoading) {
+    <div class="loading-state">
+        <i class="fa-solid fa-spinner fa-spin"></i> Chargement des logs...
+    </div>
+    }
+
+    <!-- Empty -->
+    @if (!logsLoading && logItems.length === 0) {
+    <div class="logs-empty">
+        <i class="fa-solid fa-chart-bar"></i>
+        <span>Aucune transaction enregistrée</span>
+    </div>
+    }
+
+    <!-- Table -->
+    @if (!logsLoading && logItems.length > 0) {
+    <div class="logs-table-wrap">
+        <table class="logs-table" id="logs-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Service</th>
+                    <th>Model</th>
+                    <th>Trigger</th>
+                    <th>Tokens In</th>
+                    <th>Tokens Out</th>
+                    <th>COGS</th>
+                    <th>User</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (log of logItems; track log.id) {
+                <tr>
+                    <td class="logs-cell--date">{{ formatDateTime(log.timestamp) }}</td>
+                    <td>
+                        <span class="service-tag" [attr.data-service]="log.service_type">{{ log.service_type }}</span>
+                    </td>
+                    <td class="logs-cell--mono">{{ log.model || '—' }}</td>
+                    <td class="logs-cell--trigger">{{ log.trigger_source }}</td>
+                    <td class="logs-cell--num">{{ log.input_tokens || '—' }}</td>
+                    <td class="logs-cell--num">{{ log.output_tokens || '—' }}</td>
+                    <td class="logs-cell--cogs">${{ log.cogs_amount.toFixed(6) || '0' }}</td>
+                    <td class="logs-cell--user" [title]="log.user_email || ''">{{ log.user_id.slice(0, 8) || '—' }}
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (logTotal > logLimit) {
+    <div class="logs-pagination">
+        <button class="btn btn-outline btn-sm" [disabled]="logOffset === 0"
+            (click)="logOffset = logOffset - logLimit; loadLogs()">
+            <i class="fa-solid fa-chevron-left"></i> Précédent
+        </button>
+        <span class="logs-pagination__info">{{ logOffset + 1 }}–{{ Math.min(logOffset + logLimit, logTotal) }} / {{
+            logTotal }}</span>
+        <button class="btn btn-outline btn-sm" [disabled]="logOffset + logLimit >= logTotal"
+            (click)="logOffset = logOffset + logLimit; loadLogs()">
+            Suivant <i class="fa-solid fa-chevron-right"></i>
+        </button>
+    </div>
+    }
+    }
+</div>
+}
+}
+
+<!-- ═══════════════ STATUS CHANGE DIALOG ═══════════════ -->
+@if (showStatusDialog) {
+<div class="dialog-overlay" (click)="showStatusDialog = false">
+    <div class="dialog" (click)="$event.stopPropagation()">
+        <div class="dialog__header">
+            <h3 class="dialog__title">Changer le statut</h3>
+            <button class="dialog__close" (click)="showStatusDialog = false"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="dialog__body">
+            <div class="form-group">
+                <label class="form-label">Nouveau statut</label>
+                <select class="input" id="select-status" [(ngModel)]="newStatus">
+                    <option value="TRIAL">Essai</option>
+                    <option value="ACTIVE">Actif</option>
+                    <option value="SUSPENDED">Suspendu</option>
+                    <option value="CANCELLED">Annulé</option>
+                </select>
+            </div>
+        </div>
+        <div class="dialog__footer">
+            <button class="btn btn-outline" (click)="showStatusDialog = false">Annuler</button>
+            <button class="btn btn-accent" id="btn-confirm-status" (click)="confirmStatusChange()">Confirmer</button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- ═══════════════ PROVISION DIALOG ═══════════════ -->
+@if (showProvisionDialog) {
+<div class="dialog-overlay" (click)="showProvisionDialog = false">
+    <div class="dialog dialog--wide" (click)="$event.stopPropagation()">
+        <div class="dialog__header">
+            <h3 class="dialog__title">Provisionner le tenant</h3>
+            <button class="dialog__close" (click)="showProvisionDialog = false"><i
+                    class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="dialog__body">
+            <p class="dialog__hint"><i class="fa-solid fa-info-circle"></i> Créer le premier utilisateur admin pour ce
+                tenant.</p>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Prénom *</label>
+                    <input type="text" class="input" id="prov-first-name" [(ngModel)]="provisionFirstName"
+                        placeholder="Jean" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nom *</label>
+                    <input type="text" class="input" id="prov-last-name" [(ngModel)]="provisionLastName"
+                        placeholder="Dupont" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" class="input" id="prov-email" [(ngModel)]="provisionEmail"
+                        placeholder="admin@tenant.com" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mot de passe *</label>
+                    <input type="password" class="input" id="prov-password" [(ngModel)]="provisionPassword"
+                        placeholder="Min 8 caractères" />
+                </div>
+            </div>
+
+            @if (provisionMessage) {
+            <div class="dialog__status" [class.dialog__status--success]="provisionType === 'success'"
+                [class.dialog__status--error]="provisionType === 'error'">
+                <p>{{ provisionMessage }}</p>
+            </div>
+            }
+        </div>
+        <div class="dialog__footer">
+            <button class="btn btn-outline" (click)="showProvisionDialog = false">Fermer</button>
+            <button class="btn btn-accent" id="btn-provision-submit" (click)="submitProvision()"
+                [disabled]="isProvisioning || !provisionEmail.trim() || !provisionPassword.trim() || !provisionFirstName.trim() || !provisionLastName.trim()">
+                @if (isProvisioning) {
+                <i class="fa-solid fa-spinner fa-spin"></i> En cours...
+                } @else {
+                <i class="fa-solid fa-user-plus"></i> Provisionner
+                }
+            </button>
+        </div>
+    </div>
+</div>
+}

@@ -1,191 +1,20 @@
-import { environment } from '../../../environments/environment';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-
-// ═══════════════════════════════════════════════════════════════
-// LAYER 1 — LIBRARY INTERFACES
-// ═══════════════════════════════════════════════════════════════
-
-export interface BccIndustry {
-    id: string;
-    name: string;
-    description: string | null;
-    best_practices: Record<string, unknown> | null;
-}
-
-export interface BccCareer {
-    id: string;
-    name: string;
-    description: string | null;
-    typical_skills: string[] | null;
-    typical_tasks: string[] | null;
-}
-
-export interface BccSkillTemplate {
-    id: string;
-    name: string;
-    type: string;
-    description: string | null;
-    category: string | null;
-}
-
-export interface BccTaskTemplate {
-    id: string;
-    name: string;
-    description: string | null;
-    context: Record<string, unknown> | null;
-    frequency: string;
-    category: string | null;
-    required_skill_ids: string[] | null;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// LAYER 2 — ORGANIZATION INTERFACES
-// ═══════════════════════════════════════════════════════════════
-
-export interface BccOrgProfile {
-    id: string;
-    country: string | null;
-    state_province: string | null;
-    city: string | null;
-    operations_domains: string[] | null;
-}
-
-export interface BccOrganization {
-    id: string;
-    name: string;
-    description: string | null;
-    icon: string | null;
-    color: string | null;
-    profile: BccOrgProfile | null;
-    department_count: number;
-    industry_count: number;
-}
-
-export interface BccDepartment {
-    id: string;
-    name: string;
-    description: string | null;
-    organization_id: string;
-    team_count: number;
-}
-
-export interface BccTeam {
-    id: string;
-    name: string;
-    description: string | null;
-    department_id: string;
-    role_count: number;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// LAYER 3 — CONTEXT / REGULATIONS
-// ═══════════════════════════════════════════════════════════════
-
-export interface BccRegulation {
-    id: string;
-    name: string;
-    description: string | null;
-    type: string;
-    scope: string | null;
-    enforcement_level: string;
-    details: Record<string, unknown> | null;
-}
-
-export interface BccOrgDetail {
-    id: string;
-    name: string;
-    description: string | null;
-    icon: string | null;
-    color: string | null;
-    profile: BccOrgProfile | null;
-    departments: BccDepartment[];
-    industries: BccIndustry[];
-    regulations: BccRegulation[];
-}
-
-// ═══════════════════════════════════════════════════════════════
-// EXISTING INTERFACES (backward compat)
-// ═══════════════════════════════════════════════════════════════
-
-export interface BccResource {
-    id: string;
-    title: string;
-    type: string;
-    content: string | null;
-    url: string | null;
-}
-
-export interface BccSkill {
-    id: string;
-    name: string;
-    type: string;
-    stage: string;
-    priority: number;
-    description: string | null;
-    prerequisites: string[] | null;
-    training_data: Record<string, unknown> | null;
-    resources: BccResource[];
-}
-
-export interface BccTaskStep {
-    id: string;
-    step_number: number;
-    instruction: string;
-    details: string | null;
-}
-
-export interface BccTask {
-    id: string;
-    name: string;
-    frequency: string;
-    stage: string;
-    category: string | null;
-    description: string | null;
-    required_skills: string[] | null;
-    training_data: Record<string, unknown> | null;
-    steps: BccTaskStep[];
-}
-
-export interface BccMilestone {
-    id: string;
-    name: string;
-    stage: string;
-    sort_order: number;
-    criteria: Record<string, unknown> | null;
-}
-
-export interface BccRole {
-    id: string;
-    name: string;
-    team_id: string | null;
-    department: string | null;
-    description: string | null;
-    icon: string | null;
-    color: string | null;
-    kpis: Record<string, unknown> | null;
-    context: Record<string, unknown> | null;
-    skill_count: number;
-    task_count: number;
-    user_count: number;
-}
-
-export interface BccRoleDetail extends BccRole {
-    skills: BccSkill[];
-    tasks: BccTask[];
-    milestones: BccMilestone[];
-}
-
-// ═══════════════════════════════════════════════════════════════
-// SERVICE
-// ═══════════════════════════════════════════════════════════════
+import { environment } from '../../../environments/environment';
+import {
+    BccOrganization, BccOrgDetail, BccDepartment, BccTeam,
+    BccIndustry, BccCareer, BccSkillTemplate, BccTaskTemplate, BccIntent,
+    BccRegulation, BccRole, BccRoleDetail,
+    BccSkill, BccTask, BccTaskStep, BccResource, BccMilestone,
+    BccProfile, BccProfileSection, BccProfileEntry,
+} from '../models/bcc.model';
 
 const API_URL = `${environment.apiUrl}/bcc`;
 
 @Injectable({ providedIn: 'root' })
 export class BccService {
-    constructor(private http: HttpClient) { }
+    private http = inject(HttpClient);
 
     // ── Organizations ────────────────────────────────────────
     listOrganizations(): Observable<BccOrganization[]> {
@@ -279,6 +108,19 @@ export class BccService {
         return this.http.get<BccTaskTemplate>(`${API_URL}/task-templates/${id}`);
     }
 
+    // ── Library: Intents ─────────────────────────────────────
+    listIntents(): Observable<BccIntent[]> {
+        return this.http.get<BccIntent[]>(`${API_URL}/intents`);
+    }
+
+    getIntent(id: string): Observable<BccIntent> {
+        return this.http.get<BccIntent>(`${API_URL}/intents/${id}`);
+    }
+
+    createIntent(data: Partial<BccIntent>): Observable<BccIntent> {
+        return this.http.post<BccIntent>(`${API_URL}/intents`, data);
+    }
+
     // ── Regulations ──────────────────────────────────────────
     listRegulations(orgId: string): Observable<BccRegulation[]> {
         return this.http.get<BccRegulation[]>(`${API_URL}/organizations/${orgId}/regulations`);
@@ -288,7 +130,7 @@ export class BccService {
         return this.http.post<BccRegulation>(`${API_URL}/organizations/${orgId}/regulations`, data);
     }
 
-    // ── Existing: Roles ──────────────────────────────────────
+    // ── Roles ────────────────────────────────────────────────
     listRoles(): Observable<BccRole[]> {
         return this.http.get<BccRole[]>(`${API_URL}/roles`);
     }
@@ -309,7 +151,7 @@ export class BccService {
         return this.http.delete<void>(`${API_URL}/roles/${id}`);
     }
 
-    // ── Existing: Skills ─────────────────────────────────────
+    // ── Skills ───────────────────────────────────────────────
     getSkill(skillId: string): Observable<BccSkill> {
         return this.http.get<BccSkill>(`${API_URL}/skills/${skillId}`);
     }
@@ -326,7 +168,7 @@ export class BccService {
         return this.http.delete<void>(`${API_URL}/skills/${skillId}`);
     }
 
-    // ── Existing: Tasks ──────────────────────────────────────
+    // ── Tasks ────────────────────────────────────────────────
     getTask(taskId: string): Observable<BccTask> {
         return this.http.get<BccTask>(`${API_URL}/tasks/${taskId}`);
     }
@@ -343,7 +185,7 @@ export class BccService {
         return this.http.delete<void>(`${API_URL}/tasks/${taskId}`);
     }
 
-    // ── Existing: Steps / Resources / Milestones ─────────────
+    // ── Steps / Resources / Milestones ───────────────────────
     addTaskStep(taskId: string, data: Partial<BccTaskStep>): Observable<BccTaskStep> {
         return this.http.post<BccTaskStep>(`${API_URL}/tasks/${taskId}/steps`, data);
     }
@@ -372,40 +214,4 @@ export class BccService {
     addProfileEntry(entityType: string, entityId: string, data: Partial<BccProfileEntry>): Observable<BccProfileEntry> {
         return this.http.post<BccProfileEntry>(`${API_URL}/profiles/${entityType}/${entityId}/entries`, data);
     }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// LAYER 4 — PROFILE ENTRIES (versioned knowledge)
-// ═══════════════════════════════════════════════════════════════
-
-export type BccPerspective = 'general' | 'ceo' | 'cfo' | 'director' | 'employee';
-export type BccEntityType = 'industry' | 'career' | 'skill_template' | 'task_template'
-    | 'organization' | 'department' | 'team' | 'role' | 'regulation';
-
-export interface BccProfileEntry {
-    id: string;
-    entity_type: BccEntityType;
-    entity_id: string;
-    section: string;
-    content: string | null;
-    structured_data: Record<string, unknown> | unknown[] | null;
-    perspective: BccPerspective;
-    version: number;
-    is_active: boolean;
-    contributed_by: string | null;
-    contributor_name: string | null;
-    contribution_method: 'conversation' | 'manual' | 'import';
-    conversation_id: string | null;
-    created_at: string | null;
-}
-
-export interface BccProfileSection {
-    section: string;
-    perspectives: BccProfileEntry[];
-}
-
-export interface BccProfile {
-    entity_type: BccEntityType;
-    entity_id: string;
-    sections: BccProfileSection[];
 }

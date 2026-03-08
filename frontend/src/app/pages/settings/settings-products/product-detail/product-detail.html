@@ -1,0 +1,622 @@
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Loading product...</span>
+</div>
+}
+
+@if (!isLoading) {
+<!-- ═══ Sticky Header ═══ -->
+<header class="product-header">
+    <div class="product-header__top">
+        <div class="product-header__identity">
+            <a routerLink="/settings/products" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div class="product-header__avatar" [class]="getCategoryClass(formData.category)">
+                <i [class]="getCategoryIcon(formData.category)"></i>
+            </div>
+            <div class="product-header__info">
+                <div class="product-header__name-row">
+                    @if (isNew) {
+                    <h2 class="product-header__name">New Product</h2>
+                    } @else {
+                    <h2 class="product-header__name">{{ product?.name }}</h2>
+                    }
+                    <span class="category-badge"
+                        [class]="'category-badge--' + getCategoryClass(formData.category).replace('category--', '')">
+                        {{ getCategoryLabel(formData.category) }}
+                    </span>
+                    @if (product?.is_active === false) {
+                    <span class="status-label status-label--inactive">INACTIVE</span>
+                    }
+                </div>
+                <p class="product-header__meta">
+                    @if (product) {
+                    {{ formatPrice(product.unit_price, product.currency) }}
+                    @if (product.billing_cycle) { · {{ getBillingLabel(product.billing_cycle) }} }
+                    @if (product.sku) { · SKU: {{ product.sku }} }
+                    }
+                </p>
+            </div>
+        </div>
+
+        <div class="product-header__actions">
+            @if (!isNew) {
+            <button class="btn btn-outline btn-outline--danger" (click)="deleteProduct()">
+                <i class="fa-solid fa-trash"></i> Delete
+            </button>
+            }
+            <button class="btn btn-accent" (click)="saveProduct()" [disabled]="isSaving || !formData.name.trim()">
+                @if (isSaving) {
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                } @else {
+                <i class="fa-solid fa-check"></i>
+                {{ isNew ? 'Create Product' : 'Save Changes' }}
+                }
+            </button>
+        </div>
+    </div>
+
+    <div class="product-header__tabs">
+        <nav class="tabs">
+            @for (tab of getTabs(); track tab.key) {
+            <button class="tab" [class.tab--active]="activeTab === tab.key" (click)="setActiveTab(tab.key)">{{ tab.label
+                }}</button>
+            }
+        </nav>
+    </div>
+</header>
+
+@if (statusMessage) {
+<div class="status-bar" [class.status-bar--error]="statusType === 'error'"
+    [class.status-bar--success]="statusType === 'success'">
+    {{ statusMessage }}
+</div>
+}
+
+<!-- ═══ Main Content ═══ -->
+<main class="product-main">
+    <div class="product-content">
+
+        <!-- ── Overview Tab ── -->
+        @if (activeTab === 'overview' && !isNew) {
+        <section class="tab-section">
+            <div class="section-block">
+                <h3 class="section-title">Product Summary</h3>
+                <div class="summary-card">
+                    <p class="summary-text">{{ product?.description || 'No description provided.' }}</p>
+                </div>
+            </div>
+
+            @if (product?.category === 'SERVICE' || product?.category === 'ADD_ON') {
+            <div class="section-block">
+                <h3 class="section-title">Subscription Details</h3>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <p class="metric-card__label">Billing Cycle</p>
+                        <p class="metric-card__value">{{ getBillingLabel(product?.billing_cycle) || '—' }}</p>
+                    </div>
+                    <div class="metric-card">
+                        <p class="metric-card__label">Contract Term</p>
+                        <p class="metric-card__value">{{ product?.contract_term_months ? product?.contract_term_months +
+                            ' months' : '—' }}</p>
+                    </div>
+                    <div class="metric-card">
+                        <p class="metric-card__label">Auto-Renew</p>
+                        <p class="metric-card__value">{{ product?.auto_renew ? 'Yes' : 'No' }}</p>
+                    </div>
+                    <div class="metric-card">
+                        <p class="metric-card__label">Setup Fee</p>
+                        <p class="metric-card__value">{{ product?.setup_fee ? formatPrice(product!.setup_fee!) : '—' }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            }
+
+            @if (product?.category === 'SERVICE') {
+            <div class="section-block">
+                <h3 class="section-title">Add-Ons</h3>
+                @if (addons.length === 0) {
+                <p class="empty-hint">No add-ons linked to this service.</p>
+                } @else {
+                <div class="addon-list">
+                    @for (a of addons; track a.id) {
+                    <div class="addon-card">
+                        <div class="addon-card__info">
+                            <p class="addon-card__name">{{ a.name }}</p>
+                            <p class="addon-card__meta">{{ formatPrice(a.unit_price) }} · {{ a.is_coterminus ?
+                                'Coterminus' : 'Independent term' }}</p>
+                        </div>
+                        <span class="category-badge category-badge--purple">ADD-ON</span>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+            }
+
+            @if (product?.category === 'SOFTWARE') {
+            <div class="section-block">
+                <h3 class="section-title">License Details</h3>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <p class="metric-card__label">License Type</p>
+                        <p class="metric-card__value">{{ product?.license_type?.replace('_', ' ') || '—' }}</p>
+                    </div>
+                    <div class="metric-card">
+                        <p class="metric-card__label">Max Users</p>
+                        <p class="metric-card__value">{{ product?.max_users || 'Unlimited' }}</p>
+                    </div>
+                </div>
+            </div>
+            }
+
+            @if (product?.category === 'HARDWARE') {
+            <div class="section-block">
+                <h3 class="section-title">Hardware Specifications</h3>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <p class="metric-card__label">Manufacturer</p>
+                        <p class="metric-card__value">{{ product?.manufacturer || '—' }}</p>
+                    </div>
+                    <div class="metric-card">
+                        <p class="metric-card__label">Part Number</p>
+                        <p class="metric-card__value">{{ product?.part_number || '—' }}</p>
+                    </div>
+                    <div class="metric-card">
+                        <p class="metric-card__label">Weight</p>
+                        <p class="metric-card__value">{{ product?.weight_kg ? product?.weight_kg + ' kg' : '—' }}</p>
+                    </div>
+                    <div class="metric-card">
+                        <p class="metric-card__label">Warranty</p>
+                        <p class="metric-card__value">{{ product?.warranty_months ? product?.warranty_months + ' months'
+                            : '—' }}</p>
+                    </div>
+                </div>
+            </div>
+            }
+        </section>
+        }
+
+        <!-- ── Configuration Tab ── -->
+        @if (activeTab === 'configuration') {
+        <section class="tab-section">
+
+            <!-- General -->
+            <div class="config-section">
+                <div class="config-section__header">
+                    <i class="fa-solid fa-tag"></i>
+                    <h3 class="config-section__title">General Information</h3>
+                </div>
+                <div class="config-fields">
+                    <div class="config-row config-row--two">
+                        <div class="form-group">
+                            <label class="form-label">Product Name</label>
+                            <input class="form-input" type="text" [(ngModel)]="formData.name"
+                                placeholder="e.g. Enterprise Platform" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Category</label>
+                            <select class="form-input" [(ngModel)]="formData.category">
+                                <option value="SOFTWARE">Software</option>
+                                <option value="SERVICE">Service (SaaS)</option>
+                                <option value="ADD_ON">Add-On</option>
+                                <option value="CONSULTING">Consulting</option>
+                                <option value="HARDWARE">Hardware</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-input form-input--textarea" [(ngModel)]="formData.description"
+                            placeholder="Brief description..." rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing -->
+            <div class="config-section">
+                <div class="config-section__header">
+                    <i class="fa-solid fa-dollar-sign"></i>
+                    <h3 class="config-section__title">Pricing</h3>
+                </div>
+                <div class="config-fields">
+                    <div class="config-row config-row--three">
+                        <div class="form-group">
+                            <label class="form-label">Unit Price</label>
+                            <input class="form-input" type="number" min="0" step="0.01"
+                                [(ngModel)]="formData.unit_price" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Currency</label>
+                            <select class="form-input" [(ngModel)]="formData.currency">
+                                <option value="CAD">CAD</option>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">SKU</label>
+                            <input class="form-input" type="text" [(ngModel)]="formData.sku" placeholder="PROD-001" />
+                        </div>
+                    </div>
+                    <div class="config-row config-row--three">
+                        <div class="form-group">
+                            <label class="form-label">Min Quantity</label>
+                            <input class="form-input" type="number" min="1" [(ngModel)]="formData.min_quantity" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Max Quantity</label>
+                            <input class="form-input" type="number" min="0" placeholder="Unlimited"
+                                [(ngModel)]="formData.max_quantity" />
+                        </div>
+                        <div class="form-group form-group--toggle">
+                            <label class="toggle">
+                                <input type="checkbox" [(ngModel)]="formData.is_taxable" />
+                                <span class="toggle__track"></span>
+                            </label>
+                            <span class="toggle-label">Taxable</span>
+                            @if (formData.is_taxable) {
+                            <input class="form-input form-input--small" type="number" min="0" max="100" step="0.01"
+                                [(ngModel)]="formData.tax_rate" placeholder="Tax %" />
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SaaS / Subscription (SERVICE + ADD_ON) -->
+            @if (formData.category === 'SERVICE' || formData.category === 'ADD_ON') {
+            <div class="config-section">
+                <div class="config-section__header">
+                    <i class="fa-solid fa-repeat"></i>
+                    <h3 class="config-section__title">Subscription & Billing</h3>
+                </div>
+                <div class="config-fields">
+                    <div class="config-row config-row--two">
+                        <div class="form-group">
+                            <label class="form-label">Billing Cycle</label>
+                            <select class="form-input" [(ngModel)]="formData.billing_cycle">
+                                <option [ngValue]="undefined">Not set</option>
+                                <option value="MONTHLY">Monthly</option>
+                                <option value="QUARTERLY">Quarterly</option>
+                                <option value="SEMI_ANNUAL">Semi-Annual</option>
+                                <option value="ANNUAL">Annual</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Contract Term (months)</label>
+                            <input class="form-input" type="number" min="1" [(ngModel)]="formData.contract_term_months"
+                                placeholder="12" />
+                        </div>
+                    </div>
+                    <div class="config-row config-row--three">
+                        <div class="form-group">
+                            <label class="form-label">Setup Fee</label>
+                            <input class="form-input" type="number" min="0" step="0.01" [(ngModel)]="formData.setup_fee"
+                                placeholder="0.00" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Trial Days</label>
+                            <input class="form-input" type="number" min="0" [(ngModel)]="formData.trial_days"
+                                placeholder="0" />
+                        </div>
+                        <div class="form-group form-group--toggle">
+                            <label class="toggle">
+                                <input type="checkbox" [(ngModel)]="formData.auto_renew" />
+                                <span class="toggle__track"></span>
+                            </label>
+                            <span class="toggle-label">Auto-Renew</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            }
+
+            <!-- ADD_ON link -->
+            @if (formData.category === 'ADD_ON') {
+            <div class="config-section">
+                <div class="config-section__header">
+                    <i class="fa-solid fa-link"></i>
+                    <h3 class="config-section__title">Add-On Configuration</h3>
+                </div>
+                <div class="config-fields">
+                    <div class="config-row config-row--two">
+                        <div class="form-group">
+                            <label class="form-label">Parent Service</label>
+                            <select class="form-input" [(ngModel)]="formData.parent_product_id">
+                                <option [ngValue]="undefined">No parent (standalone)</option>
+                                @for (s of serviceProducts; track s.id) {
+                                <option [value]="s.id">{{ s.name }}</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group form-group--toggle">
+                            <label class="toggle">
+                                <input type="checkbox" [(ngModel)]="formData.is_coterminus" />
+                                <span class="toggle__track"></span>
+                            </label>
+                            <span class="toggle-label">Coterminus</span>
+                            <p class="form-hint">Ends with parent contract</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            }
+
+            <!-- SOFTWARE -->
+            @if (formData.category === 'SOFTWARE') {
+            <div class="config-section">
+                <div class="config-section__header">
+                    <i class="fa-solid fa-key"></i>
+                    <h3 class="config-section__title">License</h3>
+                </div>
+                <div class="config-fields">
+                    <div class="config-row config-row--two">
+                        <div class="form-group">
+                            <label class="form-label">License Type</label>
+                            <select class="form-input" [(ngModel)]="formData.license_type">
+                                <option [ngValue]="undefined">Not set</option>
+                                <option value="PERPETUAL">Perpetual</option>
+                                <option value="SUBSCRIPTION">Subscription</option>
+                                <option value="USAGE_BASED">Usage-Based</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Max Users</label>
+                            <input class="form-input" type="number" min="0" placeholder="Unlimited"
+                                [(ngModel)]="formData.max_users" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            }
+
+            <!-- CONSULTING -->
+            @if (formData.category === 'CONSULTING') {
+            <div class="config-section">
+                <div class="config-section__header">
+                    <i class="fa-solid fa-briefcase"></i>
+                    <h3 class="config-section__title">Professional Services</h3>
+                </div>
+                <div class="config-fields">
+                    <div class="config-row config-row--two">
+                        <div class="form-group">
+                            <label class="form-label">Billing Unit</label>
+                            <select class="form-input" [(ngModel)]="formData.billing_unit">
+                                <option [ngValue]="undefined">Not set</option>
+                                <option value="HOUR">Per Hour</option>
+                                <option value="DAY">Per Day</option>
+                                <option value="PROJECT">Per Project</option>
+                                <option value="RETAINER">Retainer</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Estimated Hours</label>
+                            <input class="form-input" type="number" min="0" step="0.5"
+                                [(ngModel)]="formData.estimated_hours" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            }
+
+            <!-- HARDWARE -->
+            @if (formData.category === 'HARDWARE') {
+            <div class="config-section">
+                <div class="config-section__header">
+                    <i class="fa-solid fa-microchip"></i>
+                    <h3 class="config-section__title">Hardware Specifications</h3>
+                </div>
+                <div class="config-fields">
+                    <div class="config-row config-row--two">
+                        <div class="form-group">
+                            <label class="form-label">Manufacturer</label>
+                            <input class="form-input" type="text" [(ngModel)]="formData.manufacturer"
+                                placeholder="e.g. Apple" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Part Number</label>
+                            <input class="form-input" type="text" [(ngModel)]="formData.part_number"
+                                placeholder="MK-4850" />
+                        </div>
+                    </div>
+                    <div class="config-row config-row--two">
+                        <div class="form-group">
+                            <label class="form-label">Weight (kg)</label>
+                            <input class="form-input" type="number" min="0" step="0.01"
+                                [(ngModel)]="formData.weight_kg" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Warranty (months)</label>
+                            <input class="form-input" type="number" min="0" [(ngModel)]="formData.warranty_months"
+                                placeholder="24" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            }
+        </section>
+        }
+
+        <!-- ── Add-ons Tab (SERVICE only) ── -->
+        @if (activeTab === 'addons' && product?.category === 'SERVICE') {
+        <section class="tab-section">
+            <div class="tab-section__header">
+                <h3 class="section-title">Linked Add-Ons</h3>
+                <button class="btn btn-accent" (click)="openAddonDialog()">
+                    <i class="fa-solid fa-plus"></i> Add Add-On
+                </button>
+            </div>
+
+            @if (addons.length === 0) {
+            <div class="empty-state">
+                <div class="empty-state__content">
+                    <i class="fa-solid fa-puzzle-piece empty-state__icon"></i>
+                    <p>No add-ons linked to this service yet.</p>
+                </div>
+            </div>
+            } @else {
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Add-On</th>
+                            <th>Price</th>
+                            <th>Coterminus</th>
+                            <th>Status</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (a of addons; track a.id) {
+                        <tr>
+                            <td>
+                                <a [routerLink]="'/settings/products/' + a.id" class="entity-link">
+                                    <p class="product-name">{{ a.name }}</p>
+                                    @if (a.description) { <p class="product-desc">{{ a.description }}</p> }
+                                </a>
+                            </td>
+                            <td>{{ formatPrice(a.unit_price) }}</td>
+                            <td>{{ a.is_coterminus ? 'Yes' : 'No' }}</td>
+                            <td>
+                                @if (a.is_active) {
+                                <span class="status-badge status-badge--green">ACTIVE</span>
+                                } @else {
+                                <span class="status-badge status-badge--gray">INACTIVE</span>
+                                }
+                            </td>
+                            <td class="text-right">
+                                <button class="row-action row-action--danger" (click)="deleteAddon(a)">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+        </section>
+        }
+
+    </div>
+
+    <!-- ═══ Right: Info Panel ═══ -->
+    @if (!isNew && product) {
+    <aside class="product-panel">
+        <div class="panel-section">
+            <h4 class="panel-section__title">Key Information</h4>
+            <div class="panel-fields">
+                <div class="panel-field">
+                    <p class="panel-field__label">Category</p>
+                    <p class="panel-field__value">{{ getCategoryLabel(product.category) }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Unit Price</p>
+                    <p class="panel-field__value">{{ formatPrice(product.unit_price, product.currency) }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Currency</p>
+                    <p class="panel-field__value">{{ product.currency }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">SKU</p>
+                    <p class="panel-field__value">{{ product.sku || '—' }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Status</p>
+                    <p class="panel-field__value">{{ product.is_active ? 'Active' : 'Inactive' }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Taxable</p>
+                    <p class="panel-field__value">{{ product.is_taxable ? 'Yes' : 'No' }}{{ product.tax_rate ? ' (' +
+                        product.tax_rate + '%)' : '' }}</p>
+                </div>
+            </div>
+        </div>
+
+        @if (product.category === 'SERVICE' || product.category === 'ADD_ON') {
+        <div class="panel-section">
+            <h4 class="panel-section__title">Subscription</h4>
+            <div class="panel-fields">
+                <div class="panel-field">
+                    <p class="panel-field__label">Billing</p>
+                    <p class="panel-field__value">{{ getBillingLabel(product.billing_cycle) || '—' }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Term</p>
+                    <p class="panel-field__value">{{ product.contract_term_months ? product.contract_term_months + 'mo'
+                        : '—' }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Auto-Renew</p>
+                    <p class="panel-field__value">{{ product.auto_renew ? 'Yes' : 'No' }}</p>
+                </div>
+            </div>
+        </div>
+        }
+
+        <div class="panel-section">
+            <h4 class="panel-section__title">Tags</h4>
+            <div class="panel-tags">
+                <span class="panel-tag"
+                    [class]="'panel-tag--' + getCategoryClass(product.category).replace('category--', '')">
+                    {{ getCategoryLabel(product.category) }}
+                </span>
+                <span class="panel-tag">{{ product.is_active ? 'Active' : 'Inactive' }}</span>
+            </div>
+        </div>
+    </aside>
+    }
+</main>
+}
+
+<!-- ═══ ADD ADDON DIALOG ═══ -->
+@if (showAddonDialog) {
+<div class="dialog-overlay" (click)="closeAddonDialog()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+        <div class="dialog__header">
+            <h3 class="dialog__title">Add Add-On</h3>
+            <button class="dialog__close" (click)="closeAddonDialog()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="dialog__body">
+            <div class="form-group">
+                <label class="form-label">Add-On Name</label>
+                <input class="form-input" type="text" [(ngModel)]="addonForm.name" placeholder="e.g. Premium Support"
+                    autofocus />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea class="form-input form-input--textarea" [(ngModel)]="addonForm.description"
+                    rows="2"></textarea>
+            </div>
+            <div class="config-row config-row--two">
+                <div class="form-group">
+                    <label class="form-label">Unit Price</label>
+                    <input class="form-input" type="number" min="0" step="0.01" [(ngModel)]="addonForm.unit_price" />
+                </div>
+                <div class="form-group form-group--toggle">
+                    <label class="toggle">
+                        <input type="checkbox" [(ngModel)]="addonForm.is_coterminus" />
+                        <span class="toggle__track"></span>
+                    </label>
+                    <span class="toggle-label">Coterminus</span>
+                </div>
+            </div>
+            <div class="dialog__actions">
+                <button class="btn btn-outline" (click)="closeAddonDialog()">Cancel</button>
+                <button class="btn btn-accent" (click)="createAddon()"
+                    [disabled]="isCreatingAddon || !addonForm.name.trim()">
+                    @if (isCreatingAddon) { <i class="fa-solid fa-spinner fa-spin"></i> }
+                    @else { <i class="fa-solid fa-plus"></i> Create Add-On }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+}

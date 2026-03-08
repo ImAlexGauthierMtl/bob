@@ -39,6 +39,9 @@
                 ({{ careers.length }})</button>
             <button class="tab" [class.tab--active]="activeTab === 'skills'" (click)="setActiveTab('skills')">Skills ({{
                 skillTemplates.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'intents'" (click)="setActiveTab('intents')">Intents
+                ({{
+                intents.length }})</button>
             <button class="tab" [class.tab--active]="activeTab === 'tasks'" (click)="setActiveTab('tasks')">Tasks ({{
                 taskTemplates.length }})</button>
         </nav>
@@ -170,6 +173,41 @@
         </section>
         }
 
+        <!-- ══ Intents Tab ══ -->
+        @if (activeTab === 'intents') {
+        <section class="tab-section">
+            @if (intents.length === 0) {
+            <div class="empty-state">No intents defined</div>
+            } @else {
+            <div class="opp-list">
+                @for (intent of intents; track intent.id) {
+                <a [routerLink]="['/settings/bob-control-center/library/intent', intent.id]" class="opp-card"
+                    style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
+                    <div class="opp-card__main">
+                        <div class="opp-card__info">
+                            <h4 class="opp-card__name">{{ intent.name }}</h4>
+                            <div class="opp-card__tags">
+                                @if (intent.category) {
+                                <span class="stage-badge">{{ intent.category }}</span>
+                                }
+                                <span class="opp-card__meta">{{ intent.task_count }} tasks</span>
+                                @if (intent.trigger_phrases && intent.trigger_phrases.length > 0) {
+                                <span class="opp-card__meta">· {{ intent.trigger_phrases.length }} triggers</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="opp-card__value">
+                            <p class="opp-card__amount">{{ intent.task_count }}</p>
+                            <p class="opp-card__amount-label">Tasks</p>
+                        </div>
+                    </div>
+                </a>
+                }
+            </div>
+            }
+        </section>
+        }
+
         <!-- ══ Tasks Tab ══ -->
         @if (activeTab === 'tasks') {
         <section class="tab-section">
@@ -222,6 +260,10 @@
                 <div class="panel-field">
                     <p class="panel-field__label">Skill Templates</p>
                     <p class="panel-field__value">{{ skillTemplates.length }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Intents</p>
+                    <p class="panel-field__value">{{ intents.length }}</p>
                 </div>
                 <div class="panel-field">
                     <p class="panel-field__label">Task Templates</p>

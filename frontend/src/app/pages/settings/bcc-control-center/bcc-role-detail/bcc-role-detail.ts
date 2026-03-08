@@ -1,11 +1,12 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { UpperCasePipe, DatePipe, LowerCasePipe } from '@angular/common';
+import { BccService } from '../../../../shared/services/bcc.service';
 import {
-    BccService, BccOrgDetail, BccDepartment, BccTeam, BccRole,
+    BccOrgDetail, BccDepartment, BccTeam, BccRole,
     BccIndustry, BccRegulation, BccOrgProfile,
     BccProfile, BccProfileSection, BccProfileEntry, BccPerspective,
-} from '../../../../shared/services/bcc.service';
+} from '../../../../shared/models/bcc.model';
 import { BccInterviewComponent } from '../bcc-interview/bcc-interview';
 
 @Component({

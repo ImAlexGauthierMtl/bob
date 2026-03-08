@@ -17,16 +17,20 @@ async def lifespan(app: FastAPI):
     from app.infrastructure.database import engine, SessionLocal
     from app.domain.entities.base import Base
     # Import entities so they register with Base.metadata
-    from app.domain.entities import user, organization, contact, opportunity, quote, activity, department, capability, bob_settings  # noqa: F401
+    from app.domain.entities import user, organization, contact, opportunity, quote, activity, department, capability, bob_settings, tenant  # noqa: F401
     from app.domain.entities import workflow, workflow_execution  # noqa: F401
     from app.domain.entities import bcc_entities  # noqa: F401
     from app.domain.entities import training_models  # noqa: F401
     from app.domain.entities import role as role_entities  # noqa: F401
+    from app.domain.entities import product as product_entity  # noqa: F401
+    from app.domain.entities import opportunity_product as opp_product_entity  # noqa: F401
+    from app.domain.entities import usage_transaction as usage_transaction_entity  # noqa: F401
     from app.infrastructure.seed import run_seed
     from app.infrastructure.seed_capabilities import seed_capabilities
     from app.infrastructure.seed_workflows import seed_workflows
     from app.infrastructure.seed_bcc import seed_bcc
     from app.infrastructure.seed_roles import seed_roles
+    from app.infrastructure.seed_rate_cards import seed_rate_cards
 
     # Create tables (will be replaced by alembic upgrade in production)
     Base.metadata.create_all(bind=engine)
@@ -42,6 +46,7 @@ async def lifespan(app: FastAPI):
             seed_workflows(db, tenant_id=admin.tenant_id)
             seed_bcc(db, tenant_id=admin.tenant_id)
             seed_roles(db, tenant_id=admin.tenant_id)
+        seed_rate_cards(db)
     finally:
         db.close()
     logger.info("api_started", environment=settings.environment)
@@ -89,6 +94,9 @@ from app.presentation.routes.voice_routes import router as voice_router
 from app.presentation.routes.bcc_routes import router as bcc_router
 from app.presentation.routes.training_routes import router as training_router
 from app.presentation.routes.role_routes import router as role_router
+from app.presentation.routes.tenant_routes import router as tenant_router
+from app.presentation.routes.product_routes import router as product_router
+from app.presentation.routes.usage_routes import router as usage_router
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(search_router, tags=["search"])
@@ -111,6 +119,9 @@ app.include_router(voice_router, tags=["voice"])
 app.include_router(bcc_router, tags=["bcc"])
 app.include_router(training_router, tags=["training"])
 app.include_router(role_router, tags=["roles"])
+app.include_router(tenant_router, tags=["tenants"])
+app.include_router(product_router, tags=["products"])
+app.include_router(usage_router, tags=["usage"])
 
 
 @app.get("/health", tags=["monitoring"])

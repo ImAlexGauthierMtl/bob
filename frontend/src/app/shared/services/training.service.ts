@@ -1,39 +1,14 @@
-import { environment } from '../../../environments/environment';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { TrainingSession, TrainingNote, TrainingMissing } from '../models/training.model';
 
 const API_URL = `${environment.apiUrl}/training`;
 
-export interface TrainingSession {
-    id: string;
-    user_id: string;
-    training_slug: string;
-    current_slide: number;
-    started_at: string;
-}
-
-export interface TrainingNote {
-    id: string;
-    session_id: string;
-    slide_id: number | null;
-    content: string;
-    note_type: 'insight' | 'action' | 'important';
-    created_at: string;
-}
-
-export interface TrainingMissing {
-    id: string;
-    session_id: string;
-    label: string;
-    category: 'integration' | 'feature' | 'process';
-    description: string | null;
-    created_at: string;
-}
-
 @Injectable({ providedIn: 'root' })
 export class TrainingService {
-    constructor(private http: HttpClient) { }
+    private http = inject(HttpClient);
 
     createSession(slug: string): Observable<TrainingSession> {
         return this.http.post<TrainingSession>(`${API_URL}/sessions`, { training_slug: slug });

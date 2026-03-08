@@ -164,6 +164,12 @@ Return the JSON object with extracted fields."""
             json_mode=True,
             temperature=0.0,
             max_tokens=2048,
+            # ── Usage tracking context ──
+            tenant_id=state.get("tenant_id"),
+            user_id=None,
+            user_email=state.get("user_email"),
+            trigger_source="ENRICHMENT",
+            correlation_id=state.get("organization_id", ""),
         )
         extracted = json.loads(flat_response)
         extracted = {k: v for k, v in extracted.items() if v is not None}
@@ -186,6 +192,12 @@ Return the comprehensive JSON object."""
             json_mode=True,
             temperature=0.0,
             max_tokens=4096,
+            # ── Usage tracking context ──
+            tenant_id=state.get("tenant_id"),
+            user_id=None,
+            user_email=state.get("user_email"),
+            trigger_source="ENRICHMENT",
+            correlation_id=state.get("organization_id", ""),
         )
         organization_profile = json.loads(deep_response)
         logger.info("deep_extraction_complete", organization=name, categories=list(organization_profile.keys()))

@@ -1,9 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { UpperCasePipe, DatePipe, LowerCasePipe } from '@angular/common';
-import {
-    BccService, BccProfile, BccProfileSection, BccProfileEntry, BccPerspective,
-} from '../../../../shared/services/bcc.service';
+import { BccService } from '../../../../shared/services/bcc.service';
+import { BccProfile, BccProfileSection, BccProfileEntry, BccPerspective } from '../../../../shared/models/bcc.model';
 
 @Component({
     selector: 'croo-bcc-child-profile',

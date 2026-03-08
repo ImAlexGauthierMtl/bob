@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ActivityService, Activity } from '../../shared/services/activity.service';
+import { ActivityService } from '../../shared/services/activity.service';
+import { Activity } from '../../shared/models/activity.model';
 
 @Component({
     selector: 'croo-activities',
@@ -14,7 +15,7 @@ export class ActivitiesComponent implements OnInit {
     total = 0;
     isLoading = true;
 
-    constructor(private actService: ActivityService) { }
+    private actService = inject(ActivityService);
 
     ngOnInit(): void {
         this.loadActivities();
@@ -22,7 +23,7 @@ export class ActivitiesComponent implements OnInit {
 
     loadActivities(): void {
         this.isLoading = true;
-        this.actService.list().subscribe({
+        this.actService.getAll().subscribe({
             next: (res) => {
                 this.activities = res.items;
                 this.total = res.total;

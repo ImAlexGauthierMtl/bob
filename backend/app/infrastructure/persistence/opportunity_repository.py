@@ -55,3 +55,31 @@ class OpportunityRepository:
         self.db.commit()
         self.db.refresh(opp)
         return opp
+
+    # ── Opportunity-Product line items ──────────────────
+
+    def add_product(self, line_item) -> "OpportunityProduct":
+        from app.domain.entities.opportunity_product import OpportunityProduct  # noqa: F811
+        self.db.add(line_item)
+        self.db.commit()
+        self.db.refresh(line_item)
+        return line_item
+
+    def list_products(self, opp_id: str, tenant_id: str) -> list:
+        from app.domain.entities.opportunity_product import OpportunityProduct
+        return self.db.query(OpportunityProduct).filter(
+            OpportunityProduct.opportunity_id == opp_id,
+            OpportunityProduct.tenant_id == tenant_id,
+        ).all()
+
+    def get_product_line(self, line_id: str, tenant_id: str):
+        from app.domain.entities.opportunity_product import OpportunityProduct
+        return self.db.query(OpportunityProduct).filter(
+            OpportunityProduct.id == line_id,
+            OpportunityProduct.tenant_id == tenant_id,
+        ).first()
+
+    def remove_product(self, line_item) -> None:
+        self.db.delete(line_item)
+        self.db.commit()
+

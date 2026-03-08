@@ -1,7 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { UpperCasePipe, KeyValuePipe } from '@angular/common';
-import { BccService, BccSkill } from '../../../../shared/services/bcc.service';
+import { BccService } from '../../../../shared/services/bcc.service';
+import { BccSkill } from '../../../../shared/models/bcc.model';
 
 @Component({
     selector: 'croo-bcc-skill-view',

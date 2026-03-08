@@ -1,14 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DatePipe, DecimalPipe } from '@angular/common';
-
-import {
-    KnowledgeBaseService,
-    KBCategory,
-    KBArticleSummary,
-    KBStats,
-} from '../../shared/services/kb.service';
+import { KnowledgeBaseService } from '../../shared/services/kb.service';
+import { KBCategory, KBArticleSummary, KBStats } from '../../shared/models/kb.model';
 
 @Component({
     selector: 'app-kb-portal',
@@ -58,7 +53,7 @@ export class KBPortalComponent implements OnInit {
         'api': '#6366f1',
     };
 
-    constructor(private kbService: KnowledgeBaseService) { }
+    private kbService = inject(KnowledgeBaseService);
 
     ngOnInit(): void {
         this.loadCategories();

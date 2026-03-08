@@ -1,9 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { KeyValuePipe, UpperCasePipe } from '@angular/common';
-import {
-    BccService, BccRoleDetail, BccSkill, BccTask, BccMilestone,
-} from '../../../../shared/services/bcc.service';
+import { BccService } from '../../../../shared/services/bcc.service';
+import { BccRoleDetail, BccSkill, BccTask, BccMilestone } from '../../../../shared/models/bcc.model';
 
 @Component({
     selector: 'croo-bcc-role-view',

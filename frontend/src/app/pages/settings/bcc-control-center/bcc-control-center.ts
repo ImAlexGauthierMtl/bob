@@ -1,10 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import {
-    BccService,
-    BccOrganization, BccIndustry, BccCareer, BccSkillTemplate, BccTaskTemplate,
-} from '../../../shared/services/bcc.service';
+import { BccService } from '../../../shared/services/bcc.service';
+import { BccOrganization, BccIndustry, BccCareer, BccSkillTemplate, BccTaskTemplate, BccIntent } from '../../../shared/models/bcc.model';
 
 @Component({
     selector: 'croo-bcc-control-center',
@@ -23,6 +21,7 @@ export class BccControlCenterComponent implements OnInit {
     careers: BccCareer[] = [];
     skillTemplates: BccSkillTemplate[] = [];
     taskTemplates: BccTaskTemplate[] = [];
+    intents: BccIntent[] = [];
     isLoading = true;
     activeTab = 'organizations';
 
@@ -54,6 +53,7 @@ export class BccControlCenterComponent implements OnInit {
         this.bccService.listCareers().subscribe({ next: (d) => this.careers = d });
         this.bccService.listSkillTemplates().subscribe({ next: (d) => this.skillTemplates = d });
         this.bccService.listTaskTemplates().subscribe({ next: (d) => this.taskTemplates = d });
+        this.bccService.listIntents().subscribe({ next: (d) => this.intents = d });
     }
 
     setActiveTab(tab: string): void {

@@ -1,0 +1,188 @@
+<div class="settings-panel">
+    <div class="settings-panel__header">
+        <div class="products-header">
+            <div>
+                <h2 class="settings-panel__title">Product Catalog</h2>
+                <p class="settings-panel__subtitle">Manage your products, services, and consulting offerings</p>
+            </div>
+            <div class="new-product-dropdown">
+                <button class="btn btn-accent" (click)="toggleNewDropdown()">
+                    <i class="fa-solid fa-plus"></i> New Product
+                    <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
+                </button>
+                @if (showNewDropdown) {
+                <div class="dropdown-backdrop" (click)="showNewDropdown = false"></div>
+                <div class="dropdown-menu">
+                    <p class="dropdown-menu__label">Choose product type</p>
+                    <button class="dropdown-item" (click)="createProduct('SOFTWARE')">
+                        <span class="dot dot--blue"></span>
+                        <div class="dropdown-item__text">
+                            <span class="dropdown-item__title">Software</span>
+                            <span class="dropdown-item__desc">License-based software product</span>
+                        </div>
+                    </button>
+                    <button class="dropdown-item" (click)="createProduct('SERVICE')">
+                        <span class="dot dot--green"></span>
+                        <div class="dropdown-item__text">
+                            <span class="dropdown-item__title">Service (SaaS)</span>
+                            <span class="dropdown-item__desc">Subscription with billing cycle & contract</span>
+                        </div>
+                    </button>
+                    <button class="dropdown-item" (click)="createProduct('ADD_ON')">
+                        <span class="dot dot--purple"></span>
+                        <div class="dropdown-item__text">
+                            <span class="dropdown-item__title">Add-On</span>
+                            <span class="dropdown-item__desc">Extension linked to a parent service</span>
+                        </div>
+                    </button>
+                    <button class="dropdown-item" (click)="createProduct('CONSULTING')">
+                        <span class="dot dot--orange"></span>
+                        <div class="dropdown-item__text">
+                            <span class="dropdown-item__title">Consulting</span>
+                            <span class="dropdown-item__desc">Professional services billed by unit</span>
+                        </div>
+                    </button>
+                    <button class="dropdown-item" (click)="createProduct('HARDWARE')">
+                        <span class="dot dot--gray"></span>
+                        <div class="dropdown-item__text">
+                            <span class="dropdown-item__title">Hardware</span>
+                            <span class="dropdown-item__desc">Physical equipment with specs & warranty</span>
+                        </div>
+                    </button>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Filter Pills -->
+    <div class="filter-pills">
+        <button class="filter-pill" [class.filter-pill--active]="activeFilter === 'ALL'" (click)="setFilter('ALL')">All
+            Products</button>
+        <button class="filter-pill" [class.filter-pill--active]="activeFilter === 'SOFTWARE'"
+            (click)="setFilter('SOFTWARE')">
+            <span class="dot dot--blue"></span> Software
+        </button>
+        <button class="filter-pill" [class.filter-pill--active]="activeFilter === 'SERVICE'"
+            (click)="setFilter('SERVICE')">
+            <span class="dot dot--green"></span> Service
+        </button>
+        <button class="filter-pill" [class.filter-pill--active]="activeFilter === 'ADD_ON'"
+            (click)="setFilter('ADD_ON')">
+            <span class="dot dot--purple"></span> Add-On
+        </button>
+        <button class="filter-pill" [class.filter-pill--active]="activeFilter === 'CONSULTING'"
+            (click)="setFilter('CONSULTING')">
+            <span class="dot dot--orange"></span> Consulting
+        </button>
+        <button class="filter-pill" [class.filter-pill--active]="activeFilter === 'HARDWARE'"
+            (click)="setFilter('HARDWARE')">
+            <span class="dot dot--gray"></span> Hardware
+        </button>
+    </div>
+
+    <!-- Loading -->
+    @if (isLoading) {
+    <div class="loading-state">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <span>Loading products...</span>
+    </div>
+    }
+
+    <!-- Products Table -->
+    @if (!isLoading) {
+    <section class="table-card">
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Product / Service</th>
+                        <th>Category</th>
+                        <th>Unit Price</th>
+                        <th class="hide-mobile">SKU</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (p of products; track p.id) {
+                    <tr class="clickable-row" (click)="openProduct(p)">
+                        <td>
+                            <div class="product-info">
+                                <p class="product-name">{{ p.name }}</p>
+                                @if (p.description) {
+                                <p class="product-desc">{{ p.description }}</p>
+                                }
+                                @if (getSubInfo(p)) {
+                                <p class="product-meta">{{ getSubInfo(p) }}</p>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            <span class="category-badge" [class]="getCategoryClass(p.category)">
+                                {{ getCategoryLabel(p.category) }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="product-price">{{ formatPrice(p.unit_price) }}</span>
+                            <span class="product-cycle">{{ getBillingLabel(p.billing_cycle) ||
+                                getBillingUnitLabel(p.billing_unit) }}</span>
+                        </td>
+                        <td class="hide-mobile">
+                            <span class="product-sku">{{ p.sku || '—' }}</span>
+                        </td>
+                        <td>
+                            @if (p.is_active) {
+                            <span class="status-badge status-badge--green">ACTIVE</span>
+                            } @else {
+                            <span class="status-badge status-badge--gray">INACTIVE</span>
+                            }
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <div class="empty-state__content">
+                                <i class="fa-solid fa-box-open empty-state__icon"></i>
+                                <p>No products yet. Click <strong>"New Product"</strong> to build your catalog.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (total > 0) {
+        <div class="table-pagination">
+            <p class="table-pagination__info">
+                Showing
+                <strong>{{ (currentPage - 1) * pageSize + 1 }}–{{ Math.min(currentPage * pageSize, total) }}</strong>
+                of <strong>{{ total }}</strong> products
+            </p>
+            <div class="table-pagination__size">
+                <label>Results per page</label>
+                <select [value]="pageSize" (change)="onPageSizeChange($event)">
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                </select>
+            </div>
+            <div class="table-pagination__nav">
+                <button class="table-pagination__btn" [disabled]="currentPage <= 1" (click)="goToPage(currentPage - 1)">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                @for (pg of getPages(); track pg) {
+                <button class="table-pagination__btn" [class.table-pagination__btn--active]="pg === currentPage"
+                    (click)="goToPage(pg)">{{ pg }}</button>
+                }
+                <button class="table-pagination__btn" [disabled]="currentPage >= totalPages"
+                    (click)="goToPage(currentPage + 1)">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+        }
+    </section>
+    }
+</div>

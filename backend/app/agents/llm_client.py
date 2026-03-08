@@ -28,6 +28,12 @@ class LLMClient:
         json_mode: bool = False,
         temperature: float = 0.1,
         max_tokens: int = 4096,
+        # ── Usage tracking context (optional) ──
+        tenant_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        user_email: Optional[str] = None,
+        trigger_source: Optional[str] = None,
+        correlation_id: Optional[str] = None,
     ) -> str:
         """Send a chat completion request to Groq.
 
@@ -38,6 +44,11 @@ class LLMClient:
             json_mode: Enable JSON response format
             temperature: Creativity (0.0-1.0)
             max_tokens: Max response tokens
+            tenant_id: Tenant for usage tracking
+            user_id: User for usage tracking
+            user_email: User email for usage tracking
+            trigger_source: Origin (BOB_CHAT, WORKFLOW, etc.)
+            correlation_id: Groups related transactions
 
         Returns:
             Response text content
@@ -59,12 +70,42 @@ class LLMClient:
         try:
             response = self.client.chat.completions.create(**kwargs)
             content = response.choices[0].message.content or ""
+            tokens_in = response.usage.prompt_tokens if response.usage else 0
+            tokens_out = response.usage.completion_tokens if response.usage else 0
+
             logger.info(
                 "llm_call",
                 model=kwargs["model"],
-                tokens_in=response.usage.prompt_tokens if response.usage else 0,
-                tokens_out=response.usage.completion_tokens if response.usage else 0,
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
             )
+
+            # ── Persist usage if tracking context provided ──
+            if tenant_id:
+                try:
+                    from app.infrastructure.database import SessionLocal
+                    from app.middleware.usage_tracker import UsageTracker
+                    from app.domain.entities.usage_transaction import TriggerSource
+
+                    db = SessionLocal()
+                    try:
+                        tracker = UsageTracker(db)
+                        ts = TriggerSource(trigger_source) if trigger_source else TriggerSource.SYSTEM
+                        tracker.track_llm(
+                            tenant_id=tenant_id,
+                            user_id=user_id or "",
+                            user_email=user_email or "",
+                            model=kwargs["model"],
+                            input_tokens=tokens_in,
+                            output_tokens=tokens_out,
+                            trigger_source=ts,
+                            correlation_id=correlation_id or "",
+                        )
+                    finally:
+                        db.close()
+                except Exception as track_err:
+                    logger.warning("usage_tracking_failed", error=str(track_err))
+
             return content
         except Exception as e:
             logger.error("llm_call_error", model=kwargs["model"], error=str(e))
@@ -73,3 +114,4 @@ class LLMClient:
 
 # Singleton
 llm_client = LLMClient()
+

@@ -1,35 +1,9 @@
-import { environment } from '../../../environments/environment';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, tap, catchError, throwError } from 'rxjs';
-
-export interface LoginRequest {
-    email: string;
-    password: string;
-}
-
-export interface RegisterRequest {
-    email: string;
-    password: string;
-    first_name: string;
-    last_name: string;
-}
-
-export interface TokenResponse {
-    access_token: string;
-    refresh_token: string;
-    token_type: string;
-}
-
-export interface User {
-    id: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-    created_at: string;
-    updated_at: string;
-}
+import { environment } from '../../../environments/environment';
+import { LoginRequest, RegisterRequest, TokenResponse, AuthUser } from '../models/auth.model';
 
 const API_URL = `${environment.apiUrl}/auth`;
 const TOKEN_KEY = 'croo_access_token';
@@ -37,16 +11,16 @@ const REFRESH_KEY = 'croo_refresh_token';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-    private currentUser$ = new BehaviorSubject<User | null>(null);
+    private http = inject(HttpClient);
+    private router = inject(Router);
+
+    private currentUser$ = new BehaviorSubject<AuthUser | null>(null);
     private isAuthenticated$ = new BehaviorSubject<boolean>(this.hasToken());
 
     user$ = this.currentUser$.asObservable();
     authenticated$ = this.isAuthenticated$.asObservable();
 
-    constructor(
-        private http: HttpClient,
-        private router: Router,
-    ) {
+    constructor() {
         if (this.hasToken()) {
             this.loadCurrentUser();
         }
@@ -65,8 +39,8 @@ export class AuthService {
         );
     }
 
-    register(data: RegisterRequest): Observable<User> {
-        return this.http.post<User>(`${API_URL}/register`, data);
+    register(data: RegisterRequest): Observable<AuthUser> {
+        return this.http.post<AuthUser>(`${API_URL}/register`, data);
     }
 
     logout(): void {
@@ -108,7 +82,7 @@ export class AuthService {
     }
 
     private loadCurrentUser(): void {
-        this.http.get<User>(`${API_URL}/me`).subscribe({
+        this.http.get<AuthUser>(`${API_URL}/me`).subscribe({
             next: (user) => this.currentUser$.next(user),
             error: () => this.logout(),
         });

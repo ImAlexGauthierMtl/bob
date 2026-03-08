@@ -9,6 +9,7 @@ import re
 import time
 from typing import Optional
 from threading import Lock
+import uuid
 
 import structlog
 from groq import Groq
@@ -29,10 +30,39 @@ Your capabilities:
 - Offer suggestions for follow-ups and engagement strategies
 - CRITICAL: If the user asks for their training (e.g. "ma formation CRM", "start training") or complains the presentation isn't showing ("ne montre pas la présentation", "I don't see the presentation"), you MUST immediately call the `start_crm_training` tool. Do NOT just say "I don't see it". Let the tool do the navigation.
 
-UI Controls & Chained Actions:
+## CRM Procedures — FOLLOW THESE STRICTLY
+
+### Creating Entities (Organization + Contact + Opportunity)
+When the user asks to create accounts, contacts, or opportunities:
+
+1. **Decompose the request**: Identify what needs to be created — organization, contact(s), opportunity
+2. **Ask for missing required info** before executing:
+   - Organization: name (REQUIRED), domain, industry
+   - Contact: first_name + last_name (REQUIRED), email, phone, organization_id
+   - Opportunity: name (REQUIRED), organization_id, contact_id, value/amount, stage
+3. **Execute in strict order** using API tools:
+   - Step 1: `create_organization` → capture the returned org ID
+   - Step 2: `create_contact` with the organization_id from step 1
+   - Step 3: `create_opportunity` with the organization_id and contact_id
+4. **Confirm each step** to the user with what was created
+
+### CRITICAL — Tool Priority Rules
+- ALWAYS use `create_organization`, `create_contact`, `create_opportunity` for creating CRM data
+- NEVER use `open_create_dialog`, `ui_update_input`, `ui_select_result` for creating entities
+- UI tools (`open_create_dialog`, `ui_update_input`, `ui_select_result`) are ONLY for:
+  - Navigation and form interaction when the user explicitly asks
+  - Searching/browsing existing records in the UI
+
+### Handling Ambiguous Requests
+If the user says something like "ajoute le compte X avec contact Y et une opportunité Z":
+- X is the **organization** name
+- Y is the **contact** name (split into first_name / last_name)
+- Z is the **opportunity** name
+- Ask the user for any missing details (email, value, stage) BEFORE executing
+
+UI Controls (for navigation only):
 - When the user asks to change the text in a search/create dialog, use `ui_update_input`. Set submit=true if they want to execute the search immediately.
 - When the user says "choose number X", "select the second one", use `ui_select_result` with the requested index.
-- You can CHAIN actions: if the user says "create organization Shopify, choose the first result, then create contact Tobi", you must generate multiple tool calls in sequence if possible, or accomplish them step by step. Do your best to guide them through the UI fluently.
 
 Communication style:
 - Professional but friendly
@@ -178,6 +208,10 @@ class BobChatAgent:
 
         session.add_user_message(user_message)
 
+        # ── Generate intent correlation ──────────────
+        intent_id = str(uuid.uuid4())
+        intent_label = user_message[:80].strip()
+
         # Build system prompt with user's personality settings
         personality_directives = ""
         llm_temperature = settings.bob_temperature
@@ -223,7 +257,57 @@ Personality (from user preferences):
         except Exception as e:
             logger.warning("bob_settings_lookup_failed", error=str(e))
 
-        system_prompt = BOB_SYSTEM_PROMPT + personality_directives
+        # ── Inject BCC task procedures ──────────────
+        bcc_procedures = ""
+        try:
+            from app.infrastructure.database import SessionLocal as BccSessionLocal
+            from app.domain.entities.bcc_entities import BccTask, BccTaskTemplate
+            db_bcc = BccSessionLocal()
+            try:
+                lines = ["\n\n## Procedural Knowledge (from Control Center):"]
+                has_content = False
+
+                # Load role-specific tasks with steps
+                tasks = db_bcc.query(BccTask).filter(
+                    BccTask.tenant_id == session.tenant_id
+                ).all()
+                for t in tasks:
+                    has_content = True
+                    lines.append(f"\n### Task: {t.name}")
+                    if t.description:
+                        lines.append(f"{t.description}")
+                    if t.steps:
+                        for step in t.steps:
+                            lines.append(f"  {step.step_number}. {step.instruction}")
+                            if step.details:
+                                lines.append(f"     Details: {step.details}")
+
+                # Load library task templates with procedures
+                templates = db_bcc.query(BccTaskTemplate).filter(
+                    BccTaskTemplate.tenant_id == session.tenant_id
+                ).all()
+                for tpl in templates:
+                    ctx = tpl.context or {}
+                    procedure = ctx.get("procedure")
+                    if procedure:
+                        has_content = True
+                        lines.append(f"\n### Procedure: {tpl.name}")
+                        if tpl.description:
+                            lines.append(f"{tpl.description}")
+                        for step_text in procedure:
+                            lines.append(f"  {step_text}")
+                        tool_prio = ctx.get("tool_priority")
+                        if tool_prio:
+                            lines.append(f"  ⚠ {tool_prio}")
+
+                if has_content:
+                    bcc_procedures = "\n".join(lines)
+            finally:
+                db_bcc.close()
+        except Exception as bcc_err:
+            logger.warning("bcc_task_injection_failed", error=str(bcc_err))
+
+        system_prompt = BOB_SYSTEM_PROMPT + personality_directives + bcc_procedures
 
         # ── Inject mission prompt if active ──────────
         if session.mission_prompt:
@@ -258,14 +342,45 @@ Personality (from user preferences):
         try:
             client = Groq(api_key=settings.groq_api_key)
 
-            response = client.chat.completions.create(
-                model=settings.bob_model,
-                messages=messages,
-                tools=active_tools,
-                tool_choice="auto",
-                temperature=llm_temperature,
-                max_tokens=2048,
-            )
+            try:
+                response = client.chat.completions.create(
+                    model=settings.bob_model,
+                    messages=messages,
+                    tools=active_tools,
+                    tool_choice="auto",
+                    temperature=llm_temperature,
+                    max_tokens=2048,
+                )
+            except Exception as tool_err:
+                if "tool_use_failed" not in str(tool_err):
+                    raise
+                # Groq tool_use_failed — retry once with tools
+                logger.warning(
+                    "bob_tool_use_retry",
+                    session_id=session_id,
+                    attempt=2,
+                )
+                try:
+                    response = client.chat.completions.create(
+                        model=settings.bob_model,
+                        messages=messages,
+                        tools=active_tools,
+                        tool_choice="auto",
+                        temperature=max(0.3, llm_temperature),
+                        max_tokens=2048,
+                    )
+                except Exception:
+                    # Last resort: text-only response
+                    logger.warning(
+                        "bob_tool_use_fallback_text",
+                        session_id=session_id,
+                    )
+                    response = client.chat.completions.create(
+                        model=settings.bob_model,
+                        messages=messages,
+                        temperature=llm_temperature,
+                        max_tokens=2048,
+                    )
 
             choice = response.choices[0]
             actions: list[dict] = []
@@ -284,11 +399,68 @@ Personality (from user preferences):
                 content_preview=(choice.message.content or "")[:100],
             )
 
-            # Handle tool calls
-            if choice.message.tool_calls:
+            # ── Track LLM usage ────────────────────────
+            try:
+                from app.infrastructure.database import SessionLocal
+                from app.middleware.usage_tracker import UsageTracker
+                from app.domain.entities.usage_transaction import TriggerSource
+
+                _track_db = SessionLocal()
+                try:
+                    _tracker = UsageTracker(_track_db)
+                    _tokens_in = response.usage.prompt_tokens if response.usage else 0
+                    _tokens_out = response.usage.completion_tokens if response.usage else 0
+                    # Extract thinking block from raw content
+                    _raw_content = choice.message.content or ""
+                    _think_match = _THINK_RE.search(_raw_content)
+                    _thinking = _think_match.group(0)[:500] if _think_match else None
+                    _clean_content = _THINK_RE.sub("", _raw_content).strip()
+
+                    _tool_calls_meta = None
+                    if tool_calls:
+                        _tool_calls_meta = [
+                            {
+                                "name": tc.function.name,
+                                "args": tc.function.arguments[:300],
+                            }
+                            for tc in tool_calls
+                        ]
+
+                    _tracker.track_llm(
+                        tenant_id=session.tenant_id,
+                        user_id=session.user_id,
+                        user_email=session.user_email,
+                        model=settings.bob_model,
+                        input_tokens=_tokens_in,
+                        output_tokens=_tokens_out,
+                        trigger_source=TriggerSource.BOB_CHAT,
+                        trigger_id=session_id,
+                        correlation_id=intent_id,
+                        correlation_label=intent_label,
+                        metadata={
+                            "user_message": user_message[:500],
+                            "response": _clean_content[:500],
+                            "thinking": _thinking,
+                            "tool_calls": _tool_calls_meta,
+                            "finish_reason": finish_reason,
+                        },
+                    )
+                finally:
+                    _track_db.close()
+            except Exception as _track_err:
+                logger.warning("bob_usage_tracking_failed", error=str(_track_err))
+
+            # Handle tool calls — loop to support multi-step tool chains
+            MAX_TOOL_ROUNDS = 5
+            tool_round = 0
+            current_choice = choice
+            tool_steps: list[dict] = []
+
+            while current_choice.message.tool_calls and tool_round < MAX_TOOL_ROUNDS:
+                tool_round += 1
                 # Process each tool call
                 tool_results: dict[str, str] = {}
-                for tc in choice.message.tool_calls:
+                for tc in current_choice.message.tool_calls:
                     args = json.loads(tc.function.arguments)
                     fn = tc.function.name
 
@@ -338,6 +510,8 @@ Personality (from user preferences):
                                     "user_id": session.user_id,
                                     "tenant_id": session.tenant_id,
                                     "session_id": session_id,
+                                    "intent_id": intent_id,
+                                    "intent_label": intent_label,
                                 }
                                 res = loop.run_until_complete(
                                     execute_bob_tool("search_and_open_entity", args, user_ctx, db)
@@ -407,6 +581,8 @@ Personality (from user preferences):
                                     "user_id": session.user_id,
                                     "tenant_id": session.tenant_id,
                                     "session_id": session_id,
+                                    "intent_id": intent_id,
+                                    "intent_label": intent_label,
                                 }
                                 result = loop.run_until_complete(
                                     execute_bob_tool(fn, args, user_context, db)
@@ -420,17 +596,19 @@ Personality (from user preferences):
                             future = executor.submit(_run_tool)
                             tool_results[tc.id] = future.result(timeout=30)
 
+                    tool_steps.append({"tool": fn, "status": "ok"})
                     logger.info(
                         "bob_tool_call",
                         session_id=session_id,
                         function=fn,
                         arguments=args,
+                        round=tool_round,
                     )
 
-                # Add tool call + result to context, then get follow-up
+                # Add tool call + result to context
                 assistant_msg: dict = {
                     "role": "assistant",
-                    "content": choice.message.content or "",
+                    "content": current_choice.message.content or "",
                     "tool_calls": [
                         {
                             "id": tc.id,
@@ -440,30 +618,78 @@ Personality (from user preferences):
                                 "arguments": tc.function.arguments,
                             },
                         }
-                        for tc in choice.message.tool_calls
+                        for tc in current_choice.message.tool_calls
                     ],
                 }
                 messages.append(assistant_msg)
-                for tc in choice.message.tool_calls:
+                for tc in current_choice.message.tool_calls:
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tc.id,
                         "content": tool_results.get(tc.id, '{"status": "ok"}'),
                     })
 
-                # Get the follow-up text response
+                # Get the follow-up response (with tools so it can chain)
                 followup = client.chat.completions.create(
+                    model=settings.bob_model,
+                    messages=messages,
+                    tools=active_tools,
+                    tool_choice="auto",
+                    temperature=settings.bob_temperature,
+                    max_tokens=2048,
+                )
+                current_choice = followup.choices[0]
+
+                # Track follow-up usage
+                try:
+                    from app.infrastructure.database import SessionLocal as _SL2
+                    from app.middleware.usage_tracker import UsageTracker as _UT2
+                    from app.domain.entities.usage_transaction import TriggerSource as _TS2
+
+                    _fu_db = _SL2()
+                    try:
+                        _fu_tokens_in = followup.usage.prompt_tokens if followup.usage else 0
+                        _fu_tokens_out = followup.usage.completion_tokens if followup.usage else 0
+                        _fu_tracker = _UT2(_fu_db)
+                        _fu_tracker.track_llm(
+                            tenant_id=session.tenant_id,
+                            user_id=session.user_id,
+                            user_email=session.user_email,
+                            model=settings.bob_model,
+                            input_tokens=_fu_tokens_in,
+                            output_tokens=_fu_tokens_out,
+                            trigger_source=_TS2.BOB_CHAT,
+                            trigger_id=session_id,
+                            correlation_id=intent_id,
+                            correlation_label=intent_label,
+                            metadata={
+                                "type": "follow_up",
+                                "round": tool_round,
+                                "response": (current_choice.message.content or "")[:500],
+                                "tool_results": {k: v[:300] for k, v in list(tool_results.items())[:5]},
+                            },
+                        )
+                    finally:
+                        _fu_db.close()
+                except Exception as _fu_err:
+                    logger.warning("bob_followup_tracking_failed", error=str(_fu_err))
+
+            # Final response text — if loop exhausted max rounds with pending
+            # tool calls, force a final text-only response
+            response_text = current_choice.message.content or ""
+            if not response_text.strip() and tool_round >= MAX_TOOL_ROUNDS:
+                logger.info("bob_tool_loop_exhausted", rounds=tool_round, session_id=session_id)
+                final_resp = client.chat.completions.create(
                     model=settings.bob_model,
                     messages=messages,
                     temperature=settings.bob_temperature,
                     max_tokens=512,
                 )
-                response_text = followup.choices[0].message.content or ""
-            else:
-                response_text = choice.message.content or ""
+                response_text = final_resp.choices[0].message.content or ""
 
             # Strip <think>...</think> blocks
             response_text = _THINK_RE.sub("", response_text).strip()
+
 
             session.add_assistant_message(response_text)
 
@@ -486,7 +712,7 @@ Personality (from user preferences):
                 except Exception as ex:
                     logger.warning("insight_extraction_failed", error=str(ex))
 
-            return response_text, actions
+            return response_text, actions, tool_steps
 
         except Exception as e:
             logger.error(

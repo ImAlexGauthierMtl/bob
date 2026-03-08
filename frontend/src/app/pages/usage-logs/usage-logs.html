@@ -1,0 +1,285 @@
+<div class="page-header">
+    <div class="page-header__left">
+        <h1 class="page-title">Logs d'utilisation</h1>
+        <p class="page-subtitle">Transactions enregistrées sur la plateforme</p>
+    </div>
+</div>
+
+<!-- View toggle -->
+<div class="logs-view-toggle" id="logs-view-toggle">
+    <button class="logs-view-btn" [class.logs-view-btn--active]="viewMode === 'transactions'"
+        (click)="switchView('transactions')">
+        <i class="fa-solid fa-list"></i> Transactions
+    </button>
+    <button class="logs-view-btn" [class.logs-view-btn--active]="viewMode === 'intents'"
+        (click)="switchView('intents')">
+        <i class="fa-solid fa-layer-group"></i> Par intention
+    </button>
+</div>
+
+<!-- Filters -->
+<div class="logs-toolbar" id="logs-toolbar">
+    <div class="logs-toolbar__filters">
+        @if (viewMode === 'transactions') {
+        <select class="input input--sm" id="filter-service" [(ngModel)]="filterService"
+            (ngModelChange)="onFilterChange()">
+            <option value="">Tous les services</option>
+            <option value="LLM">LLM</option>
+            <option value="STT">STT</option>
+            <option value="TTS">TTS</option>
+            <option value="SEARCH">Search</option>
+            <option value="TOOL">Tool</option>
+            <option value="ENRICHMENT">Enrichment</option>
+            <option value="WORKFLOW">Workflow</option>
+        </select>
+        }
+        <input type="text" class="input input--sm" id="filter-tenant" [(ngModel)]="filterTenant"
+            (keyup.enter)="onFilterChange()" placeholder="Tenant ID..." />
+        <button class="btn btn-outline btn-sm" (click)="resetFilters()">
+            <i class="fa-solid fa-rotate-left"></i> Reset
+        </button>
+    </div>
+    <div class="logs-toolbar__stats">
+        @if (viewMode === 'transactions') {
+        <span class="logs-stat">{{ logTotal }} transactions</span>
+        <span class="logs-stat logs-stat--accent">COGS: ${{ logTotalCogs.toFixed(4) }}</span>
+        } @else {
+        <span class="logs-stat">{{ intentTotal }} intentions</span>
+        <span class="logs-stat logs-stat--accent">COGS: ${{ intentTotalCogs.toFixed(4) }}</span>
+        }
+    </div>
+</div>
+
+<!-- Loading -->
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i> Chargement des logs...
+</div>
+}
+
+<!-- ═══ TRANSACTIONS VIEW ═══ -->
+@if (viewMode === 'transactions') {
+
+@if (!isLoading && logItems.length === 0) {
+<div class="logs-empty">
+    <i class="fa-solid fa-chart-bar"></i>
+    <span>Aucune transaction enregistrée</span>
+</div>
+}
+
+@if (!isLoading && logItems.length > 0) {
+<div class="logs-table-wrap">
+    <table class="logs-table" id="logs-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Service</th>
+                <th>Model</th>
+                <th>Trigger</th>
+                <th>Tokens In</th>
+                <th>Tokens Out</th>
+                <th>COGS</th>
+                <th>Tenant</th>
+                <th>User</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (log of logItems; track log.id) {
+            <tr>
+                <td class="logs-cell--date">{{ formatDateTime(log.timestamp) }}</td>
+                <td>
+                    <span class="service-tag" [attr.data-service]="log.service_type">{{ log.service_type }}</span>
+                </td>
+                <td class="logs-cell--mono">{{ log.model || '—' }}</td>
+                <td class="logs-cell--trigger">{{ log.trigger_source }}</td>
+                <td class="logs-cell--num">{{ log.input_tokens || '—' }}</td>
+                <td class="logs-cell--num">{{ log.output_tokens || '—' }}</td>
+                <td class="logs-cell--cogs">${{ log.cogs_amount.toFixed(6) || '0' }}</td>
+                <td class="logs-cell--tenant">{{ log.tenant_id.slice(0, 8) }}</td>
+                <td class="logs-cell--user" [title]="log.user_email || ''">{{ log.user_id.slice(0, 8) || '—' }}</td>
+            </tr>
+            }
+        </tbody>
+    </table>
+</div>
+}
+}
+
+<!-- ═══ INTENTS VIEW ═══ -->
+@if (viewMode === 'intents') {
+
+@if (!isLoading && intentItems.length === 0) {
+<div class="logs-empty">
+    <i class="fa-solid fa-layer-group"></i>
+    <span>Aucune intention regroupée</span>
+</div>
+}
+
+@if (!isLoading && intentItems.length > 0) {
+<div class="logs-table-wrap">
+    <table class="logs-table logs-table--intents" id="intents-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Intention</th>
+                <th>Source</th>
+                <th>Services</th>
+                <th>Transactions</th>
+                <th>COGS total</th>
+                <th>User</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (intent of intentItems; track intent.correlation_id) {
+            <tr class="intent-row intent-row--clickable" (click)="openIntentDetail(intent)">
+                <td class="logs-cell--date">{{ formatDateTime(intent.first_timestamp) }}</td>
+                <td class="intent-label">
+                    <span class="intent-label__text">{{ intent.correlation_label || intent.correlation_id.slice(0, 12) +
+                        '...' }}</span>
+                </td>
+                <td class="logs-cell--trigger">{{ intent.trigger_source }}</td>
+                <td class="intent-services">
+                    @for (svc of intent.service_types; track svc) {
+                    <span class="service-tag service-tag--sm" [attr.data-service]="svc">{{ svc }}</span>
+                    }
+                </td>
+                <td class="logs-cell--num intent-count">{{ intent.transaction_count }}</td>
+                <td class="logs-cell--cogs intent-cogs">${{ intent.total_cogs.toFixed(6) }}</td>
+                <td class="logs-cell--user" [title]="intent.user_email || ''">{{ intent.user_email || '—' }}</td>
+            </tr>
+            }
+        </tbody>
+    </table>
+</div>
+}
+}
+
+<!-- Pagination (shared) -->
+@if (currentTotal > currentLimit) {
+<div class="logs-pagination">
+    <button class="btn btn-outline btn-sm" [disabled]="currentOffset === 0" (click)="prevPage()">
+        <i class="fa-solid fa-chevron-left"></i> Précédent
+    </button>
+    <span class="logs-pagination__info">{{ currentOffset + 1 }}–{{ Math.min(currentOffset + currentLimit,
+        currentTotal) }} / {{ currentTotal }}</span>
+    <button class="btn btn-outline btn-sm" [disabled]="currentOffset + currentLimit >= currentTotal"
+        (click)="nextPage()">
+        Suivant <i class="fa-solid fa-chevron-right"></i>
+    </button>
+</div>
+}
+
+<!-- ═══ INTENT DETAIL DRAWER ═══ -->
+@if (drawerOpen && drawerIntent) {
+<div class="drawer-backdrop" (click)="closeDrawer()"></div>
+<div class="drawer" id="intent-drawer">
+    <div class="drawer__header">
+        <div class="drawer__title-area">
+            <h3 class="drawer__title">{{ drawerIntent.correlation_label || 'Intention' }}</h3>
+            <span class="drawer__subtitle">{{ drawerIntent.transaction_count }} transactions · ${{
+                drawerIntent.total_cogs.toFixed(6) }}</span>
+        </div>
+        <button class="drawer__close" (click)="closeDrawer()">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <div class="drawer__body">
+        @if (drawerLoading) {
+        <div class="loading-state">
+            <i class="fa-solid fa-spinner fa-spin"></i> Chargement...
+        </div>
+        }
+
+        @if (!drawerLoading) {
+        <div class="timeline">
+            @for (item of drawerItems; track item.id; let i = $index) {
+            <div class="timeline__item">
+                <div class="timeline__dot" [attr.data-service]="item.service_type"></div>
+                <div class="timeline__card">
+                    <div class="timeline__card-header">
+                        <span class="service-tag service-tag--sm" [attr.data-service]="item.service_type">{{
+                            item.service_type }}</span>
+                        <span class="timeline__model">{{ item.model || item.trigger_source }}</span>
+                        <span class="timeline__cogs">${{ item.cogs_amount?.toFixed(6) || '0' }}</span>
+                    </div>
+
+                    <!-- Tokens info -->
+                    @if (item.input_tokens || item.output_tokens) {
+                    <div class="timeline__tokens">
+                        <span>↓ {{ item.input_tokens || 0 }} tokens in</span>
+                        <span>↑ {{ item.output_tokens || 0 }} tokens out</span>
+                    </div>
+                    }
+
+                    <!-- User message -->
+                    @if (getMetaValue(item, 'user_message')) {
+                    <div class="timeline__block timeline__block--user">
+                        <div class="timeline__block-label">
+                            <i class="fa-solid fa-user"></i> Prompt
+                        </div>
+                        <div class="timeline__block-content">{{ getMetaValue(item, 'user_message') }}</div>
+                    </div>
+                    }
+
+                    <!-- Thinking -->
+                    @if (getMetaValue(item, 'thinking')) {
+                    <div class="timeline__block timeline__block--thinking">
+                        <div class="timeline__block-label">
+                            <i class="fa-solid fa-brain"></i> Thinking
+                        </div>
+                        <div class="timeline__block-content timeline__block-content--mono">{{ getMetaValue(item,
+                            'thinking') }}</div>
+                    </div>
+                    }
+
+                    <!-- Tool calls -->
+                    @if (getMetaValue(item, 'tool_calls')) {
+                    <div class="timeline__block timeline__block--tool">
+                        <div class="timeline__block-label">
+                            <i class="fa-solid fa-wrench"></i> Tool Calls
+                        </div>
+                        <div class="timeline__block-content timeline__block-content--mono">{{ getMetaValue(item,
+                            'tool_calls') }}</div>
+                    </div>
+                    }
+
+                    <!-- Tool results (follow-up) -->
+                    @if (getMetaValue(item, 'tool_results')) {
+                    <div class="timeline__block timeline__block--tool">
+                        <div class="timeline__block-label">
+                            <i class="fa-solid fa-reply"></i> Tool Results
+                        </div>
+                        <div class="timeline__block-content timeline__block-content--mono">{{ getMetaValue(item,
+                            'tool_results') }}</div>
+                    </div>
+                    }
+
+                    <!-- Response -->
+                    @if (getMetaValue(item, 'response')) {
+                    <div class="timeline__block timeline__block--response">
+                        <div class="timeline__block-label">
+                            <i class="fa-solid fa-robot"></i> Response
+                        </div>
+                        <div class="timeline__block-content">{{ getMetaValue(item, 'response') }}</div>
+                    </div>
+                    }
+
+                    <!-- Tool name (for TOOL service type) -->
+                    @if (item.service_type === 'TOOL' && item.metadata_) {
+                    <div class="timeline__block timeline__block--tool">
+                        <div class="timeline__block-label">
+                            <i class="fa-solid fa-gear"></i> Tool: {{ item.model || 'unknown' }}
+                        </div>
+                    </div>
+                    }
+
+                    <div class="timeline__time">{{ formatDateTime(item.timestamp) }}</div>
+                </div>
+            </div>
+            }
+        </div>
+        }
+    </div>
+</div>
+}

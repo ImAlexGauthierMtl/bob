@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { QuoteService, Quote } from '../../shared/services/quote.service';
+import { QuoteService } from '../../shared/services/quote.service';
+import { Quote } from '../../shared/models/quote.model';
 
 @Component({
     selector: 'croo-quotes',
@@ -14,7 +15,7 @@ export class QuotesComponent implements OnInit {
     total = 0;
     isLoading = true;
 
-    constructor(private quoteService: QuoteService) { }
+    private quoteService = inject(QuoteService);
 
     ngOnInit(): void {
         this.loadQuotes();
@@ -22,7 +23,7 @@ export class QuotesComponent implements OnInit {
 
     loadQuotes(): void {
         this.isLoading = true;
-        this.quoteService.list().subscribe({
+        this.quoteService.getAll().subscribe({
             next: (res) => {
                 this.quotes = res.items;
                 this.total = res.total;

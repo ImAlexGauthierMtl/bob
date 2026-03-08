@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SlicePipe } from '@angular/common';
-import { ContactService, Contact } from '../../shared/services/contact.service';
+import { ContactService } from '../../shared/services/contact.service';
 import { OrganizationService } from '../../shared/services/organization.service';
+import { Contact } from '../../shared/models/contact.model';
 
 @Component({
     selector: 'croo-contact-profile',
@@ -17,11 +18,9 @@ export class ContactProfileComponent implements OnInit {
     activeTab = 'overview';
     orgName = '';
 
-    constructor(
-        private route: ActivatedRoute,
-        private contactService: ContactService,
-        private orgService: OrganizationService,
-    ) { }
+    private route = inject(ActivatedRoute);
+    private contactService = inject(ContactService);
+    private orgService = inject(OrganizationService);
 
     ngOnInit(): void {
         const id = this.route.snapshot.paramMap.get('id');

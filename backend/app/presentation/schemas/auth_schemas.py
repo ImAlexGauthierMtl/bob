@@ -47,6 +47,7 @@ class UserResponse(BaseModel):
     location: str | None = None
     timezone: str | None = None
     role: str = "member"
+    is_super_admin: bool = False
     created_at: datetime
     updated_at: datetime
 

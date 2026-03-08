@@ -1,10 +1,11 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { KeyValuePipe, UpperCasePipe, JsonPipe, DatePipe, LowerCasePipe } from '@angular/common';
+import { BccService } from '../../../../shared/services/bcc.service';
 import {
-    BccService, BccIndustry, BccCareer, BccSkillTemplate, BccTaskTemplate,
+    BccIndustry, BccCareer, BccSkillTemplate, BccTaskTemplate, BccIntent,
     BccProfile, BccProfileSection, BccProfileEntry, BccPerspective,
-} from '../../../../shared/services/bcc.service';
+} from '../../../../shared/models/bcc.model';
 
 @Component({
     selector: 'croo-bcc-library-detail',
@@ -19,7 +20,7 @@ import {
 })
 export class BccLibraryDetailComponent implements OnInit {
     type = '';
-    item: BccIndustry | BccCareer | BccSkillTemplate | BccTaskTemplate | null = null;
+    item: BccIndustry | BccCareer | BccSkillTemplate | BccTaskTemplate | BccIntent | null = null;
     isLoading = true;
 
     // ── Profile entries (versioned knowledge) ────────
@@ -64,6 +65,10 @@ export class BccLibraryDetailComponent implements OnInit {
                 error: () => { this.isLoading = false; },
             }),
             'task-template': () => this.bccService.getTaskTemplate(id).subscribe({
+                next: (data) => { this.item = data; this.isLoading = false; this.loadProfile(id); },
+                error: () => { this.isLoading = false; },
+            }),
+            'intent': () => this.bccService.getIntent(id).subscribe({
                 next: (data) => { this.item = data; this.isLoading = false; this.loadProfile(id); },
                 error: () => { this.isLoading = false; },
             }),
@@ -143,6 +148,9 @@ export class BccLibraryDetailComponent implements OnInit {
     get asTaskTemplate(): BccTaskTemplate | null {
         return this.type === 'task-template' ? this.item as BccTaskTemplate : null;
     }
+    get asIntent(): BccIntent | null {
+        return this.type === 'intent' ? this.item as BccIntent : null;
+    }
 
     // ── Helpers ──────────────────────────────────────
     get typeLabel(): string {
@@ -151,6 +159,7 @@ export class BccLibraryDetailComponent implements OnInit {
             case 'career': return 'Career';
             case 'skill-template': return 'Skill Template';
             case 'task-template': return 'Task Template';
+            case 'intent': return 'Intent';
             default: return 'Library Item';
         }
     }
@@ -161,6 +170,7 @@ export class BccLibraryDetailComponent implements OnInit {
             case 'career': return 'fa-solid fa-briefcase';
             case 'skill-template': return 'fa-solid fa-cog';
             case 'task-template': return 'fa-solid fa-list-check';
+            case 'intent': return 'fa-solid fa-bullseye';
             default: return 'fa-solid fa-book';
         }
     }
@@ -171,6 +181,7 @@ export class BccLibraryDetailComponent implements OnInit {
             case 'career': return '#F59E0B';
             case 'skill-template': return '#EF4444';
             case 'task-template': return '#10B981';
+            case 'intent': return '#6366F1';
             default: return '#6B7280';
         }
     }

@@ -44,15 +44,30 @@
                     <a routerLink="/template" routerLinkActive="sidebar__link--active"
                         class="sidebar__link sidebar__link--sm">Training</a>
                 </div>
+
+                @if (isSuperAdmin) {
+                <div class="sidebar__section sidebar__section--admin" id="sidebar-admin-section">
+                    <p class="sidebar__section-title">Administration</p>
+                    <div class="sidebar__nav-secondary">
+                        <a routerLink="/tenants" routerLinkActive="sidebar__link--active"
+                            class="sidebar__link sidebar__link--sm" id="sidebar-tenants-link">
+                            <i class="fa-solid fa-building-columns"></i> Tenants
+                        </a>
+                        <a routerLink="/usage-logs" routerLinkActive="sidebar__link--active"
+                            class="sidebar__link sidebar__link--sm" id="sidebar-logs-link">
+                            <i class="fa-solid fa-chart-line"></i> Logs
+                        </a>
+                    </div>
+                </div>
+                }
             </div>
         </nav>
 
         <div class="sidebar__user">
-            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="User"
-                class="sidebar__avatar" />
+            <div class="sidebar__avatar-placeholder">{{ userName ? userName[0] : 'U' }}</div>
             <div class="sidebar__user-info">
-                <p class="sidebar__user-name">Marcus Chen</p>
-                <p class="sidebar__user-role">Sales Manager</p>
+                <p class="sidebar__user-name">{{ userName || 'User' }}</p>
+                <p class="sidebar__user-role">{{ userRole || 'Member' }}</p>
             </div>
         </div>
     </aside>

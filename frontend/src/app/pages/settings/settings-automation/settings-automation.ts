@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TitleCasePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { WorkflowService, Workflow, WorkflowExecution, UserCapabilities } from '../../../shared/services/workflow.service';
+import { WorkflowService } from '../../../shared/services/workflow.service';
+import { Workflow, WorkflowExecution, UserCapabilities } from '../../../shared/models/workflow.model';
 
 @Component({
     selector: 'croo-settings-automation',
@@ -26,10 +27,8 @@ export class SettingsAutomationComponent implements OnInit {
     runningWorkflowId: string | null = null;
     lastExecution: WorkflowExecution | null = null;
 
-    constructor(
-        private workflowService: WorkflowService,
-        private router: Router,
-    ) { }
+    private workflowService = inject(WorkflowService);
+    private router = inject(Router);
 
     ngOnInit(): void {
         this.loadWorkflows();
@@ -40,7 +39,7 @@ export class SettingsAutomationComponent implements OnInit {
     loadWorkflows(): void {
         this.isLoading = true;
         const level = this.selectedLevel === 'all' ? undefined : this.selectedLevel;
-        this.workflowService.list(level, undefined, false).subscribe({
+        this.workflowService.getAll(level, undefined, false).subscribe({
             next: (res) => {
                 this.workflows = res.items;
                 this.isLoading = false;
@@ -52,7 +51,7 @@ export class SettingsAutomationComponent implements OnInit {
     }
 
     loadTemplates(): void {
-        this.workflowService.list(undefined, undefined, true).subscribe({
+        this.workflowService.getAll(undefined, undefined, true).subscribe({
             next: (res) => {
                 this.templates = res.items;
             },

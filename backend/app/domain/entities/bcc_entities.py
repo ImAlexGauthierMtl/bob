@@ -91,7 +91,40 @@ class BccTaskTemplate(Base, TenantMixin, AuditMixin):
 
     # Relationships
     role_links = relationship("BccRoleTask", back_populates="task_template", cascade="all, delete-orphan")
+    intent_links = relationship("BccIntentTask", back_populates="task_template", cascade="all, delete-orphan")
 
+
+class BccIntent(Base, TenantMixin, AuditMixin):
+    """An intent — what the user wants to achieve. Maps to a sequence of tasks.
+
+    Example: 'New Sales Opportunity', 'Lead Qualification', 'Client Onboarding'
+    """
+
+    __tablename__ = "bcc_intents"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    trigger_phrases = Column(JSON, nullable=True, default=list)   # phrases that trigger this intent
+    category = Column(String(100), nullable=True)
+
+    # Relationships
+    task_links = relationship("BccIntentTask", back_populates="intent", cascade="all, delete-orphan",
+                              order_by="BccIntentTask.sort_order")
+
+
+class BccIntentTask(Base, TenantMixin):
+    """Junction: Intent ↔ TaskTemplate (ordered, many-to-many)."""
+
+    __tablename__ = "bcc_intent_tasks"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    intent_id = Column(String(36), ForeignKey("bcc_intents.id"), nullable=False)
+    task_template_id = Column(String(36), ForeignKey("bcc_task_templates.id"), nullable=False)
+    sort_order = Column(Integer, default=0)
+
+    intent = relationship("BccIntent", back_populates="task_links")
+    task_template = relationship("BccTaskTemplate", back_populates="intent_links")
 
 # ═══════════════════════════════════════════════════════════════
 # LAYER 2 — ORGANIZATION (hierarchical structure)

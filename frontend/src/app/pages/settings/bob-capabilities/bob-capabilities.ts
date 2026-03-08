@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { WorkflowService, UserCapabilities, UserCapability } from '../../../shared/services/workflow.service';
+import { WorkflowService } from '../../../shared/services/workflow.service';
+import { UserCapabilities, UserCapability } from '../../../shared/models/workflow.model';
 
 @Component({
     selector: 'croo-bob-capabilities',
@@ -17,7 +18,7 @@ export class BobCapabilitiesComponent implements OnInit {
     isLoading = true;
     searchQuery = '';
 
-    constructor(private workflowService: WorkflowService) { }
+    private workflowService = inject(WorkflowService);
 
     ngOnInit(): void {
         this.loadCapabilities();

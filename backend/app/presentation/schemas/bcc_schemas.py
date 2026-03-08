@@ -127,6 +127,39 @@ class BccTaskTemplateResponse(BaseModel):
         from_attributes = True
 
 
+# ── Intent ───────────────────────────────────────────────────
+
+class BccIntentTaskResponse(BaseModel):
+    id: str
+    task_template_id: str
+    task_template_name: str = ""
+    sort_order: int
+
+    class Config:
+        from_attributes = True
+
+
+class BccIntentCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    trigger_phrases: Optional[list] = None
+    category: Optional[str] = None
+    task_template_ids: Optional[List[str]] = None
+
+
+class BccIntentResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    trigger_phrases: Optional[list] = None
+    category: Optional[str] = None
+    task_count: int = 0
+    tasks: List[BccIntentTaskResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
 # ═══════════════════════════════════════════════════════════════
 # LAYER 2 — ORGANIZATION
 # ═══════════════════════════════════════════════════════════════

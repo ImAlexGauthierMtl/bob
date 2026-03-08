@@ -1,0 +1,198 @@
+<div class="page-header">
+    <div class="page-header__left">
+        <h2 class="page-title">Tenants</h2>
+        <p class="page-subtitle">{{ total }} abonnés</p>
+    </div>
+    <div class="page-header__actions">
+        <button class="btn btn-accent" id="btn-add-tenant" (click)="openAddDialog()"><i class="fa-solid fa-plus"></i>
+            Nouveau Tenant</button>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<section class="stats-grid" id="stats-grid">
+    <div class="stat-card">
+        <p class="stat-card__label">Total</p>
+        <p class="stat-card__value">{{ total }}</p>
+        <p class="stat-card__desc">Tenants enregistrés</p>
+    </div>
+    <div class="stat-card stat-card--accent">
+        <p class="stat-card__label">Actifs</p>
+        <p class="stat-card__value">{{ activeCount }}</p>
+        <p class="stat-card__desc">Abonnements actifs</p>
+    </div>
+    <div class="stat-card stat-card--warn">
+        <p class="stat-card__label">Essai</p>
+        <p class="stat-card__value">{{ trialCount }}</p>
+        <p class="stat-card__desc">En période d'essai</p>
+    </div>
+    <div class="stat-card stat-card--danger">
+        <p class="stat-card__label">Suspendus</p>
+        <p class="stat-card__value">{{ suspendedCount }}</p>
+        <p class="stat-card__desc">Comptes suspendus</p>
+    </div>
+</section>
+
+<!-- Search & Filters -->
+<div class="toolbar" id="toolbar">
+    <div class="search-box">
+        <i class="fa-solid fa-search search-box__icon"></i>
+        <input type="text" class="search-box__input" id="search-input" placeholder="Rechercher un tenant..."
+            [(ngModel)]="searchQuery" (keydown.enter)="onSearch()" />
+    </div>
+    <div class="filter-pills">
+        <button class="filter-pill" [class.filter-pill--active]="!activeFilter"
+            (click)="filterByStatus('')">Tous</button>
+        <button class="filter-pill" [class.filter-pill--active]="activeFilter === 'ACTIVE'"
+            (click)="filterByStatus('ACTIVE')">Actifs</button>
+        <button class="filter-pill" [class.filter-pill--active]="activeFilter === 'TRIAL'"
+            (click)="filterByStatus('TRIAL')">Essai</button>
+        <button class="filter-pill" [class.filter-pill--active]="activeFilter === 'SUSPENDED'"
+            (click)="filterByStatus('SUSPENDED')">Suspendus</button>
+        <button class="filter-pill" [class.filter-pill--active]="activeFilter === 'CANCELLED'"
+            (click)="filterByStatus('CANCELLED')">Annulés</button>
+    </div>
+</div>
+
+<!-- Error State -->
+@if (errorMessage) {
+<div class="error-state" id="error-state">
+    <i class="fa-solid fa-circle-exclamation"></i>
+    <span>{{ errorMessage }}</span>
+    <button class="btn btn-outline btn-sm" (click)="loadTenants()">Réessayer</button>
+</div>
+}
+
+<!-- Loading -->
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Chargement des tenants...</span>
+</div>
+}
+
+<!-- Tenants Table -->
+@if (!isLoading && !errorMessage) {
+<section class="table-card" id="tenant-table">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Tenant</th>
+                <th>Plan</th>
+                <th class="hide-mobile">Propriétaire</th>
+                <th>Statut</th>
+                <th class="hide-mobile">Utilisateurs</th>
+                <th class="hide-mobile">Créé le</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (tenant of tenants; track tenant.id) {
+            <tr>
+                <td><a [routerLink]="'/tenants/' + tenant.id" class="tenant-link" [id]="'tenant-' + tenant.id">
+                        <div class="avatar-sm">{{ getInitials(tenant.name) }}</div>
+                        <div>
+                            <p class="tenant-name">{{ tenant.name }}</p>
+                            <p class="tenant-meta">{{ tenant.slug }}</p>
+                        </div>
+                    </a></td>
+                <td><span class="plan-badge">{{ getPlanLabel(tenant.plan) }}</span></td>
+                <td class="hide-mobile">
+                    <p class="owner-name">{{ tenant.owner_name }}</p>
+                    <p class="owner-email">{{ tenant.owner_email }}</p>
+                </td>
+                <td><span class="status-badge" [class]="getStatusClass(tenant.status)">{{ tenant.status }}</span></td>
+                <td class="hide-mobile">{{ tenant.max_users }}</td>
+                <td class="hide-mobile">{{ formatDate(tenant.created_at) }}</td>
+            </tr>
+            }
+            @empty {
+            <tr>
+                <td colspan="6" class="empty-state">
+                    <p>Aucun tenant. Cliquez <strong>« Nouveau Tenant »</strong> pour commencer.</p>
+                </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+</section>
+}
+
+<!-- Pagination -->
+@if (total > 0) {
+<div class="pagination" id="pagination">
+    <p class="pagination__info"><strong>{{ tenants.length }}</strong> sur <strong>{{ total }}</strong> tenants</p>
+</div>
+}
+
+<!-- ═══════════════ ADD TENANT DIALOG ═══════════════ -->
+@if (showAddDialog) {
+<div class="dialog-overlay" (click)="closeAddDialog()">
+    <div class="dialog dialog--wide" (click)="$event.stopPropagation()">
+        <div class="dialog__header">
+            <h3 class="dialog__title">Nouveau Tenant</h3>
+            <button class="dialog__close" id="btn-close-dialog" (click)="closeAddDialog()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="dialog__body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Nom commercial *</label>
+                    <input type="text" class="input" id="input-name" [(ngModel)]="newName"
+                        (ngModelChange)="generateSlug()" placeholder="Ex: Acme Corp" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Slug *</label>
+                    <input type="text" class="input" id="input-slug" [(ngModel)]="newSlug" placeholder="acme-corp" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email propriétaire *</label>
+                    <input type="email" class="input" id="input-email" [(ngModel)]="newOwnerEmail"
+                        placeholder="admin@acme.com" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nom propriétaire *</label>
+                    <input type="text" class="input" id="input-owner-name" [(ngModel)]="newOwnerName"
+                        placeholder="John Doe" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Plan</label>
+                    <select class="input" id="input-plan" [(ngModel)]="newPlan">
+                        <option value="STARTER">Starter</option>
+                        <option value="PRO">Pro</option>
+                        <option value="ENTERPRISE">Enterprise</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max utilisateurs</label>
+                    <input type="number" class="input" id="input-max-users" [(ngModel)]="newMaxUsers" min="1" />
+                </div>
+                <div class="form-group form-group--full">
+                    <label class="form-label">Notes internes</label>
+                    <textarea class="input textarea" id="input-notes" [(ngModel)]="newNotes" rows="3"
+                        placeholder="Notes pour l'administration..."></textarea>
+                </div>
+            </div>
+
+            @if (statusMessage) {
+            <div class="dialog__status" [class.dialog__status--error]="statusType === 'error'">
+                <p>{{ statusMessage }}</p>
+            </div>
+            }
+        </div>
+
+        <div class="dialog__footer">
+            <button class="btn btn-outline" (click)="closeAddDialog()">Annuler</button>
+            <button class="btn btn-accent" id="btn-submit-create" (click)="submitCreate()"
+                [disabled]="isCreating || !newName.trim() || !newSlug.trim() || !newOwnerEmail.trim() || !newOwnerName.trim()">
+                @if (isCreating) {
+                <i class="fa-solid fa-spinner fa-spin"></i> Création...
+                } @else {
+                <i class="fa-solid fa-plus"></i> Créer le Tenant
+                }
+            </button>
+        </div>
+    </div>
+</div>
+}

@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, ViewChild, ElementRef, AfterViewChecked, Input, Output, EventEmitter } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { BccService, BccProfile, BccProfileEntry } from '../../../../shared/services/bcc.service';
+import { BccService } from '../../../../shared/services/bcc.service';
+import { BccProfile, BccProfileEntry } from '../../../../shared/models/bcc.model';
 import { BobService } from '../../../../shared/services/bob.service';
 
 interface ChatMessage {

@@ -125,22 +125,39 @@ class TestSearchTools:
 # ── 3. Create Tools ─────────────────────────────────────────
 
 class TestCreateTools:
-    """Create tools are temporarily restricted."""
+    """Create tools are now fully functional."""
 
-    def test_create_contact_restricted(self, db):
-        """create_contact should return error (temporarily restricted)."""
+    def test_create_contact_basic(self, db):
+        """create_contact should succeed and return contact_id."""
         result = run_tool("create_contact", {
             "first_name": "Test",
+            "last_name": "User",
             "email": "test@test.com",
         }, db)
-        assert result["status"] == "error"
-        assert "restricted" in result["message"].lower()
+        assert result["status"] == "ok"
+        assert "contact_id" in result
 
-    def test_create_organization_restricted(self, db):
-        """create_organization should return error (temporarily restricted)."""
+    def test_create_organization_basic(self, db):
+        """create_organization should succeed and return org_id."""
         result = run_tool("create_organization", {"name": "TestOrg"}, db)
-        assert result["status"] == "error"
-        assert "restricted" in result["message"].lower()
+        assert result["status"] == "ok"
+        assert "org_id" in result
+
+    def test_create_contact_with_company_link(self, db):
+        """create_contact should link to existing org by company name."""
+        # First create the org
+        org_result = run_tool("create_organization", {"name": "Acme Corp"}, db)
+        assert org_result["status"] == "ok"
+
+        # Now create contact with company reference
+        result = run_tool("create_contact", {
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "john@acme.com",
+            "company": "Acme",
+        }, db)
+        assert result["status"] == "ok"
+        assert "linked to" in result["message"].lower() or "acme" in result["message"].lower()
 
 
 # ── 4. BCC Profile Tools ────────────────────────────────────
@@ -294,8 +311,8 @@ class TestChatAgentDispatch:
         tool_names = [t["function"]["name"] for t in BOB_TOOLS]
         assert "ui_switch_tab" in tool_names
 
-    def test_all_18_tools_declared(self):
-        """All 18 tools should be present in BOB_TOOLS."""
+    def test_all_20_tools_declared(self):
+        """All 20 tools should be present in BOB_TOOLS."""
         from app.agents.bob_tools import BOB_TOOLS
         tool_names = [t["function"]["name"] for t in BOB_TOOLS]
 
@@ -304,6 +321,7 @@ class TestChatAgentDispatch:
             "ui_select_result", "ui_switch_tab", "start_crm_training",
             "search_and_open_entity", "search_contacts", "search_organizations",
             "get_pipeline_stats", "create_contact", "create_organization",
+            "create_opportunity", "link_product_to_opportunity",
             "get_recent_activities", "bcc_update_profile", "bcc_get_profile",
             "save_training_note", "save_missing_element", "change_training_slide",
         ]
@@ -317,3 +335,208 @@ class TestChatAgentDispatch:
         from app.agents.bob_chat_agent import BobChatAgent
         source = inspect.getsource(BobChatAgent.chat)
         assert "ui_switch_tab" in source, "ui_switch_tab not found in chat agent dispatch"
+
+
+# ── 9. New Tools: Opportunity & Product Linking ──────────────
+
+class TestNewTools:
+    """Tests for create_opportunity and link_product_to_opportunity."""
+
+    def test_create_opportunity_basic(self, db):
+        """create_opportunity should succeed."""
+        result = run_tool("create_opportunity", {
+            "name": "Test Deal",
+            "source": "Bob",
+        }, db)
+        assert result["status"] == "ok"
+        assert "opportunity_id" in result
+
+    def test_create_opportunity_with_invalid_org(self, db):
+        """create_opportunity with nonexistent org should error."""
+        result = run_tool("create_opportunity", {
+            "name": "Bad Deal",
+            "organization_id": "00000000-0000-0000-0000-999999999999",
+        }, db)
+        assert result["status"] == "error"
+        assert "not found" in result["message"].lower()
+
+    def test_link_product_invalid_opp(self, db):
+        """link_product_to_opportunity with nonexistent opp should error."""
+        result = run_tool("link_product_to_opportunity", {
+            "opportunity_id": "00000000-0000-0000-0000-999999999999",
+            "product_id": "irrelevant",
+        }, db)
+        assert result["status"] == "error"
+        assert "not found" in result["message"].lower()
+
+
+# ── 10. Lead Processing Pipeline ─────────────────────────────
+
+class TestLeadProcessingPipeline:
+    """End-to-end tests simulating real lead processing from the user's data.
+
+    Covers: email-only leads, domain-based org grouping, name parsing,
+    opportunity creation, and product linking.
+    """
+
+    def test_uc1_email_only_creates_org_from_domain(self, db):
+        """UC1: connor@psu.com — email only, no name → auto-create org PSU."""
+        result = run_tool("create_contact", {
+            "first_name": "connor",
+            "last_name": "",
+            "email": "connor@psu.com",
+        }, db)
+        assert result["status"] == "ok"
+        assert result["org_created"] is True
+        assert result["organization_id"] is not None
+        assert "auto-created" in result["message"].lower()
+
+    def test_uc2_second_email_same_domain_groups(self, db):
+        """UC2: yasn@psu.com — should reuse existing PSU org, NOT create new."""
+        # UC1 already created PSU org, so this should match
+        result = run_tool("create_contact", {
+            "first_name": "yasn",
+            "last_name": "",
+            "email": "yasn@psu.com",
+        }, db)
+        assert result["status"] == "ok"
+        # org_created should be False because PSU already exists
+        assert result["org_created"] is False
+        assert result["organization_id"] is not None
+        assert "linked to" in result["message"].lower()
+
+    def test_uc3_full_name_same_domain(self, db):
+        """UC3: Chris Clement chris.clement@psu.com — full name, same PSU domain."""
+        result = run_tool("create_contact", {
+            "first_name": "Chris",
+            "last_name": "Clement",
+            "email": "chris.clement@psu.com",
+        }, db)
+        assert result["status"] == "ok"
+        assert result["org_created"] is False
+        assert "linked to" in result["message"].lower()
+
+    def test_uc4_new_domain_creates_new_org(self, db):
+        """UC4: yqi@fiberwood.ca — new domain → creates FIBERWOOD org."""
+        result = run_tool("create_contact", {
+            "first_name": "Yanyun",
+            "last_name": "Qi",
+            "email": "yqi@fiberwood.ca",
+        }, db)
+        assert result["status"] == "ok"
+        assert result["org_created"] is True
+        assert "auto-created" in result["message"].lower()
+        # Should have named org FIBERWOOD from domain
+        assert "FIBERWOOD" in result["message"]
+
+    def test_uc5_second_contact_same_new_domain(self, db):
+        """UC5: cphenix@fiberwood.ca — should group with fiberwood."""
+        result = run_tool("create_contact", {
+            "first_name": "Carl",
+            "last_name": "Phenix",
+            "email": "cphenix@fiberwood.ca",
+        }, db)
+        assert result["status"] == "ok"
+        assert result["org_created"] is False
+        assert "linked to" in result["message"].lower()
+
+    def test_uc6_ibwave_domain(self, db):
+        """UC6: kian.gorji@ibwave.com — new domain ibwave."""
+        result = run_tool("create_contact", {
+            "first_name": "Kian",
+            "last_name": "Gorji",
+            "email": "kian.gorji@ibwave.com",
+        }, db)
+        assert result["status"] == "ok"
+        assert result["org_created"] is True
+        assert "IBWAVE" in result["message"]
+
+    def test_uc7_hyphenated_name(self, db):
+        """UC7: Ben Shillabeer-Hall ben.shillabeer-hall@psu.com — compound name."""
+        result = run_tool("create_contact", {
+            "first_name": "Ben",
+            "last_name": "Shillabeer-Hall",
+            "email": "ben.shillabeer-hall@psu.com",
+        }, db)
+        assert result["status"] == "ok"
+        assert result["org_created"] is False  # PSU already exists
+
+    def test_uc8_underscore_email(self, db):
+        """UC8: jackson_jessica@psu.com — underscore in email."""
+        result = run_tool("create_contact", {
+            "first_name": "Jackson",
+            "last_name": "Jessica",
+            "email": "jackson_jessica@psu.com",
+        }, db)
+        assert result["status"] == "ok"
+        assert result["org_created"] is False  # PSU already exists
+
+    def test_uc9_create_opportunity_for_org(self, db):
+        """UC9: Create opportunity for an auto-created org."""
+        # First create a contact to auto-create the org
+        contact_result = run_tool("create_contact", {
+            "first_name": "Sarah",
+            "last_name": "Woolverton",
+            "email": "sarah.woolverton@ultra-tcs.com",
+        }, db)
+        assert contact_result["status"] == "ok"
+        org_id = contact_result["organization_id"]
+        assert org_id is not None
+
+        # Now create opportunity
+        opp_result = run_tool("create_opportunity", {
+            "name": "ULTRA-TCS — Service Integration",
+            "organization_id": org_id,
+            "contact_id": contact_result["contact_id"],
+            "source": "Hunter",
+        }, db)
+        assert opp_result["status"] == "ok"
+        assert "opportunity_id" in opp_result
+        assert "ULTRA-TCS" in opp_result["message"]
+
+    def test_uc10_link_product_to_opportunity(self, db):
+        """UC10: Full pipeline — contact → org → opportunity → product."""
+        from app.domain.entities.product import Product
+
+        # 1. Create product in catalog
+        product = Product(
+            name="Croo CRM Integration",
+            category="SERVICE",
+            unit_price=4999.00,
+            currency="CAD",
+            tenant_id=USER_CTX["tenant_id"],
+            created_by="test",
+        )
+        db.add(product)
+        db.commit()
+        db.refresh(product)
+
+        # 2. Create contact (auto-creates org)
+        contact_result = run_tool("create_contact", {
+            "first_name": "Katherine",
+            "last_name": "Brun",
+            "email": "kbrun@xiplink.com",
+            "phone": "+1 514 848 9640 ext:225",
+        }, db)
+        assert contact_result["status"] == "ok"
+
+        # 3. Create opportunity
+        opp_result = run_tool("create_opportunity", {
+            "name": "Xiplink — CRM Integration",
+            "organization_id": contact_result["organization_id"],
+            "contact_id": contact_result["contact_id"],
+            "source": "Hunter",
+        }, db)
+        assert opp_result["status"] == "ok"
+
+        # 4. Link product
+        link_result = run_tool("link_product_to_opportunity", {
+            "opportunity_id": opp_result["opportunity_id"],
+            "product_id": str(product.id),
+            "quantity": 1,
+        }, db)
+        assert link_result["status"] == "ok"
+        assert "line_id" in link_result
+        assert "Croo CRM Integration" in link_result["message"]
+        assert "4999" in link_result["message"]
+

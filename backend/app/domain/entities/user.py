@@ -1,6 +1,6 @@
 """User entity for authentication."""
 
-from sqlalchemy import Column, String, Text, Float
+from sqlalchemy import Column, String, Text, Float, Boolean
 from sqlalchemy.orm import relationship
 import bcrypt
 
@@ -25,6 +25,7 @@ class User(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
     location = Column(String(150), nullable=True)
     timezone = Column(String(50), nullable=True, default="America/Montreal")
     role = Column(String(30), nullable=False, default="member")
+    is_super_admin = Column(Boolean, default=False, nullable=False, comment="Platform super-admin flag")
     trust_score = Column(Float, nullable=False, default=0.1)
 
     # Relationships — owned entities

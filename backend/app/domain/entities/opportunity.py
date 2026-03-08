@@ -61,3 +61,4 @@ class Opportunity(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
     # Child relations
     quotes = relationship("Quote", back_populates="opportunity", passive_deletes=True)
     activities = relationship("Activity", back_populates="opportunity", passive_deletes=True)
+    products = relationship("OpportunityProduct", back_populates="opportunity", cascade="all, delete-orphan")

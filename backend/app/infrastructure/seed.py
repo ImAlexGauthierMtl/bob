@@ -23,6 +23,7 @@ def seed_admin_user(db: Session) -> None:
         password_hash=User.hash_password(settings.admin_password),
         first_name=settings.admin_first_name,
         last_name=settings.admin_last_name,
+        role="admin",
         created_by="system-seed",
     )
     created = repo.create(admin)

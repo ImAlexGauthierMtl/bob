@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { OrganizationService } from '../../shared/services/organization.service';
 import { ContactService } from '../../shared/services/contact.service';
@@ -21,13 +21,11 @@ export class DashboardComponent implements OnInit {
     activityCount = 0;
     isLoading = true;
 
-    constructor(
-        private orgService: OrganizationService,
-        private contactService: ContactService,
-        private oppService: OpportunityService,
-        private quoteService: QuoteService,
-        private actService: ActivityService,
-    ) { }
+    private orgService = inject(OrganizationService);
+    private contactService = inject(ContactService);
+    private oppService = inject(OpportunityService);
+    private quoteService = inject(QuoteService);
+    private actService = inject(ActivityService);
 
     ngOnInit(): void {
         this.loadCounts();
@@ -38,10 +36,10 @@ export class DashboardComponent implements OnInit {
         let loaded = 0;
         const checkDone = () => { loaded++; if (loaded >= 5) this.isLoading = false; };
 
-        this.orgService.list(0, 1).subscribe({ next: (r) => { this.orgCount = r.total; checkDone(); }, error: checkDone });
-        this.contactService.list(0, 1).subscribe({ next: (r) => { this.contactCount = r.total; checkDone(); }, error: checkDone });
-        this.oppService.list(0, 1).subscribe({ next: (r) => { this.oppCount = r.total; checkDone(); }, error: checkDone });
-        this.quoteService.list(0, 1).subscribe({ next: (r) => { this.quoteCount = r.total; checkDone(); }, error: checkDone });
-        this.actService.list(0, 1).subscribe({ next: (r) => { this.activityCount = r.total; checkDone(); }, error: checkDone });
+        this.orgService.getAll(0, 1).subscribe({ next: (r) => { this.orgCount = r.total; checkDone(); }, error: checkDone });
+        this.contactService.getAll(0, 1).subscribe({ next: (r) => { this.contactCount = r.total; checkDone(); }, error: checkDone });
+        this.oppService.getAll(0, 1).subscribe({ next: (r) => { this.oppCount = r.total; checkDone(); }, error: checkDone });
+        this.quoteService.getAll(0, 1).subscribe({ next: (r) => { this.quoteCount = r.total; checkDone(); }, error: checkDone });
+        this.actService.getAll(0, 1).subscribe({ next: (r) => { this.activityCount = r.total; checkDone(); }, error: checkDone });
     }
 }

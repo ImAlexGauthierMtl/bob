@@ -49,6 +49,11 @@ def node_ai_analyze(state: dict) -> dict:
             system_prompt="You are an AI analysis agent. Provide structured insights in JSON format.",
             json_mode=True,
             temperature=0.1,
+            # ── Usage tracking context ──
+            tenant_id=state.get("tenant_id"),
+            user_id=state.get("user_id"),
+            trigger_source="WORKFLOW",
+            correlation_id=state.get("execution_id", ""),
         )
         result = json.loads(response)
         return {**state, "output_data": result, "confidence": 0.8}

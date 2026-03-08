@@ -1,14 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { UpperCasePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
-import {
-    WorkflowService,
-    Workflow,
-    WorkflowStep,
-    WorkflowExecution,
-} from '../../../shared/services/workflow.service';
+import { WorkflowService } from '../../../shared/services/workflow.service';
+import { Workflow, WorkflowStep, WorkflowExecution } from '../../../shared/models/workflow.model';
 
 // ── Step type registry ──────────────────────────
 
@@ -118,11 +114,9 @@ export class WorkflowBuilderComponent implements OnInit {
     testRunning = false;
     lastExecution: WorkflowExecution | null = null;
 
-    constructor(
-        private workflowService: WorkflowService,
-        private route: ActivatedRoute,
-        private router: Router,
-    ) { }
+    private workflowService = inject(WorkflowService);
+    private route = inject(ActivatedRoute);
+    private router = inject(Router);
 
     ngOnInit(): void {
         const id = this.route.snapshot.paramMap.get('id');
@@ -190,7 +184,7 @@ export class WorkflowBuilderComponent implements OnInit {
         if (!this.workflow) return;
         moveItemInArray(this.workflow.steps, event.previousIndex, event.currentIndex);
         // Update step_order for all steps
-        this.workflow.steps.forEach((step, i) => {
+        this.workflow.steps.forEach((step: WorkflowStep, i: number) => {
             step.step_order = i;
         });
         this.hasChanges = true;
@@ -251,7 +245,7 @@ export class WorkflowBuilderComponent implements OnInit {
             }
         ).subscribe({
             next: (updated) => {
-                const idx = this.workflow!.steps.findIndex(s => s.id === updated.id);
+                const idx = this.workflow!.steps.findIndex((s: WorkflowStep) => s.id === updated.id);
                 if (idx >= 0) this.workflow!.steps[idx] = updated;
                 this.isSaving = false;
                 this.selectedStep = { ...updated };
@@ -268,7 +262,7 @@ export class WorkflowBuilderComponent implements OnInit {
         if (!this.workflow) return;
         this.workflowService.deleteStep(this.workflow.id, step.id).subscribe({
             next: () => {
-                this.workflow!.steps = this.workflow!.steps.filter(s => s.id !== step.id);
+                this.workflow!.steps = this.workflow!.steps.filter((s: WorkflowStep) => s.id !== step.id);
                 if (this.selectedStep?.id === step.id) {
                     this.deselectStep();
                 }
@@ -283,7 +277,7 @@ export class WorkflowBuilderComponent implements OnInit {
         this.isSaving = true;
         let pendingUpdates = this.workflow.steps.length;
 
-        this.workflow.steps.forEach((step) => {
+        this.workflow.steps.forEach((step: WorkflowStep) => {
             this.workflowService.updateStep(this.workflow!.id, step.id, {
                 step_order: step.step_order,
             }).subscribe({

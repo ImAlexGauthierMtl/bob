@@ -28,6 +28,25 @@ async def execute_bob_tool(tool_name: str, args: Dict[str, Any], user_context: d
     """
     logger.info("execute_bob_tool_start", tool=tool_name, args=args, user=user_context.get("user_id"))
     
+    # ── Track tool execution for audit ──
+    try:
+        from app.middleware.usage_tracker import UsageTracker
+        from app.domain.entities.usage_transaction import TriggerSource
+        _tracker = UsageTracker(db)
+        _trigger = TriggerSource.BOB_VOICE if user_context.get("source") == "voice" else TriggerSource.BOB_CHAT
+        _tracker.track_tool(
+            tenant_id=user_context.get("tenant_id", ""),
+            user_id=user_context.get("user_id", ""),
+            tool_name=tool_name,
+            trigger_source=_trigger,
+            trigger_id=user_context.get("session_id", ""),
+            correlation_id=user_context.get("intent_id", user_context.get("session_id", "")),
+            correlation_label=user_context.get("intent_label", ""),
+            metadata={"args_keys": list(args.keys())},
+        )
+    except Exception as _te:
+        logger.warning("tool_usage_tracking_failed", error=str(_te))
+    
     # ── 1. Search APIs ──────────────────────────────────────────
     if tool_name == "search_contacts":
         from app.domain.entities.contact import Contact
@@ -67,7 +86,7 @@ async def execute_bob_tool(tool_name: str, args: Dict[str, Any], user_context: d
             items = db.query(Organization).filter(
                 Organization.tenant_id == user_context["tenant_id"]
             ).limit(5).all()
-            filtered = [o for o in items if not query or query in (o.name + (o.domain or "")).lower()]
+            filtered = [o for o in items if not query or query in (o.name + (o.website or "")).lower()]
             base_route = "organizations"
         elif entity_type == "contact":
             from app.domain.entities.contact import Contact
@@ -112,9 +131,9 @@ async def execute_bob_tool(tool_name: str, args: Dict[str, Any], user_context: d
                 {
                     "id": str(o.id),
                     "name": o.name,
-                    "domain": o.domain,
+                    "website": o.website,
                 }
-                for o in orgs if not query or query in (o.name + (o.domain or "")).lower()
+                for o in orgs if not query or query in (o.name + (o.website or "")).lower()
             ][:limit]
         }
 
@@ -138,10 +157,215 @@ async def execute_bob_tool(tool_name: str, args: Dict[str, Any], user_context: d
         
     # ── 2. Create APIs ──────────────────────────────────────────
     elif tool_name == "create_contact":
-        return {"status": "error", "message": "Creation via AI is temporarily restricted. Please use the create dialog in the UI."}
-        
+        from app.domain.entities.contact import Contact
+        from app.domain.entities.organization import Organization
+
+        first_name = args.get("first_name", "")
+        last_name = args.get("last_name", "")
+        email = args.get("email", "")
+        phone = args.get("phone", "")
+        company = args.get("company", "")
+
+        # ── Organization resolution strategy ──
+        # Priority: 1) company name match  2) email domain match
+        org_id = None
+        org_name = ""
+        org_created = False
+
+        if company:
+            org = db.query(Organization).filter(
+                Organization.tenant_id == user_context["tenant_id"],
+                Organization.name.ilike(f"%{company}%"),
+            ).first()
+            if org:
+                org_id = org.id
+                org_name = org.name
+
+        # Fallback: extract domain from email and match by website
+        if not org_id and email and "@" in email:
+            email_domain = email.split("@")[1].lower()
+            # Search by website containing the domain
+            org = db.query(Organization).filter(
+                Organization.tenant_id == user_context["tenant_id"],
+                Organization.website.ilike(f"%{email_domain}%"),
+            ).first()
+            if org:
+                org_id = org.id
+                org_name = org.name
+            else:
+                # Auto-create organization from domain
+                org = Organization(
+                    name=email_domain.split(".")[0].upper(),
+                    website=email_domain,
+                    tenant_id=user_context["tenant_id"],
+                    created_by=user_context.get("user_email", "bob"),
+                )
+                db.add(org)
+                db.commit()
+                db.refresh(org)
+                org_id = org.id
+                org_name = org.name
+                org_created = True
+                logger.info("tool_org_auto_created", org_id=str(org.id), domain=email_domain)
+
+        contact = Contact(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            phone=phone,
+            organization_id=org_id,
+            tenant_id=user_context["tenant_id"],
+            created_by=user_context.get("user_email", "bob"),
+        )
+        db.add(contact)
+        db.commit()
+        db.refresh(contact)
+
+        logger.info(
+            "tool_contact_created",
+            contact_id=str(contact.id),
+            email=email,
+            organization=org_name or None,
+            user_id=user_context["user_id"],
+        )
+
+        result_msg = f"Contact created: {first_name} {last_name}"
+        if email:
+            result_msg += f" ({email})"
+        if org_created:
+            result_msg += f" — auto-created organization '{org_name}' from domain"
+        elif org_name:
+            result_msg += f" — linked to '{org_name}'"
+        elif company:
+            result_msg += f" — organization '{company}' not found"
+
+        return {"status": "ok", "contact_id": str(contact.id), "organization_id": str(org_id) if org_id else None, "org_created": org_created, "message": result_msg}
+
     elif tool_name == "create_organization":
-        return {"status": "error", "message": "Creation via AI is temporarily restricted. Please use the create dialog in the UI."}
+        from app.domain.entities.organization import Organization
+
+        name = args.get("name", "")
+        org = Organization(
+            name=name,
+            tenant_id=user_context["tenant_id"],
+            created_by=user_context.get("user_email", "bob"),
+        )
+        if args.get("website"):
+            org.website = args["website"]
+        db.add(org)
+        db.commit()
+        db.refresh(org)
+
+        logger.info(
+            "tool_organization_created",
+            org_id=str(org.id),
+            name=name,
+            user_id=user_context["user_id"],
+        )
+        return {"status": "ok", "org_id": str(org.id), "message": f"Organization created: {name}"}
+
+    elif tool_name == "create_opportunity":
+        from app.domain.entities.opportunity import Opportunity
+        from app.domain.entities.organization import Organization
+        from app.domain.entities.contact import Contact
+
+        name = args.get("name", "")
+        org_id = args.get("organization_id")
+        contact_id = args.get("contact_id")
+        stage = args.get("stage", "PROSPECTING")
+        source = args.get("source", "Bob")
+        amount = args.get("amount")
+
+        # Validate org exists
+        if org_id:
+            org = db.query(Organization).filter(
+                Organization.id == org_id,
+                Organization.tenant_id == user_context["tenant_id"],
+            ).first()
+            if not org:
+                return {"status": "error", "message": f"Organization {org_id} not found"}
+
+        # Validate contact exists
+        if contact_id:
+            contact = db.query(Contact).filter(
+                Contact.id == contact_id,
+                Contact.tenant_id == user_context["tenant_id"],
+            ).first()
+            if not contact:
+                return {"status": "error", "message": f"Contact {contact_id} not found"}
+
+        opp = Opportunity(
+            name=name,
+            organization_id=org_id,
+            contact_id=contact_id,
+            stage=stage,
+            source=source,
+            amount=amount,
+            tenant_id=user_context["tenant_id"],
+            created_by=user_context.get("user_email", "bob"),
+        )
+        db.add(opp)
+        db.commit()
+        db.refresh(opp)
+
+        logger.info(
+            "tool_opportunity_created",
+            opp_id=str(opp.id),
+            name=name,
+            org_id=org_id,
+            user_id=user_context["user_id"],
+        )
+        return {"status": "ok", "opportunity_id": str(opp.id), "message": f"Opportunity created: {name}"}
+
+    elif tool_name == "link_product_to_opportunity":
+        from app.domain.entities.opportunity import Opportunity
+        from app.domain.entities.product import Product
+        from app.domain.entities.opportunity_product import OpportunityProduct
+
+        opp_id = args.get("opportunity_id", "")
+        product_id = args.get("product_id", "")
+        quantity = args.get("quantity", 1)
+
+        # Validate opportunity
+        opp = db.query(Opportunity).filter(
+            Opportunity.id == opp_id,
+            Opportunity.tenant_id == user_context["tenant_id"],
+        ).first()
+        if not opp:
+            return {"status": "error", "message": f"Opportunity {opp_id} not found"}
+
+        # Validate product
+        product = db.query(Product).filter(
+            Product.id == product_id,
+            Product.tenant_id == user_context["tenant_id"],
+        ).first()
+        if not product:
+            return {"status": "error", "message": f"Product {product_id} not found"}
+
+        line = OpportunityProduct(
+            opportunity_id=opp_id,
+            product_id=product_id,
+            quantity=quantity,
+            unit_price=product.unit_price,
+            tenant_id=user_context["tenant_id"],
+            created_by=user_context.get("user_email", "bob"),
+        )
+        db.add(line)
+        db.commit()
+        db.refresh(line)
+
+        logger.info(
+            "tool_product_linked",
+            line_id=str(line.id),
+            opp_id=opp_id,
+            product=product.name,
+            user_id=user_context["user_id"],
+        )
+        return {
+            "status": "ok",
+            "line_id": str(line.id),
+            "message": f"Product '{product.name}' linked to opportunity (qty={quantity}, price={product.unit_price})",
+        }
 
     # ── 3. Profile / Context Knowledge ──────────────────────────
     elif tool_name == "bcc_update_profile":

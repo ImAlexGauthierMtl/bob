@@ -1,11 +1,12 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DecimalPipe, SlicePipe } from '@angular/common';
-import { OpportunityService, Opportunity, CreateOpportunityRequest } from '../../shared/services/opportunity.service';
+import { Subscription } from 'rxjs';
+import { OpportunityService } from '../../shared/services/opportunity.service';
 import { OrganizationService } from '../../shared/services/organization.service';
 import { BobActionService } from '../../shared/services/bob-action.service';
-import { Subscription } from 'rxjs';
+import { Opportunity, CreateOpportunityDto } from '../../shared/models/opportunity.model';
 
 @Component({
     selector: 'croo-opportunities',
@@ -19,6 +20,12 @@ export class OpportunitiesComponent implements OnInit, OnDestroy {
     total = 0;
     isLoading = true;
 
+    // Pagination
+    currentPage = 1;
+    pageSize = 50;
+    totalPages = 1;
+    Math = Math;
+
     // Org name resolution
     orgNames: Record<string, string> = {};
 
@@ -31,16 +38,14 @@ export class OpportunitiesComponent implements OnInit, OnDestroy {
     isProcessing = false;
     isCreating = false;
     statusMessage = '';
-    parsedPreview: Partial<CreateOpportunityRequest> | null = null;
+    parsedPreview: Partial<CreateOpportunityDto> | null = null;
 
     private bobActionSub?: Subscription;
 
-    constructor(
-        private oppService: OpportunityService,
-        private orgService: OrganizationService,
-        private router: Router,
-        private bobActionService: BobActionService,
-    ) { }
+    private oppService = inject(OpportunityService);
+    private orgService = inject(OrganizationService);
+    private router = inject(Router);
+    private bobActionService = inject(BobActionService);
 
     ngOnInit(): void {
         this.loadOpportunities();
@@ -58,16 +63,40 @@ export class OpportunitiesComponent implements OnInit, OnDestroy {
 
     loadOpportunities(): void {
         this.isLoading = true;
-        this.oppService.list().subscribe({
+        const skip = (this.currentPage - 1) * this.pageSize;
+        this.oppService.getAll(skip, this.pageSize).subscribe({
             next: (res) => {
                 this.opportunities = res.items;
                 this.total = res.total;
+                this.totalPages = Math.max(1, Math.ceil(this.total / this.pageSize));
                 this.isLoading = false;
                 this.resolveOrgNames();
                 this.pipelineValue = this.opportunities.reduce((sum, o) => sum + (o.amount || 0), 0);
             },
             error: () => (this.isLoading = false),
         });
+    }
+
+    goToPage(page: number): void {
+        if (page < 1 || page > this.totalPages) return;
+        this.currentPage = page;
+        this.loadOpportunities();
+    }
+
+    onPageSizeChange(event: Event): void {
+        this.pageSize = +(event.target as HTMLSelectElement).value;
+        this.currentPage = 1;
+        this.loadOpportunities();
+    }
+
+    getPages(): number[] {
+        const pages: number[] = [];
+        const max = Math.min(this.totalPages, 5);
+        let start = Math.max(1, this.currentPage - Math.floor(max / 2));
+        const end = Math.min(this.totalPages, start + max - 1);
+        start = Math.max(1, end - max + 1);
+        for (let i = start; i <= end; i++) pages.push(i);
+        return pages;
     }
 
     formatAmount(amount: number | null): string {
@@ -149,7 +178,7 @@ export class OpportunitiesComponent implements OnInit, OnDestroy {
         if (!this.parsedPreview?.name) return;
         this.isCreating = true;
 
-        const data: CreateOpportunityRequest = {
+        const data: CreateOpportunityDto = {
             name: this.parsedPreview.name,
             description: this.parsedPreview.description,
             stage: this.parsedPreview.stage || 'PROSPECTING',
@@ -171,8 +200,8 @@ export class OpportunitiesComponent implements OnInit, OnDestroy {
         });
     }
 
-    private parseOppText(text: string): Partial<CreateOpportunityRequest> {
-        const result: Partial<CreateOpportunityRequest> = {};
+    private parseOppText(text: string): Partial<CreateOpportunityDto> {
+        const result: Partial<CreateOpportunityDto> = {};
 
         const amountMatch = text.match(/\$([\d,]+(?:\.\d{1,2})?)\s*([KkMm])?/);
         if (amountMatch) {
