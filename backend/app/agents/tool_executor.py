@@ -122,19 +122,26 @@ async def execute_bob_tool(tool_name: str, args: Dict[str, Any], user_context: d
         from app.domain.entities.organization import Organization
         query = args.get("query", "").lower()
         limit = args.get("limit", 5)
-        orgs = db.query(Organization).filter(
+        
+        q = db.query(Organization).filter(
             Organization.tenant_id == user_context["tenant_id"]
-        ).limit(limit).all()
+        )
+        if query:
+            q = q.filter(Organization.name.ilike(f"%{query}%"))
+        orgs = q.limit(limit).all()
+        
         return {
             "status": "ok",
             "results": [
                 {
                     "id": str(o.id),
                     "name": o.name,
+                    "industry": o.industry,
+                    "phone": o.phone,
                     "website": o.website,
                 }
-                for o in orgs if not query or query in (o.name + (o.website or "")).lower()
-            ][:limit]
+                for o in orgs
+            ]
         }
 
     elif tool_name == "get_pipeline_stats":

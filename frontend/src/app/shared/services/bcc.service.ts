@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
     BccOrganization, BccOrgDetail, BccDepartment, BccTeam,
-    BccIndustry, BccCareer, BccSkillTemplate, BccTaskTemplate, BccIntent,
+    BccIndustry, BccCareer, BccSkillTemplate, BccTaskTemplate, BccDomain, BccIntent,
     BccRegulation, BccRole, BccRoleDetail,
     BccSkill, BccTask, BccTaskStep, BccResource, BccMilestone,
     BccProfile, BccProfileSection, BccProfileEntry,
@@ -106,6 +106,19 @@ export class BccService {
 
     getTaskTemplate(id: string): Observable<BccTaskTemplate> {
         return this.http.get<BccTaskTemplate>(`${API_URL}/task-templates/${id}`);
+    }
+
+    // ── Library: Domains ─────────────────────────────────────
+    listDomains(): Observable<BccDomain[]> {
+        return this.http.get<BccDomain[]>(`${API_URL}/domains`);
+    }
+
+    createDomain(data: Partial<BccDomain>): Observable<BccDomain> {
+        return this.http.post<BccDomain>(`${API_URL}/domains`, data);
+    }
+
+    deleteDomain(id: string): Observable<void> {
+        return this.http.delete<void>(`${API_URL}/domains/${id}`);
     }
 
     // ── Library: Intents ─────────────────────────────────────

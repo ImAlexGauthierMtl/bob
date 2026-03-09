@@ -10,10 +10,11 @@ const API_URL = `${environment.apiUrl}`;
 export class ActivityService {
     private http = inject(HttpClient);
 
-    getAll(skip = 0, limit = 50, organizationId?: string, contactId?: string, status?: string): Observable<ActivityListResponse> {
+    getAll(skip = 0, limit = 50, organizationId?: string, contactId?: string, opportunityId?: string, status?: string): Observable<ActivityListResponse> {
         let url = `${API_URL}/activities?skip=${skip}&limit=${limit}`;
         if (organizationId) url += `&organization_id=${organizationId}`;
         if (contactId) url += `&contact_id=${contactId}`;
+        if (opportunityId) url += `&opportunity_id=${opportunityId}`;
         if (status) url += `&activity_status=${status}`;
         return this.http.get<ActivityListResponse>(url);
     }

@@ -1,6 +1,6 @@
 """User entity for authentication."""
 
-from sqlalchemy import Column, String, Text, Float, Boolean
+from sqlalchemy import Column, String, Text, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 import bcrypt
 
@@ -27,6 +27,9 @@ class User(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
     role = Column(String(30), nullable=False, default="member")
     is_super_admin = Column(Boolean, default=False, nullable=False, comment="Platform super-admin flag")
     trust_score = Column(Float, nullable=False, default=0.1)
+
+    # Active BCC organization context
+    active_organization_id = Column(String(36), ForeignKey("bcc_organizations.id"), nullable=True)
 
     # Relationships — owned entities
     bob_settings = relationship("BobUserSettings", foreign_keys="BobUserSettings.user_id", uselist=False, passive_deletes=True)

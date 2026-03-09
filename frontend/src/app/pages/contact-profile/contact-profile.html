@@ -203,17 +203,42 @@
         @if (activeTab === 'activities') {
         <section>
             <div class="tab-header">
-                <h3 class="section-title-lg">Activities & Tasks</h3>
-                <button class="btn btn-accent"><i class="fa-solid fa-plus"></i> Add Task</button>
+                <h3 class="section-title-lg">Activities</h3>
+                <button class="btn btn-accent" (click)="openAddActivityDialog()"><i class="fa-solid fa-plus"></i> Add
+                    Activity</button>
             </div>
-            <h4 class="sub-section-title">Upcoming</h4>
+
+            @if (activities.length === 0) {
             <div class="empty-state">
-                <p>No upcoming tasks. Create a follow-up task for {{ contact.first_name }}.</p>
+                <p>No activities yet. Create a follow-up activity for {{ contact.first_name }}.</p>
             </div>
-            <h4 class="sub-section-title">Completed Activities</h4>
-            <div class="empty-state">
-                <p>No completed activities yet.</p>
+            } @else {
+            <div class="activity-list">
+                @for (a of activities; track a.id) {
+                <div class="activity-card">
+                    <div class="activity-card__icon">
+                        @switch (a.activity_type) {
+                        @case ('CALL') { <i class="fa-solid fa-phone" style="color:#16a34a"></i> }
+                        @case ('EMAIL') { <i class="fa-solid fa-envelope" style="color:#db2777"></i> }
+                        @case ('MEETING') { <i class="fa-solid fa-users" style="color:#2563eb"></i> }
+                        @case ('NOTE') { <i class="fa-solid fa-sticky-note" style="color:#ca8a04"></i> }
+                        @default { <i class="fa-solid fa-check-circle" style="color:#9333ea"></i> }
+                        }
+                    </div>
+                    <div class="activity-card__body">
+                        <p class="activity-card__title">{{ a.subject }}</p>
+                        <div class="activity-card__meta">
+                            <span class="stage-badge">{{ a.activity_type }}</span>
+                            <span>·</span>
+                            <span>{{ a.priority }}</span>
+                            <span>·</span>
+                            <span class="stage-badge">{{ a.status }}</span>
+                        </div>
+                    </div>
+                </div>
+                }
             </div>
+            }
         </section>
         }
 
@@ -313,4 +338,70 @@
     </aside>
 
 </div>
+
+<!-- ═══════════════ ADD ACTIVITY DIALOG ═══════════════ -->
+@if (showAddActivityDialog) {
+<div class="dialog-overlay" (click)="closeAddActivityDialog()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+        <div class="dialog__header">
+            <h3 class="dialog__title">Add Activity for {{ contact.first_name }} {{ contact.last_name }}</h3>
+            <button class="dialog__close" (click)="closeAddActivityDialog()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="dialog__body">
+            <div class="form-group">
+                <label class="form-label">Subject *</label>
+                <input class="input" type="text" placeholder="Activity subject..." [(ngModel)]="newActivitySubject">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea class="input" placeholder="Optional description..." [(ngModel)]="newActivityDescription"
+                    rows="2"></textarea>
+            </div>
+
+            <div class="form-row-2">
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select class="input" [(ngModel)]="newActivityType">
+                        <option value="TASK">Task</option>
+                        <option value="CALL">Call</option>
+                        <option value="MEETING">Meeting</option>
+                        <option value="EMAIL">Email</option>
+                        <option value="NOTE">Note</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Priority</label>
+                    <select class="input" [(ngModel)]="newActivityPriority">
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="URGENT">Urgent</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Due Date</label>
+                <input class="input" type="datetime-local" [(ngModel)]="newActivityDueDate">
+            </div>
+        </div>
+
+        <div class="dialog__footer">
+            <button class="btn btn-outline" (click)="closeAddActivityDialog()">Cancel</button>
+            <button class="btn btn-accent" (click)="createLinkedActivity()"
+                [disabled]="isCreatingActivity || !newActivitySubject.trim()">
+                @if (isCreatingActivity) {
+                <i class="fa-solid fa-spinner fa-spin"></i> Creating...
+                } @else {
+                <i class="fa-solid fa-plus"></i> Create Activity
+                }
+            </button>
+        </div>
+    </div>
+</div>
+}
 }

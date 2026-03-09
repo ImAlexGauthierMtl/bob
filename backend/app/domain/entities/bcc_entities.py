@@ -94,6 +94,23 @@ class BccTaskTemplate(Base, TenantMixin, AuditMixin):
     intent_links = relationship("BccIntentTask", back_populates="task_template", cascade="all, delete-orphan")
 
 
+class BccDomain(Base, TenantMixin, AuditMixin):
+    """A high-level logical area or module grouping Intents.
+
+    Example: 'Opportunités', 'Recherche Globale', 'Navigation CRM'
+    """
+
+    __tablename__ = "bcc_domains"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    icon = Column(String(50), nullable=True)
+
+    # Relationships
+    intents = relationship("BccIntent", back_populates="domain", cascade="all, delete-orphan", order_by="BccIntent.name")
+
+
 class BccIntent(Base, TenantMixin, AuditMixin):
     """An intent — what the user wants to achieve. Maps to a sequence of tasks.
 
@@ -107,8 +124,10 @@ class BccIntent(Base, TenantMixin, AuditMixin):
     description = Column(Text, nullable=True)
     trigger_phrases = Column(JSON, nullable=True, default=list)   # phrases that trigger this intent
     category = Column(String(100), nullable=True)
+    domain_id = Column(String(36), ForeignKey("bcc_domains.id"), nullable=True)
 
     # Relationships
+    domain = relationship("BccDomain", back_populates="intents")
     task_links = relationship("BccIntentTask", back_populates="intent", cascade="all, delete-orphan",
                               order_by="BccIntentTask.sort_order")
 

@@ -25,18 +25,29 @@ class ActivityRepository:
             Activity.is_deleted == False,
         ).first()
 
-    def list_all(self, tenant_id: str, skip: int = 0, limit: int = 50, organization_id: Optional[str] = None, contact_id: Optional[str] = None, status: Optional[str] = None) -> List[Activity]:
+    def list_all(self, tenant_id: str, skip: int = 0, limit: int = 50, organization_id: Optional[str] = None, contact_id: Optional[str] = None, opportunity_id: Optional[str] = None, status: Optional[str] = None) -> List[Activity]:
         query = self.db.query(Activity).filter(Activity.tenant_id == tenant_id, Activity.is_deleted == False)
         if organization_id:
             query = query.filter(Activity.organization_id == organization_id)
         if contact_id:
             query = query.filter(Activity.contact_id == contact_id)
+        if opportunity_id:
+            query = query.filter(Activity.opportunity_id == opportunity_id)
         if status:
             query = query.filter(Activity.status == status)
         return query.order_by(Activity.due_date.desc().nullslast()).offset(skip).limit(limit).all()
 
-    def count(self, tenant_id: str) -> int:
-        return self.db.query(Activity).filter(Activity.tenant_id == tenant_id, Activity.is_deleted == False).count()
+    def count(self, tenant_id: str, organization_id: Optional[str] = None, contact_id: Optional[str] = None, opportunity_id: Optional[str] = None, status: Optional[str] = None) -> int:
+        query = self.db.query(Activity).filter(Activity.tenant_id == tenant_id, Activity.is_deleted == False)
+        if organization_id:
+            query = query.filter(Activity.organization_id == organization_id)
+        if contact_id:
+            query = query.filter(Activity.contact_id == contact_id)
+        if opportunity_id:
+            query = query.filter(Activity.opportunity_id == opportunity_id)
+        if status:
+            query = query.filter(Activity.status == status)
+        return query.count()
 
     def update(self, activity: Activity) -> Activity:
         activity.version += 1

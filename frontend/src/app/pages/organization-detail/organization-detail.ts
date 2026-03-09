@@ -11,7 +11,7 @@ import { BobActionService } from '../../shared/services/bob-action.service';
 import { Organization, OrganizationProfile } from '../../shared/models/organization.model';
 import { Contact, CreateContactDto } from '../../shared/models/contact.model';
 import { Opportunity, CreateOpportunityDto } from '../../shared/models/opportunity.model';
-import { Activity } from '../../shared/models/activity.model';
+import { Activity, CreateActivityDto } from '../../shared/models/activity.model';
 
 @Component({
     selector: 'croo-organization-detail',
@@ -44,6 +44,15 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
     isCreatingOpp = false;
     oppStatusMessage = '';
     parsedOppPreview: Partial<CreateOpportunityDto> | null = null;
+
+    // Add Activity dialog
+    showAddActivityDialog = false;
+    newActivitySubject = '';
+    newActivityDescription = '';
+    newActivityType = 'TASK';
+    newActivityPriority = 'MEDIUM';
+    newActivityDueDate = '';
+    isCreatingActivity = false;
 
     private bobActionSub?: Subscription;
 
@@ -379,5 +388,51 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
         }
 
         return result;
+    }
+
+    // ── Add Activity Dialog ──────────────────────────
+
+    openAddActivityDialog(): void {
+        this.showAddActivityDialog = true;
+        this.newActivitySubject = '';
+        this.newActivityDescription = '';
+        this.newActivityType = 'TASK';
+        this.newActivityPriority = 'MEDIUM';
+        this.newActivityDueDate = '';
+        this.isCreatingActivity = false;
+    }
+
+    closeAddActivityDialog(): void {
+        this.showAddActivityDialog = false;
+    }
+
+    createLinkedActivity(): void {
+        if (!this.newActivitySubject.trim() || !this.org) return;
+        this.isCreatingActivity = true;
+
+        const data: CreateActivityDto = {
+            subject: this.newActivitySubject,
+            description: this.newActivityDescription || undefined,
+            activity_type: this.newActivityType,
+            priority: this.newActivityPriority,
+            organization_id: this.org.id,
+        };
+        if (this.newActivityDueDate) {
+            data.due_date = this.newActivityDueDate;
+        }
+
+        this.actService.create(data).subscribe({
+            next: () => {
+                this.showAddActivityDialog = false;
+                this.isCreatingActivity = false;
+                // Refresh activities list
+                this.actService.getAll(0, 10, this.org!.id).subscribe({
+                    next: (res) => (this.activities = res.items),
+                });
+            },
+            error: () => {
+                this.isCreatingActivity = false;
+            },
+        });
     }
 }

@@ -8,6 +8,11 @@ export const routes: Routes = [
             import('./pages/login/login').then((m) => m.LoginComponent),
     },
     {
+        path: 'select-organization',
+        loadComponent: () =>
+            import('./pages/org-selector/org-selector').then((m) => m.OrgSelectorComponent),
+    },
+    {
         path: '',
         loadComponent: () =>
             import('./shared/layout/layout').then((m) => m.LayoutComponent),

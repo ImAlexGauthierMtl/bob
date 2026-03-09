@@ -16,6 +16,7 @@ class ActivityCreate(BaseModel):
     contact_id: Optional[str] = None
     opportunity_id: Optional[str] = None
     assigned_to: Optional[str] = None
+    owner_id: Optional[str] = None
 
 
 class ActivityUpdate(BaseModel):
@@ -30,6 +31,7 @@ class ActivityUpdate(BaseModel):
     contact_id: Optional[str] = None
     opportunity_id: Optional[str] = None
     assigned_to: Optional[str] = None
+    owner_id: Optional[str] = None
 
 
 class ActivityResponse(BaseModel):
@@ -45,6 +47,7 @@ class ActivityResponse(BaseModel):
     contact_id: Optional[str] = None
     opportunity_id: Optional[str] = None
     assigned_to: Optional[str] = None
+    owner_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

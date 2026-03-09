@@ -26,9 +26,11 @@ export class OrganizationsComponent implements OnInit, OnDestroy {
 
     // Dialog state
     showAddDialog = false;
+    searchMode = false;
     searchQuery = '';
     isSearching = false;
     searchResults: PlaceResult[] = [];
+    dbSearchResults: Organization[] = [];
     hasSearched = false;
 
     // Manual entry
@@ -55,7 +57,10 @@ export class OrganizationsComponent implements OnInit, OnDestroy {
         console.log('[Organizations] subscribing to BobActionService.action$');
         this.bobActionSub = this.bobActionService.action$.subscribe(action => {
             console.log('[Organizations] received action:', JSON.stringify(action));
-            if (action.type === 'open_create_dialog' && action.entity === 'organization') {
+            if (action.type === 'search_entity' && action.entity === 'organization') {
+                console.log('[Organizations] ✅ search_entity! calling openSearchDialog()');
+                this.openSearchDialog(action.name);
+            } else if (action.type === 'open_create_dialog' && action.entity === 'organization') {
                 console.log('[Organizations] ✅ match! calling openAddDialog()');
                 this.openAddDialog(action.name);
             } else if (action.type === 'ui_update_input' && this.showAddDialog) {
@@ -63,10 +68,16 @@ export class OrganizationsComponent implements OnInit, OnDestroy {
                     this.searchQuery = action.text;
                 }
                 if (action.submit) {
-                    this.searchMaps();
+                    if (this.searchMode) {
+                        this.searchDB();
+                    } else {
+                        this.searchMaps();
+                    }
                 }
             } else if (action.type === 'ui_select_result' && this.showAddDialog) {
-                if (action.index !== undefined && action.index > 0 && this.searchResults.length >= action.index) {
+                if (this.searchMode && action.index !== undefined && action.index > 0 && this.dbSearchResults.length >= action.index) {
+                    this.goToOrg(this.dbSearchResults[action.index - 1]);
+                } else if (action.index !== undefined && action.index > 0 && this.searchResults.length >= action.index) {
                     this.selectPlace(this.searchResults[action.index - 1]);
                 }
             }
@@ -119,22 +130,33 @@ export class OrganizationsComponent implements OnInit, OnDestroy {
 
     openAddDialog(name?: string): void {
         this.showAddDialog = true;
+        this.searchMode = false;
         this.resetDialog();
-        // If a name was provided (from Bob), pre-fill and auto-search
         if (name) {
             this.searchQuery = name;
-            // Let Angular detect the change before searching
             setTimeout(() => this.searchMaps(), 100);
+        }
+    }
+
+    openSearchDialog(name?: string): void {
+        this.showAddDialog = true;
+        this.searchMode = true;
+        this.resetDialog();
+        if (name) {
+            this.searchQuery = name;
+            setTimeout(() => this.searchDB(), 100);
         }
     }
 
     closeAddDialog(): void {
         this.showAddDialog = false;
+        this.searchMode = false;
     }
 
     resetDialog(): void {
         this.searchQuery = '';
         this.searchResults = [];
+        this.dbSearchResults = [];
         this.hasSearched = false;
         this.showManualForm = false;
         this.isSearching = false;
@@ -175,6 +197,35 @@ export class OrganizationsComponent implements OnInit, OnDestroy {
                 this.statusType = 'error';
             },
         });
+    }
+
+    // ── Search DB ────────────────────────────
+
+    searchDB(): void {
+        if (!this.searchQuery.trim()) return;
+        this.isSearching = true;
+        this.hasSearched = false;
+        this.dbSearchResults = [];
+
+        this.orgService.search(this.searchQuery.trim()).subscribe({
+            next: (res) => {
+                this.dbSearchResults = res.items;
+                this.hasSearched = true;
+                this.isSearching = false;
+            },
+            error: () => {
+                this.isSearching = false;
+                this.hasSearched = true;
+                this.statusMessage = '⚠️ Search failed.';
+                this.statusType = 'error';
+            },
+        });
+    }
+
+    goToOrg(org: Organization): void {
+        this.showAddDialog = false;
+        this.searchMode = false;
+        this.router.navigate(['/organizations', org.id]);
     }
 
     // ── Step 2: Select → Create → Redirect ──

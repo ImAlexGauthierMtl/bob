@@ -64,6 +64,104 @@
     text-transform: uppercase;
 }
 
+/* Org Switcher */
+.sidebar__org-switcher {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    margin-bottom: 1rem;
+    background: var(--color-gray-50);
+    border: 1px solid var(--color-gray-100);
+}
+
+.sidebar__org-switcher:hover {
+    background: var(--color-gray-100);
+}
+
+.sidebar__org-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--color-accent);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.sidebar__org-name {
+    flex: 1;
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar__org-chevron {
+    font-size: 10px;
+    color: var(--color-gray-400);
+    transition: transform 0.2s ease;
+}
+
+.sidebar__org-chevron--open {
+    transform: rotate(180deg);
+}
+
+.sidebar__org-dropdown {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-100);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.sidebar__org-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.625rem 1rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-size: 0.8125rem;
+    color: var(--color-gray-600);
+    transition: all 0.15s ease;
+    text-align: left;
+}
+
+.sidebar__org-option:hover {
+    background: var(--color-gray-50);
+    color: var(--color-black);
+}
+
+.sidebar__org-option--active {
+    color: var(--color-accent);
+    font-weight: var(--font-weight-medium);
+}
+
+.sidebar__org-option i:first-child {
+    font-size: 12px;
+    width: 16px;
+    text-align: center;
+}
+
+.sidebar__org-check {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--color-accent);
+}
+
 /* Navigation */
 .sidebar__nav {
     flex: 1;

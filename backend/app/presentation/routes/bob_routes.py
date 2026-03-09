@@ -33,7 +33,7 @@ class ChatRequest(BaseModel):
 
 class BobAction(BaseModel):
     """An action Bob wants the UI to perform."""
-    type: str          # 'navigate' | 'open_create_dialog' | 'ui_update_input' | 'ui_select_result' | 'change_slide'
+    type: str          # 'navigate' | 'open_create_dialog' | 'ui_update_input' | 'ui_select_result' | 'change_slide' | 'bob_display'
     page: Optional[str] = None
     entity: Optional[str] = None
     name: Optional[str] = None
@@ -42,6 +42,13 @@ class BobAction(BaseModel):
     text: Optional[str] = None
     submit: Optional[bool] = None
     index: Optional[int] = None
+    # bob_display fields
+    display_type: Optional[str] = None
+    title: Optional[str] = None
+    subtitle: Optional[str] = None
+    icon: Optional[str] = None
+    items: Optional[list[dict]] = None
+    stats: Optional[list[dict]] = None
 
 
 class ToolStep(BaseModel):

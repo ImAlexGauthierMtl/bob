@@ -127,6 +127,31 @@ class BccTaskTemplateResponse(BaseModel):
         from_attributes = True
 
 
+# ── Domain ───────────────────────────────────────────────────
+
+class BccDomainCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    icon: Optional[str] = None
+
+
+class BccDomainUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+
+
+class BccDomainResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    intent_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+
 # ── Intent ───────────────────────────────────────────────────
 
 class BccIntentTaskResponse(BaseModel):
@@ -144,6 +169,7 @@ class BccIntentCreate(BaseModel):
     description: Optional[str] = None
     trigger_phrases: Optional[list] = None
     category: Optional[str] = None
+    domain_id: Optional[str] = None
     task_template_ids: Optional[List[str]] = None
 
 
@@ -153,6 +179,8 @@ class BccIntentResponse(BaseModel):
     description: Optional[str] = None
     trigger_phrases: Optional[list] = None
     category: Optional[str] = None
+    domain_id: Optional[str] = None
+    domain_name: Optional[str] = None
     task_count: int = 0
     tasks: List[BccIntentTaskResponse] = []
 

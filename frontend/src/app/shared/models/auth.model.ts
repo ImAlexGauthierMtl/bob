@@ -23,6 +23,8 @@ export interface AuthUser {
     email: string;
     first_name: string;
     last_name: string;
+    active_organization_id: string | null;
+    active_organization_name: string | null;
     created_at: string;
     updated_at: string;
 }

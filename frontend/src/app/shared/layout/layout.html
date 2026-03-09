@@ -12,13 +12,39 @@
         </div>
 
         <nav class="sidebar__nav">
+            <!-- Org Switcher (only show if multiple orgs exist) -->
+            @if (activeOrgName && organizations.length > 1) {
+            <div class="sidebar__org-switcher" (click)="toggleOrgDropdown()">
+                <div class="sidebar__org-icon">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+                <span class="sidebar__org-name">{{ activeOrgName }}</span>
+                <i class="fa-solid fa-chevron-down sidebar__org-chevron"
+                    [class.sidebar__org-chevron--open]="showOrgDropdown"></i>
+            </div>
+            @if (showOrgDropdown) {
+            <div class="sidebar__org-dropdown">
+                @for (org of organizations; track org.id) {
+                <button class="sidebar__org-option" [class.sidebar__org-option--active]="org.id === activeOrgId"
+                    (click)="switchOrg(org)">
+                    <i class="fa-solid fa-building"></i>
+                    <span>{{ org.name }}</span>
+                    @if (org.id === activeOrgId) {
+                    <i class="fa-solid fa-check sidebar__org-check"></i>
+                    }
+                </button>
+                }
+            </div>
+            }
+            }
+
             <div class="sidebar__nav-main">
                 <a routerLink="/dashboard" routerLinkActive="sidebar__link--active" class="sidebar__link">Dashboard</a>
                 <a routerLink="/organizations" routerLinkActive="sidebar__link--active"
                     class="sidebar__link">Organizations</a>
                 <a routerLink="/contacts" class="sidebar__link">Contacts</a>
                 <a routerLink="/opportunities" class="sidebar__link">Opportunities</a>
-                <a routerLink="/tasks" routerLinkActive="sidebar__link--active" class="sidebar__link">Tasks</a>
+                <a routerLink="/tasks" routerLinkActive="sidebar__link--active" class="sidebar__link">Activities</a>
                 <a routerLink="/analytics" class="sidebar__link">Analytics</a>
             </div>
 
@@ -88,5 +114,6 @@
 
     <!-- Bob Chat FAB (global) -->
     <croo-bob-chat />
+    <croo-bob-display-overlay />
 
 </div>

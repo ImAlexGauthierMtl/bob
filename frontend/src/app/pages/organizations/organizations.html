@@ -147,7 +147,7 @@
 <div class="dialog-overlay" (click)="closeAddDialog()">
     <div class="dialog dialog--wide" (click)="$event.stopPropagation()">
         <div class="dialog__header">
-            <h3 class="dialog__title">Add Organization</h3>
+            <h3 class="dialog__title">{{ searchMode ? 'Search Organization' : 'Add Organization' }}</h3>
             <button class="dialog__close" (click)="closeAddDialog()">
                 <i class="fa-solid fa-xmark"></i>
             </button>
@@ -158,13 +158,18 @@
             <!-- Search bar -->
             <div class="dialog__hint">
                 <i class="fa-solid fa-magnifying-glass"></i>
+                @if (searchMode) {
+                Search your CRM database for an existing organization.
+                } @else {
                 Search by company name — we'll find it on Google Maps with address, phone, and industry.
+                }
             </div>
 
             <div class="search-row">
                 <input type="text" class="input search-input" placeholder="e.g. BC Assur, Bombardier, Shopify..."
-                    [(ngModel)]="searchQuery" (keydown.enter)="searchMaps()" autofocus />
-                <button class="btn btn-accent" (click)="searchMaps()" [disabled]="isSearching || !searchQuery.trim()">
+                    [(ngModel)]="searchQuery" (keydown.enter)="searchMode ? searchDB() : searchMaps()" autofocus />
+                <button class="btn btn-accent" (click)="searchMode ? searchDB() : searchMaps()"
+                    [disabled]="isSearching || !searchQuery.trim()">
                     @if (isSearching) {
                     <i class="fa-solid fa-spinner fa-spin"></i>
                     } @else {
@@ -177,11 +182,53 @@
             @if (isSearching) {
             <div class="search-loading">
                 <i class="fa-solid fa-spinner fa-spin"></i>
+                @if (searchMode) {
+                Searching CRM database...
+                } @else {
                 Searching Google Maps...
+                }
             </div>
             }
 
-            @if (hasSearched && searchResults.length > 0) {
+            @if (searchMode && hasSearched && dbSearchResults.length > 0) {
+            <p class="results-label">{{ dbSearchResults.length }} results found — select one:</p>
+            <div class="results-list">
+                @for (org of dbSearchResults; track org.id; let i = $index) {
+                <div class="result-card" (click)="goToOrg(org)">
+                    <div class="result-card__number">#{{ i + 1 }}</div>
+                    <div class="result-card__main">
+                        <p class="result-card__name">{{ org.name }}</p>
+                        <div class="result-card__tags">
+                            @if (org.industry) {
+                            <span class="result-tag"><i class="fa-solid fa-building"></i> {{ org.industry }}</span>
+                            }
+                            @if (org.phone) {
+                            <span class="result-tag"><i class="fa-solid fa-phone"></i> {{ org.phone }}</span>
+                            }
+                            @if (org.address_city) {
+                            <span class="result-tag"><i class="fa-solid fa-location-dot"></i> {{ org.address_city
+                                }}</span>
+                            }
+                            <span class="result-tag"><i class="fa-solid fa-circle"
+                                    [style.color]="org.status === 'CUSTOMER' ? '#22c55e' : '#f59e0b'"></i> {{ org.status
+                                }}</span>
+                        </div>
+                    </div>
+                    <div class="result-card__action">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </div>
+                </div>
+                }
+            </div>
+            }
+
+            @if (searchMode && hasSearched && dbSearchResults.length === 0) {
+            <div class="manual-form">
+                <p class="manual-form__label">No organizations found matching "{{ searchQuery }}".</p>
+            </div>
+            }
+
+            @if (!searchMode && hasSearched && searchResults.length > 0) {
             <p class="results-label">{{ searchResults.length }} results found — select the right one:</p>
             <div class="results-list">
                 @for (place of searchResults; track place.place_id; let i = $index) {
@@ -215,7 +262,7 @@
             }
 
             <!-- No results → Manual form -->
-            @if (showManualForm) {
+            @if (!searchMode && showManualForm) {
             <div class="manual-form">
                 <p class="manual-form__label">No results found. Enter the details manually:</p>
                 <div class="form-grid">

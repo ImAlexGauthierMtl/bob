@@ -4,8 +4,10 @@ import { DatePipe, UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OpportunityService } from '../../shared/services/opportunity.service';
 import { ProductService } from '../../shared/services/product.service';
+import { ActivityService } from '../../shared/services/activity.service';
 import { Opportunity, OpportunityProduct } from '../../shared/models/opportunity.model';
 import { Product } from '../../shared/models/product.model';
+import { Activity, CreateActivityDto } from '../../shared/models/activity.model';
 
 /** All pipeline stages in display order. */
 const STAGES = ['PROSPECTING', 'QUALIFICATION', 'PROPOSAL', 'NEGOTIATION', 'CLOSED_WON', 'CLOSED_LOST'] as const;
@@ -47,9 +49,23 @@ export class OpportunityProfileComponent implements OnInit {
     selectedProductId = '';
     isAddingProduct = false;
 
+    // ── Activities ────────────────────────────────
+    activities: Activity[] = [];
+    activitiesLoaded = false;
+
+    // Add Activity dialog
+    showAddActivityDialog = false;
+    newActivitySubject = '';
+    newActivityDescription = '';
+    newActivityType = 'TASK';
+    newActivityPriority = 'MEDIUM';
+    newActivityDueDate = '';
+    isCreatingActivity = false;
+
     private route = inject(ActivatedRoute);
     private oppService = inject(OpportunityService);
     private productService = inject(ProductService);
+    private actService = inject(ActivityService);
 
     ngOnInit(): void {
         const id = this.route.snapshot.paramMap.get('id');
@@ -76,6 +92,9 @@ export class OpportunityProfileComponent implements OnInit {
         if (tab === 'products' && !this.productsLoaded && this.opp) {
             this.loadProducts();
         }
+        if (tab === 'activities' && !this.activitiesLoaded && this.opp) {
+            this.loadActivities();
+        }
     }
 
     // ── Product management ──────────────────────────────
@@ -86,6 +105,16 @@ export class OpportunityProfileComponent implements OnInit {
             next: (res) => {
                 this.linkedProducts = res.items;
                 this.productsLoaded = true;
+            },
+        });
+    }
+
+    loadActivities(): void {
+        if (!this.opp) return;
+        this.actService.getAll(0, 50, undefined, undefined, this.opp.id).subscribe({
+            next: (res) => {
+                this.activities = res.items;
+                this.activitiesLoaded = true;
             },
         });
     }
@@ -237,5 +266,51 @@ export class OpportunityProfileComponent implements OnInit {
             case 'HARDWARE': return 'fa-solid fa-microchip';
             default: return 'fa-solid fa-box';
         }
+    }
+
+    // ── Add Activity Dialog ──────────────────────────
+
+    openAddActivityDialog(): void {
+        this.showAddActivityDialog = true;
+        this.newActivitySubject = '';
+        this.newActivityDescription = '';
+        this.newActivityType = 'TASK';
+        this.newActivityPriority = 'MEDIUM';
+        this.newActivityDueDate = '';
+        this.isCreatingActivity = false;
+    }
+
+    closeAddActivityDialog(): void {
+        this.showAddActivityDialog = false;
+    }
+
+    createLinkedActivity(): void {
+        if (!this.newActivitySubject.trim() || !this.opp) return;
+        this.isCreatingActivity = true;
+
+        const data: CreateActivityDto = {
+            subject: this.newActivitySubject,
+            description: this.newActivityDescription || undefined,
+            activity_type: this.newActivityType,
+            priority: this.newActivityPriority,
+            opportunity_id: this.opp.id,
+        };
+        if (this.opp.organization_id) {
+            data.organization_id = this.opp.organization_id;
+        }
+        if (this.newActivityDueDate) {
+            data.due_date = this.newActivityDueDate;
+        }
+
+        this.actService.create(data).subscribe({
+            next: () => {
+                this.showAddActivityDialog = false;
+                this.isCreatingActivity = false;
+                this.loadActivities();
+            },
+            error: () => {
+                this.isCreatingActivity = false;
+            },
+        });
     }
 }

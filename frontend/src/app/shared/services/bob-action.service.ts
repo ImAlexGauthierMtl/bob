@@ -2,8 +2,33 @@ import { Injectable, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject, ReplaySubject } from 'rxjs';
 
+export interface BobDisplayItemTag {
+    label: string;
+    color?: string;
+    icon?: string;
+}
+
+export interface BobDisplayItem {
+    id: string;
+    number: number;
+    title: string;
+    subtitle?: string;
+    tags?: BobDisplayItemTag[];
+    value?: string;
+    value_label?: string;
+    route?: string;
+}
+
+export interface BobDisplayStat {
+    label: string;
+    value: string;
+    trend?: 'up' | 'down' | 'neutral';
+    icon?: string;
+    color?: string;
+}
+
 export interface BobAction {
-    type: 'navigate' | 'open_create_dialog' | 'change_slide' | 'ui_update_input' | 'ui_select_result' | 'ui_switch_tab';
+    type: 'navigate' | 'open_create_dialog' | 'search_entity' | 'change_slide' | 'ui_update_input' | 'ui_select_result' | 'ui_switch_tab' | 'bob_display';
     page?: string;
     entity?: string;
     name?: string;
@@ -12,6 +37,13 @@ export interface BobAction {
     text?: string;
     submit?: boolean;
     index?: number;
+    // bob_display fields
+    display_type?: 'list' | 'stats' | 'detail';
+    title?: string;
+    subtitle?: string;
+    icon?: string;
+    items?: BobDisplayItem[];
+    stats?: BobDisplayStat[];
 }
 
 export interface BobMission {
@@ -50,7 +82,7 @@ export class BobActionService {
                 });
             });
         }
-        else if (page && action.type === 'open_create_dialog') {
+        else if (page && (action.type === 'open_create_dialog' || action.type === 'search_entity')) {
             const isAlreadyOnPage = this.router.url.startsWith(`/${page}`);
             console.log(`[BobAction] navigating to /${page}... (already on page: ${isAlreadyOnPage})`);
             this.ngZone.run(() => {

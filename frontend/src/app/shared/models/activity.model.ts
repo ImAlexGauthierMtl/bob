@@ -13,6 +13,7 @@ export interface Activity {
     contact_id: string | null;
     opportunity_id: string | null;
     assigned_to: string | null;
+    owner_id: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -35,6 +36,7 @@ export interface CreateActivityDto {
     contact_id?: string;
     opportunity_id?: string;
     assigned_to?: string;
+    owner_id?: string;
 }
 
 export type UpdateActivityDto = Partial<CreateActivityDto>;

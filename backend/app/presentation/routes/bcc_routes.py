@@ -16,7 +16,7 @@ from app.domain.entities.bcc_entities import (
     BccRole, BccSkill, BccTask, BccTaskStep, BccResource, BccMilestone,
     BccOrganization, BccOrgProfile, BccDepartment, BccTeam,
     BccIndustry, BccCareer, BccSkillTemplate, BccTaskTemplate,
-    BccIntent, BccIntentTask,
+    BccDomain, BccIntent, BccIntentTask,
     BccRegulation, BccOrgIndustry, BccProfileEntry,
 )
 from app.presentation.schemas.bcc_schemas import (
@@ -32,6 +32,7 @@ from app.presentation.schemas.bcc_schemas import (
     BccCareerCreate, BccCareerUpdate, BccCareerResponse,
     BccSkillTemplateCreate, BccSkillTemplateUpdate, BccSkillTemplateResponse,
     BccTaskTemplateCreate, BccTaskTemplateUpdate, BccTaskTemplateResponse,
+    BccDomainCreate, BccDomainUpdate, BccDomainResponse,
     BccIntentCreate, BccIntentResponse, BccIntentTaskResponse,
     # Layer 2 — Organization
     BccOrganizationCreate, BccOrganizationUpdate, BccOrganizationResponse,
@@ -656,6 +657,71 @@ async def delete_task_template(
     db.commit()
 
 
+# ── Domains ──────────────────────────────────────────────────
+
+@router.get("/domains", response_model=list[BccDomainResponse])
+async def list_domains(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all domains."""
+    items = db.query(BccDomain).filter(
+        BccDomain.tenant_id == current_user["tenant_id"],
+    ).order_by(BccDomain.name).all()
+    return [
+        BccDomainResponse(
+            id=d.id,
+            name=d.name,
+            description=d.description,
+            icon=d.icon,
+            intent_count=len(d.intents)
+        )
+        for d in items
+    ]
+
+
+@router.post("/domains", status_code=status.HTTP_201_CREATED, response_model=BccDomainResponse)
+async def create_domain(
+    data: BccDomainCreate,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a new domain."""
+    item = BccDomain(
+        tenant_id=current_user["tenant_id"],
+        created_by=current_user["email"],
+        **data.model_dump(exclude_none=True),
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    logger.info("bcc_domain_created", id=item.id, name=item.name)
+    return BccDomainResponse(
+        id=item.id,
+        name=item.name,
+        description=item.description,
+        icon=item.icon,
+        intent_count=0
+    )
+
+
+@router.delete("/domains/{domain_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_domain(
+    domain_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a domain."""
+    item = db.query(BccDomain).filter(
+        BccDomain.id == domain_id,
+        BccDomain.tenant_id == current_user["tenant_id"],
+    ).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    db.delete(item)
+    db.commit()
+
+
 # ── Intents ──────────────────────────────────────────────────
 
 
@@ -685,6 +751,8 @@ async def list_intents(
             description=intent.description,
             trigger_phrases=intent.trigger_phrases,
             category=intent.category,
+            domain_id=intent.domain_id,
+            domain_name=intent.domain.name if intent.domain else None,
             task_count=len(tasks),
             tasks=tasks,
         ))
@@ -719,6 +787,8 @@ async def get_intent(
         description=intent.description,
         trigger_phrases=intent.trigger_phrases,
         category=intent.category,
+        domain_id=intent.domain_id,
+        domain_name=intent.domain.name if intent.domain else None,
         task_count=len(tasks),
         tasks=tasks,
     )
@@ -738,6 +808,7 @@ async def create_intent(
         description=data.description,
         trigger_phrases=data.trigger_phrases,
         category=data.category,
+        domain_id=data.domain_id,
     )
     db.add(intent)
     db.flush()
@@ -771,6 +842,8 @@ async def create_intent(
         description=intent.description,
         trigger_phrases=intent.trigger_phrases,
         category=intent.category,
+        domain_id=intent.domain_id,
+        domain_name=intent.domain.name if intent.domain else None,
         task_count=len(tasks),
         tasks=tasks,
     )

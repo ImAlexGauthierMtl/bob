@@ -3,7 +3,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { KeyValuePipe, UpperCasePipe, JsonPipe, DatePipe, LowerCasePipe } from '@angular/common';
 import { BccService } from '../../../../shared/services/bcc.service';
 import {
-    BccIndustry, BccCareer, BccSkillTemplate, BccTaskTemplate, BccIntent,
+    BccIndustry, BccCareer, BccSkillTemplate, BccTaskTemplate, BccIntent, BccDomain,
     BccProfile, BccProfileSection, BccProfileEntry, BccPerspective,
 } from '../../../../shared/models/bcc.model';
 
@@ -20,7 +20,7 @@ import {
 })
 export class BccLibraryDetailComponent implements OnInit {
     type = '';
-    item: BccIndustry | BccCareer | BccSkillTemplate | BccTaskTemplate | BccIntent | null = null;
+    item: BccIndustry | BccCareer | BccSkillTemplate | BccTaskTemplate | BccIntent | BccDomain | null = null;
     isLoading = true;
 
     // ── Profile entries (versioned knowledge) ────────
@@ -72,6 +72,19 @@ export class BccLibraryDetailComponent implements OnInit {
                 next: (data) => { this.item = data; this.isLoading = false; this.loadProfile(id); },
                 error: () => { this.isLoading = false; },
             }),
+            'domain': () => {
+                // Pour domain, on utilise get/list since getDomain might not exist in service
+                // Just mock it or wait, I didn't add getDomain. I'll need to fetch the list and find it, or add it to BccService.
+                // Or I can add `getDomain` to `BccService` really quick, but right now I'll just find it.
+                this.bccService.listDomains().subscribe({
+                    next: (domains) => {
+                        this.item = domains.find(d => d.id === id) || null;
+                        this.isLoading = false;
+                        this.loadProfile(id);
+                    },
+                    error: () => this.isLoading = false
+                });
+            },
         };
         const loader = loaders[this.type];
         if (loader) loader();
@@ -151,6 +164,9 @@ export class BccLibraryDetailComponent implements OnInit {
     get asIntent(): BccIntent | null {
         return this.type === 'intent' ? this.item as BccIntent : null;
     }
+    get asDomain(): BccDomain | null {
+        return this.type === 'domain' ? this.item as BccDomain : null;
+    }
 
     // ── Helpers ──────────────────────────────────────
     get typeLabel(): string {
@@ -160,6 +176,7 @@ export class BccLibraryDetailComponent implements OnInit {
             case 'skill-template': return 'Skill Template';
             case 'task-template': return 'Task Template';
             case 'intent': return 'Intent';
+            case 'domain': return 'Domain';
             default: return 'Library Item';
         }
     }
@@ -171,6 +188,7 @@ export class BccLibraryDetailComponent implements OnInit {
             case 'skill-template': return 'fa-solid fa-cog';
             case 'task-template': return 'fa-solid fa-list-check';
             case 'intent': return 'fa-solid fa-bullseye';
+            case 'domain': return 'fa-solid fa-layer-group';
             default: return 'fa-solid fa-book';
         }
     }
@@ -182,6 +200,7 @@ export class BccLibraryDetailComponent implements OnInit {
             case 'skill-template': return '#EF4444';
             case 'task-template': return '#10B981';
             case 'intent': return '#6366F1';
+            case 'domain': return '#EC4899'; // Pink
             default: return '#6B7280';
         }
     }

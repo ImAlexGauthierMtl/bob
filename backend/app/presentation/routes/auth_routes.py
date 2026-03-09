@@ -18,6 +18,7 @@ from app.presentation.schemas.auth_schemas import (
     TokenResponse,
     RefreshTokenRequest,
     UserResponse,
+    SetActiveOrgRequest,
 )
 
 router = APIRouter(prefix="/api/v1/auth")
@@ -104,6 +105,7 @@ def get_current_user(
         "user_id": user_id,
         "email": payload.get("email"),
         "tenant_id": user.tenant_id,
+        "active_organization_id": user.active_organization_id,
         "roles": role_names,
         "permissions": permission_keys,
     }
@@ -174,4 +176,46 @@ async def get_me(current_user: dict = Depends(get_current_user), db: Session = D
     user = UserRepository(db).get_by_id(current_user["user_id"])
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return UserResponse.model_validate(user)
+    response = UserResponse.model_validate(user)
+    # Resolve org name
+    if user.active_organization_id:
+        from app.domain.entities.bcc_entities import BccOrganization
+        org = db.query(BccOrganization).filter(BccOrganization.id == user.active_organization_id).first()
+        if org:
+            response.active_organization_name = org.name
+    return response
+
+
+@router.put("/me/active-organization", response_model=UserResponse)
+async def set_active_organization(
+    body: SetActiveOrgRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Set user's active BCC organization."""
+    user = UserRepository(db).get_by_id(current_user["user_id"])
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if body.organization_id:
+        from app.domain.entities.bcc_entities import BccOrganization
+        org = db.query(BccOrganization).filter(
+            BccOrganization.id == body.organization_id,
+            BccOrganization.tenant_id == user.tenant_id,
+        ).first()
+        if not org:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+        user.active_organization_id = body.organization_id
+    else:
+        user.active_organization_id = None
+
+    db.commit()
+    db.refresh(user)
+
+    response = UserResponse.model_validate(user)
+    if user.active_organization_id:
+        from app.domain.entities.bcc_entities import BccOrganization
+        org = db.query(BccOrganization).filter(BccOrganization.id == user.active_organization_id).first()
+        if org:
+            response.active_organization_name = org.name
+    return response

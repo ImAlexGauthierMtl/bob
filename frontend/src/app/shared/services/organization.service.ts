@@ -17,6 +17,10 @@ export class OrganizationService {
         return this.http.get<OrganizationListResponse>(`${API_URL}/organizations?skip=${skip}&limit=${limit}`);
     }
 
+    search(query: string, skip = 0, limit = 10): Observable<OrganizationListResponse> {
+        return this.http.get<OrganizationListResponse>(`${API_URL}/organizations?search=${encodeURIComponent(query)}&skip=${skip}&limit=${limit}`);
+    }
+
     getById(id: string): Observable<Organization> {
         return this.http.get<Organization>(`${API_URL}/organizations/${id}`);
     }

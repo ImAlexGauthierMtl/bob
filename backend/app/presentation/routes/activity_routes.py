@@ -22,13 +22,14 @@ async def list_activities(
     limit: int = Query(50, ge=1, le=100),
     organization_id: Optional[str] = None,
     contact_id: Optional[str] = None,
+    opportunity_id: Optional[str] = None,
     activity_status: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     repo = ActivityRepository(db)
-    items = repo.list_all(current_user["tenant_id"], skip, limit, organization_id, contact_id, activity_status)
-    total = repo.count(current_user["tenant_id"])
+    items = repo.list_all(current_user["tenant_id"], skip, limit, organization_id, contact_id, opportunity_id, activity_status)
+    total = repo.count(current_user["tenant_id"], organization_id, contact_id, opportunity_id, activity_status)
     return ActivityListResponse(
         items=[ActivityResponse.model_validate(a) for a in items],
         total=total, skip=skip, limit=limit,
@@ -43,6 +44,8 @@ async def create_activity(
     db: Session = Depends(get_db),
 ):
     repo = ActivityRepository(db)
+    if not data.owner_id:
+        data.owner_id = current_user["user_id"]
     activity = Activity(**data.model_dump(exclude_none=True), tenant_id=current_user["tenant_id"], created_by=current_user["email"])
     created = repo.create(activity)
     import asyncio
@@ -66,7 +69,7 @@ async def get_activity(
     return ActivityResponse.model_validate(activity)
 
 
-@router.patch("/{act_id}", response_model=ActivityResponse,
+@router.patch("/{activity_id}", response_model=ActivityResponse,
               dependencies=[Depends(require_permission("activity:write"))])
 async def update_activity(
     activity_id: str,
@@ -95,7 +98,7 @@ async def update_activity(
     return ActivityResponse.model_validate(updated)
 
 
-@router.delete("/{act_id}", status_code=status.HTTP_204_NO_CONTENT,
+@router.delete("/{activity_id}", status_code=status.HTTP_204_NO_CONTENT,
                dependencies=[Depends(require_permission("activity:delete"))])
 async def delete_activity(
     activity_id: str,

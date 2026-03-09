@@ -1,0 +1,41 @@
+<div class="org-selector">
+    <div class="org-selector__card">
+        <div class="org-selector__header">
+            <img src="croo-logo.png" alt="Croo" class="org-selector__logo" />
+            <h1 class="org-selector__title">Select your organization</h1>
+            <p class="org-selector__subtitle">Choose the organization you want to work with</p>
+        </div>
+
+        @if (isLoading) {
+        <div class="org-selector__loading">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <span>Loading organizations...</span>
+        </div>
+        } @else if (organizations.length === 0) {
+        <div class="org-selector__empty">
+            <i class="fa-solid fa-building-circle-xmark"></i>
+            <p>No organizations available</p>
+        </div>
+        } @else {
+        <div class="org-selector__list">
+            @for (org of organizations; track org.id) {
+            <button class="org-selector__item" (click)="selectOrg(org)">
+                <div class="org-selector__item-icon" [style.background]="org.color || '#6366F1'">
+                    <i [class]="org.icon || 'fa-solid fa-building'"></i>
+                </div>
+                <div class="org-selector__item-info">
+                    <h3 class="org-selector__item-name">{{ org.name }}</h3>
+                    <p class="org-selector__item-desc">{{ org.description || 'No description' }}</p>
+                    <div class="org-selector__item-meta">
+                        <span>{{ org.department_count }} departments</span>
+                        <span>·</span>
+                        <span>{{ org.industry_count }} industries</span>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right org-selector__item-arrow"></i>
+            </button>
+            }
+        </div>
+        }
+    </div>
+</div>

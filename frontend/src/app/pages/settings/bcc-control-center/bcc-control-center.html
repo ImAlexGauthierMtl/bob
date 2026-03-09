@@ -37,8 +37,9 @@
                 (click)="setActiveTab('industries')">Industries ({{ industries.length }})</button>
             <button class="tab" [class.tab--active]="activeTab === 'careers'" (click)="setActiveTab('careers')">Careers
                 ({{ careers.length }})</button>
-            <button class="tab" [class.tab--active]="activeTab === 'skills'" (click)="setActiveTab('skills')">Skills ({{
-                skillTemplates.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'domains'" (click)="setActiveTab('domains')">Domains
+                ({{
+                domains.length }})</button>
             <button class="tab" [class.tab--active]="activeTab === 'intents'" (click)="setActiveTab('intents')">Intents
                 ({{
                 intents.length }})</button>
@@ -145,25 +146,28 @@
         </section>
         }
 
-        <!-- ══ Skills Tab ══ -->
-        @if (activeTab === 'skills') {
+        <!-- ══ Domains Tab ══ -->
+        @if (activeTab === 'domains') {
         <section class="tab-section">
-            @if (skillTemplates.length === 0) {
-            <div class="empty-state">No skill templates defined</div>
+            @if (domains.length === 0) {
+            <div class="empty-state">No domains defined</div>
             } @else {
             <div class="opp-list">
-                @for (skill of skillTemplates; track skill.id) {
-                <a [routerLink]="['/settings/bob-control-center/library/skill-template', skill.id]" class="opp-card"
+                @for (domain of domains; track domain.id) {
+                <a [routerLink]="['/settings/bob-control-center/library/domain', domain.id]" class="opp-card"
                     style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
                     <div class="opp-card__main">
                         <div class="opp-card__info">
-                            <h4 class="opp-card__name">{{ skill.name }}</h4>
+                            <h4 class="opp-card__name">{{ domain.name }}</h4>
                             <div class="opp-card__tags">
-                                <span class="stage-badge">{{ skill.type }}</span>
-                                @if (skill.category) {
-                                <span class="opp-card__meta">{{ skill.category }}</span>
+                                @if (domain.description) {
+                                <span class="opp-card__meta">{{ domain.description }}</span>
                                 }
                             </div>
+                        </div>
+                        <div class="opp-card__value">
+                            <p class="opp-card__amount">{{ domain.intent_count }}</p>
+                            <p class="opp-card__amount-label">Intents</p>
                         </div>
                     </div>
                 </a>
@@ -187,8 +191,8 @@
                         <div class="opp-card__info">
                             <h4 class="opp-card__name">{{ intent.name }}</h4>
                             <div class="opp-card__tags">
-                                @if (intent.category) {
-                                <span class="stage-badge">{{ intent.category }}</span>
+                                @if (intent.domain_name) {
+                                <span class="stage-badge">{{ intent.domain_name }}</span>
                                 }
                                 <span class="opp-card__meta">{{ intent.task_count }} tasks</span>
                                 @if (intent.trigger_phrases && intent.trigger_phrases.length > 0) {
@@ -258,8 +262,8 @@
                     <p class="panel-field__value">{{ careers.length }}</p>
                 </div>
                 <div class="panel-field">
-                    <p class="panel-field__label">Skill Templates</p>
-                    <p class="panel-field__value">{{ skillTemplates.length }}</p>
+                    <p class="panel-field__label">Domains</p>
+                    <p class="panel-field__value">{{ domains.length }}</p>
                 </div>
                 <div class="panel-field">
                     <p class="panel-field__label">Intents</p>

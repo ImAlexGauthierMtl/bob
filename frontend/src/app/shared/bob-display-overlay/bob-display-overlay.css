@@ -1,0 +1,290 @@
+/* =============================================================
+   Bob Display Overlay — Global popup for CRM data display
+   Same visual language as organizations dialog-overlay
+   ============================================================= */
+
+.bob-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    backdrop-filter: blur(4px);
+    animation: bob-overlay-in 0.2s ease-out;
+}
+
+@keyframes bob-overlay-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.bob-overlay__dialog {
+    background-color: var(--color-white);
+    width: 100%;
+    max-width: 40rem;
+    max-height: 85vh;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    animation: bob-dialog-in 0.25s ease-out;
+}
+
+@keyframes bob-dialog-in {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+
+.bob-overlay__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.bob-overlay__header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.bob-overlay__icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--color-accent), #e03e00);
+    color: white;
+    font-size: 0.875rem;
+}
+
+.bob-overlay__title {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-light);
+    letter-spacing: -0.01em;
+}
+
+.bob-overlay__subtitle {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500);
+    margin-top: 0.125rem;
+}
+
+.bob-overlay__close {
+    background: none;
+    border: none;
+    color: var(--color-gray-400);
+    cursor: pointer;
+    font-size: 1.125rem;
+    padding: 0.25rem;
+    transition: color var(--transition-base);
+}
+
+.bob-overlay__close:hover {
+    color: var(--color-black);
+}
+
+/* ── Body ────────────────────────────────────────────────── */
+
+.bob-overlay__body {
+    padding: 1.5rem 2rem 2rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.bob-overlay__divider {
+    height: 1px;
+    background: var(--color-gray-200);
+    margin: 1.5rem 0;
+}
+
+/* ── Stats Grid ──────────────────────────────────────────── */
+
+.bob-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+}
+
+.bob-stat-card {
+    background-color: var(--color-gray-50);
+    padding: 1.25rem;
+    position: relative;
+}
+
+.bob-stat-card__icon {
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.bob-stat-card__label {
+    font-size: 0.6875rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.375rem;
+}
+
+.bob-stat-card__value {
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-light);
+    letter-spacing: -0.025em;
+}
+
+.bob-stat-card__trend {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 0.75rem;
+}
+
+/* ── Results List ────────────────────────────────────────── */
+
+.bob-overlay__results-label {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500);
+    margin-bottom: 0.75rem;
+}
+
+.bob-overlay__results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 24rem;
+    overflow-y: auto;
+}
+
+/* ── Result Card ─────────────────────────────────────────── */
+
+.bob-result-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--color-gray-200);
+    transition: all var(--transition-base);
+}
+
+.bob-result-card--clickable {
+    cursor: pointer;
+}
+
+.bob-result-card--clickable:hover {
+    border-color: var(--color-accent);
+    background-color: var(--color-accent-10);
+}
+
+.bob-result-card__number {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8125rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-accent);
+    background-color: var(--color-accent-10);
+    flex-shrink: 0;
+}
+
+.bob-result-card__main {
+    flex: 1;
+    min-width: 0;
+}
+
+.bob-result-card__name {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    margin-bottom: 0.125rem;
+    font-size: 0.9375rem;
+}
+
+.bob-result-card__sub {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500);
+    margin-bottom: 0.375rem;
+}
+
+.bob-result-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.bob-result-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    background-color: var(--color-gray-50);
+    padding: 0.1875rem 0.5rem;
+}
+
+.bob-result-card__value {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.bob-result-card__amount {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-light);
+    color: var(--color-black);
+}
+
+.bob-result-card__amount-label {
+    font-size: 0.6875rem;
+    color: var(--color-gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.bob-result-card__action {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-gray-300);
+    flex-shrink: 0;
+    transition: color var(--transition-base);
+}
+
+.bob-result-card--clickable:hover .bob-result-card__action {
+    color: var(--color-accent);
+}
+
+/* ── Empty State ─────────────────────────────────────────── */
+
+.bob-overlay__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 3rem;
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+}
+
+.bob-overlay__empty i {
+    font-size: 2rem;
+    opacity: 0.5;
+}

@@ -281,6 +281,21 @@
     }
     }
 
+    @if (asDomain; as domain) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-layer-group"></i>
+            <h3>Overview</h3>
+        </div>
+        <div class="detail-section__tags" style="margin-top: 12px">
+            <span class="detail-tag detail-tag--outline">{{ domain.intent_count }} intents</span>
+        </div>
+        @if (domain.description) {
+        <p class="detail-section__text" style="margin-top: 12px">{{ domain.description }}</p>
+        }
+    </section>
+    }
+
     <!-- Dynamic profile sections from versioned entries -->
     @for (section of filteredSections; track section.section) {
     <section class="detail-section">

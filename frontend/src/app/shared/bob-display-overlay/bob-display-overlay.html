@@ -1,0 +1,105 @@
+@if (isVisible) {
+<div class="bob-overlay" (click)="close()">
+    <div class="bob-overlay__dialog" (click)="$event.stopPropagation()">
+
+        <!-- Header -->
+        <div class="bob-overlay__header">
+            <div class="bob-overlay__header-left">
+                <div class="bob-overlay__icon">
+                    <i [class]="icon"></i>
+                </div>
+                <div>
+                    <h3 class="bob-overlay__title">{{ title }}</h3>
+                    @if (subtitle) {
+                    <p class="bob-overlay__subtitle">{{ subtitle }}</p>
+                    }
+                </div>
+            </div>
+            <button class="bob-overlay__close" (click)="close()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="bob-overlay__body">
+
+            <!-- Stats display -->
+            @if (displayType === 'stats' && stats.length > 0) {
+            <div class="bob-stats-grid">
+                @for (stat of stats; track stat.label) {
+                <div class="bob-stat-card">
+                    @if (stat.icon) {
+                    <div class="bob-stat-card__icon" [style.color]="stat.color || 'var(--color-accent)'">
+                        <i [class]="stat.icon"></i>
+                    </div>
+                    }
+                    <p class="bob-stat-card__label">{{ stat.label }}</p>
+                    <p class="bob-stat-card__value">{{ stat.value }}</p>
+                    @if (stat.trend) {
+                    <div class="bob-stat-card__trend" [style.color]="getTrendColor(stat.trend)">
+                        <i [class]="getTrendIcon(stat.trend)"></i>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+            }
+
+            <!-- List display -->
+            @if ((displayType === 'list' || displayType === 'stats') && items.length > 0) {
+            @if (displayType === 'stats') {
+            <div class="bob-overlay__divider"></div>
+            }
+            <p class="bob-overlay__results-label">{{ items.length }} résultat(s) — sélectionnez par #numéro :</p>
+            <div class="bob-overlay__results-list">
+                @for (item of items; track item.id) {
+                <div class="bob-result-card" (click)="navigateToItem(item)"
+                    [class.bob-result-card--clickable]="!!item.route">
+                    <div class="bob-result-card__number">#{{ item.number }}</div>
+                    <div class="bob-result-card__main">
+                        <p class="bob-result-card__name">{{ item.title }}</p>
+                        @if (item.subtitle) {
+                        <p class="bob-result-card__sub">{{ item.subtitle }}</p>
+                        }
+                        @if (item.tags && item.tags.length > 0) {
+                        <div class="bob-result-card__tags">
+                            @for (tag of item.tags; track tag.label) {
+                            <span class="bob-result-tag" [style.color]="tag.color || 'var(--color-gray-500)'">
+                                @if (tag.icon) {
+                                <i [class]="tag.icon" style="font-size: 0.625rem"></i>
+                                }
+                                {{ tag.label }}
+                            </span>
+                            }
+                        </div>
+                        }
+                    </div>
+                    @if (item.value) {
+                    <div class="bob-result-card__value">
+                        <p class="bob-result-card__amount">{{ item.value }}</p>
+                        @if (item.value_label) {
+                        <p class="bob-result-card__amount-label">{{ item.value_label }}</p>
+                        }
+                    </div>
+                    }
+                    @if (item.route) {
+                    <div class="bob-result-card__action">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+            }
+
+            @if (items.length === 0 && stats.length === 0) {
+            <div class="bob-overlay__empty">
+                <i class="fa-solid fa-inbox"></i>
+                <p>Aucun résultat trouvé</p>
+            </div>
+            }
+
+        </div>
+    </div>
+</div>
+}

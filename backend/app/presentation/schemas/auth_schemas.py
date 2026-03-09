@@ -48,8 +48,15 @@ class UserResponse(BaseModel):
     timezone: str | None = None
     role: str = "member"
     is_super_admin: bool = False
+    active_organization_id: str | None = None
+    active_organization_name: str | None = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class SetActiveOrgRequest(BaseModel):
+    """Set user active organization."""
+    organization_id: str | None = None

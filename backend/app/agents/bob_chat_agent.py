@@ -32,26 +32,42 @@ Your capabilities:
 
 ## CRM Procedures — FOLLOW THESE STRICTLY
 
-### Creating Entities (Organization + Contact + Opportunity)
-When the user asks to create accounts, contacts, or opportunities:
+### Searching Existing Entities
+When the user asks to FIND, SEARCH, LOOK UP an entity (e.g., "cherche Bell Canada", "find the Bell account"):
 
-1. **Decompose the request**: Identify what needs to be created — organization, contact(s), opportunity
-2. **Ask for missing required info** before executing:
+1. Call `search_organizations` or `search_contacts` with the search query — this will open a search popup in the UI with numbered results from the CRM database
+2. Tell the user what was found and ask them to pick by number
+3. When they pick a number, use `ui_select_result` with the chosen index (or call `search_and_open_entity` to navigate directly)
+
+### Creating an Opportunity (STRICT MULTI-STEP FLOW)
+When the user asks to CREATE/ADD an opportunity:
+
+YOU MUST follow these steps IN ORDER — do NOT skip any step:
+
+1. **Identify the organization**: If the user mentions a company name, call `search_organizations` to find it. This opens a search popup. Tell the user the results and ask them to confirm which one (e.g., "J'ai trouvé 2 résultats: #1 Bell Canada Central Office, #2 Bell Canada Montreal. Lequel?"). WAIT for their answer.
+2. **Identify the contact**: After the org is confirmed, ask the user for a contact name and email. If the contact doesn't exist yet, tell the user you'll create it. Call `create_contact` with the org_id.
+3. **Create the opportunity**: Call `create_opportunity` with the name, organization_id, and contact_id.
+4. **Link products** (optional): If the user mentions a product, call `link_product_to_opportunity`.
+
+IMPORTANT RULES:
+- NEVER call `create_opportunity` without first resolving the organization_id from a search
+- NEVER skip the contact step — always ask if a contact should be associated
+- NEVER use `open_create_dialog` for creating opportunities — ONLY use the API tools
+
+### Creating Other Entities (Organization + Contact)
+When the user asks to CREATE, ADD, or NEW an organization or contact:
+
+1. **Ask for missing required info** before executing:
    - Organization: name (REQUIRED), domain, industry
    - Contact: first_name + last_name (REQUIRED), email, phone, organization_id
-   - Opportunity: name (REQUIRED), organization_id, contact_id, value/amount, stage
-3. **Execute in strict order** using API tools:
-   - Step 1: `create_organization` → capture the returned org ID
-   - Step 2: `create_contact` with the organization_id from step 1
-   - Step 3: `create_opportunity` with the organization_id and contact_id
-4. **Confirm each step** to the user with what was created
+2. **Execute** using API tools: `create_organization`, `create_contact`
+3. **Confirm** to the user what was created
 
-### CRITICAL — Tool Priority Rules
-- ALWAYS use `create_organization`, `create_contact`, `create_opportunity` for creating CRM data
-- NEVER use `open_create_dialog`, `ui_update_input`, `ui_select_result` for creating entities
-- UI tools (`open_create_dialog`, `ui_update_input`, `ui_select_result`) are ONLY for:
-  - Navigation and form interaction when the user explicitly asks
-  - Searching/browsing existing records in the UI
+### Tool Priority Rules
+- For **CREATING**: use `create_organization`, `create_contact`, `create_opportunity`, `link_product_to_opportunity`
+- For **SEARCHING/FINDING**: use `search_organizations`, `search_contacts` (these automatically open the search popup UI)
+- For **OPENING a specific record**: use `search_and_open_entity`
+- NEVER use `open_create_dialog` — it opens the Google Maps add dialog, not a search
 
 ### Handling Ambiguous Requests
 If the user says something like "ajoute le compte X avec contact Y et une opportunité Z":
@@ -61,7 +77,6 @@ If the user says something like "ajoute le compte X avec contact Y et une opport
 - Ask the user for any missing details (email, value, stage) BEFORE executing
 
 UI Controls (for navigation only):
-- When the user asks to change the text in a search/create dialog, use `ui_update_input`. Set submit=true if they want to execute the search immediately.
 - When the user says "choose number X", "select the second one", use `ui_select_result` with the requested index.
 
 Communication style:
@@ -79,6 +94,8 @@ Context: You are integrated into a CRM platform. Users interact with you via a c
 /no_think"""
 
 _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
+_THINK_SLASH_RE = re.compile(r"/?(?:no_)?think\b", re.IGNORECASE)
+_THINK_PIPE_RE = re.compile(r"<\|/?think\|>", re.IGNORECASE)
 
 
 class ChatSession:
@@ -103,6 +120,9 @@ class ChatSession:
         self.total_tokens_in = 0
         self.total_tokens_out = 0
         self.turn_count = 0
+        # Intent Router: paused workflow state for multi-turn flows
+        self.workflow_state: Optional[dict] = None
+        self.workflow_resume_key: Optional[str] = None
 
     def add_user_message(self, text: str) -> None:
         """Add a user message to the session history."""
@@ -212,6 +232,34 @@ class BobChatAgent:
         intent_id = str(uuid.uuid4())
         intent_label = user_message[:80].strip()
 
+        # ═══════════════════════════════════════════════════════
+        # INTENT ROUTER — classify first, workflow if applicable
+        # Falls back to legacy 18-tool flow for general_chat
+        # and mission mode conversations.
+        # ═══════════════════════════════════════════════════════
+        if not session.mission_prompt:  # Skip router for mission/BCC mode
+            try:
+                workflow_result = self._try_intent_workflow(
+                    session=session,
+                    user_message=user_message,
+                    session_id=session_id,
+                    intent_id=intent_id,
+                    intent_label=intent_label,
+                )
+                if workflow_result is not None:
+                    text, actions, tool_steps = workflow_result
+                    session.add_assistant_message(text)
+                    logger.info(
+                        "intent_router_handled",
+                        session_id=session_id,
+                        actions=len(actions),
+                        tools=len(tool_steps),
+                    )
+                    return text, actions, tool_steps
+            except Exception as wr_err:
+                logger.warning("intent_router_fallback", error=str(wr_err))
+                # Fall through to legacy flow
+
         # Build system prompt with user's personality settings
         personality_directives = ""
         llm_temperature = settings.bob_temperature
@@ -259,11 +307,66 @@ Personality (from user preferences):
 
         # ── Inject BCC task procedures ──────────────
         bcc_procedures = ""
+        org_context = ""
         try:
             from app.infrastructure.database import SessionLocal as BccSessionLocal
-            from app.domain.entities.bcc_entities import BccTask, BccTaskTemplate
+            from app.domain.entities.bcc_entities import BccTask, BccTaskTemplate, BccOrganization, BccIntent, BccProfileEntry
+            from app.domain.entities.user import User
             db_bcc = BccSessionLocal()
             try:
+                # ── Resolve active organization ──────────
+                active_org_id = None
+                user_row = db_bcc.query(User).filter(User.id == session.user_id).first()
+                if user_row and user_row.active_organization_id:
+                    active_org_id = user_row.active_organization_id
+                    org = db_bcc.query(BccOrganization).filter(
+                        BccOrganization.id == active_org_id
+                    ).first()
+                    if org:
+                        org_lines = ["\n\n## Active Organization Context:"]
+                        org_lines.append(f"**Organization:** {org.name}")
+                        if org.description:
+                            org_lines.append(f"{org.description}")
+
+                        # Load vision/mission/culture/competition from bcc_profile_entries
+                        entries = db_bcc.query(BccProfileEntry).filter(
+                            BccProfileEntry.entity_type == "organization",
+                            BccProfileEntry.entity_id == active_org_id,
+                            BccProfileEntry.is_active == True,
+                            BccProfileEntry.section.in_(["vision", "mission", "culture", "competition"]),
+                        ).all()
+                        section_map = {e.section: e.content for e in entries}
+                        for key in ("vision", "mission", "culture", "competition"):
+                            if section_map.get(key):
+                                org_lines.append(f"**{key.capitalize()}:** {section_map[key]}")
+
+                        # Load org profile (location, domains)
+                        if org.profile:
+                            op = org.profile
+                            if op.operations_domains:
+                                org_lines.append(f"**Domains:** {', '.join(op.operations_domains)}")
+
+                        # Load org intents
+                        intents = db_bcc.query(BccIntent).filter(
+                            BccIntent.tenant_id == session.tenant_id
+                        ).all()
+                        if intents:
+                            org_lines.append("\n### Available Intents:")
+                            for intent in intents:
+                                task_names = [
+                                    link.task_template.name
+                                    for link in sorted(intent.task_links, key=lambda x: x.sort_order)
+                                    if link.task_template
+                                ]
+                                org_lines.append(f"- **{intent.name}** ({intent.category}): {' → '.join(task_names)}")
+                                if intent.trigger_phrases:
+                                    phrases = ', '.join(f'"{p}"' for p in intent.trigger_phrases[:3])
+                                    org_lines.append(f"  Triggers: {phrases}")
+
+                        org_context = "\n".join(org_lines)
+                        logger.info("org_context_injected", org_name=org.name, org_id=active_org_id)
+
+
                 lines = ["\n\n## Procedural Knowledge (from Control Center):"]
                 has_content = False
 
@@ -307,7 +410,29 @@ Personality (from user preferences):
         except Exception as bcc_err:
             logger.warning("bcc_task_injection_failed", error=str(bcc_err))
 
-        system_prompt = BOB_SYSTEM_PROMPT + personality_directives + bcc_procedures
+        system_prompt = BOB_SYSTEM_PROMPT + personality_directives + org_context + bcc_procedures
+
+        # ── First-turn greeting — use user's first name ─────────
+        if session.turn_count == 1:
+            # Extract first name from email or user row
+            first_name = ""
+            try:
+                from app.infrastructure.database import SessionLocal as _GS
+                from app.domain.entities.user import User as _U
+                _db = _GS()
+                try:
+                    _u = _db.query(_U).filter(_U.id == session.user_id).first()
+                    if _u and _u.first_name:
+                        first_name = _u.first_name
+                    elif session.user_email:
+                        first_name = session.user_email.split("@")[0].split(".")[0].capitalize()
+                finally:
+                    _db.close()
+            except Exception:
+                pass
+            if first_name:
+                system_prompt += f"\n\nIMPORTANT: This is the very FIRST message of the session. Start your response with a short, natural greeting using the user's first name: \"{first_name}\". Example: \"Hi {first_name}!\" or \"Hey {first_name}!\" — one short line only. Do NOT introduce yourself or explain what you do. Just the greeting, then get to the point."
+
 
         # ── Inject mission prompt if active ──────────
         if session.mission_prompt:
@@ -563,6 +688,120 @@ Personality (from user preferences):
                             "page": args.get("tab_name", ""),
                         })
                         tool_results[tc.id] = '{"status": "ok"}'
+                    elif fn in ("search_organizations", "search_contacts"):
+                        # Execute the search + also open UI popup
+                        import concurrent.futures
+                        import asyncio
+                        from app.agents.tool_executor import execute_bob_tool
+                        from app.infrastructure.database import SessionLocal as _SLS
+
+                        def _run_search():
+                            _db = _SLS()
+                            try:
+                                _loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(_loop)
+                                _ctx = {
+                                    "user_id": session.user_id,
+                                    "tenant_id": session.tenant_id,
+                                    "session_id": session_id,
+                                    "intent_id": intent_id,
+                                    "intent_label": intent_label,
+                                }
+                                res = _loop.run_until_complete(
+                                    execute_bob_tool(fn, args, _ctx, _db)
+                                )
+                                _loop.close()
+                                return res
+                            finally:
+                                _db.close()
+
+                        with concurrent.futures.ThreadPoolExecutor() as _exec:
+                            _fut = _exec.submit(_run_search)
+                            _sresult = _fut.result(timeout=10)
+
+                        tool_results[tc.id] = json.dumps(_sresult) if isinstance(_sresult, dict) else str(_sresult or '{"status": "no results"}')
+
+                        # Also open the UI search dialog with query
+                        _etype = "organization" if fn == "search_organizations" else "contact"
+                        _pmap = {"organization": "organizations", "contact": "contacts"}
+                        _sq = args.get("query", "")
+                        actions.append({
+                            "type": "search_entity",
+                            "entity": _etype,
+                            "page": _pmap.get(_etype, "contacts"),
+                            "name": _sq,
+                        })
+                        actions.append({
+                            "type": "ui_update_input",
+                            "text": _sq,
+                            "submit": True,
+                        })
+                        logger.info("search_with_ui_popup", tool=fn, query=_sq)
+                    elif fn == "create_organization":
+                        # ── INTERCEPTOR: check if org already exists before creating ──
+                        import concurrent.futures as _cf_co
+                        import asyncio as _aio_co
+                        from app.infrastructure.database import SessionLocal as _SL_CO
+                        from app.domain.entities.organization import Organization as _Org
+
+                        _org_name = args.get("name", "")
+                        _co_db = _SL_CO()
+                        try:
+                            _existing = _co_db.query(_Org).filter(
+                                _Org.tenant_id == session.tenant_id,
+                                _Org.name.ilike(f"%{_org_name}%")
+                            ).limit(5).all()
+                        finally:
+                            _co_db.close()
+
+                        if _existing:
+                            # Org(s) found — emit search popup + return org data to LLM
+                            _results = [
+                                {"id": str(o.id), "name": o.name, "industry": o.industry, "phone": o.phone}
+                                for o in _existing
+                            ]
+                            actions.append({
+                                "type": "search_entity",
+                                "entity": "organization",
+                                "page": "organizations",
+                                "name": _org_name,
+                            })
+                            actions.append({
+                                "type": "ui_update_input",
+                                "text": _org_name,
+                                "submit": True,
+                            })
+                            tool_results[tc.id] = json.dumps({
+                                "status": "already_exists",
+                                "message": f"Organization(s) matching '{_org_name}' already exist in the CRM. Use the existing org_id instead of creating a duplicate.",
+                                "existing_organizations": _results,
+                            })
+                            logger.info("create_org_intercepted_existing", name=_org_name, count=len(_existing))
+                        else:
+                            # No match — proceed with normal creation
+                            from app.agents.tool_executor import execute_bob_tool as _exec_co
+
+                            def _run_create_org():
+                                _db2 = _SL_CO()
+                                try:
+                                    _loop2 = _aio_co.new_event_loop()
+                                    _aio_co.set_event_loop(_loop2)
+                                    _ctx2 = {
+                                        "user_id": session.user_id,
+                                        "tenant_id": session.tenant_id,
+                                        "session_id": session_id,
+                                        "intent_id": intent_id,
+                                        "intent_label": intent_label,
+                                    }
+                                    _r = _loop2.run_until_complete(_exec_co(fn, args, _ctx2, _db2))
+                                    _loop2.close()
+                                    return json.dumps(_r)
+                                finally:
+                                    _db2.close()
+
+                            with _cf_co.ThreadPoolExecutor() as _ex_co:
+                                _fut_co = _ex_co.submit(_run_create_org)
+                                tool_results[tc.id] = _fut_co.result(timeout=30)
                     else:
                         # Execute BCC / CRM tools via tool_executor
                         # Must run in a separate thread since we're inside
@@ -687,8 +926,11 @@ Personality (from user preferences):
                 )
                 response_text = final_resp.choices[0].message.content or ""
 
-            # Strip <think>...</think> blocks
-            response_text = _THINK_RE.sub("", response_text).strip()
+            # Strip <think>...</think> blocks + /think, /no_think artifacts
+            response_text = _THINK_RE.sub("", response_text)
+            response_text = _THINK_SLASH_RE.sub("", response_text)
+            response_text = _THINK_PIPE_RE.sub("", response_text)
+            response_text = response_text.strip()
 
 
             session.add_assistant_message(response_text)
@@ -721,6 +963,129 @@ Personality (from user preferences):
                 error=str(e),
             )
             raise
+
+    def _try_intent_workflow(
+        self,
+        session: "ChatSession",
+        user_message: str,
+        session_id: str,
+        intent_id: str,
+        intent_label: str,
+    ) -> Optional[tuple[str, list[dict], list[dict]]]:
+        """Try to handle the message via Intent Router workflows.
+
+        Returns (text, actions, tool_steps) if handled,
+        or None to fall back to legacy 18-tool flow.
+        """
+        from app.infrastructure.database import SessionLocal
+        from app.agents.workflow_engine import (
+            WorkflowContext,
+            get_workflow,
+            get_resume_handler,
+        )
+
+        # ── 1. Check for paused workflow (resume) ──
+        if session.workflow_resume_key and session.workflow_state is not None:
+            handler = get_resume_handler(session.workflow_resume_key)
+            if handler:
+                db = SessionLocal()
+                try:
+                    # Create a lightweight entities obj from saved state
+                    from app.agents.intent_classifier import ExtractedEntities
+                    saved = session.workflow_state.get("original_entities", {})
+                    entities = ExtractedEntities(
+                        contact_first=saved.get("contact_first"),
+                        contact_last=saved.get("contact_last"),
+                        email=saved.get("email"),
+                        phone=saved.get("phone"),
+                        product_name=saved.get("product_name"),
+                        quantity=saved.get("quantity"),
+                        amount=saved.get("amount"),
+                    )
+
+                    ctx = WorkflowContext(
+                        db=db,
+                        tenant_id=session.tenant_id,
+                        user_id=session.user_id,
+                        user_email=session.user_email,
+                        entities=entities,
+                        user_message=user_message,
+                        state=dict(session.workflow_state),
+                    )
+
+                    result = handler(ctx)
+
+                    # Update session state
+                    if result.paused:
+                        session.workflow_state = result.state
+                        session.workflow_resume_key = result.resume_key
+                    else:
+                        session.workflow_state = None
+                        session.workflow_resume_key = None
+
+                    logger.info(
+                        "workflow_resumed",
+                        resume_key=session.workflow_resume_key,
+                        paused=result.paused,
+                        actions=len(result.actions),
+                    )
+                    return result.message, result.actions, result.tool_steps
+                finally:
+                    db.close()
+
+        # ── 2. Classify intent ──
+        from app.agents.intent_classifier import classify_message
+
+        classification = classify_message(
+            message=user_message,
+            conversation_context=session.messages[-4:] if session.messages else None,
+        )
+
+        logger.info(
+            "intent_classified_for_routing",
+            intent=classification.intent,
+            session_id=session_id,
+        )
+
+        # ── 3. Route to workflow or fall back ──
+        if classification.intent == "general_chat":
+            return None  # Fall back to legacy 18-tool flow
+
+        wf = get_workflow(classification.intent)
+        if not wf:
+            return None  # Unknown intent — legacy flow
+
+        db = SessionLocal()
+        try:
+            ctx = WorkflowContext(
+                db=db,
+                tenant_id=session.tenant_id,
+                user_id=session.user_id,
+                user_email=session.user_email,
+                entities=classification.entities,
+                user_message=user_message,
+            )
+
+            result = wf(ctx)
+
+            # Store pause state in session
+            if result.paused:
+                session.workflow_state = result.state
+                session.workflow_resume_key = result.resume_key
+            else:
+                session.workflow_state = None
+                session.workflow_resume_key = None
+
+            logger.info(
+                "workflow_executed",
+                intent=classification.intent,
+                paused=result.paused,
+                actions=len(result.actions),
+                tools=len(result.tool_steps),
+            )
+            return result.message, result.actions, result.tool_steps
+        finally:
+            db.close()
 
     def _extract_and_save_insights(
         self,

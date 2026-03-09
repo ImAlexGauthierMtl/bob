@@ -42,12 +42,22 @@ export interface BccIntentTask {
     sort_order: number;
 }
 
+export interface BccDomain {
+    id: string;
+    name: string;
+    description: string | null;
+    icon: string | null;
+    intent_count: number;
+}
+
 export interface BccIntent {
     id: string;
     name: string;
     description: string | null;
     trigger_phrases: string[] | null;
     category: string | null;
+    domain_id: string | null;
+    domain_name: string | null;
     task_count: number;
     tasks: BccIntentTask[];
 }
