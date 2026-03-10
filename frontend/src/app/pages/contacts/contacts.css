@@ -944,6 +944,7 @@ tr:hover .row-action {
     .toolbar {
         flex-direction: row;
         align-items: center;
+        justify-content: space-between;
     }
 
     .ai-insights__grid--4 {
