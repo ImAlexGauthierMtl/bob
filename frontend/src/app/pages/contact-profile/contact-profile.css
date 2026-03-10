@@ -29,13 +29,24 @@
     flex: 1;
 }
 
-.profile-photo {
-    width: 6rem;
-    height: 6rem;
+.profile-avatar {
+    width: 4rem;
+    height: 4rem;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
     border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--color-gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-white);
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-medium);
     flex-shrink: 0;
+}
+
+.profile-avatar--sm {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.875rem;
 }
 
 .profile-name-row {
@@ -50,6 +61,9 @@
     font-size: 1.875rem;
     font-weight: var(--font-weight-light);
     letter-spacing: -0.025em;
+    color: var(--color-black);
+    margin: 0;
+    line-height: 1.2;
 }
 
 .profile-role {
@@ -127,13 +141,12 @@
 /* ── Tabs ─────────────────────────────────────────────────── */
 .tabs {
     display: flex;
-    gap: 0;
-    border-bottom: 1px solid var(--color-gray-100);
+    gap: var(--space-8);
     overflow-x: auto;
 }
 
 .tab {
-    padding: 1rem 0.75rem;
+    padding: var(--space-4) var(--space-2);
     font-family: var(--font-family);
     font-size: 0.875rem;
     font-weight: var(--font-weight-light);
@@ -884,6 +897,149 @@
     font-size: 0.875rem;
     color: var(--color-gray-600);
     line-height: 1.6;
+}
+
+/* ── BEM Interaction Item (Interactions Tab) ──────────────── */
+
+.interaction-item__icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.875rem;
+}
+
+.interaction-item__icon--blue {
+    background-color: #dbeafe;
+    color: #2563eb;
+}
+
+.interaction-item__icon--green {
+    background-color: #dcfce7;
+    color: #16a34a;
+}
+
+.interaction-item__icon--purple {
+    background-color: #f3e8ff;
+    color: #9333ea;
+}
+
+.interaction-item__body {
+    flex: 1;
+    min-width: 0;
+}
+
+.interaction-item__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.interaction-item__title {
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    margin-bottom: 0.25rem;
+}
+
+.interaction-item__desc {
+    font-size: 0.875rem;
+    color: var(--color-gray-600);
+    line-height: 1.5;
+}
+
+.interaction-item__time {
+    font-size: 0.75rem;
+    color: var(--color-gray-400);
+    white-space: nowrap;
+}
+
+.interaction-item__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+    color: var(--color-gray-600);
+}
+
+.interaction-item__sep {
+    color: var(--color-gray-400);
+}
+
+.interaction-item__sentiment {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-weight: var(--font-weight-medium);
+}
+
+.interaction-item__sentiment--positive {
+    color: #16a34a;
+}
+
+.interaction-item__sentiment--neutral {
+    color: #ca8a04;
+}
+
+/* ── Note Card Enhancements ──────────────────────────────── */
+
+.note-card__title {
+    font-size: 1rem;
+    font-weight: var(--font-weight-medium);
+    margin-bottom: 0.5rem;
+}
+
+.note-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+/* ── Utility / Shared ────────────────────────────────────── */
+
+.dot--yellow {
+    background-color: #eab308;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-gray-400);
+    padding: 0.25rem;
+    font-size: 0.875rem;
+    transition: color var(--transition-base);
+}
+
+.btn-icon:hover {
+    color: var(--color-accent);
+}
+
+.tab-header__filters {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.input--sm {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--color-gray-200);
+    font-family: var(--font-family);
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-light);
+    color: var(--color-gray-600);
+    outline: none;
+    transition: border-color var(--transition-base);
+    background-color: var(--color-white);
+}
+
+.input--sm:focus {
+    border-color: var(--color-accent);
 }
 
 /* ── Info Panel ───────────────────────────────────────────── */

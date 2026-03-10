@@ -189,12 +189,153 @@
         @if (activeTab === 'interactions') {
         <section>
             <div class="tab-header">
-                <h3 class="section-title-lg">Recent Interactions</h3>
-                <button class="btn btn-accent"><i class="fa-solid fa-plus"></i> Log Interaction</button>
+                <h3 class="section-title-lg">Communication History</h3>
+                <div class="tab-header__filters">
+                    <select class="input input--sm">
+                        <option>All Types</option>
+                        <option>Email</option>
+                        <option>Phone</option>
+                        <option>Meeting</option>
+                    </select>
+                    <select class="input input--sm">
+                        <option>Last 30 Days</option>
+                        <option>Last 90 Days</option>
+                        <option>Last Year</option>
+                        <option>All Time</option>
+                    </select>
+                </div>
             </div>
-            <div class="empty-state">
-                <p>No interactions recorded yet. Log your first call, email, or meeting with {{ contact.first_name }}.
-                </p>
+
+            <div class="interaction-list">
+                <!-- Phone Call -->
+                <div class="interaction-item">
+                    <div class="interaction-item__icon interaction-item__icon--blue">
+                        <i class="fa-solid fa-phone"></i>
+                    </div>
+                    <div class="interaction-item__body">
+                        <div class="interaction-item__top">
+                            <div>
+                                <p class="interaction-item__title">Phone Call: Q4 Expansion Discussion</p>
+                                <p class="interaction-item__desc">45-minute call discussing enterprise platform
+                                    expansion, budget allocation, and implementation timeline. Strong interest in
+                                    analytics module and requested technical documentation.</p>
+                            </div>
+                            <span class="interaction-item__time">2 hours ago</span>
+                        </div>
+                        <div class="interaction-item__meta">
+                            <span>Sarah Johnson</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span>Duration: 45 min</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span class="interaction-item__sentiment interaction-item__sentiment--positive"><span
+                                    class="dot dot--green"></span> Positive Sentiment</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email -->
+                <div class="interaction-item">
+                    <div class="interaction-item__icon interaction-item__icon--green">
+                        <i class="fa-solid fa-envelope"></i>
+                    </div>
+                    <div class="interaction-item__body">
+                        <div class="interaction-item__top">
+                            <div>
+                                <p class="interaction-item__title">Email: Re: Enterprise Proposal Review</p>
+                                <p class="interaction-item__desc">Responded to enterprise proposal with detailed
+                                    feedback. Highlighted key requirements for integration with existing systems and
+                                    requested clarification on data migration.</p>
+                            </div>
+                            <span class="interaction-item__time">1 day ago</span>
+                        </div>
+                        <div class="interaction-item__meta">
+                            <span>{{ contact.first_name }} {{ contact.last_name }}</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span>Response time: 3.2 hours</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span class="interaction-item__sentiment interaction-item__sentiment--positive"><span
+                                    class="dot dot--green"></span> Engaged</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Meeting -->
+                <div class="interaction-item">
+                    <div class="interaction-item__icon interaction-item__icon--purple">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="interaction-item__body">
+                        <div class="interaction-item__top">
+                            <div>
+                                <p class="interaction-item__title">Meeting: Quarterly Business Review</p>
+                                <p class="interaction-item__desc">Comprehensive QBR with executive team. Reviewed
+                                    platform performance metrics, discussed ROI, and explored expansion opportunities.
+                                    Praised system reliability and user adoption rates.</p>
+                            </div>
+                            <span class="interaction-item__time">3 days ago</span>
+                        </div>
+                        <div class="interaction-item__meta">
+                            <span>Sarah Johnson</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span>Attendees: 5</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span class="interaction-item__sentiment interaction-item__sentiment--positive"><span
+                                    class="dot dot--green"></span> Highly Positive</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email 2 -->
+                <div class="interaction-item">
+                    <div class="interaction-item__icon interaction-item__icon--green">
+                        <i class="fa-solid fa-envelope"></i>
+                    </div>
+                    <div class="interaction-item__body">
+                        <div class="interaction-item__top">
+                            <div>
+                                <p class="interaction-item__title">Email: Technical Integration Questions</p>
+                                <p class="interaction-item__desc">Sent detailed technical questions about API
+                                    capabilities and integration architecture. Demonstrates deep technical understanding
+                                    and active evaluation of platform capabilities.</p>
+                            </div>
+                            <span class="interaction-item__time">5 days ago</span>
+                        </div>
+                        <div class="interaction-item__meta">
+                            <span>{{ contact.first_name }} {{ contact.last_name }}</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span>Response time: 2.8 hours</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span class="interaction-item__sentiment interaction-item__sentiment--neutral"><span
+                                    class="dot dot--yellow"></span> Neutral</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phone Call 2 -->
+                <div class="interaction-item">
+                    <div class="interaction-item__icon interaction-item__icon--blue">
+                        <i class="fa-solid fa-phone"></i>
+                    </div>
+                    <div class="interaction-item__body">
+                        <div class="interaction-item__top">
+                            <div>
+                                <p class="interaction-item__title">Phone Call: Initial Discovery</p>
+                                <p class="interaction-item__desc">Introduction call to understand technology needs and
+                                    current pain points. Outlined key challenges with legacy systems and expressed
+                                    interest in modern cloud solutions.</p>
+                            </div>
+                            <span class="interaction-item__time">1 week ago</span>
+                        </div>
+                        <div class="interaction-item__meta">
+                            <span>Sarah Johnson</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span>Duration: 30 min</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span class="interaction-item__sentiment interaction-item__sentiment--positive"><span
+                                    class="dot dot--green"></span> Positive</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
         }
@@ -234,6 +375,30 @@
                             <span>·</span>
                             <span class="stage-badge">{{ a.status }}</span>
                         </div>
+                        <div class="activity-card__links"
+                            style="margin-top:0.5rem; display:flex; gap:10px; font-size: 0.8rem; color: #6b7280;">
+                            @if (a.organization_ids?.length) {
+                            @for (orgId of a.organization_ids; track orgId) {
+                            <a [routerLink]="['/organizations', orgId]" style="text-decoration: none; color: inherit;">
+                                <i class="fa-solid fa-building"></i> Linked Org
+                            </a>
+                            }
+                            }
+                            @if (a.contact_ids?.length) {
+                            @for (contactId of a.contact_ids; track contactId) {
+                            <a [routerLink]="['/contacts', contactId]" style="text-decoration: none; color: inherit;">
+                                <i class="fa-solid fa-address-book"></i> Linked Contact
+                            </a>
+                            }
+                            }
+                            @if (a.opportunity_ids?.length) {
+                            @for (oppId of a.opportunity_ids; track oppId) {
+                            <a [routerLink]="['/opportunities', oppId]" style="text-decoration: none; color: inherit;">
+                                <i class="fa-solid fa-chart-line"></i> Linked Opp
+                            </a>
+                            }
+                            }
+                        </div>
                     </div>
                 </div>
                 }
@@ -249,8 +414,9 @@
                 <h3 class="section-title-lg">Notes</h3>
                 <button class="btn btn-accent"><i class="fa-solid fa-plus"></i> Add Note</button>
             </div>
-            @if (contact.notes) {
+
             <div class="notes-list">
+                @if (contact.notes) {
                 <div class="note-card">
                     <div class="note-header">
                         <div class="owner-col">
@@ -260,15 +426,89 @@
                                 <p class="note-date">Contact note</p>
                             </div>
                         </div>
+                        <button class="btn-icon"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                     </div>
                     <p class="note-text">{{ contact.notes }}</p>
                 </div>
+                }
+
+                <!-- Demo notes from mockup -->
+                <div class="note-card">
+                    <div class="note-header">
+                        <div class="owner-col">
+                            <div class="profile-avatar profile-avatar--sm">SJ</div>
+                            <div>
+                                <p class="note-author">Sarah Johnson</p>
+                                <p class="note-date">2 hours ago</p>
+                            </div>
+                        </div>
+                        <button class="btn-icon"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                    </div>
+                    <h4 class="note-card__title">Excellent Call - Strong Technical Interest</h4>
+                    <p class="note-text">Had a fantastic 45-minute call. Very knowledgeable, asked specific technical
+                        questions about API architecture and integration capabilities. Enthusiasm for the analytics
+                        module is clear — mentioned how AI-powered insights would transform their decision-making. Key
+                        takeaway: a true champion for our solution internally. Timeline looks good for Q1 2025
+                        implementation. Strong buy signals throughout the conversation.</p>
+                </div>
+
+                <div class="note-card">
+                    <div class="note-header">
+                        <div class="owner-col">
+                            <div class="profile-avatar profile-avatar--sm">SJ</div>
+                            <div>
+                                <p class="note-author">Sarah Johnson</p>
+                                <p class="note-date">1 day ago</p>
+                            </div>
+                        </div>
+                        <button class="btn-icon"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                    </div>
+                    <h4 class="note-card__title">Proposal Feedback — Positive Response</h4>
+                    <p class="note-text">Responded to our enterprise proposal within 3 hours — excellent engagement!
+                        Email was detailed and thoughtful, focusing on integration requirements and data migration.
+                        Doing due diligence, evaluating two other vendors but emphasized our existing relationship gives
+                        us a significant advantage. Need to address technical questions comprehensively to maintain
+                        momentum.</p>
+                </div>
+
+                <div class="note-card">
+                    <div class="note-header">
+                        <div class="owner-col">
+                            <div class="profile-avatar profile-avatar--sm">SJ</div>
+                            <div>
+                                <p class="note-author">Sarah Johnson</p>
+                                <p class="note-date">3 days ago</p>
+                            </div>
+                        </div>
+                        <button class="btn-icon"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                    </div>
+                    <h4 class="note-card__title">QBR Success — Strong Partnership Indicators</h4>
+                    <p class="note-text">Outstanding quarterly business review. Presented specific metrics: 47%
+                        efficiency increase, 32% reduction in manual processes, and 94% user adoption. Executive team
+                        was impressed. Proactively brought up expansion opportunities for European offices (200+ users)
+                        and strong interest in analytics module. Action items: prepare European expansion proposal and
+                        schedule analytics demo.</p>
+                </div>
+
+                <div class="note-card">
+                    <div class="note-header">
+                        <div class="owner-col">
+                            <div class="profile-avatar profile-avatar--sm">SJ</div>
+                            <div>
+                                <p class="note-author">Sarah Johnson</p>
+                                <p class="note-date">1 week ago</p>
+                            </div>
+                        </div>
+                        <button class="btn-icon"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                    </div>
+                    <h4 class="note-card__title">Initial Contact Profile</h4>
+                    <p class="note-text">First substantive conversation. Immediately impressed by technical depth and
+                        strategic thinking. Clearly understands pain points with legacy systems, has a vision for
+                        modernization. Communication style: direct and efficient — appreciates data-driven discussions.
+                        Well-connected internally. This is exactly the type of technical decision-maker we excel at
+                        working with.</p>
+                </div>
             </div>
-            } @else {
-            <div class="empty-state">
-                <p>No notes for this contact yet. Add your first note about {{ contact.first_name }}.</p>
-            </div>
-            }
         </section>
         }
     </div>
