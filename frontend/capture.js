@@ -39,7 +39,7 @@ const fs = require('fs');
         console.log("Typing credentials...");
         await page.fill('input[type="email"]', 'admin@croo.digital');
         await page.press('input[type="email"]', 'Tab');
-        await page.fill('input[type="password"]', 'Cr00-Adm1n-S3cure!2026');
+        await page.fill('input[type="password"]', 'Admin123!');
         await page.press('input[type="password"]', 'Tab');
         await page.click('button[type="submit"]');
         await page.waitForLoadState('networkidle');
@@ -84,6 +84,8 @@ const fs = require('fs');
         console.log("Navigating to Contacts detail...");
         await page.click('a[routerLink="/contacts"]');
         await page.waitForTimeout(2000);
+        await page.screenshot({ path: path.join(screenshotsDir, 'contacts_list.png'), fullPage: true });
+
         const contactLinks = await page.$$('.contact-link');
         if (contactLinks.length > 0) {
             await contactLinks[0].click();
