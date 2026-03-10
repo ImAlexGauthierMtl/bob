@@ -59,6 +59,10 @@ const fs = require('fs');
             return;
         }
 
+        // Ticket 67967: Analytics — Implémenter page BI avec widgets (Dashboard)
+        await page.waitForTimeout(2000); // Wait for Plotly to render
+        await page.screenshot({ path: path.join(screenshotsDir, '67967.png'), fullPage: true });
+
         console.log("Navigating to Organizations list...");
         await page.click('a[routerLink="/organizations"]');
         await page.waitForTimeout(2000);

@@ -55,10 +55,7 @@
             <h3 class="chart-card__title">Revenue Trends</h3>
             <p class="chart-card__subtitle">Monthly performance across quarters</p>
         </div>
-        <div class="chart-placeholder">
-            <i class="fa-solid fa-chart-line"></i>
-            <span>Chart coming soon</span>
-        </div>
+        <div id="revenue-chart" style="height: 320px;"></div>
     </div>
 
     <div class="chart-card">
@@ -229,6 +226,60 @@
                 </tr>
             </tbody>
         </table>
+    </div>
+</section>
+
+<!-- Team Performance & Inventory -->
+<section class="charts-row">
+    <div class="chart-card">
+        <div class="chart-card__header">
+            <h3 class="chart-card__title">Inventory Status</h3>
+            <p class="chart-card__subtitle">Current stock levels</p>
+        </div>
+        <div class="pipeline-bars">
+            <div class="pipeline-item">
+                <div class="pipeline-item__header">
+                    <span class="pipeline-item__name">In Stock</span>
+                    <span class="pipeline-item__value">8,742</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-bar__fill" style="width: 87%"></div>
+                </div>
+            </div>
+            <div class="pipeline-item">
+                <div class="pipeline-item__header">
+                    <span class="pipeline-item__name">Low Stock</span>
+                    <span class="pipeline-item__value">1,248</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-bar__fill"
+                        style="width: 12%; background-color: var(--color-gray-400, #9CA3AF);"></div>
+                </div>
+            </div>
+            <div class="pipeline-item">
+                <div class="pipeline-item__header">
+                    <span class="pipeline-item__name">Out of Stock</span>
+                    <span class="pipeline-item__value">87</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-bar__fill"
+                        style="width: 1%; background-color: var(--color-gray-400, #9CA3AF);"></div>
+                </div>
+            </div>
+        </div>
+        <div class="pipeline-total"
+            style="border-top: 1px solid var(--color-border); margin-top: 2rem; padding-top: 1.5rem;">
+            <span class="pipeline-total__label" style="text-transform: uppercase;">Total SKUs</span>
+            <span class="pipeline-total__value">10,077</span>
+        </div>
+    </div>
+
+    <div class="chart-card chart-card--wide">
+        <div class="chart-card__header">
+            <h3 class="chart-card__title">Team Performance</h3>
+            <p class="chart-card__subtitle">Sales by team member this quarter</p>
+        </div>
+        <div id="team-performance-chart" style="height: 280px; margin-top: 1rem;"></div>
     </div>
 </section>
 
