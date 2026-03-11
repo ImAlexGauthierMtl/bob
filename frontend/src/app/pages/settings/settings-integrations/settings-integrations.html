@@ -15,6 +15,46 @@
     <div>
         <p class="section-label">Connected</p>
         <div class="integration-grid">
+
+            <!-- Microsoft 365 — Connected State -->
+            @if (ms365IsConnected) {
+            <div class="integration-card">
+                <div class="integration-card__header">
+                    <div class="integration-card__brand">
+                        <div class="integration-card__icon integration-card__icon--ms">
+                            <i class="fa-brands fa-microsoft"></i>
+                        </div>
+                        <div>
+                            <p class="integration-card__name">Microsoft 365</p>
+                            <p class="integration-card__sub">{{ ms365Connection?.msEmail || 'Outlook, Calendar' }}</p>
+                        </div>
+                    </div>
+                    <span class="status-badge status-badge--green">
+                        @if (ms365Syncing) {
+                        <i class="fa-solid fa-spinner fa-spin"></i> Syncing
+                        } @else {
+                        Active
+                        }
+                    </span>
+                </div>
+                <p class="integration-card__desc">
+                    @if (ms365Connection?.lastEmailSync) {
+                    Last sync: {{ ms365Connection!.lastEmailSync | date:'short' }}
+                    } @else {
+                    Connected — waiting for first sync
+                    }
+                </p>
+                <div class="integration-card__actions">
+                    <button class="integration-card__btn" routerLink="/settings/ms365">Configure</button>
+                    <button class="integration-card__btn" (click)="forceSync()" [disabled]="ms365Syncing">
+                        <i class="fa-solid fa-rotate"></i> Sync Now
+                    </button>
+                    <button class="integration-card__btn integration-card__btn--disconnect"
+                        (click)="disconnectMs365()">Disconnect</button>
+                </div>
+            </div>
+            }
+
             <div class="integration-card">
                 <div class="integration-card__header">
                     <div class="integration-card__brand">
@@ -60,6 +100,9 @@
     <div class="settings-section">
         <p class="section-label">Available</p>
         <div class="integration-grid">
+
+            <!-- Microsoft 365 — Available State (not connected) -->
+            @if (!ms365IsConnected) {
             <div class="integration-card">
                 <div class="integration-card__header">
                     <div class="integration-card__brand">
@@ -68,13 +111,22 @@
                         </div>
                         <div>
                             <p class="integration-card__name">Microsoft 365</p>
-                            <p class="integration-card__sub">Outlook, Teams, OneDrive</p>
+                            <p class="integration-card__sub">Outlook, Calendar</p>
                         </div>
                     </div>
                 </div>
-                <p class="integration-card__desc">Integrate with Microsoft ecosystem for seamless workflow</p>
-                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
+                <p class="integration-card__desc">Sync your emails and calendar events from Microsoft 365</p>
+                <button class="integration-card__btn integration-card__btn--connect" style="width:100%"
+                    (click)="connectMs365()" [disabled]="ms365Loading">
+                    @if (ms365Loading) {
+                    <i class="fa-solid fa-spinner fa-spin"></i> Connecting...
+                    } @else {
+                    Connect
+                    }
+                </button>
             </div>
+            }
+
             <div class="integration-card">
                 <div class="integration-card__header">
                     <div class="integration-card__brand">

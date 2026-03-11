@@ -27,31 +27,18 @@ ORPHEUS_VOCAL_DIRECTIONS = {
     "singsong", "breathy", "gravelly whisper", "rapid babbling",
 }
 
-# ── Qwen3-TTS instruction map — tone × language → natural language directives ──
-# IMPORTANT: instructions parameter only supports Chinese and English (per DashScope docs).
-# French/Spanish/Portuguese instructions cause intermittent Chinese speech output.
-# → All instructions MUST be written in English regardless of output language.
+# ── Qwen3-TTS instruction map — EN only ──────────────────────────────
+# The `instructions` parameter of qwen3-tts-instruct-flash only supports
+# Chinese and English. Using it for FR/ES/PT causes accent bleed (Chinese
+# accent intermittent). Non-EN languages use qwen3-tts-flash plain.
 QWEN_INSTRUCTIONS_MAP: dict[tuple[str, str], str] = {
-    ("fr-CA", "professional"): "Warm and natural voice with a professional Quebec rhythm. Lively intonation, slightly upbeat.",
-    ("fr-CA", "friendly"):     "Cheerful and approachable voice, like a friendly colleague from Montreal.",
-    ("fr-CA", "formal"):       "Poised and formal voice, elevated register, clear diction.",
-    ("fr-CA", "casual"):       "Relaxed and natural voice, casual conversational Quebec tone.",
-    ("fr-FR", "professional"): "Clear and composed voice, neutral French accent. Professional and sustained tone.",
-    ("fr-FR", "friendly"):     "Warm and natural voice, approachable Parisian accent.",
-    ("fr-FR", "formal"):       "Formal and articulate voice, academic French register.",
-    ("fr-FR", "casual"):       "Natural and relaxed voice, standard French accent.",
-    ("fr",    "professional"): "Natural and expressive French voice. Engaging professional tone.",
-    ("fr",    "friendly"):     "Warm and approachable voice, friendly and natural tone.",
-    ("es",    "professional"): "Natural and expressive Spanish voice. Clear professional tone.",
-    ("pt",    "professional"): "Natural and expressive Portuguese voice. Professional tone.",
+    ("en", "professional"): "Clear and professional voice, natural rhythm.",
+    ("en", "friendly"):     "Warm and approachable voice, conversational tone.",
+    ("en", "formal"):       "Formal and articulate voice, elevated register.",
+    ("en", "casual"):       "Relaxed and natural voice, casual conversational.",
 }
-# Fallback if exact (language, tone) is not in the map
 QWEN_INSTRUCTIONS_LANG_FALLBACK: dict[str, str] = {
-    "fr-CA": "Warm natural voice with professional Quebec rhythm.",
-    "fr-FR": "Clear voice with neutral French accent.",
-    "fr":    "Natural and expressive French voice.",
-    "es":    "Natural and expressive Spanish voice.",
-    "pt":    "Natural Portuguese voice.",
+    "en": "Natural and expressive English voice.",
 }
 
 # ── Qwen voice catalog with language/accent metadata ────────────
@@ -426,27 +413,35 @@ async def create_bob_voice_pipeline(
             valid_qwen_voices = list(QWEN_VOICE_CATALOG.keys())
         qwen_voice = tts_voice if tts_voice in valid_qwen_voices else valid_qwen_voices[0]
 
-        # ── Instructions dynamiques : langue × tone ──────────────────
+        # ── Model selection by language ────────────────────────────────
+        # instruct-flash supports instructions (tone control) for CN/EN only.
+        # For non-EN languages, instruct causes accent bleed (Chinese accent).
+        # → EN = instruct-flash + instructions, everything else = flash plain.
+        is_english = user_language.startswith("en")
         user_tone = user_settings.tone or "professional"
-        qwen_instructions = (
-            QWEN_INSTRUCTIONS_MAP.get((user_language, user_tone))
-            or QWEN_INSTRUCTIONS_LANG_FALLBACK.get(user_language, "")
-        )
+        if is_english:
+            tts_model = settings.dashscope_tts_instruct_model
+            qwen_instructions = (
+                QWEN_INSTRUCTIONS_MAP.get(("en", user_tone))
+                or QWEN_INSTRUCTIONS_LANG_FALLBACK.get("en", "")
+            )
+        else:
+            tts_model = settings.dashscope_tts_model  # flash plain
+            qwen_instructions = ""  # no instructions for non-EN
 
         # Rick = voice cloning via ref_audio. DashScope ne connaît pas "Rick"
-        # comme voice ID natif — on passe Cherry + ref_audio pour le cloning.
+        # comme voice ID natif — on passe Ethan + ref_audio pour le cloning.
         actual_dashscope_voice = qwen_voice
         ref_audio_path = ""
         if qwen_voice == "Rick":
             actual_dashscope_voice = "Ethan"  # base voice masculine → meilleur cloning
+            tts_model = settings.dashscope_tts_model  # always flash for cloning (stable TTFB)
+            qwen_instructions = ""  # no instructions with ref_audio
             import os
-            # settings.rick_ref_audio_path peut être un path local (hors container)
-            # → on vérifie d'abord que le fichier existe réellement
             _settings_path = settings.rick_ref_audio_path or ""
             if _settings_path and os.path.isfile(_settings_path):
                 ref_audio_path = _settings_path
             else:
-                # Fallback: chemin relatif au fichier actuel (valable dans le container)
                 fallback = os.path.join(os.path.dirname(__file__), "rick_ref.wav")
                 ref_audio_path = fallback if os.path.isfile(fallback) else ""
             logger.info(
@@ -456,7 +451,6 @@ async def create_bob_voice_pipeline(
             )
 
         # Transcription exacte du ref_audio Rick (whisper-large-v3 via Groq)
-        # Source: youtube.com/watch?v=jXSNfHCpRvI — 15s, voix seule sans musique
         RICK_REF_TEXT = (
             "Hey, salut! Tu te cherches présentement un métier? T'asseoir devant "
             "un ordinateur dans un bureau à longueur de journée, c'est peut-être "
@@ -467,7 +461,7 @@ async def create_bob_voice_pipeline(
 
         tts = DashScopeTTSService(
             api_key=settings.dashscope_api_key,
-            model=settings.dashscope_tts_model,
+            model=tts_model,
             voice=actual_dashscope_voice,
             language=user_language,
             instructions=qwen_instructions,
@@ -475,7 +469,7 @@ async def create_bob_voice_pipeline(
             ref_text=rick_ref_text,
             speed=tts_speed,
         )
-        tts_model_name = settings.dashscope_tts_model
+        tts_model_name = tts_model
         tts_provider = "dashscope"
     else:
         qwen_voice = None  # non utilisé pour Orpheus

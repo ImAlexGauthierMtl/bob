@@ -16,3 +16,6 @@ pipecat-ai[groq,silero,websocket]>=0.0.50
 aiohttp>=3.9
 redis>=5.0
 pgvector>=0.3
+msgraph-sdk>=1.0
+azure-identity>=1.0
+msal>=1.28

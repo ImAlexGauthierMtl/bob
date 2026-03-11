@@ -166,6 +166,13 @@ export const routes: Routes = [
                             ),
                     },
                     {
+                        path: 'ms365',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-ms365/settings-ms365').then(
+                                (m) => m.SettingsMs365Component
+                            ),
+                    },
+                    {
                         path: 'team',
                         loadComponent: () =>
                             import('./pages/settings/settings-team/settings-team').then(

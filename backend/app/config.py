@@ -47,7 +47,10 @@ class Settings(BaseSettings):
 
     # DashScope / Alibaba Cloud (Qwen3-TTS for multilingual voice)
     dashscope_api_key: str = ""
-    dashscope_tts_model: str = "qwen3-tts-instruct-flash"
+    dashscope_tts_model: str = "qwen3-tts-flash"
+    # instruct-flash supports instructions (tone/emotion) but only for CN/EN
+    # Using it for non-CN/EN languages causes accent bleed (Chinese accent)
+    dashscope_tts_instruct_model: str = "qwen3-tts-instruct-flash"
     dashscope_tts_voice: str = "Cherry"
     # Rick — custom cloned voice (zero-shot via ref_audio)
     # Point to a WAV file (mono, 24kHz): set RICK_REF_AUDIO_PATH=/path/to/rick_ref.wav
@@ -73,6 +76,14 @@ class Settings(BaseSettings):
     admin_password: str = ""  # MUST be set via .env
     admin_first_name: str = "Admin"
     admin_last_name: str = "Croo"
+
+    # Microsoft 365 (MS Graph API)
+    ms365_client_id: str = ""  # Azure AD App Client ID
+    ms365_client_secret: str = ""  # Azure AD App Client Secret
+    ms365_tenant_id: str = "common"  # Azure AD Tenant ID — "common" for multi-tenant
+    ms365_redirect_uri: str = "http://localhost:4500/api/v1/ms365/callback"
+    ms365_sync_interval_seconds: int = 120  # Polling fallback interval
+    ms365_webhook_host: str = ""  # Public HTTPS host for webhook notifications
 
     # Webhooks
     webhook_api_key: str = ""  # MUST be set via .env

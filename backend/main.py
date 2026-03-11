@@ -1,5 +1,6 @@
 """Main FastAPI application for Croo Digital Experience API."""
 
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -20,6 +21,7 @@ async def lifespan(app: FastAPI):
     from app.domain.entities import user, organization, contact, opportunity, quote, activity, department, capability, bob_settings, tenant  # noqa: F401
     from app.domain.entities import workflow, workflow_execution  # noqa: F401
     from app.domain.entities import bcc_entities  # noqa: F401
+    from app.domain.entities import ms365_connection, synced_email, synced_event  # noqa: F401
     from app.domain.entities import training_models  # noqa: F401
     from app.domain.entities import role as role_entities  # noqa: F401
     from app.domain.entities import product as product_entity  # noqa: F401
@@ -58,8 +60,32 @@ async def lifespan(app: FastAPI):
         db.close()
     logger.info("api_started", environment=settings.environment)
 
+    # Start MS365 background sync task (polling fallback)
+    ms365_sync_task = None
+    if settings.ms365_client_id:
+        async def _ms365_polling_loop():
+            """Background task — sync all active M365 connections."""
+            while True:
+                await asyncio.sleep(settings.ms365_sync_interval_seconds)
+                try:
+                    from app.application.services.ms365_sync_service import MS365SyncService
+                    poll_db = SessionLocal()
+                    try:
+                        svc = MS365SyncService(poll_db)
+                        await svc.sync_all_active_connections()
+                    finally:
+                        poll_db.close()
+                except Exception as e:
+                    logger.error("ms365_polling_error", error=str(e))
+
+        ms365_sync_task = asyncio.create_task(_ms365_polling_loop())
+        logger.info("ms365_polling_started", interval=settings.ms365_sync_interval_seconds)
+
     yield  # App runs here
 
+    # Cancel background tasks on shutdown
+    if ms365_sync_task:
+        ms365_sync_task.cancel()
     logger.info("api_shutdown")
 
 # Create FastAPI app
@@ -104,6 +130,7 @@ from app.presentation.routes.role_routes import router as role_router
 from app.presentation.routes.tenant_routes import router as tenant_router
 from app.presentation.routes.product_routes import router as product_router
 from app.presentation.routes.usage_routes import router as usage_router
+from app.presentation.routes.ms365_routes import router as ms365_router
 from app.middleware.metrics import router as metrics_router
 
 app.include_router(auth_router, tags=["auth"])
@@ -130,6 +157,7 @@ app.include_router(role_router, tags=["roles"])
 app.include_router(tenant_router, tags=["tenants"])
 app.include_router(product_router, tags=["products"])
 app.include_router(usage_router, tags=["usage"])
+app.include_router(ms365_router, tags=["ms365"])
 app.include_router(metrics_router, tags=["metrics"])
 
 

@@ -65,7 +65,7 @@ class DashScopeTTSService(TTSService):
         self,
         *,
         api_key: str,
-        model: str = "qwen3-tts-instruct-flash",
+        model: str = "qwen3-tts-flash",
         voice: str = "Cherry",
         language: str = "en",
         instructions: str = "",
@@ -134,11 +134,8 @@ class DashScopeTTSService(TTSService):
             input_params["ref_audio"] = self._ref_audio_b64
             if self._ref_text:
                 input_params["ref_text"] = self._ref_text
-        # BENCHMARK RESULTS (2026-03-11):
-        # instruct-flash + ref_audio WITHOUT instructions = 82s TTFB (!)
-        # instruct-flash + ref_audio WITH instructions    = 3.1s TTFB
-        # → instructions MUST be sent even with ref_audio on instruct model
-        # optimize_instructions=True adds ~6s — keep disabled
+        # Instructions only passed when model is instruct-flash (EN only).
+        # Pipeline handles the model/instructions selection per language.
         if self._instructions:
             input_params["instructions"] = self._instructions
         payload = {
