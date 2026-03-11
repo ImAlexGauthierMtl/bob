@@ -28,27 +28,30 @@ ORPHEUS_VOCAL_DIRECTIONS = {
 }
 
 # ── Qwen3-TTS instruction map — tone × language → natural language directives ──
+# IMPORTANT: instructions parameter only supports Chinese and English (per DashScope docs).
+# French/Spanish/Portuguese instructions cause intermittent Chinese speech output.
+# → All instructions MUST be written in English regardless of output language.
 QWEN_INSTRUCTIONS_MAP: dict[tuple[str, str], str] = {
-    ("fr-CA", "professional"): "Voix naturelle et chaleureuse, rythme québécois professionnel. Intonation vivante, légèrement enjouée.",
-    ("fr-CA", "friendly"):     "Voix enjouée et accessible, comme un collègue sympathique de Montréal.",
-    ("fr-CA", "formal"):       "Voix posée et formelle, registre soutenu, diction claire.",
-    ("fr-CA", "casual"):       "Voix décontractée et naturelle, ton conversationnel québécois.",
-    ("fr-FR", "professional"): "Voix claire et posée, accent neutre français. Ton professionnel soutenu.",
-    ("fr-FR", "friendly"):     "Voix chaleureuse et naturelle, accent parisien accessible.",
-    ("fr-FR", "formal"):       "Voix formelle et articulée, registre académique français.",
-    ("fr-FR", "casual"):       "Voix naturelle et décontractée, accent français standard.",
-    ("fr",    "professional"): "Voix française naturelle et expressive. Ton professionnel engageant.",
-    ("fr",    "friendly"):     "Voix chaleureuse et accessible, ton amical et naturel.",
-    ("es",    "professional"): "Voz natural y expresiva en español. Tono profesional y claro.",
-    ("pt",    "professional"): "Voz natural e expressiva em português. Tom profissional.",
+    ("fr-CA", "professional"): "Warm and natural voice with a professional Quebec rhythm. Lively intonation, slightly upbeat.",
+    ("fr-CA", "friendly"):     "Cheerful and approachable voice, like a friendly colleague from Montreal.",
+    ("fr-CA", "formal"):       "Poised and formal voice, elevated register, clear diction.",
+    ("fr-CA", "casual"):       "Relaxed and natural voice, casual conversational Quebec tone.",
+    ("fr-FR", "professional"): "Clear and composed voice, neutral French accent. Professional and sustained tone.",
+    ("fr-FR", "friendly"):     "Warm and natural voice, approachable Parisian accent.",
+    ("fr-FR", "formal"):       "Formal and articulate voice, academic French register.",
+    ("fr-FR", "casual"):       "Natural and relaxed voice, standard French accent.",
+    ("fr",    "professional"): "Natural and expressive French voice. Engaging professional tone.",
+    ("fr",    "friendly"):     "Warm and approachable voice, friendly and natural tone.",
+    ("es",    "professional"): "Natural and expressive Spanish voice. Clear professional tone.",
+    ("pt",    "professional"): "Natural and expressive Portuguese voice. Professional tone.",
 }
-# Fallback si le (langue, tone) exact n'est pas dans la map
+# Fallback if exact (language, tone) is not in the map
 QWEN_INSTRUCTIONS_LANG_FALLBACK: dict[str, str] = {
-    "fr-CA": "Voix naturelle, rythme québécois professionnel.",
-    "fr-FR": "Voix claire, accent neutre français.",
-    "fr":    "Voix française naturelle et expressive.",
-    "es":    "Voz natural y expresiva en español.",
-    "pt":    "Voz natural em português.",
+    "fr-CA": "Warm natural voice with professional Quebec rhythm.",
+    "fr-FR": "Clear voice with neutral French accent.",
+    "fr":    "Natural and expressive French voice.",
+    "es":    "Natural and expressive Spanish voice.",
+    "pt":    "Natural Portuguese voice.",
 }
 
 # ── Qwen voice catalog with language/accent metadata ────────────
