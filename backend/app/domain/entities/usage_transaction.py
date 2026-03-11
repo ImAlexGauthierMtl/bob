@@ -29,6 +29,7 @@ class ServiceType(str, enum.Enum):
     ENRICHMENT = "ENRICHMENT"
     WORKFLOW = "WORKFLOW"
     TOOL = "TOOL"
+    RETRIEVAL = "RETRIEVAL"
 
 
 class BillingCategory(str, enum.Enum):

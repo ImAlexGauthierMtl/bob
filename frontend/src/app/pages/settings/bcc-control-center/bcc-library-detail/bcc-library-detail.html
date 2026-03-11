@@ -107,19 +107,73 @@
     }
 
     <!-- Context: Tool Priority -->
-    @if (tsk.context && tsk.context['tool_priority']) {
+    @if (tsk.context && isArray(tsk.context['tool_priority']) && asArray(tsk.context['tool_priority']).length > 0) {
     <section class="detail-section">
         <div class="detail-section__header">
-            <i class="fa-solid fa-triangle-exclamation"></i>
+            <i class="fa-solid fa-wrench"></i>
             <h3>Tool Priority</h3>
         </div>
-        <p class="detail-section__text" style="margin-top: 12px; color: #D97706; font-weight: 500">
-            ⚠ {{ tsk.context['tool_priority'] }}
-        </p>
+        <div class="detail-chips" style="margin-top: 12px">
+            @for (tool of asArray(tsk.context['tool_priority']); track $index) {
+            <span class="detail-chip" style="background: rgba(255,69,0,0.08); border-color: rgba(255,69,0,0.2); color: #e03e00; font-family: 'SF Mono','Fira Code',monospace; font-size: 0.78rem;">{{ tool }}</span>
+            }
+        </div>
     </section>
     }
 
-    <!-- Context: Required Info -->
+    <!-- Context: Required Info (array of field names) -->
+    @if (tsk.context && isArray(tsk.context['required_info']) && asArray(tsk.context['required_info']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-clipboard-check"></i>
+            <h3>Required Info</h3>
+        </div>
+        <div class="detail-chips" style="margin-top: 12px">
+            @for (field of asArray(tsk.context['required_info']); track $index) {
+            <span class="detail-chip" style="font-family: 'SF Mono','Fira Code',monospace; font-size: 0.78rem;">{{ field }}</span>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Context: Optional Info -->
+    @if (tsk.context && isArray(tsk.context['optional_info']) && asArray(tsk.context['optional_info']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-clipboard-question"></i>
+            <h3>Optional Info</h3>
+        </div>
+        <div class="detail-chips" style="margin-top: 12px">
+            @for (field of asArray(tsk.context['optional_info']); track $index) {
+            <span class="detail-chip" style="font-family: 'SF Mono','Fira Code',monospace; font-size: 0.78rem; opacity: 0.7;">{{ field }}</span>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Context: Expected Output -->
+    @if (tsk.context && tsk.context['expected_output']) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-message"></i>
+            <h3>Expected Output</h3>
+        </div>
+        <p class="detail-section__text" style="margin-top: 12px; font-family: 'SF Mono','Fira Code',monospace; font-size: 0.82rem; padding: 12px; background: var(--color-gray-25); border-radius: 8px; border: 1px solid var(--color-gray-100);">{{ tsk.context['expected_output'] }}</p>
+    </section>
+    }
+
+    <!-- Context: Response Format -->
+    @if (tsk.context && tsk.context['response_format']) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-code"></i>
+            <h3>Response Format</h3>
+        </div>
+        <p class="detail-section__text" style="margin-top: 12px; font-family: 'SF Mono','Fira Code',monospace; font-size: 0.82rem; padding: 12px; background: var(--color-gray-25); border-radius: 8px; border: 1px solid var(--color-gray-100);">{{ tsk.context['response_format'] }}</p>
+    </section>
+    }
+
+    <!-- Context: Required Info (legacy object format) -->
     @if (tsk.context && isObject(tsk.context['required_info'])) {
     <section class="detail-section">
         <div class="detail-section__header">
@@ -130,29 +184,6 @@
             @for (key of getObjectKeys(asRecord(tsk.context['required_info'])); track key) {
             <div class="assessment-card">
                 <span class="assessment-card__label">{{ formatKey(key) }}</span>
-                @if (isObject(asRecord(tsk.context['required_info'])[key])) {
-                <div style="margin-top: 6px">
-                    @for (subKey of getObjectKeys(asRecord(asRecord(tsk.context['required_info'])[key])); track subKey)
-                    {
-                    <div style="margin-bottom: 4px">
-                        <span
-                            style="font-weight: 600; font-size: 0.7rem; text-transform: uppercase; color: var(--color-gray-400)">{{
-                            formatKey(subKey) }}:</span>
-                        @if (isArray(asRecord(asRecord(tsk.context['required_info'])[key])[subKey])) {
-                        <div class="detail-chips" style="margin-top: 4px">
-                            @for (val of asArray(asRecord(asRecord(tsk.context['required_info'])[key])[subKey]); track
-                            $index) {
-                            <span class="detail-chip">{{ val }}</span>
-                            }
-                        </div>
-                        } @else {
-                        <span style="font-size: 0.82rem">{{
-                            asRecord(asRecord(tsk.context['required_info'])[key])[subKey] }}</span>
-                        }
-                    </div>
-                    }
-                </div>
-                }
             </div>
             }
         </div>
@@ -162,9 +193,8 @@
     <!-- Context: Other keys (SOP, compliance, success_metrics, etc.) -->
     @if (tsk.context) {
     @for (key of getObjectKeys(asRecord(tsk.context)); track key) {
-    @if (key !== 'procedure' && key !== 'tool_priority' && key !== 'required_info' && key !== 'expectations' && key !==
-    'deliverables') {
-    @if (isArray(asRecord(tsk.context)[key])) {
+    @if (key !== 'procedure' && key !== 'tool_priority' && key !== 'required_info' && key !== 'optional_info' && key !== 'expected_output' && key !== 'response_format' && key !== 'expectations' && key !== 'deliverables') {
+    @if (isArray(asRecord(tsk.context)[key]) && asArray(asRecord(tsk.context)[key]).length > 0) {
     <section class="detail-section">
         <div class="detail-section__header">
             <i [class]="getContextIcon(key)"></i>
@@ -194,6 +224,15 @@
             </div>
             }
         </div>
+    </section>
+    }
+    @if (!isObject(asRecord(tsk.context)[key]) && !isArray(asRecord(tsk.context)[key]) && asRecord(tsk.context)[key]) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i [class]="getContextIcon(key)"></i>
+            <h3>{{ formatKey(key) }}</h3>
+        </div>
+        <p class="detail-section__text" style="margin-top: 12px; font-family: 'SF Mono','Fira Code',monospace; font-size: 0.82rem; padding: 8px 12px; background: var(--color-gray-25); border-radius: 6px; border: 1px solid var(--color-gray-100); display: inline-block;">{{ asRecord(tsk.context)[key] }}</p>
     </section>
     }
     }

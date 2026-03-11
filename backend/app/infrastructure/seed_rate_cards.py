@@ -46,9 +46,41 @@ RATE_CARDS = [
     {"provider": "groq", "model": "playai-tts", "service_type": ServiceType.TTS,
      "unit_type": RateUnitType.CHARACTER, "rate_per_unit": Decimal("0.015") / 1000},
 
+    # TTS — canopylabs/orpheus-v1-english ($15/M chars)
+    {"provider": "groq", "model": "canopylabs/orpheus-v1-english", "service_type": ServiceType.TTS,
+     "unit_type": RateUnitType.CHARACTER, "rate_per_unit": Decimal("0.015") / 1000},
+
+    # TTS — DashScope qwen3-tts-flash ($0.10/10k chars = $0.01/1k chars)
+    {"provider": "dashscope", "model": "qwen3-tts-flash", "service_type": ServiceType.TTS,
+     "unit_type": RateUnitType.CHARACTER, "rate_per_unit": Decimal("0.01") / 1000},
+
+    # TTS — DashScope qwen3-tts-instruct-flash (same pricing as flash)
+    {"provider": "dashscope", "model": "qwen3-tts-instruct-flash", "service_type": ServiceType.TTS,
+     "unit_type": RateUnitType.CHARACTER, "rate_per_unit": Decimal("0.01") / 1000},
+
     # Search — serper.dev ($0.001/query approx)
     {"provider": "serper", "model": "google-search", "service_type": ServiceType.SEARCH,
      "unit_type": RateUnitType.MINUTE, "rate_per_unit": Decimal("0.001")},
+
+    # Hunter.io — Domain Search ($0.01/request approx)
+    {"provider": "hunter", "model": "domain-search", "service_type": ServiceType.SEARCH,
+     "unit_type": RateUnitType.MINUTE, "rate_per_unit": Decimal("0.01")},
+
+    # Hunter.io — Company Enrichment ($0.01/request approx)
+    {"provider": "hunter", "model": "company-enrichment", "service_type": ServiceType.SEARCH,
+     "unit_type": RateUnitType.MINUTE, "rate_per_unit": Decimal("0.01")},
+
+    # Groq — Compound (web search + LLM, ~$0.05/request approx — use per-token LLM rates)
+    {"provider": "groq", "model": "groq/compound", "service_type": ServiceType.LLM,
+     "unit_type": RateUnitType.INPUT_TOKEN, "rate_per_unit": Decimal("0.29") / 1_000_000},
+    {"provider": "groq", "model": "groq/compound", "service_type": ServiceType.LLM,
+     "unit_type": RateUnitType.OUTPUT_TOKEN, "rate_per_unit": Decimal("0.59") / 1_000_000},
+
+    # OpenRouter — Claude Sonnet 4.6 ($3.00/M in, $15.00/M out)
+    {"provider": "openrouter", "model": "anthropic/claude-sonnet-4.6", "service_type": ServiceType.LLM,
+     "unit_type": RateUnitType.INPUT_TOKEN, "rate_per_unit": Decimal("3.00") / 1_000_000},
+    {"provider": "openrouter", "model": "anthropic/claude-sonnet-4.6", "service_type": ServiceType.LLM,
+     "unit_type": RateUnitType.OUTPUT_TOKEN, "rate_per_unit": Decimal("15.00") / 1_000_000},
 ]
 
 

@@ -742,6 +742,7 @@ async def list_intents(
                 task_template_id=link.task_template_id,
                 task_template_name=link.task_template.name if link.task_template else "",
                 sort_order=link.sort_order,
+                tool_name=link.tool_name,
             )
             for link in intent.task_links
         ]
@@ -753,6 +754,8 @@ async def list_intents(
             category=intent.category,
             domain_id=intent.domain_id,
             domain_name=intent.domain.name if intent.domain else None,
+            workflow_key=intent.workflow_key,
+            pipeline_key=intent.pipeline_key,
             task_count=len(tasks),
             tasks=tasks,
         ))
@@ -778,6 +781,7 @@ async def get_intent(
             task_template_id=link.task_template_id,
             task_template_name=link.task_template.name if link.task_template else "",
             sort_order=link.sort_order,
+            tool_name=link.tool_name,
         )
         for link in intent.task_links
     ]
@@ -789,6 +793,8 @@ async def get_intent(
         category=intent.category,
         domain_id=intent.domain_id,
         domain_name=intent.domain.name if intent.domain else None,
+        workflow_key=intent.workflow_key,
+        pipeline_key=intent.pipeline_key,
         task_count=len(tasks),
         tasks=tasks,
     )
@@ -809,6 +815,8 @@ async def create_intent(
         trigger_phrases=data.trigger_phrases,
         category=data.category,
         domain_id=data.domain_id,
+        workflow_key=data.workflow_key,
+        pipeline_key=data.pipeline_key,
     )
     db.add(intent)
     db.flush()
@@ -833,6 +841,7 @@ async def create_intent(
             task_template_id=link.task_template_id,
             task_template_name=link.task_template.name if link.task_template else "",
             sort_order=link.sort_order,
+            tool_name=link.tool_name,
         )
         for link in intent.task_links
     ]
@@ -844,6 +853,8 @@ async def create_intent(
         category=intent.category,
         domain_id=intent.domain_id,
         domain_name=intent.domain.name if intent.domain else None,
+        workflow_key=intent.workflow_key,
+        pipeline_key=intent.pipeline_key,
         task_count=len(tasks),
         tasks=tasks,
     )
@@ -864,6 +875,71 @@ async def delete_intent(
         raise HTTPException(status_code=404, detail="Intent not found")
     db.delete(intent)
     db.commit()
+
+
+# ── Cognitive Map ────────────────────────────────────────────
+
+
+@router.get("/cognitive-map")
+async def get_cognitive_map(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the full Domain -> Intent -> Task tree for the cognitive flow view."""
+    from sqlalchemy.orm import joinedload
+
+    domains = (
+        db.query(BccDomain)
+        .filter(BccDomain.tenant_id == current_user["tenant_id"])
+        .options(
+            joinedload(BccDomain.intents)
+            .joinedload(BccIntent.task_links)
+            .joinedload(BccIntentTask.task_template)
+        )
+        .order_by(BccDomain.name)
+        .all()
+    )
+
+    result = []
+    for domain in domains:
+        intents_out = []
+        for intent in sorted(domain.intents, key=lambda i: i.name):
+            tasks_out = []
+            for link in sorted(intent.task_links, key=lambda l: l.sort_order):
+                tasks_out.append({
+                    "id": link.id,
+                    "sort_order": link.sort_order,
+                    "tool_name": link.tool_name,
+                    "task_template": {
+                        "id": link.task_template.id,
+                        "name": link.task_template.name,
+                        "description": link.task_template.description,
+                        "context": link.task_template.context or {},
+                        "frequency": link.task_template.frequency,
+                        "category": link.task_template.category,
+                    } if link.task_template else None,
+                })
+            intents_out.append({
+                "id": intent.id,
+                "name": intent.name,
+                "description": intent.description,
+                "workflow_key": intent.workflow_key,
+                "pipeline_key": intent.pipeline_key,
+                "category": intent.category,
+                "trigger_phrases": intent.trigger_phrases or [],
+                "tasks": tasks_out,
+            })
+        result.append({
+            "id": domain.id,
+            "name": domain.name,
+            "description": domain.description,
+            "icon": domain.icon,
+            "intent_count": len(intents_out),
+            "task_count": sum(len(i["tasks"]) for i in intents_out),
+            "intents": intents_out,
+        })
+
+    return result
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1495,6 +1571,21 @@ async def create_profile_entry(
                 entity_type=entity_type, entity_id=entity_id,
                 section=data.section, perspective=data.perspective,
                 version=new_version)
+
+    # Index in RAG for semantic retrieval
+    if entry.content:
+        try:
+            from app.rag.indexer import index_bcc_profile_entry
+            index_bcc_profile_entry(
+                db=db,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                section=data.section,
+                content=entry.content,
+                tenant_id=tenant_id,
+            )
+        except Exception as rag_err:
+            logger.warning("rag_index_profile_failed", error=str(rag_err))
 
     return BccProfileEntryResponse.model_validate(entry)
 

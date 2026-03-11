@@ -1,5 +1,6 @@
 import { Component, inject, ViewChild, ElementRef, AfterViewChecked, OnDestroy, OnInit, NgZone } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { BobService } from '../services/bob.service';
 import { AuthService } from '../services/auth.service';
@@ -38,6 +39,7 @@ const MAX_RECONNECT_ATTEMPTS = 3;
 export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
 
+    private http = inject(HttpClient);
     private bobService = inject(BobService);
     private authService = inject(AuthService);
     private bobActionService = inject(BobActionService);
@@ -64,6 +66,8 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private intentionalDisconnect = false;
     private ngZone = inject(NgZone);
+    private currentBotTranscriptMsg: ChatMessage | null = null;
+    private autoListenEnabled = true;
 
     messages: ChatMessage[] = [
         {
@@ -258,6 +262,19 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         this.showConsentDialog = false;
     }
 
+    private loadVoiceSettings(): void {
+        const token = this.authService.getToken();
+        if (!token) return;
+        this.http.get<any>(`${environment.apiUrl}/bob/settings`, {
+            headers: { Authorization: `Bearer ${token}` },
+        }).subscribe({
+            next: (data) => {
+                this.autoListenEnabled = data?.voice?.auto_listen ?? true;
+            },
+            error: () => { /* keep default */ },
+        });
+    }
+
     private async connectVoice(): Promise<void> {
         const token = this.authService.getToken();
         if (!token) {
@@ -266,6 +283,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         }
 
         this.voiceState = 'connecting';
+        this.loadVoiceSettings();
 
         try {
             this.pipecatClient = new PipecatClient({
@@ -290,14 +308,22 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
             this.pipecatClient.on(RTVIEvent.BotStartedSpeaking, () => {
                 this.ngZone.run(() => {
                     this.voiceState = 'speaking';
+                    // Prepare a new transcript bubble
+                    this.currentBotTranscriptMsg = {
+                        role: 'bob',
+                        text: '',
+                        time: new Date(),
+                    };
+                    this.messages.push(this.currentBotTranscriptMsg);
+                    this.shouldScrollToBottom = true;
                 });
             });
 
             this.pipecatClient.on(RTVIEvent.BotStoppedSpeaking, () => {
                 this.ngZone.run(() => {
                     this.voiceState = 'listening';
-                    // Auto-listen: reconnect mic after Bob finishes his response
-                    if (this.pipecatClient) {
+                    this.currentBotTranscriptMsg = null;
+                    if (this.autoListenEnabled && this.pipecatClient) {
                         this.pipecatClient.enableMic(true);
                     }
                 });
@@ -310,9 +336,23 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
             });
 
             this.pipecatClient.on(RTVIEvent.BotTranscript, (data: any) => {
-                // Voice mode: user already hears Bob speak — don't show text in chat
-                // This prevents raw LLM output (with markdown/emotion tags) from cluttering the UI
-                console.log('[Bob] BotTranscript (hidden):', data?.text);
+                if (data?.text) {
+                    this.ngZone.run(() => {
+                        let clean = this.stripVoiceTags(data.text);
+                        if (!clean) return;
+                        if (this.currentBotTranscriptMsg) {
+                            this.currentBotTranscriptMsg.text += clean + ' ';
+                        } else {
+                            this.currentBotTranscriptMsg = {
+                                role: 'bob',
+                                text: clean + ' ',
+                                time: new Date(),
+                            };
+                            this.messages.push(this.currentBotTranscriptMsg);
+                        }
+                        this.shouldScrollToBottom = true;
+                    });
+                }
             });
 
             this.pipecatClient.on(RTVIEvent.UserTranscript, (data: any) => {
@@ -360,18 +400,8 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
                     const args = data?.arguments || {};
                     console.log(`[Bob] Function call: ${fnName}`, args);
 
-                    if (fnName === 'navigate_to') {
-                        this.bobActionService.dispatch({
-                            type: 'navigate',
-                            page: args.page,
-                        });
-                    } else if (fnName === 'open_create_dialog') {
-                        this.bobActionService.dispatch({
-                            type: 'open_create_dialog',
-                            entity: args.entity,
-                            name: args.name,
-                        });
-                    }
+                    this.addVoiceToolBadge(fnName);
+                    this.dispatchVoiceAction(fnName, args);
                 });
             });
 
@@ -383,18 +413,8 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
                     const args = data?.args || data?.arguments || {};
                     console.log(`[Bob] Function call (deprecated): ${fnName}`, args);
 
-                    if (fnName === 'navigate_to') {
-                        this.bobActionService.dispatch({
-                            type: 'navigate',
-                            page: args.page,
-                        });
-                    } else if (fnName === 'open_create_dialog') {
-                        this.bobActionService.dispatch({
-                            type: 'open_create_dialog',
-                            entity: args.entity,
-                            name: args.name,
-                        });
-                    }
+                    this.addVoiceToolBadge(fnName);
+                    this.dispatchVoiceAction(fnName, args);
                 });
             });
 
@@ -436,6 +456,37 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
                 time: new Date(),
             });
             this.shouldScrollToBottom = true;
+        }
+    }
+
+    private stripVoiceTags(text: string): string {
+        return text
+            .replace(/\[[\w\s]+\]/g, '')
+            .replace(/<\/?(?:laugh|chuckle|sigh|gasp|whisper)>/gi, '')
+            .replace(/<think>[\s\S]*?<\/think>/gi, '')
+            .replace(/\/?(?:no_)?think\b/gi, '')
+            .trim();
+    }
+
+    private addVoiceToolBadge(fnName: string): void {
+        if (!fnName) return;
+        const target = this.currentBotTranscriptMsg || this.messages[this.messages.length - 1];
+        if (target && target.role === 'bob') {
+            if (!target.toolSteps) target.toolSteps = [];
+            target.toolSteps.push({ tool: fnName, status: 'ok' });
+            this.shouldScrollToBottom = true;
+        }
+    }
+
+    private dispatchVoiceAction(fnName: string, args: Record<string, any>): void {
+        if (fnName === 'navigate_to') {
+            this.bobActionService.dispatch({ type: 'navigate', page: args['page'] });
+        } else if (fnName === 'open_create_dialog') {
+            this.bobActionService.dispatch({
+                type: 'open_create_dialog', entity: args['entity'], name: args['name'],
+            });
+        } else if (fnName === 'start_crm_training') {
+            this.bobActionService.dispatch({ type: 'navigate', page: 'template/crm-mastery' });
         }
     }
 

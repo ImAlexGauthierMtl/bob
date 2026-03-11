@@ -159,6 +159,7 @@ class BccIntentTaskResponse(BaseModel):
     task_template_id: str
     task_template_name: str = ""
     sort_order: int
+    tool_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -170,6 +171,8 @@ class BccIntentCreate(BaseModel):
     trigger_phrases: Optional[list] = None
     category: Optional[str] = None
     domain_id: Optional[str] = None
+    workflow_key: Optional[str] = None
+    pipeline_key: Optional[str] = None
     task_template_ids: Optional[List[str]] = None
 
 
@@ -181,6 +184,8 @@ class BccIntentResponse(BaseModel):
     category: Optional[str] = None
     domain_id: Optional[str] = None
     domain_name: Optional[str] = None
+    workflow_key: Optional[str] = None
+    pipeline_key: Optional[str] = None
     task_count: int = 0
     tasks: List[BccIntentTaskResponse] = []
 

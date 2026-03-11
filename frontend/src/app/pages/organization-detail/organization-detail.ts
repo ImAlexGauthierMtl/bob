@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe, UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -26,6 +26,7 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
     opportunities: Opportunity[] = [];
     activities: Activity[] = [];
     isLoading = true;
+    notFound = false;
     isEnriching = false;
     activeTab = 'overview';
 
@@ -57,6 +58,7 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
     private bobActionSub?: Subscription;
 
     private route = inject(ActivatedRoute);
+    private router = inject(Router);
     private orgService = inject(OrganizationService);
     private contactService = inject(ContactService);
     private oppService = inject(OpportunityService);
@@ -103,6 +105,7 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
             },
             error: () => {
                 this.isLoading = false;
+                this.notFound = true;
             },
         });
     }
@@ -143,6 +146,10 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
         this.activeTab = tab;
     }
 
+    goBack(): void {
+        this.router.navigate(['/organizations']);
+    }
+
     getInitials(name: string): string {
         return name.split(' ').map((w) => w[0]).join('').substring(0, 2).toUpperCase();
     }
@@ -153,6 +160,12 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
         if (revenue >= 1_000_000) return `$${(revenue / 1_000_000).toFixed(1)}M`;
         if (revenue >= 1_000) return `$${(revenue / 1_000).toFixed(0)}K`;
         return `$${revenue}`;
+    }
+
+    getWinRate(): number {
+        if (!this.opportunities || this.opportunities.length === 0) return 0;
+        const won = this.opportunities.filter(o => o.stage === 'CLOSED_WON').length;
+        return (won / this.opportunities.length) * 100;
     }
 
     triggerEnrichment(): void {
@@ -415,7 +428,7 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
             description: this.newActivityDescription || undefined,
             activity_type: this.newActivityType,
             priority: this.newActivityPriority,
-            organization_id: this.org.id,
+            organization_ids: [this.org.id],
         };
         if (this.newActivityDueDate) {
             data.due_date = this.newActivityDueDate;

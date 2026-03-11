@@ -31,20 +31,16 @@
 
     <div class="org-header__tabs">
         <nav class="tabs">
+            <button class="tab" [class.tab--active]="activeTab === 'cognitive'"
+                (click)="setActiveTab('cognitive')">
+                <i class="fa-solid fa-brain"></i> Cognitive Flow
+            </button>
             <button class="tab" [class.tab--active]="activeTab === 'organizations'"
                 (click)="setActiveTab('organizations')">Organizations ({{ organizations.length }})</button>
             <button class="tab" [class.tab--active]="activeTab === 'industries'"
                 (click)="setActiveTab('industries')">Industries ({{ industries.length }})</button>
             <button class="tab" [class.tab--active]="activeTab === 'careers'" (click)="setActiveTab('careers')">Careers
                 ({{ careers.length }})</button>
-            <button class="tab" [class.tab--active]="activeTab === 'domains'" (click)="setActiveTab('domains')">Domains
-                ({{
-                domains.length }})</button>
-            <button class="tab" [class.tab--active]="activeTab === 'intents'" (click)="setActiveTab('intents')">Intents
-                ({{
-                intents.length }})</button>
-            <button class="tab" [class.tab--active]="activeTab === 'tasks'" (click)="setActiveTab('tasks')">Tasks ({{
-                taskTemplates.length }})</button>
         </nav>
     </div>
 </header>
@@ -52,6 +48,93 @@
 <!-- ═══ Main Content ═══ -->
 <main class="org-main">
     <div class="org-content">
+
+        <!-- ══ Cognitive Flow Tab ══ -->
+        @if (activeTab === 'cognitive') {
+        <section class="tab-section">
+            @if (cognitiveMap.length === 0) {
+            <div class="empty-state">No cognitive structure defined — use the Deep Agent to build it.</div>
+            } @else {
+            <div class="cognitive-tree">
+                @for (domain of cognitiveMap; track domain.id) {
+                <div class="cog-domain" [class.cog-domain--expanded]="expandedDomains.has(domain.id)">
+                    <div class="cog-domain__header" (click)="toggleDomain(domain.id)">
+                        <div class="cog-domain__toggle">
+                            <i class="fa-solid" [class.fa-chevron-down]="expandedDomains.has(domain.id)"
+                                [class.fa-chevron-right]="!expandedDomains.has(domain.id)"></i>
+                        </div>
+                        @if (domain.icon) {
+                        <i [class]="domain.icon" class="cog-domain__icon"></i>
+                        }
+                        <h3 class="cog-domain__name">{{ domain.name }}</h3>
+                        <div class="cog-domain__meta">
+                            <span class="cog-badge cog-badge--domain">{{ domain.intent_count }} intents</span>
+                            <span class="cog-badge cog-badge--task">{{ domain.task_count }} tasks</span>
+                        </div>
+                    </div>
+
+                    @if (expandedDomains.has(domain.id)) {
+                    <div class="cog-domain__body">
+                        @if (domain.description) {
+                        <p class="cog-domain__desc">{{ domain.description }}</p>
+                        }
+                        @for (intent of domain.intents; track intent.id) {
+                        <div class="cog-intent" [class.cog-intent--expanded]="expandedIntents.has(intent.id)">
+                            <div class="cog-intent__header" (click)="toggleIntent(intent.id)">
+                                <div class="cog-intent__toggle">
+                                    <i class="fa-solid" [class.fa-chevron-down]="expandedIntents.has(intent.id)"
+                                        [class.fa-chevron-right]="!expandedIntents.has(intent.id)"></i>
+                                </div>
+                                <i class="fa-solid fa-bullseye cog-intent__icon"></i>
+                                <span class="cog-intent__name">{{ intent.name }}</span>
+                                @if (intent.workflow_key) {
+                                <span class="cog-badge cog-badge--workflow">workflow: {{ intent.workflow_key }}</span>
+                                }
+                                @if (intent.pipeline_key) {
+                                <span class="cog-badge cog-badge--pipeline">pipeline: {{ intent.pipeline_key }}</span>
+                                }
+                                <span class="cog-intent__task-count">{{ intent.tasks.length }} tasks</span>
+                            </div>
+
+                            @if (expandedIntents.has(intent.id)) {
+                            <div class="cog-intent__body">
+                                @if (intent.trigger_phrases && intent.trigger_phrases.length > 0) {
+                                <div class="cog-triggers">
+                                    <span class="cog-triggers__label">Triggers:</span>
+                                    @for (phrase of intent.trigger_phrases; track phrase) {
+                                    <span class="cog-chip">{{ phrase }}</span>
+                                    }
+                                </div>
+                                }
+
+                                <div class="cog-task-list">
+                                    @for (task of intent.tasks; track task.id) {
+                                    <div class="cog-task">
+                                        <span class="cog-task__order">{{ task.sort_order + 1 }}.</span>
+                                        @if (task.task_template) {
+                                        <a [routerLink]="['/settings/bob-control-center/library/task-template', task.task_template.id]"
+                                            class="cog-task__name">
+                                            {{ task.task_template.name }}
+                                        </a>
+                                        }
+                                        @if (task.tool_name) {
+                                        <span class="cog-badge cog-badge--tool">{{ task.tool_name }}</span>
+                                        }
+                                    </div>
+                                    }
+                                </div>
+                            </div>
+                            }
+                        </div>
+                        }
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+            }
+        </section>
+        }
 
         <!-- ══ Organizations Tab ══ -->
         @if (activeTab === 'organizations') {
@@ -146,108 +229,40 @@
         </section>
         }
 
-        <!-- ══ Domains Tab ══ -->
-        @if (activeTab === 'domains') {
-        <section class="tab-section">
-            @if (domains.length === 0) {
-            <div class="empty-state">No domains defined</div>
-            } @else {
-            <div class="opp-list">
-                @for (domain of domains; track domain.id) {
-                <a [routerLink]="['/settings/bob-control-center/library/domain', domain.id]" class="opp-card"
-                    style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
-                    <div class="opp-card__main">
-                        <div class="opp-card__info">
-                            <h4 class="opp-card__name">{{ domain.name }}</h4>
-                            <div class="opp-card__tags">
-                                @if (domain.description) {
-                                <span class="opp-card__meta">{{ domain.description }}</span>
-                                }
-                            </div>
-                        </div>
-                        <div class="opp-card__value">
-                            <p class="opp-card__amount">{{ domain.intent_count }}</p>
-                            <p class="opp-card__amount-label">Intents</p>
-                        </div>
-                    </div>
-                </a>
-                }
-            </div>
-            }
-        </section>
-        }
-
-        <!-- ══ Intents Tab ══ -->
-        @if (activeTab === 'intents') {
-        <section class="tab-section">
-            @if (intents.length === 0) {
-            <div class="empty-state">No intents defined</div>
-            } @else {
-            <div class="opp-list">
-                @for (intent of intents; track intent.id) {
-                <a [routerLink]="['/settings/bob-control-center/library/intent', intent.id]" class="opp-card"
-                    style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
-                    <div class="opp-card__main">
-                        <div class="opp-card__info">
-                            <h4 class="opp-card__name">{{ intent.name }}</h4>
-                            <div class="opp-card__tags">
-                                @if (intent.domain_name) {
-                                <span class="stage-badge">{{ intent.domain_name }}</span>
-                                }
-                                <span class="opp-card__meta">{{ intent.task_count }} tasks</span>
-                                @if (intent.trigger_phrases && intent.trigger_phrases.length > 0) {
-                                <span class="opp-card__meta">· {{ intent.trigger_phrases.length }} triggers</span>
-                                }
-                            </div>
-                        </div>
-                        <div class="opp-card__value">
-                            <p class="opp-card__amount">{{ intent.task_count }}</p>
-                            <p class="opp-card__amount-label">Tasks</p>
-                        </div>
-                    </div>
-                </a>
-                }
-            </div>
-            }
-        </section>
-        }
-
-        <!-- ══ Tasks Tab ══ -->
-        @if (activeTab === 'tasks') {
-        <section class="tab-section">
-            @if (taskTemplates.length === 0) {
-            <div class="empty-state">No task templates defined</div>
-            } @else {
-            <div class="opp-list">
-                @for (task of taskTemplates; track task.id) {
-                <a [routerLink]="['/settings/bob-control-center/library/task-template', task.id]" class="opp-card"
-                    style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
-                    <div class="opp-card__main">
-                        <div class="opp-card__info">
-                            <h4 class="opp-card__name">{{ task.name }}</h4>
-                            <div class="opp-card__tags">
-                                @if (task.frequency) {
-                                <span class="stage-badge">{{ task.frequency }}</span>
-                                }
-                                @if (task.category) {
-                                <span class="opp-card__meta">{{ task.category }}</span>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </a>
-                }
-            </div>
-            }
-        </section>
-        }
 
     </div>
 
     <!-- Right Panel -->
     <aside class="org-panel">
+        @if (activeTab === 'cognitive') {
         <div class="panel-section">
-            <h4 class="panel-section__title">Key Information</h4>
+            <h4 class="panel-section__title">Cognitive Structure</h4>
+            <div class="panel-fields">
+                <div class="panel-field">
+                    <p class="panel-field__label">Domains</p>
+                    <p class="panel-field__value">{{ cognitiveStats.domains }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Intents</p>
+                    <p class="panel-field__value">{{ cognitiveStats.intents }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Tasks</p>
+                    <p class="panel-field__value">{{ cognitiveStats.tasks }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Unique Tools</p>
+                    <p class="panel-field__value">{{ cognitiveStats.tools }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Workflows</p>
+                    <p class="panel-field__value">{{ cognitiveStats.workflows }}</p>
+                </div>
+            </div>
+        </div>
+        } @else {
+        <div class="panel-section">
+            <h4 class="panel-section__title">Library</h4>
             <div class="panel-fields">
                 <div class="panel-field">
                     <p class="panel-field__label">Organizations</p>
@@ -261,20 +276,9 @@
                     <p class="panel-field__label">Careers</p>
                     <p class="panel-field__value">{{ careers.length }}</p>
                 </div>
-                <div class="panel-field">
-                    <p class="panel-field__label">Domains</p>
-                    <p class="panel-field__value">{{ domains.length }}</p>
-                </div>
-                <div class="panel-field">
-                    <p class="panel-field__label">Intents</p>
-                    <p class="panel-field__value">{{ intents.length }}</p>
-                </div>
-                <div class="panel-field">
-                    <p class="panel-field__label">Task Templates</p>
-                    <p class="panel-field__value">{{ taskTemplates.length }}</p>
-                </div>
             </div>
         </div>
+        }
 
         <div class="panel-section">
             <h4 class="panel-section__title">Quick Actions</h4>

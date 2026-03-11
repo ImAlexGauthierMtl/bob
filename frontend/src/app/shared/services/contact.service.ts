@@ -38,4 +38,8 @@ export class ContactService {
             organization_id: organizationId ?? null,
         });
     }
+
+    enrichLinkedIn(contactId: string): Observable<any> {
+        return this.http.post(`${API_URL}/contacts/${contactId}/enrich-linkedin`, {});
+    }
 }

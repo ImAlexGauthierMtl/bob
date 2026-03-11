@@ -108,6 +108,51 @@ def get_resume_handler(resume_key: str) -> Optional[Callable]:
     return _RESUME_HANDLERS.get(resume_key)
 
 
+def load_generated_workflows() -> list[str]:
+    """Scan app/agents/generated/ for .py files and import them.
+
+    Each file should contain @workflow() decorated functions that
+    auto-register into _WORKFLOWS on import. Returns list of loaded
+    module names.
+    """
+    import importlib
+    import importlib.util
+    import os
+
+    generated_dir = os.path.join(os.path.dirname(__file__), "generated")
+    if not os.path.isdir(generated_dir):
+        return []
+
+    loaded = []
+    for filename in sorted(os.listdir(generated_dir)):
+        if not filename.endswith(".py") or filename == "__init__.py":
+            continue
+
+        module_name = f"app.agents.generated.{filename[:-3]}"
+        filepath = os.path.join(generated_dir, filename)
+
+        try:
+            if module_name in importlib.sys.modules:
+                importlib.reload(importlib.sys.modules[module_name])
+            else:
+                spec = importlib.util.spec_from_file_location(module_name, filepath)
+                if spec and spec.loader:
+                    mod = importlib.util.module_from_spec(spec)
+                    importlib.sys.modules[module_name] = mod
+                    spec.loader.exec_module(mod)
+
+            loaded.append(filename[:-3])
+            logger.info("generated_workflow_loaded", module=module_name)
+        except Exception as e:
+            logger.error("generated_workflow_load_failed", module=module_name, error=str(e))
+
+    return loaded
+
+
+# Load generated workflows on import
+load_generated_workflows()
+
+
 # ═══════════════════════════════════════════════════════════════
 #  WORKFLOW: create_prospect
 #  Triggered by: "nouveau prospect", "ajoute une opportunité", etc.
@@ -1220,4 +1265,126 @@ def overdue_activities_flow(ctx: WorkflowContext) -> WorkflowResult:
     ctx.add_tool_step("overdue activities")
     return ctx.complete(message=f"⚠️ **{len(activities)}** activité(s) en retard — à traiter rapidement !")
 
+
+# ═══════════════════════════════════════════════════════════════
+#  WORKFLOW: build_bcc
+#  Triggered by: "Configure Bob", "Set up BCC", "Build the cognitive structure"
+# ═══════════════════════════════════════════════════════════════
+
+@workflow("build_bcc")
+def build_bcc_flow(ctx: WorkflowContext) -> WorkflowResult:
+    """Deep Agent invocation — plan, confirm, then build BCC structure.
+
+    Step 1 (initial): Show the plan from supervisor, pause for confirmation.
+    Step 2 (resume): Run the full deep agent graph.
+    """
+    import asyncio
+    from app.agents.deep_agent_graph import supervisor_node, DeepAgentState
+
+    instruction = ctx.user_message or ctx.entities.search_query or "Build the default BCC cognitive structure"
+
+    agent_state: DeepAgentState = {
+        "tenant_id": ctx.tenant_id,
+        "user_id": ctx.user_id,
+        "user_email": ctx.user_email,
+        "instruction": instruction,
+        "plan": {},
+        "domains_created": [],
+        "intents_created": [],
+        "tasks_created": [],
+        "review_result": {},
+        "status": "planning",
+        "error": None,
+        "revision_count": 0,
+    }
+
+    agent_state = supervisor_node(agent_state)
+    if agent_state.get("error"):
+        return ctx.complete(message=f"Deep Agent failed to plan: {agent_state['error']}")
+
+    plan = agent_state.get("plan", {})
+    domains = plan.get("domains", [])
+    total_intents = sum(len(d.get("intents", [])) for d in domains)
+    total_tasks = sum(
+        len(t.get("tasks", []))
+        for d in domains
+        for t in d.get("intents", [])
+    )
+
+    plan_summary = f"🧠 **Deep Agent Plan**\n\n"
+    plan_summary += f"I'll create **{len(domains)} domains**, **{total_intents} intents**, and **{total_tasks} tasks**.\n\n"
+    for d in domains:
+        plan_summary += f"**{d['name']}** ({d.get('icon', '')})\n"
+        for i in d.get("intents", []):
+            plan_summary += f"  • `{i['name']}` — {len(i.get('tasks', []))} tasks"
+            if i.get("workflow_key"):
+                plan_summary += f" (workflow: `{i['workflow_key']}`)"
+            plan_summary += "\n"
+        plan_summary += "\n"
+    plan_summary += "**Confirm to proceed.** Say 'yes' or 'confirm'."
+
+    ctx.state["deep_agent_plan"] = plan
+    ctx.state["deep_agent_instruction"] = instruction
+    ctx.add_tool_step("deep_agent_supervisor")
+
+    return ctx.pause(message=plan_summary, resume_key="build_bcc_confirm")
+
+
+@resume_handler("build_bcc_confirm")
+def build_bcc_confirm(ctx: WorkflowContext) -> WorkflowResult:
+    """Execute the Deep Agent after user confirmation."""
+    import asyncio
+    from app.agents.deep_agent_graph import run_deep_agent
+
+    user_msg = (ctx.user_message or "").lower().strip()
+    if user_msg not in ("yes", "oui", "confirm", "confirme", "go", "ok", "y"):
+        return ctx.complete(message="Deep Agent execution cancelled.")
+
+    plan = ctx.state.get("deep_agent_plan", {})
+    instruction = ctx.state.get("deep_agent_instruction", "")
+
+    ctx.add_tool_step("deep_agent_building")
+
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                result = pool.submit(
+                    asyncio.run,
+                    run_deep_agent(
+                        instruction=instruction,
+                        tenant_id=ctx.tenant_id,
+                        user_id=ctx.user_id,
+                        user_email=ctx.user_email,
+                    ),
+                ).result()
+        else:
+            result = asyncio.run(run_deep_agent(
+                instruction=instruction,
+                tenant_id=ctx.tenant_id,
+                user_id=ctx.user_id,
+                user_email=ctx.user_email,
+            ))
+    except Exception as e:
+        return ctx.complete(message=f"Deep Agent failed: {str(e)}")
+
+    if result.get("error"):
+        return ctx.complete(message=f"Deep Agent encountered an error: {result['error']}")
+
+    msg = (
+        f"✅ **Deep Agent completed!**\n\n"
+        f"- **{result.get('domains_created', 0)}** new domains\n"
+        f"- **{result.get('intents_created', 0)}** new intents\n"
+        f"- **{result.get('tasks_created', 0)}** new tasks\n\n"
+    )
+
+    review = result.get("review", {})
+    if review.get("summary"):
+        msg += f"**Review:** {review['summary']}\n\n"
+
+    msg += "View your updated cognitive structure in **BCC → Cognitive Flow**."
+
+    ctx.add_tool_step("deep_agent_complete")
+    return ctx.complete(message=msg)
 

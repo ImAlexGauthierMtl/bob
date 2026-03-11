@@ -19,6 +19,38 @@
     color: var(--color-gray-400);
 }
 
+/* ── Not Found ────────────────────────────────────────────── */
+
+.not-found-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-16) var(--space-8);
+    text-align: center;
+    min-height: 60vh;
+}
+
+.not-found-state__icon {
+    font-size: 3rem;
+    color: var(--color-gray-300);
+    margin-bottom: var(--space-6);
+}
+
+.not-found-state__title {
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-light);
+    color: var(--color-black);
+    margin: 0 0 var(--space-3) 0;
+}
+
+.not-found-state__desc {
+    font-size: 0.875rem;
+    color: var(--color-gray-500);
+    margin: 0 0 var(--space-8) 0;
+    max-width: 30rem;
+}
+
 /* ── Responsive Helpers ───────────────────────────────────── */
 
 .lg-hidden {
@@ -398,6 +430,183 @@
     font-weight: var(--font-weight-light);
 }
 
+/* ── Recent Activities & Documents ───────────────────────── */
+
+.activity-item {
+    padding: var(--space-6);
+    display: flex;
+    gap: var(--space-4);
+    align-items: flex-start;
+    border-bottom: 1px solid var(--color-gray-100);
+    transition: background-color var(--transition-base);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-item:hover {
+    background-color: var(--color-gray-50);
+}
+
+.activity-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    /* Adjust to standard design in Bob CRM if needed, or keep square as in HTML */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.activity-icon--call {
+    background-color: #dbeafe;
+    /* Tailwind blue-100 */
+    color: #2563eb;
+    /* Tailwind blue-600 */
+}
+
+.activity-icon--email {
+    background-color: #dcfce7;
+    /* Tailwind green-100 */
+    color: #16a34a;
+    /* Tailwind green-600 */
+}
+
+.activity-icon--meeting {
+    background-color: #f3e8ff;
+    /* Tailwind purple-100 */
+    color: #9333ea;
+    /* Tailwind purple-600 */
+}
+
+.activity-icon--task {
+    background-color: #ffedd5;
+    /* Tailwind orange-100 */
+    color: #ea580c;
+    /* Tailwind orange-600 */
+}
+
+.activity-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.activity-title {
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    margin: 0 0 var(--space-1) 0;
+}
+
+.activity-desc {
+    font-size: 0.875rem;
+    color: var(--color-gray-600);
+    margin: 0 0 var(--space-2) 0;
+}
+
+.activity-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+
+.activity-meta-text {
+    font-size: 0.75rem;
+    color: var(--color-gray-400);
+}
+
+.activity-meta-user {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.activity-meta-avatar {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+    background-color: var(--color-gray-300);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: white;
+}
+
+.activity-meta-name {
+    font-size: 0.75rem;
+    color: var(--color-gray-600);
+}
+
+/* ── Documents List ──────────────────────────────────────── */
+
+.document-item {
+    padding: var(--space-6);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--color-gray-100);
+    transition: background-color var(--transition-base);
+}
+
+.document-item:last-child {
+    border-bottom: none;
+}
+
+.document-item:hover {
+    background-color: var(--color-gray-50);
+}
+
+.document-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex: 1;
+}
+
+.document-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.document-icon--pdf {
+    background-color: #fee2e2;
+    /* Tailwind red-100 */
+    color: #dc2626;
+    /* Tailwind red-600 */
+}
+
+.document-title {
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    margin: 0;
+}
+
+.document-meta {
+    font-size: 0.75rem;
+    color: var(--color-gray-400);
+    margin: 0;
+}
+
+.document-action {
+    color: var(--color-gray-400);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color var(--transition-base);
+}
+
+.document-action:hover {
+    color: var(--color-accent);
+}
+
 /* ── Data Table ──────────────────────────────────────────── */
 
 .table-container {
@@ -754,6 +963,17 @@
 
 .panel-action i {
     font-size: 0.75rem;
+}
+
+.panel-action--accent {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    font-weight: var(--font-weight-semibold);
+}
+
+.panel-action--accent:hover {
+    background: var(--color-accent);
+    color: #fff;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1139,6 +1359,53 @@
 .profile-tag--accent {
     background-color: var(--color-accent-10);
     color: var(--color-accent);
+}
+
+/* ── List Items (for intelligence sections) ──────────────── */
+
+.profile-list-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.profile-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    font-size: 0.8125rem;
+    color: var(--color-gray-700);
+    font-weight: var(--font-weight-light);
+    line-height: 1.5;
+    background-color: var(--color-gray-50);
+    transition: background-color var(--transition-base);
+}
+
+.profile-list-item:hover {
+    background-color: var(--color-accent-10);
+}
+
+.profile-list-item__icon {
+    font-size: 0.5rem;
+    color: var(--color-accent);
+    margin-top: 0.35rem;
+    flex-shrink: 0;
+}
+
+/* ── Compact Data Table ─────────────────────────────────── */
+
+.data-table--compact {
+    font-size: 0.8125rem;
+}
+
+.data-table--compact th {
+    padding: var(--space-3) var(--space-4);
+    font-size: 0.7rem;
+}
+
+.data-table--compact td {
+    padding: var(--space-3) var(--space-4);
 }
 
 /* ── Profile Actions ─────────────────────────────────────── */

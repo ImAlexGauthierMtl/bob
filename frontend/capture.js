@@ -90,9 +90,27 @@ const fs = require('fs');
         if (contactLinks.length > 0) {
             await contactLinks[0].click();
             await page.waitForTimeout(2000);
-            // Ticket 67958 & 67964 & 67965 (Activities section)
+            // Overview tab (default)
             await page.screenshot({ path: path.join(screenshotsDir, '67958.png'), fullPage: true });
+
+            // Interactions tab
+            console.log("Clicking Interactions tab...");
+            await page.click('button:has-text("Interactions")');
+            await page.waitForTimeout(1000);
+            await page.screenshot({ path: path.join(screenshotsDir, 'contact_interactions.png'), fullPage: true });
+
+            // Activities tab
+            console.log("Clicking Activities tab...");
+            await page.click('button:has-text("Activities")');
+            await page.waitForTimeout(1000);
+            await page.screenshot({ path: path.join(screenshotsDir, 'contact_activities.png'), fullPage: true });
             await page.screenshot({ path: path.join(screenshotsDir, '67964.png'), fullPage: true });
+
+            // Notes tab
+            console.log("Clicking Notes tab...");
+            await page.click('button:has-text("Notes")');
+            await page.waitForTimeout(1000);
+            await page.screenshot({ path: path.join(screenshotsDir, 'contact_notes.png'), fullPage: true });
         } else {
             console.log("No contact found to click");
         }

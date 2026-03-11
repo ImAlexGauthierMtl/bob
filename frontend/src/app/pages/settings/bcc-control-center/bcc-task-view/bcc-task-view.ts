@@ -7,7 +7,7 @@ import { BccTask } from '../../../../shared/models/bcc.model';
 @Component({
     selector: 'croo-bcc-task-view',
     standalone: true,
-    imports: [RouterLink, UpperCasePipe, KeyValuePipe],
+    imports: [RouterLink, UpperCasePipe],
     templateUrl: './bcc-task-view.html',
     styleUrls: [
         '../../settings-shared.css',

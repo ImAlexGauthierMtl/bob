@@ -6,7 +6,7 @@ import { Product, ProductCategory } from '../../../shared/models/product.model';
 @Component({
     selector: 'croo-settings-products',
     standalone: true,
-    imports: [RouterLink],
+    imports: [],
     templateUrl: './settings-products.html',
     styleUrls: ['../settings-shared.css', './settings-products.css'],
 })

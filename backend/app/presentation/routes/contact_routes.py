@@ -103,3 +103,54 @@ async def delete_contact(
     asyncio.ensure_future(event_bus.publish(
         "contact.deleted", {"contact_id": contact_id}, db, current_user["tenant_id"], current_user["email"]
     ))
+
+
+@router.post("/{contact_id}/enrich-linkedin")
+async def enrich_contact_linkedin(
+    contact_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Trigger Bob's Rolodex (Bright Data LinkedIn enrichment) for a contact.
+
+    Returns immediately, runs enrichment in background.
+    """
+    import asyncio
+    from app.infrastructure.database import SessionLocal
+
+    repo = ContactRepository(db)
+    contact = repo.get_by_id(contact_id, current_user["tenant_id"])
+    if not contact:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found")
+
+    # Check linkedin_url OR contact_profile.linkedin (Hunter.io stores it there)
+    linkedin_url = contact.linkedin_url
+    if not linkedin_url and contact.contact_profile:
+        linkedin_url = contact.contact_profile.get("linkedin")
+    if not linkedin_url:
+        raise HTTPException(status_code=400, detail="No LinkedIn URL on this contact")
+
+    async def _run_in_background():
+        bg_db = SessionLocal()
+        try:
+            from app.application.use_cases.enrich_contact_linkedin import EnrichContactLinkedInUseCase
+            use_case = EnrichContactLinkedInUseCase(bg_db)
+            await use_case.execute(
+                contact_id=contact_id,
+                tenant_id=current_user["tenant_id"],
+                user_email=current_user["email"],
+            )
+        except Exception as e:
+            import structlog
+            structlog.get_logger().error("contact_enrich_bg_error", error=str(e))
+        finally:
+            bg_db.close()
+
+    asyncio.create_task(_run_in_background())
+
+    return {
+        "contact_id": contact_id,
+        "status": "enriching",
+        "message": "Bob's Rolodex enrichment started",
+    }
+

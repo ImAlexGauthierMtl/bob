@@ -44,10 +44,13 @@ async def create_activity(
     db: Session = Depends(get_db),
 ):
     repo = ActivityRepository(db)
-    if not data.owner_id:
-        data.owner_id = current_user["user_id"]
-    activity = Activity(**data.model_dump(exclude_none=True), tenant_id=current_user["tenant_id"], created_by=current_user["email"])
-    created = repo.create(activity)
+    payload = data.model_dump(exclude_none=True)
+    if not payload.get("owner_id"):
+        payload["owner_id"] = current_user["user_id"]
+        
+    created = repo.create(payload, tenant_id=current_user["tenant_id"])
+    created.created_by = current_user["email"]
+    db.commit()
     import asyncio
     from app.agents.event_bus import event_bus
     asyncio.ensure_future(event_bus.publish(
@@ -81,10 +84,15 @@ async def update_activity(
     activity = repo.get_by_id(activity_id, current_user["tenant_id"])
     if not activity:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activity not found")
-    for k, v in data.model_dump(exclude_none=True).items():
-        setattr(activity, k, v)
+        
+    payload = data.model_dump(exclude_none=True)
+    # Exclude relation lists from being directly set as attributes
+    for k, v in payload.items():
+        if k not in ["organization_ids", "contact_ids", "opportunity_ids"]:
+            setattr(activity, k, v)
+            
     activity.updated_by = current_user["email"]
-    updated = repo.update(activity)
+    updated = repo.update(activity, payload=payload)
     import asyncio
     from app.agents.event_bus import event_bus
     # Fire both updated and completed events (for meeting follow-up templates)

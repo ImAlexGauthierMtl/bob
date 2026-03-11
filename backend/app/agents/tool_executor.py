@@ -50,19 +50,22 @@ async def execute_bob_tool(tool_name: str, args: Dict[str, Any], user_context: d
     # ── 1. Search APIs ──────────────────────────────────────────
     if tool_name == "search_contacts":
         from app.domain.entities.contact import Contact
-        query = args.get("query", "").lower()
+        from sqlalchemy import or_
+        query = args.get("query", "").lower().strip()
         limit = args.get("limit", 5)
         
-        # Simple ilike filter
-        contacts = db.query(Contact).filter(
+        q = db.query(Contact).filter(
             Contact.tenant_id == user_context["tenant_id"]
-        ).limit(limit).all()
-        
-        # In-memory filter fallback
-        filtered = [
-            c for c in contacts 
-            if query in (c.first_name + c.last_name + (c.email or "")).lower()
-        ][:limit]
+        )
+        if query:
+            q = q.filter(
+                or_(
+                    Contact.first_name.ilike(f"%{query}%"),
+                    Contact.last_name.ilike(f"%{query}%"),
+                    Contact.email.ilike(f"%{query}%"),
+                )
+            )
+        contacts = q.limit(limit).all()
         
         return {
             "status": "ok",
@@ -72,40 +75,55 @@ async def execute_bob_tool(tool_name: str, args: Dict[str, Any], user_context: d
                     "name": f"{c.first_name} {c.last_name}",
                     "email": c.email,
                 }
-                for c in (filtered if query else contacts[:limit])
+                for c in contacts
             ]
         }
 
     elif tool_name == "search_and_open_entity":
         entity_type = args.get("entity", "organization")
-        query = args.get("query", "").lower()
+        query = args.get("query", "").lower().strip()
         
-        # 1. Dispatch search internally
+        if not query:
+            return {"status": "error", "message": "No search query provided."}
+        
+        # 1. Dispatch search using proper DB ilike queries
         if entity_type == "organization":
             from app.domain.entities.organization import Organization
-            items = db.query(Organization).filter(
-                Organization.tenant_id == user_context["tenant_id"]
+            filtered = db.query(Organization).filter(
+                Organization.tenant_id == user_context["tenant_id"],
+                Organization.name.ilike(f"%{query}%"),
             ).limit(5).all()
-            filtered = [o for o in items if not query or query in (o.name + (o.website or "")).lower()]
             base_route = "organizations"
         elif entity_type == "contact":
             from app.domain.entities.contact import Contact
-            items = db.query(Contact).filter(
-                Contact.tenant_id == user_context["tenant_id"]
+            from sqlalchemy import or_
+            filtered = db.query(Contact).filter(
+                Contact.tenant_id == user_context["tenant_id"],
+                or_(
+                    Contact.first_name.ilike(f"%{query}%"),
+                    Contact.last_name.ilike(f"%{query}%"),
+                    Contact.email.ilike(f"%{query}%"),
+                ),
             ).limit(5).all()
-            filtered = [c for c in items if not query or query in (c.first_name + c.last_name + (c.email or "")).lower()]
             base_route = "contacts"
         elif entity_type == "opportunity":
             from app.domain.entities.opportunity import Opportunity
-            items = db.query(Opportunity).filter(
-                Opportunity.tenant_id == user_context["tenant_id"]
+            filtered = db.query(Opportunity).filter(
+                Opportunity.tenant_id == user_context["tenant_id"],
+                Opportunity.name.ilike(f"%{query}%"),
             ).limit(5).all()
-            filtered = [o for o in items if not query or query in (o.name).lower()]
             base_route = "opportunities"
         else:
             return {"status": "error", "message": f"Unsupported entity {entity_type}"}
             
         if filtered:
+            logger.info(
+                "search_and_open_entity_found",
+                entity_type=entity_type,
+                query=query,
+                result_id=str(filtered[0].id),
+                result_count=len(filtered),
+            )
             return {
                 "status": "ok",
                 "action": "navigate",
@@ -113,6 +131,11 @@ async def execute_bob_tool(tool_name: str, args: Dict[str, Any], user_context: d
                 "message": f"Opened {entity_type} details."
             }
         else:
+            logger.info(
+                "search_and_open_entity_not_found",
+                entity_type=entity_type,
+                query=query,
+            )
             return {
                 "status": "error",
                 "message": f"Could not find {entity_type} matching '{query}'."
@@ -473,14 +496,12 @@ async def execute_bob_tool(tool_name: str, args: Dict[str, Any], user_context: d
         return {"status": "ok", "profile": profile}
 
     elif tool_name == "upsert_bcc_profile_from_interaction":
-        # Knowledge extractor module not yet implemented — safe stub
-        logger.warning("tool_not_implemented", tool=tool_name)
-        return {"status": "error", "message": "Knowledge extractor not yet available."}
+        # Delegate to the real bcc_update_profile implementation
+        return await execute_bob_tool("bcc_update_profile", args, user_context, db)
 
     elif tool_name == "get_bcc_profile_context":
-        # Knowledge extractor module not yet implemented — safe stub
-        logger.warning("tool_not_implemented", tool=tool_name)
-        return {"status": "ok", "markdown": "No specific knowledge profile found yet."}
+        # Delegate to the real bcc_get_profile implementation
+        return await execute_bob_tool("bcc_get_profile", args, user_context, db)
         
     # ── 4. Training Overlay Tools ──────────────────────────────
     elif tool_name == "save_training_note":

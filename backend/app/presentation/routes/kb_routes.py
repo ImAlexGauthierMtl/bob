@@ -61,11 +61,14 @@ async def list_articles(
     db: Session = Depends(get_db),
 ):
     repo = KBRepository(db)
+    user_roles = current_user.get("roles", [])
     items = repo.list_articles(
         current_user["tenant_id"], skip, limit, search, category_id, visibility,
+        user_roles=user_roles,
     )
     total = repo.count_articles(
         current_user["tenant_id"], category_id, visibility,
+        user_roles=user_roles,
     )
     return ArticleListResponse(
         items=[ArticleSummaryResponse.model_validate(a) for a in items],
@@ -80,7 +83,8 @@ async def popular_articles(
     db: Session = Depends(get_db),
 ):
     repo = KBRepository(db)
-    items = repo.popular_articles(current_user["tenant_id"], limit)
+    user_roles = current_user.get("roles", [])
+    items = repo.popular_articles(current_user["tenant_id"], limit, user_roles=user_roles)
     return [ArticleSummaryResponse.model_validate(a) for a in items]
 
 

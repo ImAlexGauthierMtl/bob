@@ -51,7 +51,7 @@ async def bob_voice_ws(websocket: WebSocket, token: str = ""):
 
     Audio format:
     - Input: Raw PCM audio (16kHz, 16-bit, mono)
-    - Output: PCM audio with WAV header (48kHz from Groq TTS)
+    - Output: Raw PCM audio (24kHz, no WAV header)
     """
     # ── Auth ─────────────────────────────────────────────
     user = _verify_ws_token(token)
@@ -86,10 +86,25 @@ async def bob_voice_ws(websocket: WebSocket, token: str = ""):
     # ── Accept connection ────────────────────────────────
     await websocket.accept()
 
-    # ── Create session ───────────────────────────────────
+    # ── Resolve tenant_id from DB (JWT doesn't carry it) ───
+    resolved_tenant_id = user.get("tenant_id", "")
+    if not resolved_tenant_id:
+        try:
+            from app.infrastructure.database import SessionLocal
+            from app.domain.entities.user import User
+            _db = SessionLocal()
+            try:
+                _u = _db.query(User).filter(User.id == user.get("sub")).first()
+                if _u:
+                    resolved_tenant_id = _u.tenant_id or ""
+            finally:
+                _db.close()
+        except Exception as _e:
+            logger.warning("voice_tenant_lookup_failed", error=str(_e))
+
     session = await voice_session_manager.create_session(
         user_id=user.get("sub", ""),
-        tenant_id=user.get("tenant_id", ""),
+        tenant_id=resolved_tenant_id,
         user_email=user.get("email", ""),
         max_duration_minutes=settings.voice_max_session_minutes,
     )

@@ -448,3 +448,236 @@
     font-size: 0.75rem;
     padding: var(--space-2) var(--space-4);
 }
+
+/* ═══ Cognitive Flow Tree ═══ */
+
+.cognitive-tree {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.cog-domain {
+    border: 1px solid var(--color-gray-100);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: box-shadow 0.15s ease;
+}
+
+.cog-domain:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.cog-domain__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+    cursor: pointer;
+    user-select: none;
+    background: var(--color-gray-25);
+    transition: background 0.15s ease;
+}
+
+.cog-domain__header:hover {
+    background: var(--color-gray-50);
+}
+
+.cog-domain__toggle {
+    width: 16px;
+    color: var(--color-gray-400);
+    font-size: 0.75rem;
+}
+
+.cog-domain__icon {
+    color: var(--color-accent);
+    font-size: 1.1rem;
+}
+
+.cog-domain__name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    flex: 1;
+    margin: 0;
+}
+
+.cog-domain__meta {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.cog-domain__desc {
+    font-size: 0.8rem;
+    color: var(--color-gray-500);
+    margin: 0 0 var(--space-3) 0;
+    padding: 0 var(--space-5);
+}
+
+.cog-domain__body {
+    padding: var(--space-2) var(--space-5) var(--space-4);
+}
+
+/* ── Intent Row ── */
+
+.cog-intent {
+    border-left: 2px solid var(--color-gray-100);
+    margin-left: var(--space-4);
+    margin-bottom: var(--space-1);
+}
+
+.cog-intent__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    cursor: pointer;
+    user-select: none;
+    border-radius: var(--radius-md);
+    transition: background 0.15s ease;
+}
+
+.cog-intent__header:hover {
+    background: var(--color-gray-50);
+}
+
+.cog-intent__toggle {
+    width: 14px;
+    color: var(--color-gray-400);
+    font-size: 0.65rem;
+}
+
+.cog-intent__icon {
+    color: var(--color-gray-400);
+    font-size: 0.75rem;
+}
+
+.cog-intent__name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-gray-800);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.cog-intent__task-count {
+    font-size: 0.7rem;
+    color: var(--color-gray-400);
+    margin-left: auto;
+}
+
+.cog-intent__body {
+    padding: var(--space-2) var(--space-3) var(--space-3) var(--space-8);
+}
+
+/* ── Triggers ── */
+
+.cog-triggers {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    margin-bottom: var(--space-2);
+}
+
+.cog-triggers__label {
+    font-size: 0.7rem;
+    color: var(--color-gray-400);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.cog-chip {
+    font-size: 0.7rem;
+    padding: 1px var(--space-2);
+    border-radius: var(--radius-full);
+    background: var(--color-gray-50);
+    border: 1px solid var(--color-gray-100);
+    color: var(--color-gray-600);
+}
+
+/* ── Task Steps ── */
+
+.cog-task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cog-task {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    transition: background 0.1s ease;
+}
+
+.cog-task:hover {
+    background: var(--color-gray-25);
+}
+
+.cog-task__order {
+    font-size: 0.75rem;
+    color: var(--color-gray-400);
+    font-weight: 600;
+    min-width: 18px;
+}
+
+.cog-task__name {
+    font-size: 0.8rem;
+    color: var(--color-gray-700);
+    text-decoration: none;
+    flex: 1;
+}
+
+.cog-task__name:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+}
+
+/* ── Badges ── */
+
+.cog-badge {
+    font-size: 0.65rem;
+    padding: 1px var(--space-2);
+    border-radius: var(--radius-full);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.cog-badge--domain {
+    background: rgba(59, 130, 246, 0.08);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.cog-badge--task {
+    background: rgba(34, 197, 94, 0.08);
+    color: #16a34a;
+    border: 1px solid rgba(34, 197, 94, 0.15);
+}
+
+.cog-badge--workflow {
+    background: rgba(168, 85, 247, 0.08);
+    color: #9333ea;
+    border: 1px solid rgba(168, 85, 247, 0.15);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.6rem;
+}
+
+.cog-badge--pipeline {
+    background: rgba(245, 158, 11, 0.08);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.15);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.6rem;
+}
+
+.cog-badge--tool {
+    background: rgba(255, 69, 0, 0.06);
+    color: #e03e00;
+    border: 1px solid rgba(255, 69, 0, 0.12);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.6rem;
+}

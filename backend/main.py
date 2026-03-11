@@ -29,6 +29,7 @@ async def lifespan(app: FastAPI):
     from app.infrastructure.seed_capabilities import seed_capabilities
     from app.infrastructure.seed_workflows import seed_workflows
     from app.infrastructure.seed_bcc import seed_bcc
+    from app.infrastructure.seed_bcc_cognitive import seed_bcc_cognitive
     from app.infrastructure.seed_roles import seed_roles
     from app.infrastructure.seed_rate_cards import seed_rate_cards
 
@@ -45,7 +46,13 @@ async def lifespan(app: FastAPI):
         if admin:
             seed_workflows(db, tenant_id=admin.tenant_id)
             seed_bcc(db, tenant_id=admin.tenant_id)
+            seed_bcc_cognitive(db, tenant_id=admin.tenant_id)
             seed_roles(db, tenant_id=admin.tenant_id)
+        # Seed cognitive structure for all tenants
+        from sqlalchemy import distinct
+        all_tenants = [r[0] for r in db.query(distinct(user.User.tenant_id)).all()]
+        for tid in all_tenants:
+            seed_bcc_cognitive(db, tenant_id=tid)
         seed_rate_cards(db)
     finally:
         db.close()
@@ -97,6 +104,7 @@ from app.presentation.routes.role_routes import router as role_router
 from app.presentation.routes.tenant_routes import router as tenant_router
 from app.presentation.routes.product_routes import router as product_router
 from app.presentation.routes.usage_routes import router as usage_router
+from app.middleware.metrics import router as metrics_router
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(search_router, tags=["search"])
@@ -122,6 +130,7 @@ app.include_router(role_router, tags=["roles"])
 app.include_router(tenant_router, tags=["tenants"])
 app.include_router(product_router, tags=["products"])
 app.include_router(usage_router, tags=["usage"])
+app.include_router(metrics_router, tags=["metrics"])
 
 
 @app.get("/health", tags=["monitoring"])

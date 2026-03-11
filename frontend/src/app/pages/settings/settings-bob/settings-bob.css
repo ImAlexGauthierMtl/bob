@@ -170,7 +170,29 @@
     color: var(--color-gray-500);
 }
 
+/* ── Session Note ────────────────────────────────────────── */
+.bob-session-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #1d4ed8;
+    margin-bottom: 1.25rem;
+    line-height: 1.4;
+}
+
+.bob-session-note i {
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+}
+
 /* ── Save Bar ────────────────────────────────────────────── */
+
 .bob-save-bar {
     display: flex;
     align-items: center;

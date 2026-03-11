@@ -2,16 +2,40 @@
 
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from app.domain.entities.kb_article import KBArticle, KBCategory, ArticleVisibility
 
 
 class KBRepository:
-    """Repository for Knowledge Base data access with visibility filtering."""
+    """Repository for Knowledge Base data access with visibility and access control."""
 
     def __init__(self, db: Session):
         self.db = db
+
+    def _apply_access_filters(self, query, user_roles: list[str] | None = None, user_modules: list[str] | None = None):
+        """Apply required_module and required_role filters to a query.
+
+        Articles with no required_module/required_role are accessible to everyone.
+        Articles with constraints require the user to have matching role/module.
+        """
+        if user_roles is not None:
+            query = query.filter(
+                or_(
+                    KBArticle.required_role.is_(None),
+                    KBArticle.required_role == "",
+                    KBArticle.required_role.in_(user_roles),
+                )
+            )
+        if user_modules is not None:
+            query = query.filter(
+                or_(
+                    KBArticle.required_module.is_(None),
+                    KBArticle.required_module == "",
+                    KBArticle.required_module.in_(user_modules),
+                )
+            )
+        return query
 
     # ── Categories ───────────────────────────────
 
@@ -95,6 +119,8 @@ class KBRepository:
         category_id: Optional[str] = None,
         visibility: Optional[str] = None,
         published_only: bool = True,
+        user_roles: list[str] | None = None,
+        user_modules: list[str] | None = None,
     ) -> List[KBArticle]:
         query = self.db.query(KBArticle).filter(
             KBArticle.tenant_id == tenant_id,
@@ -111,6 +137,7 @@ class KBRepository:
             query = query.filter(KBArticle.category_id == category_id)
         if visibility:
             query = query.filter(KBArticle.visibility == visibility)
+        query = self._apply_access_filters(query, user_roles, user_modules)
         return (
             query.order_by(KBArticle.is_featured.desc(), KBArticle.created_at.desc())
             .offset(skip)
@@ -124,6 +151,8 @@ class KBRepository:
         category_id: Optional[str] = None,
         visibility: Optional[str] = None,
         published_only: bool = True,
+        user_roles: list[str] | None = None,
+        user_modules: list[str] | None = None,
     ) -> int:
         query = self.db.query(KBArticle).filter(
             KBArticle.tenant_id == tenant_id,
@@ -135,20 +164,26 @@ class KBRepository:
             query = query.filter(KBArticle.category_id == category_id)
         if visibility:
             query = query.filter(KBArticle.visibility == visibility)
+        query = self._apply_access_filters(query, user_roles, user_modules)
         return query.count()
 
-    def popular_articles(self, tenant_id: str, limit: int = 10) -> List[KBArticle]:
-        return (
+    def popular_articles(
+        self,
+        tenant_id: str,
+        limit: int = 10,
+        user_roles: list[str] | None = None,
+        user_modules: list[str] | None = None,
+    ) -> List[KBArticle]:
+        query = (
             self.db.query(KBArticle)
             .filter(
                 KBArticle.tenant_id == tenant_id,
                 KBArticle.is_deleted == False,
                 KBArticle.is_published == True,
             )
-            .order_by(KBArticle.view_count.desc())
-            .limit(limit)
-            .all()
         )
+        query = self._apply_access_filters(query, user_roles, user_modules)
+        return query.order_by(KBArticle.view_count.desc()).limit(limit).all()
 
     def increment_view_count(self, article: KBArticle) -> None:
         article.view_count = (article.view_count or 0) + 1

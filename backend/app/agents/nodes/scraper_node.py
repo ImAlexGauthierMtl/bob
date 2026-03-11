@@ -111,7 +111,11 @@ async def scraper_node(state: EnrichmentState) -> dict:
         "Accept-Language": "fr-CA,fr;q=0.9,en;q=0.8",
     }
 
-    async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(connect=5.0, read=15.0, write=5.0, pool=5.0),
+        follow_redirects=True,
+        limits=httpx.Limits(max_connections=5),
+    ) as client:
         # Phase 1: Scrape homepage and discover internal pages
         homepage_url = urls[0] if urls else None
         internal_pages: list[str] = []

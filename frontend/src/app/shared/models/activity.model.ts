@@ -9,9 +9,9 @@ export interface Activity {
     status: string;
     due_date: string | null;
     completed_at: string | null;
-    organization_id: string | null;
-    contact_id: string | null;
-    opportunity_id: string | null;
+    organization_ids: string[];
+    contact_ids: string[];
+    opportunity_ids: string[];
     assigned_to: string | null;
     owner_id: string | null;
     created_at: string;
@@ -32,9 +32,9 @@ export interface CreateActivityDto {
     priority?: string;
     status?: string;
     due_date?: string;
-    organization_id?: string;
-    contact_id?: string;
-    opportunity_id?: string;
+    organization_ids?: string[];
+    contact_ids?: string[];
+    opportunity_ids?: string[];
     assigned_to?: string;
     owner_id?: string;
 }

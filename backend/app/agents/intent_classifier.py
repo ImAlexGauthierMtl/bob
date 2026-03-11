@@ -16,7 +16,25 @@ from app.config import settings
 logger = structlog.get_logger(__name__)
 
 
-# ── Supported intents ─────────────────────────────────────────
+def load_supported_intents_from_bcc(db, tenant_id: str) -> list[str]:
+    """Load intent names from BCC, falling back to hardcoded list."""
+    try:
+        from app.domain.entities.bcc_entities import BccIntent
+        names = [
+            r[0] for r in
+            db.query(BccIntent.name).filter_by(tenant_id=tenant_id).all()
+        ]
+        if names:
+            if "general_chat" not in names:
+                names.append("general_chat")
+            logger.info("intents_loaded_from_bcc", count=len(names))
+            return names
+    except Exception as e:
+        logger.warning("bcc_intent_load_failed", error=str(e))
+    return SUPPORTED_INTENTS
+
+
+# ── Supported intents (hardcoded fallback) ────────────────────
 SUPPORTED_INTENTS = [
     "create_prospect",      # new prospect/opportunity with org + contact + product
     "search_entity",        # find/search an org, contact, or opportunity
@@ -38,6 +56,7 @@ SUPPORTED_INTENTS = [
     "create_activity",      # log a call, email, meeting, task, note
     "today_activities",     # activities due today
     "overdue_activities",   # overdue/past due activities
+    "build_bcc",            # configure Bob, set up BCC, deep agent invocation
     "general_chat",         # everything else — free conversation
 ]
 
@@ -152,6 +171,7 @@ Intent guidelines:
 - "create_activity" = user wants to log a call, note an email, schedule a meeting, create a task or note
 - "today_activities" = user asks about today's activities, schedule, what's planned
 - "overdue_activities" = user asks about overdue activities, missed tasks, late reminders
+- "build_bcc" = user wants to configure Bob, set up domains/intents/tasks in the BCC, "make this happen to the BCC"
 - "general_chat" = greetings, questions, help, anything else
 
 For contact names, split into first and last name when possible.
@@ -242,22 +262,39 @@ def _try_parse_failed_generation(error_str: str) -> Optional[ClassifiedIntent]:
         return None
 
 
+def _build_classify_tool(intent_list: list[str]) -> dict:
+    """Build CLASSIFY_TOOL dynamically from an intent list."""
+    tool = json.loads(json.dumps(CLASSIFY_TOOL))
+    tool["function"]["parameters"]["properties"]["intent"]["enum"] = intent_list
+    return tool
+
+
 def classify_message(
     message: str,
     conversation_context: list[dict] | None = None,
+    db=None,
+    tenant_id: str | None = None,
 ) -> ClassifiedIntent:
     """Classify a user message into an intent with extracted entities.
 
     Uses a single LLM call with a single 'classify' tool.
     Falls back to 'general_chat' if classification fails.
+    When db and tenant_id are provided, loads intents from BCC.
 
     Args:
         message: The user's message text.
         conversation_context: Optional recent messages for context.
+        db: Optional SQLAlchemy session to load BCC intents.
+        tenant_id: Optional tenant ID for BCC filtering.
 
     Returns:
         ClassifiedIntent with intent name and extracted entities.
     """
+    active_intents = SUPPORTED_INTENTS
+    if db and tenant_id:
+        active_intents = load_supported_intents_from_bcc(db, tenant_id)
+
+    classify_tool = _build_classify_tool(active_intents)
     messages = [{"role": "system", "content": CLASSIFIER_PROMPT}]
 
     # Add limited conversation context if available (last 4 messages max)
@@ -272,9 +309,9 @@ def classify_message(
         response = client.chat.completions.create(
             model=settings.bob_model,
             messages=messages,
-            tools=[CLASSIFY_TOOL],
+            tools=[classify_tool],
             tool_choice={"type": "function", "function": {"name": "classify"}},
-            temperature=0.1,  # Low temp for consistent classification
+            temperature=0.1,
             max_tokens=512,
         )
 
@@ -285,7 +322,7 @@ def classify_message(
             args = json.loads(tc.function.arguments)
 
             intent = args.get("intent", "general_chat")
-            if intent not in SUPPORTED_INTENTS:
+            if intent not in active_intents:
                 intent = "general_chat"
 
             raw_entities = args.get("entities", {})

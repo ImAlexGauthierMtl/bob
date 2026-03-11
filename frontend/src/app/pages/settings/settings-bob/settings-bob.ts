@@ -11,6 +11,7 @@ interface VoiceOption {
     gender: string;
     accent: string;
     style: string;
+    provider?: string;
 }
 
 interface LanguageOption {
@@ -57,7 +58,7 @@ export class SettingsBobComponent implements OnInit {
     emojiUsage = false;
 
     // Voice
-    selectedVoice = 'Fritz-PlayAI';
+    selectedVoice = 'autumn';
     voiceSpeed = 1.0;
     autoListen = true;
 
@@ -65,6 +66,7 @@ export class SettingsBobComponent implements OnInit {
     availableVoices: VoiceOption[] = [];
     availableTones: string[] = [];
     availableLanguages: LanguageOption[] = [];
+    private isLoadingVoices = false;
 
     // UI state
     isSaving = false;
@@ -138,6 +140,10 @@ export class SettingsBobComponent implements OnInit {
         });
     }
 
+    onLanguageChange(): void {
+        this.refreshVoicesForLanguage();
+    }
+
     selectVoice(voiceId: string): void {
         this.selectedVoice = voiceId;
     }
@@ -178,5 +184,42 @@ export class SettingsBobComponent implements OnInit {
 
     toneName(tone: string): string {
         return tone.charAt(0).toUpperCase() + tone.slice(1);
+    }
+
+    private refreshVoicesForLanguage(): void {
+        if (this.isLoadingVoices) return;
+        this.isLoadingVoices = true;
+
+        const tempPayload = {
+            personality: {
+                tone: this.tone,
+                formality: this.formality,
+                response_length: this.responseLength,
+                language: this.language,
+                creativity: this.creativity,
+                emoji_usage: this.emojiUsage,
+            },
+            voice: {
+                voice: this.selectedVoice,
+                speed: this.voiceSpeed,
+                auto_listen: this.autoListen,
+            },
+        };
+
+        this.http.put<BobSettings>(this.apiUrl, tempPayload, {
+            headers: { Authorization: `Bearer ${this.auth.getToken()}` },
+        }).subscribe({
+            next: (data) => {
+                this.availableVoices = data.available_voices;
+                const currentValid = this.availableVoices.some(v => v.id === this.selectedVoice);
+                if (!currentValid && this.availableVoices.length > 0) {
+                    this.selectedVoice = this.availableVoices[0].id;
+                }
+                this.isLoadingVoices = false;
+            },
+            error: () => {
+                this.isLoadingVoices = false;
+            },
+        });
     }
 }

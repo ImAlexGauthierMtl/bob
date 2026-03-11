@@ -161,7 +161,8 @@
 }
 
 .filter-pill--active {
-    color: var(--color-accent);
+    color: var(--color-white);
+    background-color: var(--color-accent);
     border-color: var(--color-accent);
     font-weight: var(--font-weight-medium);
 }

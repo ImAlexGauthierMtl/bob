@@ -293,10 +293,10 @@ export class OpportunityProfileComponent implements OnInit {
             description: this.newActivityDescription || undefined,
             activity_type: this.newActivityType,
             priority: this.newActivityPriority,
-            opportunity_id: this.opp.id,
+            opportunity_ids: [this.opp.id],
         };
         if (this.opp.organization_id) {
-            data.organization_id = this.opp.organization_id;
+            data.organization_ids = [this.opp.organization_id];
         }
         if (this.newActivityDueDate) {
             data.due_date = this.newActivityDueDate;

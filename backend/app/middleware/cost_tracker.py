@@ -18,6 +18,8 @@ GROQ_PRICING = {
     "llama-3.3-70b-versatile": {"input": 0.59 / 1_000_000, "output": 0.79 / 1_000_000},
     "whisper-large-v3-turbo": {"per_second": 0.04 / 3600},  # $0.04/hour
     "playai-tts": {"per_char": 0.015 / 1000},  # $15/M chars
+    "qwen3-tts-flash": {"per_char": 0.01 / 1000},  # $0.10/10k chars (DashScope)
+    "qwen3-tts-instruct-flash": {"per_char": 0.01 / 1000},  # same pricing tier
 }
 
 

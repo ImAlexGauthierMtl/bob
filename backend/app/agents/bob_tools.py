@@ -525,7 +525,47 @@ BOB_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "invoke_deep_agent",
+            "description": (
+                "Invoke the Deep Agent to build or enrich the BCC cognitive structure. "
+                "Use when the user asks to set up domains, intents, or tasks in bulk, "
+                "or to configure Bob's capabilities. Examples: 'Configure Bob', "
+                "'Set up the BCC', 'Build the cognitive structure', 'Make this happen to the BCC'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "instruction": {
+                        "type": "string",
+                        "description": "What to build or enrich in the BCC — the user's instruction.",
+                    },
+                },
+                "required": ["instruction"],
+            },
+        },
+    },
 ]
+
+
+def load_tools_from_bcc(db, tenant_id: str) -> list[dict]:
+    """Load tool schemas from BCC TaskTemplate context, falling back to hardcoded."""
+    try:
+        from app.domain.entities.bcc_entities import BccTaskTemplate
+
+        templates = db.query(BccTaskTemplate).filter_by(tenant_id=tenant_id).all()
+        bcc_schemas = []
+        for t in templates:
+            if t.context and t.context.get("tool_schemas"):
+                bcc_schemas.extend(t.context["tool_schemas"])
+        if bcc_schemas:
+            logger.info("tools_loaded_from_bcc", count=len(bcc_schemas))
+            return bcc_schemas
+    except Exception as e:
+        logger.warning("bcc_tool_load_failed", error=str(e))
+    return BOB_TOOLS
 
 
 # ── Tool executors ───────────────────────────────────────────
@@ -577,7 +617,12 @@ async def execute_tool(
             return await _save_missing_element(db_session, user_id=user_id, **arguments)
         elif tool_name == "change_training_slide":
             return await _change_training_slide(**arguments)
+        elif tool_name == "invoke_deep_agent":
+            return await _invoke_deep_agent(db_session, user_id=user_id, **arguments)
         else:
+            dynamic_result = await _execute_dynamic_tool(db_session, user_id, tool_name, arguments)
+            if dynamic_result is not None:
+                return dynamic_result
             return f"Unknown tool: {tool_name}"
     except Exception as e:
         logger.error("tool_execution_error", tool=tool_name, error=str(e))
@@ -751,16 +796,18 @@ async def _bcc_update_profile(
     from app.domain.entities.base import generate_uuid
     from sqlalchemy import and_
 
-    # Get user name for contributor display
+    # Get user name + tenant_id for contributor display
     from app.domain.entities.user import User
     user = db_session.query(User).filter(User.id == user_id).first()
     contributor_name = "Bob" if not user else f"{user.first_name} {user.last_name} (via Bob)"
+    tenant_id = user.tenant_id if user else "default"
 
     # Find latest version for this entity+section+perspective
     latest = (
         db_session.query(BccProfileEntry)
         .filter(
             and_(
+                BccProfileEntry.tenant_id == tenant_id,
                 BccProfileEntry.entity_type == entity_type,
                 BccProfileEntry.entity_id == entity_id,
                 BccProfileEntry.section == section,
@@ -780,6 +827,7 @@ async def _bcc_update_profile(
     # Create new entry
     entry = BccProfileEntry(
         id=generate_uuid(),
+        tenant_id=tenant_id,
         entity_type=entity_type,
         entity_id=entity_id,
         section=section,
@@ -794,6 +842,21 @@ async def _bcc_update_profile(
     )
     db_session.add(entry)
     db_session.commit()
+
+    # Index in RAG for semantic retrieval
+    if content:
+        try:
+            from app.rag.indexer import index_bcc_profile_entry as _rag_index
+            _rag_index(
+                db=db_session,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                section=section,
+                content=content,
+                tenant_id=entry.tenant_id,
+            )
+        except Exception as rag_err:
+            logger.warning("rag_index_profile_failed", error=str(rag_err))
 
     logger.info(
         "bcc_profile_updated",
@@ -935,4 +998,149 @@ async def _change_training_slide(
         result["slide_number"] = slide_number
 
     return json.dumps(result)
+
+
+async def _invoke_deep_agent(
+    db_session,
+    user_id: str,
+    instruction: str,
+) -> str:
+    """Invoke the Deep Agent to build/enrich BCC structure.
+
+    This is the tool-call path (legacy flow fallback).
+    The primary path is via the workflow engine (build_bcc intent).
+    """
+    from app.agents.deep_agent_graph import run_deep_agent
+    from app.domain.entities.user import User
+
+    user = db_session.query(User).filter(User.id == user_id).first()
+    if not user:
+        return "Error: user not found."
+
+    try:
+        result = await run_deep_agent(
+            instruction=instruction,
+            tenant_id=user.tenant_id,
+            user_id=user_id,
+            user_email=user.email or "unknown",
+        )
+    except Exception as e:
+        logger.error("invoke_deep_agent_failed", error=str(e))
+        return f"Deep Agent failed: {str(e)}"
+
+    if result.get("error"):
+        return f"Deep Agent error: {result['error']}"
+
+    return (
+        f"Deep Agent completed: {result.get('domains_created', 0)} domains, "
+        f"{result.get('intents_created', 0)} intents, "
+        f"{result.get('tasks_created', 0)} tasks created. "
+        f"Review: {result.get('review', {}).get('summary', 'N/A')}"
+    )
+
+
+TABLE_MODEL_MAP = {
+    "organizations": "app.domain.entities.organization.Organization",
+    "contacts": "app.domain.entities.contact.Contact",
+    "opportunities": "app.domain.entities.opportunity.Opportunity",
+    "activities": "app.domain.entities.activity.Activity",
+    "products": "app.domain.entities.product.Product",
+}
+
+
+async def _execute_dynamic_tool(
+    db_session,
+    user_id: str,
+    tool_name: str,
+    arguments: dict,
+) -> Optional[str]:
+    """Execute a BCC-defined dynamic tool via generic ORM query.
+
+    Looks up the tool in BccTaskTemplate.context["tool_schemas"],
+    then uses db_table/db_operation from context to run a safe SELECT query.
+    Returns None if the tool is not found in BCC (caller falls back to "Unknown tool").
+    """
+    from app.domain.entities.bcc_entities import BccTaskTemplate
+    from app.domain.entities.user import User
+    import importlib
+
+    user = db_session.query(User).filter(User.id == user_id).first()
+    if not user:
+        return None
+
+    tenant_id = user.tenant_id
+
+    templates = db_session.query(BccTaskTemplate).filter(
+        BccTaskTemplate.tenant_id == tenant_id,
+    ).all()
+
+    target_tpl = None
+    for tpl in templates:
+        ctx = tpl.context or {}
+        tool_prio = ctx.get("tool_priority", [])
+        if isinstance(tool_prio, list) and tool_name in tool_prio:
+            target_tpl = tpl
+            break
+        schemas = ctx.get("tool_schemas", [])
+        for s in schemas:
+            if s.get("function", {}).get("name") == tool_name:
+                target_tpl = tpl
+                break
+        if target_tpl:
+            break
+
+    if not target_tpl:
+        return None
+
+    ctx = target_tpl.context or {}
+    db_table = ctx.get("db_table")
+    db_operation = (ctx.get("db_operation") or "SELECT").upper()
+
+    if not db_table or "SELECT" not in db_operation:
+        return f"Dynamic tool {tool_name}: read-only operations only."
+
+    table_key = db_table.lower().strip()
+    model_path = TABLE_MODEL_MAP.get(table_key)
+    if not model_path:
+        return f"Dynamic tool {tool_name}: unknown table '{db_table}'."
+
+    module_path, class_name = model_path.rsplit(".", 1)
+    mod = importlib.import_module(module_path)
+    Model = getattr(mod, class_name)
+
+    try:
+        query = db_session.query(Model).filter(Model.tenant_id == tenant_id)
+
+        search_query = arguments.get("query") or arguments.get("search") or arguments.get("name")
+        if search_query and hasattr(Model, "name"):
+            query = query.filter(Model.name.ilike(f"%{search_query}%"))
+
+        limit = int(arguments.get("limit", 10))
+        limit = min(limit, 50)
+
+        if hasattr(Model, "created_at"):
+            query = query.order_by(Model.created_at.desc())
+
+        results = query.limit(limit).all()
+
+        if not results:
+            return f"No results found for {tool_name}."
+
+        lines = [f"Found {len(results)} result(s):"]
+        for i, row in enumerate(results, 1):
+            name = getattr(row, "name", None) or getattr(row, "subject", None) or str(row.id)[:8]
+            detail_parts = []
+            for attr in ("industry", "stage", "email", "category", "status", "amount"):
+                val = getattr(row, attr, None)
+                if val:
+                    detail_parts.append(f"{attr}={val}")
+            detail = f" ({', '.join(detail_parts)})" if detail_parts else ""
+            lines.append(f"  {i}. {name}{detail}")
+
+        logger.info("dynamic_tool_executed", tool=tool_name, table=db_table, results=len(results))
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.error("dynamic_tool_error", tool=tool_name, error=str(e))
+        return f"Dynamic tool {tool_name} error: {str(e)}"
 

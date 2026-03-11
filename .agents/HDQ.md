@@ -55,18 +55,8 @@ Après installation, personnaliser ces fichiers :
 | `decisions/decisions.md` | Initialiser le journal ADR |
 | `docs/gaps.md` | Se remplit automatiquement via /start |
 
-## ⛔ Règle absolue — Pré-vol templates
-
-> [!CAUTION]
-> **AVANT de créer ou modifier tout fichier de code**, exécuter la checklist `docs/preflight-templates.md`.
-> Cette règle s'applique **même sans `/feature`**, **même pour une demande directe simple**.
-> Violation = dette technique garantie.
-
-**Déclencheur** : toute tâche qui implique de créer un fichier `.ts`, `.py`, `.html`, ou `.css`.
-
 ## Conventions
 
-- **Templates d'abord** : Lire `docs/preflight-templates.md` avant toute création de fichier
 - **Commits** : `[service] type: description`
 - **Coverage** : 100% obligatoire
 - **Langue** : Code en anglais, UI en français

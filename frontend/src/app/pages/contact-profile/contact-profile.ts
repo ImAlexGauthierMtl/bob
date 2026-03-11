@@ -31,6 +31,9 @@ export class ContactProfileComponent implements OnInit {
     newActivityDueDate = '';
     isCreatingActivity = false;
 
+    // Bob's Rolodex
+    isEnrichingLinkedIn = false;
+
     private route = inject(ActivatedRoute);
     private contactService = inject(ContactService);
     private orgService = inject(OrganizationService);
@@ -108,10 +111,10 @@ export class ContactProfileComponent implements OnInit {
             description: this.newActivityDescription || undefined,
             activity_type: this.newActivityType,
             priority: this.newActivityPriority,
-            contact_id: this.contact.id,
+            contact_ids: [this.contact.id],
         };
         if (this.contact.organization_id) {
-            data.organization_id = this.contact.organization_id;
+            data.organization_ids = [this.contact.organization_id];
         }
         if (this.newActivityDueDate) {
             data.due_date = this.newActivityDueDate;
@@ -128,6 +131,33 @@ export class ContactProfileComponent implements OnInit {
             },
             error: () => {
                 this.isCreatingActivity = false;
+            },
+        });
+    }
+
+    // ── Bob's Rolodex (Bright Data) ─────────────────
+
+    triggerLinkedInEnrichment(): void {
+        if (!this.contact || this.isEnrichingLinkedIn) return;
+
+        const linkedinUrl = this.contact.linkedin_url || this.contact.contact_profile?.linkedin;
+        if (!linkedinUrl) {
+            alert('No LinkedIn URL on this contact. Add a LinkedIn URL first.');
+            return;
+        }
+
+        this.isEnrichingLinkedIn = true;
+        this.contactService.enrichLinkedIn(this.contact.id).subscribe({
+            next: () => {
+                // Poll for completion after 5s
+                setTimeout(() => {
+                    this.loadContact(this.contact!.id);
+                    this.isEnrichingLinkedIn = false;
+                }, 5000);
+            },
+            error: () => {
+                this.isEnrichingLinkedIn = false;
+                alert('Enrichment failed. Check that the contact has a valid LinkedIn URL.');
             },
         });
     }

@@ -5,6 +5,19 @@
 </div>
 }
 
+@if (notFound) {
+<div class="not-found-state">
+    <div class="not-found-state__icon">
+        <i class="fa-solid fa-building-circle-xmark"></i>
+    </div>
+    <h2 class="not-found-state__title">Organization Not Found</h2>
+    <p class="not-found-state__desc">This organization doesn't exist or may have been deleted.</p>
+    <button class="btn btn-accent" (click)="goBack()">
+        <i class="fa-solid fa-arrow-left"></i> Back to Organizations
+    </button>
+</div>
+}
+
 @if (org) {
 <!-- ═══ Sticky Header ═══ -->
 <header class="org-header">
@@ -143,6 +156,71 @@
                 </div>
             </div>
 
+            <!-- Engagement Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-card__header">
+                        <p class="metric-card__label">Win Rate</p>
+                        <i class="fa-solid fa-trophy metric-card__icon"></i>
+                    </div>
+                    <p class="metric-card__value">
+                        @if (opportunities.length > 0) {
+                        {{ getWinRate() | number:'1.0-0' }}%
+                        } @else {
+                        —
+                        }
+                    </p>
+                    <p class="metric-card__sub">Historical conversion</p>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-card__header">
+                        <p class="metric-card__label">Last Contact</p>
+                        <i class="fa-solid fa-clock metric-card__icon"></i>
+                    </div>
+                    <p class="metric-card__value">—</p>
+                    <p class="metric-card__sub">No recent activity</p>
+                </div>
+            </div>
+
+            <!-- Recent Activities Feed -->
+            <div class="section-block">
+                <h3 class="section-title">Recent Activities</h3>
+                @if (activities.length === 0) {
+                <div class="empty-state">No recent activities to display.</div>
+                } @else {
+                <div class="table-container">
+                    @for (a of activities.slice(0, 5); track a.id) {
+                    <div class="activity-item">
+                        <div class="activity-icon" [class.activity-icon--call]="a.activity_type === 'CALL'"
+                            [class.activity-icon--email]="a.activity_type === 'EMAIL'"
+                            [class.activity-icon--meeting]="a.activity_type === 'MEETING'"
+                            [class.activity-icon--task]="a.activity_type === 'TASK' || a.activity_type === 'NOTE'">
+                            @switch (a.activity_type) {
+                            @case ('CALL') { <i class="fa-solid fa-phone"></i> }
+                            @case ('EMAIL') { <i class="fa-solid fa-envelope"></i> }
+                            @case ('MEETING') { <i class="fa-solid fa-users"></i> }
+                            @default { <i class="fa-solid fa-check-circle"></i> }
+                            }
+                        </div>
+                        <div class="activity-content">
+                            <p class="activity-title">{{ a.subject }}</p>
+                            @if (a.description) {
+                            <p class="activity-desc">{{ a.description }}</p>
+                            }
+                            <div class="activity-meta">
+                                <span class="activity-meta-text">{{ a.activity_type }}</span>
+                                <span class="activity-meta-text">•</span>
+                                <span class="activity-meta-text">{{ a.priority }}</span>
+                                <span class="activity-meta-text">•</span>
+                                <span class="stage-badge">{{ a.status }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+
         </section>
         }
 
@@ -163,7 +241,7 @@
                     @if (isEnriching) {
                     <i class="fa-solid fa-spinner fa-spin"></i> Enriching...
                     } @else {
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Enrich Now
+                    <i class="fa-solid fa-address-book"></i> Bob's Rolodex
                     }
                 </button>
             </div>
@@ -503,6 +581,83 @@
                 </div>
                 }
 
+                <!-- ── Dynamic Intelligence Sections (from Compound) ── -->
+                @if (org.organization_profile.intelligence_sections &&
+                org.organization_profile.intelligence_sections.length) {
+
+                @for (section of org.organization_profile.intelligence_sections; track section.id) {
+                <div class="profile-category">
+                    <div class="profile-category__header">
+                        <div class="profile-category__icon"><i [class]="section.icon || 'fa-solid fa-circle-info'"></i>
+                        </div>
+                        <h3 class="profile-category__title">{{ section.title }}</h3>
+                    </div>
+                    <div class="profile-category__body">
+
+                        <!-- Tags type -->
+                        @if (section.type === 'tags' && section.items) {
+                        <div class="profile-tag-list">
+                            @for (item of section.items; track item) {
+                            <span class="profile-tag">{{ item }}</span>
+                            }
+                        </div>
+                        }
+
+                        <!-- Key-Value type -->
+                        @if (section.type === 'key_value' && section.entries) {
+                        <div class="profile-fields">
+                            @for (entry of section.entries; track entry.label) {
+                            <div class="profile-field">
+                                <span class="profile-field__label">{{ entry.label }}</span>
+                                <span class="profile-field__value">{{ entry.value }}</span>
+                            </div>
+                            }
+                        </div>
+                        }
+
+                        <!-- Table type -->
+                        @if (section.type === 'table' && section.columns && section.rows) {
+                        <div class="table-container">
+                            <div class="table-scroll">
+                                <table class="data-table data-table--compact">
+                                    <thead>
+                                        <tr>
+                                            @for (col of section.columns; track col) {
+                                            <th>{{ col }}</th>
+                                            }
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (row of section.rows; track $index) {
+                                        <tr>
+                                            @for (cell of row; track $index) {
+                                            <td class="cell-light">{{ cell }}</td>
+                                            }
+                                        </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        }
+
+                        <!-- List type -->
+                        @if (section.type === 'list' && section.items) {
+                        <div class="profile-list-items">
+                            @for (item of section.items; track item) {
+                            <div class="profile-list-item">
+                                <i class="fa-solid fa-chevron-right profile-list-item__icon"></i>
+                                <span>{{ item }}</span>
+                            </div>
+                            }
+                        </div>
+                        }
+
+                    </div>
+                </div>
+                }
+                }
+
             </div>
 
             <!-- Re-enrich button -->
@@ -511,7 +666,7 @@
                     @if (isEnriching) {
                     <i class="fa-solid fa-spinner fa-spin"></i> Re-enriching...
                     } @else {
-                    <i class="fa-solid fa-arrows-rotate"></i> Re-enrich Profile
+                    <i class="fa-solid fa-address-book"></i> Bob's Rolodex
                     }
                 </button>
             </div>
@@ -635,6 +790,30 @@
                             <span class="dot-sep">·</span>
                             <span class="stage-badge">{{ a.status }}</span>
                         </div>
+                        <div class="activity-card__links"
+                            style="margin-top:0.5rem; display:flex; gap:10px; font-size: 0.8rem; color: #6b7280;">
+                            @if (a.organization_ids?.length) {
+                            @for (orgId of a.organization_ids; track orgId) {
+                            <a [routerLink]="['/organizations', orgId]" style="text-decoration: none; color: inherit;">
+                                <i class="fa-solid fa-building"></i> Linked Org
+                            </a>
+                            }
+                            }
+                            @if (a.contact_ids?.length) {
+                            @for (contactId of a.contact_ids; track contactId) {
+                            <a [routerLink]="['/contacts', contactId]" style="text-decoration: none; color: inherit;">
+                                <i class="fa-solid fa-address-book"></i> Linked Contact
+                            </a>
+                            }
+                            }
+                            @if (a.opportunity_ids?.length) {
+                            @for (oppId of a.opportunity_ids; track oppId) {
+                            <a [routerLink]="['/opportunities', oppId]" style="text-decoration: none; color: inherit;">
+                                <i class="fa-solid fa-chart-line"></i> Linked Opp
+                            </a>
+                            }
+                            }
+                        </div>
                     </div>
                 </div>
                 }
@@ -647,6 +826,32 @@
 
     <!-- Right: Info Panel -->
     <aside class="org-panel">
+        <div class="panel-section">
+            <h4 class="panel-section__title">Quick Actions</h4>
+            <div class="panel-actions">
+                <button class="panel-action panel-action--accent" (click)="triggerEnrichment()"
+                    [disabled]="isEnriching">
+                    @if (isEnriching) {
+                    <i class="fa-solid fa-spinner fa-spin"></i> Enriching...
+                    } @else {
+                    <i class="fa-solid fa-address-book"></i> Bob's Rolodex
+                    }
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-envelope"></i> Send Email
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-calendar"></i> Schedule Meeting
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> Create Invoice
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-file-contract"></i> Generate Report
+                </button>
+            </div>
+        </div>
+
         <div class="panel-section">
             <h4 class="panel-section__title">Key Information</h4>
             <div class="panel-fields">
@@ -687,24 +892,6 @@
                     <p class="panel-field__label">Email</p>
                     <p class="panel-field__value">{{ org.email || '—' }}</p>
                 </div>
-            </div>
-        </div>
-
-        <div class="panel-section">
-            <h4 class="panel-section__title">Quick Actions</h4>
-            <div class="panel-actions">
-                <button class="panel-action">
-                    <i class="fa-solid fa-envelope"></i> Send Email
-                </button>
-                <button class="panel-action">
-                    <i class="fa-solid fa-calendar"></i> Schedule Meeting
-                </button>
-                <button class="panel-action">
-                    <i class="fa-solid fa-file-invoice-dollar"></i> Create Invoice
-                </button>
-                <button class="panel-action">
-                    <i class="fa-solid fa-file-contract"></i> Generate Report
-                </button>
             </div>
         </div>
 

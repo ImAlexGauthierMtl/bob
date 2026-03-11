@@ -33,6 +33,10 @@ class EnrichmentState(TypedDict):
     tenant_id: str
     user_email: str
 
+    # Hunter.io phase
+    hunter_contacts: List[Dict[str, Any]]  # Contacts from Hunter Domain Search
+    hunter_company: Dict[str, Any]  # Company data from Hunter Company Enrichment
+
     # Search phase
     search_results: List[SearchResult]
     urls_to_scrape: List[str]
@@ -44,6 +48,9 @@ class EnrichmentState(TypedDict):
     # Extraction phase
     extracted: dict  # Flat organization fields extracted by LLM
     organization_profile: dict  # Deep profile (services, contacts, social, etc.)
+
+    # Compound phase
+    intelligence_sections: List[Dict[str, Any]]  # Dynamic sections from Groq Compound
 
     # Status
     status: str  # "pending" | "searching" | "scraping" | "extracting" | "done" | "error"

@@ -65,6 +65,8 @@
         <button class="tab" [class.tab--active]="activeTab === 'activities'"
             (click)="setActiveTab('activities')">Activities</button>
         <button class="tab" [class.tab--active]="activeTab === 'notes'" (click)="setActiveTab('notes')">Notes</button>
+        <button class="tab" [class.tab--active]="activeTab === 'followers'"
+            (click)="setActiveTab('followers')">Followers</button>
     </div>
 </header>
 
@@ -159,22 +161,7 @@
             </div>
         </section>
 
-        <!-- Social Profiles -->
-        @if (contact.linkedin_url) {
-        <section>
-            <h3 class="section-title-lg">Social Profiles</h3>
-            <div class="detail-card">
-                <div class="network-list">
-                    <div class="network-item">
-                        <div class="social-icon"><i class="fa-brands fa-linkedin" style="color:#0a66c2"></i></div>
-                        <div>
-                            <a [href]="contact.linkedin_url" target="_blank" class="link-accent">LinkedIn Profile</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-        }
+
 
         <!-- Notes Preview -->
         @if (contact.notes) {
@@ -511,10 +498,86 @@
             </div>
         </section>
         }
+
+        <!-- FOLLOWERS TAB -->
+        @if (activeTab === 'followers') {
+        <section class="tab-pane">
+            <div class="section-header">
+                <h3 class="section-title">LinkedIn Followers</h3>
+            </div>
+
+            @if (contact.linkedin_followers && contact.linkedin_followers.length > 0) {
+            <div class="followers-grid">
+                @for (follower of contact.linkedin_followers; track $index) {
+                <div class="follower-card">
+                    <div class="follower-card__avatar">
+                        @if (follower.profile_picture) {
+                        <img [src]="follower.profile_picture" [alt]="follower.name" />
+                        } @else {
+                        <i class="fa-solid fa-user"></i>
+                        }
+                    </div>
+                    <div class="follower-card__info">
+                        <p class="follower-card__name">{{ follower.name || 'Unknown' }}</p>
+                        <p class="follower-card__headline">{{ follower.headline || '—' }}</p>
+                        @if (follower.url) {
+                        <a [href]="follower.url" target="_blank" class="follower-card__link">
+                            <i class="fa-brands fa-linkedin"></i> View Profile
+                        </a>
+                        }
+                    </div>
+                </div>
+                }
+            </div>
+            } @else {
+            <div class="empty-state">
+                <div class="empty-state__icon">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <h3 class="empty-state__title">No followers data yet</h3>
+                <p class="empty-state__desc">Click <strong>Bob's Rolodex</strong> to enrich this contact with LinkedIn
+                    data including followers.</p>
+                <button class="btn btn-accent" (click)="triggerLinkedInEnrichment()" [disabled]="isEnrichingLinkedIn">
+                    @if (isEnrichingLinkedIn) {
+                    <i class="fa-solid fa-spinner fa-spin"></i> Enriching...
+                    } @else {
+                    <i class="fa-solid fa-address-book"></i> Bob's Rolodex
+                    }
+                </button>
+            </div>
+            }
+        </section>
+        }
     </div>
 
     <!-- Info Panel (Right Sidebar) -->
     <aside class="info-panel">
+        <div class="info-section">
+            <h4 class="info-section__title">Quick Actions</h4>
+            <div class="panel-actions">
+                <button class="panel-action panel-action--accent" (click)="triggerLinkedInEnrichment()"
+                    [disabled]="isEnrichingLinkedIn">
+                    @if (isEnrichingLinkedIn) {
+                    <i class="fa-solid fa-spinner fa-spin"></i> Enriching...
+                    } @else {
+                    <i class="fa-solid fa-address-book"></i> Bob's Rolodex
+                    }
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-envelope"></i> Send Email
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-calendar"></i> Schedule Meeting
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-phone"></i> Log Call
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-check-circle"></i> Create Task
+                </button>
+            </div>
+        </div>
+
         <div class="info-section">
             <h4 class="info-section__title">Contact Information</h4>
             <div class="info-rows">
@@ -565,6 +628,24 @@
                 <span class="tag" [class.tag--accent]="contact.status === 'ACTIVE'">{{ contact.status }}</span>
             </div>
         </div>
+
+        @if (contact.linkedin_url || contact.contact_profile?.linkedin) {
+        <div class="info-section">
+            <h4 class="info-section__title">Social Profiles</h4>
+            <div class="panel-socials">
+                @if (contact.linkedin_url) {
+                <a [href]="contact.linkedin_url" target="_blank" class="panel-social">
+                    <i class="fa-brands fa-linkedin"></i> LinkedIn
+                </a>
+                }
+                @if (contact.contact_profile?.linkedin && contact.contact_profile?.linkedin !== contact.linkedin_url) {
+                <a [href]="contact.contact_profile?.linkedin" target="_blank" class="panel-social">
+                    <i class="fa-brands fa-linkedin"></i> LinkedIn (Hunter)
+                </a>
+                }
+            </div>
+        </div>
+        }
 
         <div class="info-section">
             <h4 class="info-section__title">Dates</h4>

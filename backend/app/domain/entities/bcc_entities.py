@@ -125,6 +125,8 @@ class BccIntent(Base, TenantMixin, AuditMixin):
     trigger_phrases = Column(JSON, nullable=True, default=list)   # phrases that trigger this intent
     category = Column(String(100), nullable=True)
     domain_id = Column(String(36), ForeignKey("bcc_domains.id"), nullable=True)
+    workflow_key = Column(String(100), nullable=True)             # maps to @workflow() decorator
+    pipeline_key = Column(String(100), nullable=True)             # maps to LangGraph pipeline name
 
     # Relationships
     domain = relationship("BccDomain", back_populates="intents")
@@ -141,6 +143,7 @@ class BccIntentTask(Base, TenantMixin):
     intent_id = Column(String(36), ForeignKey("bcc_intents.id"), nullable=False)
     task_template_id = Column(String(36), ForeignKey("bcc_task_templates.id"), nullable=False)
     sort_order = Column(Integer, default=0)
+    tool_name = Column(String(100), nullable=True)                # tool used by this step
 
     intent = relationship("BccIntent", back_populates="task_links")
     task_template = relationship("BccTaskTemplate", back_populates="intent_links")

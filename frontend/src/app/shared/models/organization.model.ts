@@ -79,6 +79,28 @@ export interface OrganizationProfile {
         partners?: string[];
         unique_selling_points?: string[];
     };
+    // Dynamic intelligence sections from Compound
+    intelligence_sections?: IntelligenceSection[];
+    // Hunter.io raw data
+    hunter_contacts?: Array<Record<string, unknown>>;
+    hunter_company?: Record<string, unknown>;
+}
+
+// Dynamic section types for Compound enrichment
+export type IntelligenceSectionType = 'tags' | 'key_value' | 'table' | 'list';
+
+export interface IntelligenceSection {
+    id: string;
+    title: string;
+    icon?: string;
+    type: IntelligenceSectionType;
+    // For 'tags' and 'list' types
+    items?: string[];
+    // For 'key_value' type
+    entries?: Array<{ label: string; value: string }>;
+    // For 'table' type
+    columns?: string[];
+    rows?: string[][];
 }
 
 export interface OrganizationListResponse {

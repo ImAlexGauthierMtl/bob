@@ -40,6 +40,7 @@ class VoiceSession:
         self.total_stt_calls = 0
         self.total_tts_calls = 0
         self.total_llm_calls = 0
+        self.tts_characters_total = 0
 
         # Conversation context for the LLM
         self.messages: list[dict[str, str]] = []
@@ -97,10 +98,22 @@ class VoiceSession:
 class VoiceSessionManager:
     """Manages active voice sessions with concurrency control."""
 
+    _STORE_PREFIX = "voice:"
+
     def __init__(self, max_concurrent: int = 10):
         self._sessions: dict[str, VoiceSession] = {}
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._max_concurrent = max_concurrent
+        from app.infrastructure.session_store import session_store
+        self._store = session_store
+
+    def _persist(self, session: VoiceSession) -> None:
+        """Persist voice session metadata to the backing store."""
+        self._store.set(
+            f"{self._STORE_PREFIX}{session.session_id}",
+            session.to_dict(),
+            ttl_seconds=session.max_duration_minutes * 60,
+        )
 
     async def create_session(
         self,
@@ -110,7 +123,6 @@ class VoiceSessionManager:
         max_duration_minutes: int = 30,
     ) -> VoiceSession:
         """Create a new voice session, respecting concurrency limits."""
-        # Check if user already has an active session
         for session in self._sessions.values():
             if session.user_id == user_id and session.is_active:
                 logger.warning(
@@ -118,8 +130,8 @@ class VoiceSessionManager:
                     user=user_email,
                     existing_session=session.session_id,
                 )
-                # Close the old session
                 session.close()
+                self._store.delete(f"{self._STORE_PREFIX}{session.session_id}")
                 del self._sessions[session.session_id]
                 break
 
@@ -130,6 +142,7 @@ class VoiceSessionManager:
             max_duration_minutes=max_duration_minutes,
         )
         self._sessions[session.session_id] = session
+        self._persist(session)
 
         logger.info(
             "voice_sessions_active",
@@ -148,6 +161,7 @@ class VoiceSessionManager:
         session = self._sessions.get(session_id)
         if session:
             session.close()
+            self._store.delete(f"{self._STORE_PREFIX}{session.session_id}")
             del self._sessions[session_id]
 
     def get_active_count(self) -> int:

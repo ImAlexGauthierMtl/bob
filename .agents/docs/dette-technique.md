@@ -5,12 +5,4 @@
 
 | Date | Service | Dette | Impact | Priorité | Status |
 |------|---------|-------|--------|----------|--------|
-| 2026-03-06 | Frontend | zone.js réintroduit comme workaround (Angular 21 est zoneless par défaut). Migration vers Signals à planifier pour profiter du zoneless. | Performance, bundle size | 🟡 MOYENNE | Ouvert |
-
-
-
-A vérifier : que chaques éléments tel que organisation, contact, opportunité, devis, activité, département, capability, bob_settings, workflow, workflow_execution, bcc_entities, training_models, role est bien dans la base de données et que les relations sont bien établies. et que les éléments est un owner, pour permettre des droits et permission efficace.
-
-Un usager ne peut pas effacer quelque chose qui a une dépenance enfant. Exemple : Si un organisation a un contact, il ne peut pas effacer l'organisation sans effacer le contact. Il faut donc mettre en place un système de gestion des dépendances.
-
-
+<!-- Les entrées seront ajoutées par /consolidation -->

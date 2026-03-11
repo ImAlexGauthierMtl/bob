@@ -24,7 +24,7 @@ class BobPersonality(BaseModel):
     tone: str = Field(default="professional", description="Tone: professional, friendly, casual, formal")
     formality: float = Field(default=0.5, ge=0.0, le=1.0, description="Formality level 0-1")
     response_length: str = Field(default="balanced", description="Length: concise, balanced, detailed")
-    language: str = Field(default="auto", description="Response language: auto, en, fr, es, de")
+    language: str = Field(default="auto", description="Response language: auto, en, fr, es, pt")
     creativity: float = Field(default=0.3, ge=0.0, le=1.0, description="Creativity/temperature 0-1")
     emoji_usage: bool = Field(default=False, description="Allow emoji in responses")
 
@@ -53,28 +53,134 @@ class BobSettingsResponse(BaseModel):
 
 # ── Available options ────────────────────────────
 
-AVAILABLE_VOICES = [
-    {"id": "autumn", "name": "Autumn", "gender": "female", "accent": "American", "style": "Warm & Natural"},
-    {"id": "diana", "name": "Diana", "gender": "female", "accent": "American", "style": "Clear & Professional"},
-    {"id": "hannah", "name": "Hannah", "gender": "female", "accent": "American", "style": "Friendly & Expressive"},
-    {"id": "austin", "name": "Austin", "gender": "male", "accent": "American", "style": "Confident & Engaging"},
-    {"id": "daniel", "name": "Daniel", "gender": "male", "accent": "American", "style": "Deep & Authoritative"},
-    {"id": "troy", "name": "Troy", "gender": "male", "accent": "American", "style": "Energetic & Dynamic"},
+# ─────────────────────────────────────────────────────────────────────────────
+# Qwen3-TTS-Flash voice catalog — from official Alibaba Cloud documentation.
+# All voices support: Chinese, English, French, German, Russian, Italian,
+# Spanish, Portuguese, Japanese, Korean.
+# Accent labels (FR-CA / FR-France / International) are curated by phoneme
+# quality and subjective tests; no official dialect-specific voices exist.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Voix féminine — caractère chaleureux / accessible (idéales fr-CA)
+_QWEN_FEMALE_WARM = [
+    {"id": "Cherry",   "name": "Cherry",   "gender": "female", "style": "Chaleureuse & Naturelle"},
+    {"id": "Serena",   "name": "Serena",   "gender": "female", "style": "Douce & Intentionnelle"},
+    {"id": "Maia",     "name": "Maia",     "gender": "female", "style": "Intelligente & Douce"},
+    {"id": "Mia",      "name": "Mia",      "gender": "female", "style": "Apaisante & Délicate"},
+    {"id": "Vivian",   "name": "Vivian",   "gender": "female", "style": "Confiante & Espiègle"},
+    {"id": "Momo",     "name": "Momo",     "gender": "female", "style": "Enjouée & Pétillante"},
 ]
+
+# Voix féminine — caractère pro / élégant (idéales fr-France)
+_QWEN_FEMALE_PRO = [
+    {"id": "Jennifer", "name": "Jennifer", "gender": "female", "style": "Cinématique & Premium"},
+    {"id": "Katerina", "name": "Katerina", "gender": "female", "style": "Posée & Mémorable"},
+    {"id": "Elias",    "name": "Elias",    "gender": "female", "style": "Académique & Précise"},
+    {"id": "Bellona",  "name": "Bellona",  "gender": "female", "style": "Puissante & Théâtrale"},
+    {"id": "Bella",    "name": "Bella",    "gender": "female", "style": "Légère & Pétillante"},
+]
+
+# Voix masculine — caractère dynamique / accessible (idéales fr-CA)
+_QWEN_MALE_WARM = [
+    {"id": "Ethan",    "name": "Ethan",    "gender": "male", "style": "Solaire & Énergique"},
+    {"id": "Aiden",    "name": "Aiden",    "gender": "male", "style": "Décontracté & Accessible"},
+    {"id": "Mochi",    "name": "Mochi",    "gender": "male", "style": "Vif & Espiègle"},
+    {"id": "Kai",      "name": "Kai",      "gender": "male", "style": "Apaisant & Enveloppant"},
+    {"id": "Moon",     "name": "Moon",     "gender": "male", "style": "Audacieux & Charismatique"},
+]
+
+# Voix masculine — caractère formel / expressif (idéales fr-France)
+_QWEN_MALE_PRO = [
+    {"id": "Ryan",     "name": "Ryan",     "gender": "male", "style": "Dramatique & Expressif"},
+    {"id": "Neil",     "name": "Neil",     "gender": "male", "style": "Articulé & Journalistique"},
+    {"id": "Vincent",  "name": "Vincent",  "gender": "male", "style": "Rauque & Cinématique"},
+    {"id": "Arthur",   "name": "Arthur",   "gender": "male", "style": "Rustique & Chaleureux"},
+    {"id": "Eldric Sage", "name": "Eldric Sage", "gender": "male", "style": "Sage & Posé"},
+]
+
+# Voix custom clonée
+_QWEN_CUSTOM = [
+    {"id": "Rick", "name": "Rick ⭐", "gender": "male", "style": "Voix clonée — Ricardo"},
+]
+
+
+def _build_voice_list(voices: list[dict], accent: str, provider: str = "qwen") -> list[dict]:
+    return [{**v, "accent": accent, "provider": provider} for v in voices]
+
+
+QWEN_VOICES_FR_CA = (
+    _build_voice_list(_QWEN_CUSTOM, "Custom")
+    + _build_voice_list(_QWEN_FEMALE_WARM, "FR Québec")
+    + _build_voice_list(_QWEN_MALE_WARM, "FR Québec")
+    + _build_voice_list(_QWEN_FEMALE_PRO, "FR Québec")
+    + _build_voice_list(_QWEN_MALE_PRO, "FR Québec")
+)
+
+QWEN_VOICES_FR_FR = (
+    _build_voice_list(_QWEN_CUSTOM, "Custom")
+    + _build_voice_list(_QWEN_FEMALE_PRO, "FR France")
+    + _build_voice_list(_QWEN_MALE_PRO, "FR France")
+    + _build_voice_list(_QWEN_FEMALE_WARM, "FR France")
+    + _build_voice_list(_QWEN_MALE_WARM, "FR France")
+)
+
+QWEN_VOICES_INTL = (
+    _build_voice_list(_QWEN_CUSTOM, "Custom")
+    + _build_voice_list(_QWEN_FEMALE_WARM + _QWEN_FEMALE_PRO, "International")
+    + _build_voice_list(_QWEN_MALE_WARM + _QWEN_MALE_PRO, "International")
+)
+
+
+# Groq Orpheus voices — English only
+ORPHEUS_VOICES = [
+    {"id": "autumn", "name": "Autumn", "gender": "female", "accent": "American", "style": "Warm & Natural",          "provider": "orpheus"},
+    {"id": "diana",  "name": "Diana",  "gender": "female", "accent": "American", "style": "Clear & Professional",   "provider": "orpheus"},
+    {"id": "hannah", "name": "Hannah", "gender": "female", "accent": "American", "style": "Friendly & Expressive",  "provider": "orpheus"},
+    {"id": "austin", "name": "Austin", "gender": "male",   "accent": "American", "style": "Confident & Engaging",   "provider": "orpheus"},
+    {"id": "daniel", "name": "Daniel", "gender": "male",   "accent": "American", "style": "Deep & Authoritative",   "provider": "orpheus"},
+    {"id": "troy",   "name": "Troy",   "gender": "male",   "accent": "American", "style": "Energetic & Dynamic",    "provider": "orpheus"},
+]
+
+# Languages that use Qwen3-TTS (multilingual voices).
+# "auto" is intentionally excluded — defaults to Orpheus in the pipeline.
+QWEN_LANGUAGE_CODES = {"fr", "fr-FR", "fr-CA", "es", "pt"}
 
 AVAILABLE_TONES = ["professional", "friendly", "casual", "formal"]
 
+
 AVAILABLE_LANGUAGES = [
     {"code": "auto", "name": "Auto-detect"},
-    {"code": "en", "name": "English"},
-    {"code": "fr", "name": "Français"},
-    {"code": "es", "name": "Español"},
-    {"code": "de", "name": "Deutsch"},
+    {"code": "en",   "name": "English"},
+    {"code": "fr-CA", "name": "Français (Canada / Québec)"},
+    {"code": "fr-FR", "name": "Français (France)"},
+    {"code": "es",   "name": "Español"},
+    {"code": "pt",   "name": "Português"},
 ]
+
+
+def _voices_for_language(language: str) -> list[dict]:
+    """Return the appropriate voice list based on the selected language.
+
+    - "en"   → Orpheus voices (English-only, expressive)
+    - "fr-CA" → Qwen FR-CA voices
+    - "fr-FR" → Qwen FR-FR voices
+    - "fr"   → Qwen international (neutral FR)
+    - "es","pt" → Qwen international
+    - "auto"  → Orpheus voices (pipeline default for auto is Orpheus)
+    """
+    if language == "fr-CA":
+        return QWEN_VOICES_FR_CA
+    if language == "fr-FR":
+        return QWEN_VOICES_FR_FR
+    if language in QWEN_LANGUAGE_CODES:
+        return QWEN_VOICES_INTL
+    # "en" and "auto" → Orpheus
+    return ORPHEUS_VOICES
 
 
 def _db_to_response(s: BobUserSettings) -> BobSettingsResponse:
     """Convert a DB row to the API response model."""
+    voices = _voices_for_language(s.language)
     return BobSettingsResponse(
         personality=BobPersonality(
             tone=s.tone,
@@ -89,7 +195,7 @@ def _db_to_response(s: BobUserSettings) -> BobSettingsResponse:
             speed=s.speed,
             auto_listen=s.auto_listen,
         ),
-        available_voices=AVAILABLE_VOICES,
+        available_voices=voices,
         available_tones=AVAILABLE_TONES,
         available_languages=AVAILABLE_LANGUAGES,
     )
@@ -119,9 +225,11 @@ async def update_bob_settings(
     """Update Bob settings for the authenticated user."""
     user_id = current_user["user_id"]
 
-    # Validate voice exists
-    valid_voice_ids = {v["id"] for v in AVAILABLE_VOICES}
-    if request.voice.voice not in valid_voice_ids:
+    # Validate voice exists in the appropriate provider list
+    all_qwen_voice_ids = {v["id"] for v in QWEN_VOICES_FR_CA + QWEN_VOICES_FR_FR + QWEN_VOICES_INTL}
+    all_voice_ids = {v["id"] for v in ORPHEUS_VOICES} | all_qwen_voice_ids
+
+    if request.voice.voice not in all_voice_ids:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid voice: {request.voice.voice}",

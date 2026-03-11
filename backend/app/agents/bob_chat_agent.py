@@ -124,6 +124,44 @@ class ChatSession:
         self.workflow_state: Optional[dict] = None
         self.workflow_resume_key: Optional[str] = None
 
+    def to_dict(self) -> dict:
+        """Serialize session to a dict for external storage."""
+        return {
+            "user_id": self.user_id,
+            "tenant_id": self.tenant_id,
+            "user_email": self.user_email,
+            "mission_prompt": self.mission_prompt,
+            "mission_context": self.mission_context,
+            "messages": self.messages[-settings.bob_max_history:],
+            "created_at": self.created_at,
+            "last_activity": self.last_activity,
+            "total_tokens_in": self.total_tokens_in,
+            "total_tokens_out": self.total_tokens_out,
+            "turn_count": self.turn_count,
+            "workflow_state": self.workflow_state,
+            "workflow_resume_key": self.workflow_resume_key,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ChatSession":
+        """Restore session from a dict."""
+        session = cls(
+            user_id=data["user_id"],
+            tenant_id=data["tenant_id"],
+            user_email=data["user_email"],
+            mission_prompt=data.get("mission_prompt"),
+            mission_context=data.get("mission_context", {}),
+        )
+        session.messages = data.get("messages", [])
+        session.created_at = data.get("created_at", time.time())
+        session.last_activity = data.get("last_activity", time.time())
+        session.total_tokens_in = data.get("total_tokens_in", 0)
+        session.total_tokens_out = data.get("total_tokens_out", 0)
+        session.turn_count = data.get("turn_count", 0)
+        session.workflow_state = data.get("workflow_state")
+        session.workflow_resume_key = data.get("workflow_resume_key")
+        return session
+
     def add_user_message(self, text: str) -> None:
         """Add a user message to the session history."""
         self.messages.append({"role": "user", "content": text})
@@ -158,9 +196,27 @@ class ChatSession:
 class BobChatAgent:
     """Manages Bob chat sessions and generates responses via Groq."""
 
+    _STORE_PREFIX = "chat:"
+
     def __init__(self):
         self._sessions: dict[str, ChatSession] = {}
         self._lock = Lock()
+        from app.infrastructure.session_store import session_store
+        self._store = session_store
+
+    def _persist(self, key: str, session: ChatSession) -> None:
+        """Write session state to the backing store."""
+        ttl = settings.bob_session_ttl_minutes * 60
+        self._store.set(f"{self._STORE_PREFIX}{key}", session.to_dict(), ttl_seconds=ttl)
+
+    def _restore(self, key: str) -> ChatSession | None:
+        """Restore session from the backing store into local cache."""
+        data = self._store.get(f"{self._STORE_PREFIX}{key}")
+        if data is None:
+            return None
+        session = ChatSession.from_dict(data)
+        self._sessions[key] = session
+        return session
 
     def get_or_create_session(
         self,
@@ -176,21 +232,26 @@ class BobChatAgent:
         Session isolation: sessions are scoped to tenant_id:user_id.
         A user can only access their own sessions within their tenant.
         """
-        # Build isolation key: tenant:user:session
         isolation_key = f"{tenant_id}:{user_id}:{session_id}"
 
         with self._lock:
-            # Cleanup expired sessions
             self._cleanup_expired()
 
             if isolation_key not in self._sessions:
-                self._sessions[isolation_key] = ChatSession(
+                restored = self._restore(isolation_key)
+                if restored:
+                    logger.info("bob_session_restored", isolation_key=isolation_key)
+                    return restored
+
+                session = ChatSession(
                     user_id=user_id,
                     tenant_id=tenant_id,
                     user_email=user_email,
                     mission_prompt=mission_prompt,
                     mission_context=mission_context,
                 )
+                self._sessions[isolation_key] = session
+                self._persist(isolation_key, session)
                 logger.info(
                     "bob_session_created",
                     session_id=session_id,
@@ -249,6 +310,7 @@ class BobChatAgent:
                 if workflow_result is not None:
                     text, actions, tool_steps = workflow_result
                     session.add_assistant_message(text)
+                    self._persist(isolation_key, session)
                     logger.info(
                         "intent_router_handled",
                         session_id=session_id,
@@ -284,8 +346,10 @@ class BobChatAgent:
                     "auto": "Respond in the same language as the user's message.",
                     "en": "Always respond in English.",
                     "fr": "Always respond in French (Français).",
+                    "fr-FR": "Always respond in standard French (France). Use vous-form by default.",
+                    "fr-CA": "Always respond in Canadian French. Use tu-form by default. Prefer Canadian terms (courriel, fin de semaine) but keep a professional tone — no forced slang.",
                     "es": "Always respond in Spanish (Español).",
-                    "de": "Always respond in German (Deutsch).",
+                    "pt": "Always respond in Portuguese (Português).",
                 }
                 tone_desc = tone_map.get(user_settings.tone, "Professional but friendly")
                 length_desc = length_map.get(user_settings.response_length, "Keep responses balanced.")
@@ -385,23 +449,43 @@ Personality (from user preferences):
                             if step.details:
                                 lines.append(f"     Details: {step.details}")
 
-                # Load library task templates with procedures
+                # Load library task templates with full BCC context
                 templates = db_bcc.query(BccTaskTemplate).filter(
                     BccTaskTemplate.tenant_id == session.tenant_id
                 ).all()
                 for tpl in templates:
                     ctx = tpl.context or {}
                     procedure = ctx.get("procedure")
-                    if procedure:
-                        has_content = True
-                        lines.append(f"\n### Procedure: {tpl.name}")
-                        if tpl.description:
-                            lines.append(f"{tpl.description}")
-                        for step_text in procedure:
-                            lines.append(f"  {step_text}")
-                        tool_prio = ctx.get("tool_priority")
-                        if tool_prio:
-                            lines.append(f"  ⚠ {tool_prio}")
+                    if not procedure:
+                        continue
+                    has_content = True
+                    lines.append(f"\n### Procedure: {tpl.name}")
+                    if tpl.description:
+                        lines.append(f"{tpl.description}")
+                    for step_text in procedure:
+                        lines.append(f"  {step_text}")
+                    tool_prio = ctx.get("tool_priority")
+                    if tool_prio:
+                        lines.append(f"  Tools (priority order): {', '.join(tool_prio) if isinstance(tool_prio, list) else tool_prio}")
+                    required = ctx.get("required_info")
+                    if required:
+                        lines.append(f"  Required fields: {', '.join(required) if isinstance(required, list) else required}")
+                    optional = ctx.get("optional_info")
+                    if optional:
+                        lines.append(f"  Optional fields: {', '.join(optional) if isinstance(optional, list) else optional}")
+                    expected = ctx.get("expected_output")
+                    if expected:
+                        lines.append(f"  Expected output: {expected}")
+                    resp_fmt = ctx.get("response_format")
+                    if resp_fmt:
+                        lines.append(f"  Response format: {resp_fmt}")
+                    db_table = ctx.get("db_table")
+                    if db_table:
+                        db_op = ctx.get("db_operation", "query")
+                        lines.append(f"  DB: {db_op} on {db_table}")
+                    model_hint = ctx.get("model_hint")
+                    if model_hint:
+                        lines.append(f"  Model: {model_hint}")
 
                 if has_content:
                     bcc_procedures = "\n".join(lines)
@@ -460,9 +544,14 @@ Personality (from user preferences):
                 ),
             })
 
-        # ── Setup tools: UI actions + CRM data operations
-        from app.agents.bob_tools import BOB_TOOLS
-        active_tools = BOB_TOOLS
+        # ── Setup tools: BCC-driven with hardcoded fallback
+        from app.agents.bob_tools import BOB_TOOLS, load_tools_from_bcc
+        from app.infrastructure.database import SessionLocal as _ToolSessionLocal
+        _tool_db = _ToolSessionLocal()
+        try:
+            active_tools = load_tools_from_bcc(_tool_db, session.tenant_id)
+        finally:
+            _tool_db.close()
 
         try:
             client = Groq(api_key=settings.groq_api_key)
@@ -954,6 +1043,9 @@ Personality (from user preferences):
                 except Exception as ex:
                     logger.warning("insight_extraction_failed", error=str(ex))
 
+            # Persist session to backing store after each turn
+            self._persist(isolation_key, session)
+
             return response_text, actions, tool_steps
 
         except Exception as e:
@@ -1033,13 +1125,20 @@ Personality (from user preferences):
                 finally:
                     db.close()
 
-        # ── 2. Classify intent ──
+        # ── 2. Classify intent (BCC-driven when possible) ──
         from app.agents.intent_classifier import classify_message
+        from app.infrastructure.database import SessionLocal as _ClassifySessionLocal
 
-        classification = classify_message(
-            message=user_message,
-            conversation_context=session.messages[-4:] if session.messages else None,
-        )
+        _classify_db = _ClassifySessionLocal()
+        try:
+            classification = classify_message(
+                message=user_message,
+                conversation_context=session.messages[-4:] if session.messages else None,
+                db=_classify_db,
+                tenant_id=session.tenant_id,
+            )
+        finally:
+            _classify_db.close()
 
         logger.info(
             "intent_classified_for_routing",
@@ -1221,11 +1320,12 @@ Retourne SEULEMENT ce JSON, rien d'autre:
         """Delete a specific session (with isolation check)."""
         isolation_key = f"{tenant_id}:{user_id}:{session_id}" if tenant_id and user_id else session_id
         with self._lock:
-            if isolation_key in self._sessions:
-                del self._sessions[isolation_key]
+            removed = isolation_key in self._sessions
+            self._sessions.pop(isolation_key, None)
+            self._store.delete(f"{self._STORE_PREFIX}{isolation_key}")
+            if removed:
                 logger.info("bob_session_deleted", session_id=session_id, isolation_key=isolation_key)
-                return True
-            return False
+            return removed
 
     def get_session_info(self, session_id: str, tenant_id: str = "", user_id: str = "") -> Optional[dict]:
         """Get session metadata (with isolation check)."""
@@ -1262,13 +1362,14 @@ Retourne SEULEMENT ce JSON, rien d'autre:
             return results
 
     def _cleanup_expired(self) -> None:
-        """Remove expired sessions."""
+        """Remove expired sessions from local cache (store handles TTL natively)."""
         expired = [
             sid for sid, s in self._sessions.items()
             if s.is_expired()
         ]
         for sid in expired:
             del self._sessions[sid]
+            self._store.delete(f"{self._STORE_PREFIX}{sid}")
             logger.info("bob_session_expired", session_id=sid)
 
 

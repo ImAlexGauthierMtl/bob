@@ -347,6 +347,30 @@
                         <span>·</span>
                         <span class="stage-badge">{{ a.status }}</span>
                     </div>
+                    <div class="activity-card__links"
+                        style="margin-top:0.5rem; display:flex; gap:10px; font-size: 0.8rem; color: #6b7280;">
+                        @if (a.organization_ids?.length) {
+                        @for (orgId of a.organization_ids; track orgId) {
+                        <a [routerLink]="['/organizations', orgId]" style="text-decoration: none; color: inherit;">
+                            <i class="fa-solid fa-building"></i> Linked Org
+                        </a>
+                        }
+                        }
+                        @if (a.contact_ids?.length) {
+                        @for (contactId of a.contact_ids; track contactId) {
+                        <a [routerLink]="['/contacts', contactId]" style="text-decoration: none; color: inherit;">
+                            <i class="fa-solid fa-address-book"></i> Linked Contact
+                        </a>
+                        }
+                        }
+                        @if (a.opportunity_ids?.length) {
+                        @for (oppId of a.opportunity_ids; track oppId) {
+                        <a [routerLink]="['/opportunities', oppId]" style="text-decoration: none; color: inherit;">
+                            <i class="fa-solid fa-chart-line"></i> Linked Opp
+                        </a>
+                        }
+                        }
+                    </div>
                 </div>
             </div>
             }

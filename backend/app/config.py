@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     # App
     environment: str = "development"
     debug: bool = True
-    api_port: int = 8000
+    api_port: int = 4500
 
     # Database
     database_url: str = "postgresql://croo:croo@localhost:5432/croo_digital_experience"
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
 
     # CORS
-    cors_origins: List[str] = ["http://localhost:4200", "http://localhost:4201"]
+    cors_origins: List[str] = ["http://localhost:4200", "http://localhost:4201", "http://localhost:4700"]
 
     # Rate limiting
     rate_limit_max_attempts: int = 5
@@ -45,8 +45,28 @@ class Settings(BaseSettings):
     voice_vad_threshold: float = 0.5
     voice_max_session_minutes: int = 30
 
+    # DashScope / Alibaba Cloud (Qwen3-TTS for multilingual voice)
+    dashscope_api_key: str = ""
+    dashscope_tts_model: str = "qwen3-tts-instruct-flash"
+    dashscope_tts_voice: str = "Cherry"
+    # Rick — custom cloned voice (zero-shot via ref_audio)
+    # Point to a WAV file (mono, 24kHz): set RICK_REF_AUDIO_PATH=/path/to/rick_ref.wav
+    rick_ref_audio_path: str = ""
+
+    # Anthropic (Deep Agent — Opus 4.6)
+    anthropic_api_key: str = ""
+
+    # OpenRouter (Deep Agent — Claude Opus 4.6 via OpenRouter)
+    openrouter_api_key: str = ""
+
+    # Redis (session store)
+    redis_url: str = ""
+
     # Serper.dev (Search)
     serper_api_key: str = ""
+
+    # Hunter.io (Domain Search & Enrichment)
+    hunter_api_key: str = ""
 
     # Admin seed
     admin_email: str = "admin@croo.digital"

@@ -8,6 +8,7 @@ import {
     BccRegulation, BccRole, BccRoleDetail,
     BccSkill, BccTask, BccTaskStep, BccResource, BccMilestone,
     BccProfile, BccProfileSection, BccProfileEntry,
+    CognitiveMapDomain,
 } from '../models/bcc.model';
 
 const API_URL = `${environment.apiUrl}/bcc`;
@@ -119,6 +120,11 @@ export class BccService {
 
     deleteDomain(id: string): Observable<void> {
         return this.http.delete<void>(`${API_URL}/domains/${id}`);
+    }
+
+    // ── Cognitive Map ────────────────────────────────────────
+    getCognitiveMap(): Observable<CognitiveMapDomain[]> {
+        return this.http.get<CognitiveMapDomain[]>(`${API_URL}/cognitive-map`);
     }
 
     // ── Library: Intents ─────────────────────────────────────

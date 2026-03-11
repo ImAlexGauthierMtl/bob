@@ -97,7 +97,7 @@ class RateLimiter:
                 detail={
                     "error": "Rate limit exceeded for voice sessions",
                     "retry_after_seconds": bucket.reset_seconds,
-                    "limit": "5 sessions/hour",
+                    "limit": "500 sessions/hour",
                 },
             )
 

@@ -5,6 +5,8 @@ import enum
 from sqlalchemy import Column, String, Text, Enum as SAEnum, Float, Date, ForeignKey
 from sqlalchemy.orm import relationship
 
+from app.domain.entities.activity import activity_opportunities
+
 from app.domain.entities.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
 
 
@@ -60,5 +62,12 @@ class Opportunity(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
 
     # Child relations
     quotes = relationship("Quote", back_populates="opportunity", passive_deletes=True)
-    activities = relationship("Activity", back_populates="opportunity", passive_deletes=True)
     products = relationship("OpportunityProduct", back_populates="opportunity", cascade="all, delete-orphan")
+
+    # M:N with Activities
+    linked_activities = relationship(
+        "Activity",
+        secondary=activity_opportunities,
+        back_populates="opportunities",
+        lazy="selectin"
+    )

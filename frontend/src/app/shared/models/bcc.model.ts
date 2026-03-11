@@ -40,6 +40,7 @@ export interface BccIntentTask {
     task_template_id: string;
     task_template_name: string;
     sort_order: number;
+    tool_name: string | null;
 }
 
 export interface BccDomain {
@@ -58,8 +59,47 @@ export interface BccIntent {
     category: string | null;
     domain_id: string | null;
     domain_name: string | null;
+    workflow_key: string | null;
+    pipeline_key: string | null;
     task_count: number;
     tasks: BccIntentTask[];
+}
+
+// ── Cognitive Map (nested tree) ────────────────────────────────
+
+export interface CognitiveMapTask {
+    id: string;
+    sort_order: number;
+    tool_name: string | null;
+    task_template: {
+        id: string;
+        name: string;
+        description: string | null;
+        context: Record<string, unknown>;
+        frequency: string;
+        category: string | null;
+    } | null;
+}
+
+export interface CognitiveMapIntent {
+    id: string;
+    name: string;
+    description: string | null;
+    workflow_key: string | null;
+    pipeline_key: string | null;
+    category: string | null;
+    trigger_phrases: string[];
+    tasks: CognitiveMapTask[];
+}
+
+export interface CognitiveMapDomain {
+    id: string;
+    name: string;
+    description: string | null;
+    icon: string | null;
+    intent_count: number;
+    task_count: number;
+    intents: CognitiveMapIntent[];
 }
 
 // ── Layer 2: Organization ───────────────────────────────────────

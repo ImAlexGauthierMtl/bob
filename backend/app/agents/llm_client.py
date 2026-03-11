@@ -1,4 +1,4 @@
-"""Groq LLM client — reusable wrapper.
+"""Groq LLM client — reusable wrapper with retry resilience.
 
 UNRULED PATTERN — No HDQ template exists for LLM client integration.
 """
@@ -9,6 +9,7 @@ from groq import Groq
 import structlog
 
 from app.config import settings
+from app.infrastructure.provider_resilience import retry_with_backoff
 
 logger = structlog.get_logger(__name__)
 
@@ -19,6 +20,10 @@ class LLMClient:
     def __init__(self):
         self.client = Groq(api_key=settings.groq_api_key)
         self.default_model = settings.groq_default_model
+
+    @retry_with_backoff(max_retries=2, base_delay=1.0, max_delay=3.0)
+    def _call_with_retry(self, **kwargs):
+        return self.client.chat.completions.create(**kwargs)
 
     def chat(
         self,
@@ -68,7 +73,7 @@ class LLMClient:
             kwargs["response_format"] = {"type": "json_object"}
 
         try:
-            response = self.client.chat.completions.create(**kwargs)
+            response = self._call_with_retry(**kwargs)
             content = response.choices[0].message.content or ""
             tokens_in = response.usage.prompt_tokens if response.usage else 0
             tokens_out = response.usage.completion_tokens if response.usage else 0

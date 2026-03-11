@@ -131,6 +131,36 @@ async def extraction_node(state: EnrichmentState) -> dict:
     # Build context from all sources
     context_parts = [f"Company name: {name}\n"]
 
+    # Hunter.io data (structured, high confidence)
+    hunter_company = state.get("hunter_company", {})
+    hunter_contacts = state.get("hunter_contacts", [])
+
+    if hunter_company:
+        parts = []
+        for key, val in hunter_company.items():
+            if val and key not in ("geo", "tech_stack", "social"):
+                parts.append(f"  {key}: {val}")
+        if hunter_company.get("social"):
+            social = {k: v for k, v in hunter_company["social"].items() if v}
+            if social:
+                parts.append(f"  social_media: {social}")
+        if hunter_company.get("tech_stack"):
+            parts.append(f"  tech_stack: {hunter_company['tech_stack'][:15]}")
+        context_parts.append("--- Hunter.io Company Data (high confidence) ---\n" + "\n".join(parts))
+
+    if hunter_contacts:
+        contact_lines = []
+        for c in hunter_contacts[:10]:
+            line = f"  {c.get('first_name', '')} {c.get('last_name', '')} — {c.get('position', 'N/A')}"
+            if c.get("email"):
+                line += f" ({c['email']})"
+            if c.get("linkedin"):
+                line += f" [LinkedIn: {c['linkedin']}]"
+            if c.get("seniority"):
+                line += f" [{c['seniority']}]"
+            contact_lines.append(line)
+        context_parts.append("--- Hunter.io Contacts (verified) ---\n" + "\n".join(contact_lines))
+
     for sr in search_results[:5]:
         context_parts.append(f"Search result: {sr['title']} — {sr['snippet']}")
 
@@ -157,6 +187,7 @@ async def extraction_node(state: EnrichmentState) -> dict:
 Return the JSON object with extracted fields."""
 
     extracted = {}
+    flat_error = None
     try:
         flat_response = llm_client.chat(
             prompt=flat_prompt,
@@ -164,7 +195,6 @@ Return the JSON object with extracted fields."""
             json_mode=True,
             temperature=0.0,
             max_tokens=2048,
-            # ── Usage tracking context ──
             tenant_id=state.get("tenant_id"),
             user_id=None,
             user_email=state.get("user_email"),
@@ -175,7 +205,8 @@ Return the JSON object with extracted fields."""
         extracted = {k: v for k, v in extracted.items() if v is not None}
         logger.info("flat_extraction_complete", organization=name, fields_found=len(extracted))
     except Exception as e:
-        logger.error("flat_extraction_error", organization=name, error=str(e))
+        flat_error = str(e)
+        logger.error("flat_extraction_error", organization=name, error=flat_error)
 
     # ── Extraction 2: Deep profile ──
     deep_prompt = f"""Extract comprehensive business intelligence for "{name}" from the following sources:
@@ -185,6 +216,7 @@ Return the JSON object with extracted fields."""
 Return the comprehensive JSON object."""
 
     organization_profile = {}
+    deep_error = None
     try:
         deep_response = llm_client.chat(
             prompt=deep_prompt,
@@ -192,7 +224,6 @@ Return the comprehensive JSON object."""
             json_mode=True,
             temperature=0.0,
             max_tokens=4096,
-            # ── Usage tracking context ──
             tenant_id=state.get("tenant_id"),
             user_id=None,
             user_email=state.get("user_email"),
@@ -202,10 +233,29 @@ Return the comprehensive JSON object."""
         organization_profile = json.loads(deep_response)
         logger.info("deep_extraction_complete", organization=name, categories=list(organization_profile.keys()))
     except Exception as e:
-        logger.error("deep_extraction_error", organization=name, error=str(e))
+        deep_error = str(e)
+        logger.error("deep_extraction_error", organization=name, error=deep_error)
+
+    flat_ok = bool(extracted)
+    deep_ok = bool(organization_profile)
+    if not flat_ok and not deep_ok:
+        status = "error"
+    elif not flat_ok or not deep_ok:
+        status = "partial"
+    else:
+        status = "done"
+
+    if status != "done":
+        logger.warning(
+            "extraction_incomplete",
+            organization=name,
+            flat_ok=flat_ok,
+            deep_ok=deep_ok,
+            status=status,
+        )
 
     return {
         "extracted": extracted,
         "organization_profile": organization_profile,
-        "status": "done",
+        "status": status,
     }

@@ -1,7 +1,7 @@
-"""Dynamic workflow runner — builds LangGraph from WorkflowStep definitions.
+"""Dynamic workflow runner — walks a WorkflowStep graph sequentially.
 
-Each workflow is compiled into a dynamic LangGraph at runtime.
-Steps are agent nodes with configurable behavior.
+Executes workflows by traversing step definitions using on_success/on_failure
+links and step_order fallback. Steps are executed by registered agent node functions.
 """
 
 from datetime import datetime, timezone

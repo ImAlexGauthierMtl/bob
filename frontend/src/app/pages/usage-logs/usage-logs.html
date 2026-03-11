@@ -201,7 +201,7 @@
                         <span class="service-tag service-tag--sm" [attr.data-service]="item.service_type">{{
                             item.service_type }}</span>
                         <span class="timeline__model">{{ item.model || item.trigger_source }}</span>
-                        <span class="timeline__cogs">${{ item.cogs_amount?.toFixed(6) || '0' }}</span>
+                        <span class="timeline__cogs">${{ item.cogs_amount.toFixed(6) || '0' }}</span>
                     </div>
 
                     <!-- Tokens info -->

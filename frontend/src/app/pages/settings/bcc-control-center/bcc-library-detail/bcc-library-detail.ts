@@ -265,6 +265,13 @@ export class BccLibraryDetailComponent implements OnInit {
             'standard_operating_procedure': 'fa-solid fa-list-ol',
             'compliance_requirements': 'fa-solid fa-shield-halved',
             'tools_required': 'fa-solid fa-toolbox',
+            'db_table': 'fa-solid fa-database',
+            'db_operation': 'fa-solid fa-pen-to-square',
+            'display_type': 'fa-solid fa-desktop',
+            'model_hint': 'fa-solid fa-microchip',
+            'thresholds': 'fa-solid fa-sliders',
+            'keyword_map': 'fa-solid fa-key',
+            'pipeline_node': 'fa-solid fa-diagram-project',
         };
         return icons[key] || 'fa-solid fa-circle-info';
     }

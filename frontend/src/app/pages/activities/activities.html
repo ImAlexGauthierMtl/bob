@@ -108,6 +108,28 @@
                         <div><i class="fa-solid fa-user"></i> {{ activity.assigned_to }}</div>
                         }
                         <div><i class="fa-solid fa-tag"></i> {{ activity.activity_type }}</div>
+
+                        @if (activity.organization_ids?.length) {
+                        @for (orgId of activity.organization_ids; track orgId) {
+                        <a [routerLink]="['/organizations', orgId]" style="text-decoration: none; color: inherit;">
+                            <div><i class="fa-solid fa-building"></i> Linked Org</div>
+                        </a>
+                        }
+                        }
+                        @if (activity.contact_ids?.length) {
+                        @for (contactId of activity.contact_ids; track contactId) {
+                        <a [routerLink]="['/contacts', contactId]" style="text-decoration: none; color: inherit;">
+                            <div><i class="fa-solid fa-address-book"></i> Linked Contact</div>
+                        </a>
+                        }
+                        }
+                        @if (activity.opportunity_ids?.length) {
+                        @for (oppId of activity.opportunity_ids; track oppId) {
+                        <a [routerLink]="['/opportunities', oppId]" style="text-decoration: none; color: inherit;">
+                            <div><i class="fa-solid fa-chart-line"></i> Linked Opp</div>
+                        </a>
+                        }
+                        }
                     </div>
                 </div>
             </div>

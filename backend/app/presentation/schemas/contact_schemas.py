@@ -42,9 +42,14 @@ class ContactResponse(BaseModel):
     mobile: Optional[str] = None
     job_title: Optional[str] = None
     department: Optional[str] = None
+    seniority: Optional[str] = None
     status: Optional[str] = None
     linkedin_url: Optional[str] = None
+    headline: Optional[str] = None
+    profile_picture_url: Optional[str] = None
     notes: Optional[str] = None
+    contact_profile: Optional[dict] = None
+    linkedin_followers: Optional[list] = None
     organization_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
