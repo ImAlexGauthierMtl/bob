@@ -1,0 +1,496 @@
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Loading…</span>
+</div>
+}
+
+@if (!isLoading && item) {
+
+<!-- ═══ Header ═══ -->
+<header class="role-header">
+    <div class="role-header__top">
+        <div class="role-header__identity">
+            <a routerLink="/settings/bob-control-center" class="role-header__back">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div class="role-header__icon" [style.background]="typeColor">
+                <i [class]="typeIcon"></i>
+            </div>
+            <div class="role-header__info">
+                <h2 class="role-header__name">{{ item?.name }}</h2>
+                <p class="role-header__meta">{{ typeLabel | uppercase }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Perspective Filter Bar -->
+    @if (profile && profile.sections.length > 0) {
+    <div class="perspective-bar">
+        @for (p of perspectives; track p.value) {
+        <button class="perspective-btn" [class.perspective-btn--active]="selectedPerspective === p.value"
+            [style.--accent]="p.value === 'all' ? '#6B7280' : getPerspectiveColor(p.value)"
+            (click)="selectPerspective(p.value)">
+            {{ p.label }}
+        </button>
+        }
+        <button class="perspective-btn perspective-btn--history" [class.perspective-btn--active]="showHistory"
+            (click)="toggleHistory()">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            History
+        </button>
+    </div>
+    }
+</header>
+
+<!-- ═══ Content ═══ -->
+<main class="role-content">
+
+    <!-- ══════════════════════════════════════════════════════
+         VERSIONED PROFILE SECTIONS (replaces hardcoded per-type sections)
+         ══════════════════════════════════════════════════════ -->
+    @if (!showHistory) {
+
+    <!-- Type-specific metadata (badges, categories) -->
+    @if (asSkillTemplate; as sk) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-file-alt"></i>
+            <h3>Overview</h3>
+        </div>
+        <div class="detail-section__tags" style="margin-top: 12px">
+            <span class="detail-tag"
+                [style.background]="sk.type === 'soft' ? '#F59E0B' : sk.type === 'tool' ? '#8B5CF6' : '#EF4444'"
+                style="color: white">
+                {{ sk.type | uppercase }}
+            </span>
+            @if (sk.category) {
+            <span class="detail-tag detail-tag--outline">{{ sk.category }}</span>
+            }
+        </div>
+    </section>
+    }
+
+    @if (asTaskTemplate; as tsk) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-file-alt"></i>
+            <h3>Overview</h3>
+        </div>
+        <div class="detail-section__tags" style="margin-top: 12px">
+            <span class="detail-tag" style="background: #10B981; color: white;">{{ tsk.frequency | uppercase }}</span>
+            @if (tsk.category) {
+            <span class="detail-tag detail-tag--outline">{{ tsk.category }}</span>
+            }
+        </div>
+        @if (tsk.description) {
+        <p class="detail-section__text" style="margin-top: 12px">{{ tsk.description }}</p>
+        }
+    </section>
+
+    <!-- Context: Procedure Steps -->
+    @if (tsk.context && isArray(tsk.context['procedure'])) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-list-ol"></i>
+            <h3>Procedure</h3>
+        </div>
+        <div class="detail-list" style="margin-top: 12px">
+            @for (step of asArray(tsk.context['procedure']); track $index) {
+            <div class="detail-list__item">
+                <span class="detail-list__bullet" style="background: #10B981"></span>
+                <span>{{ step }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Context: Tool Priority -->
+    @if (tsk.context && isArray(tsk.context['tool_priority']) && asArray(tsk.context['tool_priority']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-wrench"></i>
+            <h3>Tool Priority</h3>
+        </div>
+        <div class="detail-chips" style="margin-top: 12px">
+            @for (tool of asArray(tsk.context['tool_priority']); track $index) {
+            <span class="detail-chip" style="background: rgba(255,69,0,0.08); border-color: rgba(255,69,0,0.2); color: #e03e00; font-family: 'SF Mono','Fira Code',monospace; font-size: 0.78rem;">{{ tool }}</span>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Context: Required Info (array of field names) -->
+    @if (tsk.context && isArray(tsk.context['required_info']) && asArray(tsk.context['required_info']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-clipboard-check"></i>
+            <h3>Required Info</h3>
+        </div>
+        <div class="detail-chips" style="margin-top: 12px">
+            @for (field of asArray(tsk.context['required_info']); track $index) {
+            <span class="detail-chip" style="font-family: 'SF Mono','Fira Code',monospace; font-size: 0.78rem;">{{ field }}</span>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Context: Optional Info -->
+    @if (tsk.context && isArray(tsk.context['optional_info']) && asArray(tsk.context['optional_info']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-clipboard-question"></i>
+            <h3>Optional Info</h3>
+        </div>
+        <div class="detail-chips" style="margin-top: 12px">
+            @for (field of asArray(tsk.context['optional_info']); track $index) {
+            <span class="detail-chip" style="font-family: 'SF Mono','Fira Code',monospace; font-size: 0.78rem; opacity: 0.7;">{{ field }}</span>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Context: Expected Output -->
+    @if (tsk.context && tsk.context['expected_output']) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-message"></i>
+            <h3>Expected Output</h3>
+        </div>
+        <p class="detail-section__text" style="margin-top: 12px; font-family: 'SF Mono','Fira Code',monospace; font-size: 0.82rem; padding: 12px; background: var(--color-gray-25); border-radius: 8px; border: 1px solid var(--color-gray-100);">{{ tsk.context['expected_output'] }}</p>
+    </section>
+    }
+
+    <!-- Context: Response Format -->
+    @if (tsk.context && tsk.context['response_format']) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-code"></i>
+            <h3>Response Format</h3>
+        </div>
+        <p class="detail-section__text" style="margin-top: 12px; font-family: 'SF Mono','Fira Code',monospace; font-size: 0.82rem; padding: 12px; background: var(--color-gray-25); border-radius: 8px; border: 1px solid var(--color-gray-100);">{{ tsk.context['response_format'] }}</p>
+    </section>
+    }
+
+    <!-- Context: Required Info (legacy object format) -->
+    @if (tsk.context && isObject(tsk.context['required_info'])) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-clipboard-check"></i>
+            <h3>Required Information</h3>
+        </div>
+        <div class="assessment-grid" style="margin-top: 12px">
+            @for (key of getObjectKeys(asRecord(tsk.context['required_info'])); track key) {
+            <div class="assessment-card">
+                <span class="assessment-card__label">{{ formatKey(key) }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Context: Other keys (SOP, compliance, success_metrics, etc.) -->
+    @if (tsk.context) {
+    @for (key of getObjectKeys(asRecord(tsk.context)); track key) {
+    @if (key !== 'procedure' && key !== 'tool_priority' && key !== 'required_info' && key !== 'optional_info' && key !== 'expected_output' && key !== 'response_format' && key !== 'expectations' && key !== 'deliverables') {
+    @if (isArray(asRecord(tsk.context)[key]) && asArray(asRecord(tsk.context)[key]).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i [class]="getContextIcon(key)"></i>
+            <h3>{{ formatKey(key) }}</h3>
+        </div>
+        <div class="detail-list" style="margin-top: 12px">
+            @for (item of asArray(asRecord(tsk.context)[key]); track $index) {
+            <div class="detail-list__item">
+                <span class="detail-list__bullet" style="background: #10B981"></span>
+                <span>{{ item }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+    @if (isObject(asRecord(tsk.context)[key]) && !isArray(asRecord(tsk.context)[key])) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i [class]="getContextIcon(key)"></i>
+            <h3>{{ formatKey(key) }}</h3>
+        </div>
+        <div class="assessment-grid" style="margin-top: 12px">
+            @for (subKey of getObjectKeys(asRecord(asRecord(tsk.context)[key])); track subKey) {
+            <div class="assessment-card">
+                <span class="assessment-card__label">{{ formatKey(subKey) }}</span>
+                <span class="assessment-card__value">{{ asRecord(asRecord(tsk.context)[key])[subKey] }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+    @if (!isObject(asRecord(tsk.context)[key]) && !isArray(asRecord(tsk.context)[key]) && asRecord(tsk.context)[key]) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i [class]="getContextIcon(key)"></i>
+            <h3>{{ formatKey(key) }}</h3>
+        </div>
+        <p class="detail-section__text" style="margin-top: 12px; font-family: 'SF Mono','Fira Code',monospace; font-size: 0.82rem; padding: 8px 12px; background: var(--color-gray-25); border-radius: 6px; border: 1px solid var(--color-gray-100); display: inline-block;">{{ asRecord(tsk.context)[key] }}</p>
+    </section>
+    }
+    }
+    }
+    }
+
+    <!-- Context: Expectations -->
+    @if (tsk.context && tsk.context['expectations']) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-bullseye"></i>
+            <h3>Expectations</h3>
+        </div>
+        <p class="detail-section__text" style="margin-top: 12px">{{ tsk.context['expectations'] }}</p>
+    </section>
+    }
+
+    <!-- Context: Deliverables -->
+    @if (tsk.context && isArray(tsk.context['deliverables'])) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-box-check"></i>
+            <h3>Deliverables</h3>
+        </div>
+        <div class="detail-list" style="margin-top: 12px">
+            @for (item of asArray(tsk.context['deliverables']); track $index) {
+            <div class="detail-list__item">
+                <span class="detail-list__bullet" style="background: #6366F1"></span>
+                <span>{{ item }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+    }
+
+    @if (asIntent; as intent) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-bullseye"></i>
+            <h3>Overview</h3>
+        </div>
+        <div class="detail-section__tags" style="margin-top: 12px">
+            @if (intent.category) {
+            <span class="detail-tag" style="background: #6366F1; color: white;">{{ intent.category }}</span>
+            }
+            <span class="detail-tag detail-tag--outline">{{ intent.task_count }} tasks</span>
+        </div>
+        @if (intent.description) {
+        <p class="detail-section__text" style="margin-top: 12px">{{ intent.description }}</p>
+        }
+    </section>
+
+    <!-- Trigger Phrases -->
+    @if (intent.trigger_phrases && intent.trigger_phrases.length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-comment-dots"></i>
+            <h3>Trigger Phrases</h3>
+        </div>
+        <div class="detail-chips" style="margin-top: 12px">
+            @for (phrase of intent.trigger_phrases; track $index) {
+            <span class="detail-chip">{{ phrase }}</span>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Linked Tasks (ordered) -->
+    @if (intent.tasks && intent.tasks.length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-list-ol"></i>
+            <h3>Task Sequence</h3>
+        </div>
+        <div class="detail-list" style="margin-top: 12px">
+            @for (task of intent.tasks; track task.id) {
+            <div class="detail-list__item">
+                <span class="detail-list__bullet" style="background: #6366F1">{{ task.sort_order + 1 }}</span>
+                <span>{{ task.task_template_name }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+    }
+
+    @if (asDomain; as domain) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-layer-group"></i>
+            <h3>Overview</h3>
+        </div>
+        <div class="detail-section__tags" style="margin-top: 12px">
+            <span class="detail-tag detail-tag--outline">{{ domain.intent_count }} intents</span>
+        </div>
+        @if (domain.description) {
+        <p class="detail-section__text" style="margin-top: 12px">{{ domain.description }}</p>
+        }
+    </section>
+    }
+
+    <!-- Dynamic profile sections from versioned entries -->
+    @for (section of filteredSections; track section.section) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i [class]="getSectionIcon(section.section)"></i>
+            <h3>{{ formatKey(section.section) }}</h3>
+        </div>
+
+        @for (entry of section.perspectives; track entry.id) {
+        <div class="profile-entry">
+            <!-- Perspective badge -->
+            <div class="profile-entry__meta">
+                <span class="perspective-badge" [style.background]="getPerspectiveColor(entry.perspective)">
+                    {{ getPerspectiveLabel(entry.perspective) }}
+                </span>
+                <span class="version-badge">v{{ entry.version }}</span>
+                <span class="contributor-info">
+                    <i [class]="getMethodIcon(entry.contribution_method)"></i>
+                    {{ entry.contributor_name }}
+                </span>
+            </div>
+
+            <!-- Content -->
+            @if (entry.content) {
+            <p class="detail-section__text">{{ entry.content }}</p>
+            }
+
+            <!-- Structured data: array → list -->
+            @if (isArray(entry.structured_data)) {
+            <div class="detail-list">
+                @for (item of asArray(entry.structured_data); track $index) {
+                @if (!isObject(item)) {
+                <div class="detail-list__item">
+                    <span class="detail-list__bullet" [style.background]="typeColor"></span>
+                    <span>{{ item }}</span>
+                </div>
+                }
+                }
+            </div>
+            }
+
+            <!-- Structured data: object → assessment grid -->
+            @if (isObject(entry.structured_data)) {
+            <div class="assessment-grid">
+                @for (key of getObjectKeys(asRecord(entry.structured_data)); track key) {
+
+                @if (isArray(asRecord(entry.structured_data)[key])) {
+                <div class="assessment-card" style="grid-column: 1 / -1;">
+                    <span class="assessment-card__label">{{ formatKey(key) }}</span>
+                    <div class="detail-chips" style="margin-top: 8px">
+                        @for (val of asArray(asRecord(entry.structured_data)[key]); track $index) {
+                        <span class="detail-chip">{{ val }}</span>
+                        }
+                    </div>
+                </div>
+                } @else if (isObject(asRecord(entry.structured_data)[key])) {
+                <div class="assessment-card" style="grid-column: 1 / -1;">
+                    <span class="assessment-card__label">{{ formatKey(key) }}</span>
+                    <div class="assessment-grid" style="margin-top: 8px">
+                        @for (subKey of getObjectKeys(asRecord(asRecord(entry.structured_data)[key])); track subKey) {
+                        <div class="assessment-card">
+                            <span class="assessment-card__label">{{ formatKey(subKey) }}</span>
+                            <span class="assessment-card__value">{{
+                                asRecord(asRecord(entry.structured_data)[key])[subKey] }}</span>
+                        </div>
+                        }
+                    </div>
+                </div>
+                } @else {
+                <div class="assessment-card">
+                    <span class="assessment-card__label">{{ formatKey(key) }}</span>
+                    <span class="assessment-card__value">{{ asRecord(entry.structured_data)[key] }}</span>
+                </div>
+                }
+
+                }
+            </div>
+            }
+        </div>
+        }
+    </section>
+    }
+
+    <!-- Empty state -->
+    @if (filteredSections.length === 0 && profile) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-circle-info"></i>
+            <h3>No profile data</h3>
+        </div>
+        <p class="detail-section__text" style="opacity: 0.6">
+            @if (selectedPerspective !== 'all') {
+            No entries found for the <strong>{{ getPerspectiveLabel(selectedPerspective) }}</strong> perspective.
+            Try switching to "All" to see all available content.
+            } @else {
+            This {{ typeLabel | lowercase }} doesn't have any profile entries yet.
+            Chat with Bob to start building the knowledge base.
+            }
+        </p>
+    </section>
+    }
+
+    }
+
+    <!-- ══════════════════════════════════════════════════════
+         VERSION HISTORY
+         ══════════════════════════════════════════════════════ -->
+    @if (showHistory) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <h3>Version History</h3>
+        </div>
+
+        @if (profileHistory.length === 0) {
+        <p class="detail-section__text" style="opacity: 0.6">No version history available.</p>
+        }
+
+        <div class="history-timeline">
+            @for (entry of profileHistory; track entry.id) {
+            <div class="history-entry" [class.history-entry--inactive]="!entry.is_active">
+                <div class="history-entry__dot"
+                    [style.background]="entry.is_active ? getPerspectiveColor(entry.perspective) : '#374151'">
+                </div>
+                <div class="history-entry__content">
+                    <div class="history-entry__header">
+                        <span class="perspective-badge perspective-badge--sm"
+                            [style.background]="getPerspectiveColor(entry.perspective)">
+                            {{ getPerspectiveLabel(entry.perspective) }}
+                        </span>
+                        <strong>{{ formatKey(entry.section) }}</strong>
+                        <span class="version-badge">v{{ entry.version }}</span>
+                        @if (!entry.is_active) {
+                        <span class="version-badge version-badge--inactive">superseded</span>
+                        }
+                    </div>
+                    <p class="history-entry__body">
+                        @if (entry.content) {
+                        {{ entry.content.length > 120 ? entry.content.substring(0, 120) + '...' : entry.content }}
+                        } @else {
+                        <em style="opacity: 0.5">Structured data</em>
+                        }
+                    </p>
+                    <div class="history-entry__footer">
+                        <i [class]="getMethodIcon(entry.contribution_method)"></i>
+                        <span>{{ entry.contributor_name }}</span>
+                        @if (entry.created_at) {
+                        <span>· {{ entry.created_at | date:'short' }}</span>
+                        }
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+</main>
+}

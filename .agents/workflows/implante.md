@@ -46,7 +46,15 @@ python -m pytest tests/ -v --tb=short 2>&1 | tail -30
 npx ng test --watch=false --browsers=ChromeHeadless 2>&1 | tail -30
 ```
 
-5. **Vérifier les imports et la syntaxe** :
+5. **Si frontend touché → Playwright auto-vérification** (voir `rules/regle-playwright.md`) :
+```bash
+// turbo
+node frontend/playwright-verify.js [pages touchées]
+```
+> [!IMPORTANT]
+> Ne JAMAIS skip cette étape. L'auto-vérification visuelle est obligatoire pour tout changement frontend.
+
+6. **Vérifier les imports et la syntaxe** :
 ```bash
 # Backend
 python -c "import app; print('OK')"

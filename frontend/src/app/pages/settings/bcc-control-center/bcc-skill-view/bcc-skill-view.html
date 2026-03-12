@@ -1,0 +1,189 @@
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Loading skill module...</span>
+</div>
+}
+
+@if (skill) {
+<!-- ═══ Header ═══ -->
+<header class="role-header">
+    <div class="role-header__top">
+        <div class="role-header__identity">
+            <a [routerLink]="['/settings/bob-control-center', orgId, 'roles', roleId]" class="role-header__back">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div class="role-header__icon" [style.background]="typeColor">
+                <i [class]="typeIcon"></i>
+            </div>
+            <div class="role-header__info">
+                <h2 class="role-header__name">{{ skill.name }}</h2>
+                <p class="role-header__meta">{{ typeLabel | uppercase }} · {{ stageLabel }} · Priority {{ skill.priority
+                    }}/5</p>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ═══ Content ═══ -->
+<main class="role-content">
+
+    <!-- ══ Description ══ -->
+    @if (skill.description) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-file-alt"></i>
+            <h3>Description</h3>
+        </div>
+        <p class="detail-section__text">{{ skill.description }}</p>
+
+        <!-- Priority dots -->
+        <div class="detail-section__tags" style="margin-top: 12px">
+            <span class="detail-tag" [style.background]="typeColor" [style.color]="'white'">
+                {{ typeLabel }}
+            </span>
+            @if (skill.prerequisites && skill.prerequisites.length > 0) {
+            @for (prereq of skill.prerequisites; track prereq) {
+            <span class="detail-tag detail-tag--outline">Prérequis: {{ prereq }}</span>
+            }
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ══ Learning Objectives ══ -->
+    @if (asArray(meta['learning_objectives']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-bullseye"></i>
+            <h3>Objectifs d'apprentissage</h3>
+        </div>
+        <div class="detail-list">
+            @for (obj of asArray(meta['learning_objectives']); track $index) {
+            <div class="detail-list__item">
+                <span class="detail-list__number">{{ $index + 1 }}</span>
+                <span>{{ obj }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ══ Sub-skills ══ -->
+    @if (asArray(meta['sub_skills']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-puzzle-piece"></i>
+            <h3>Sous-compétences</h3>
+        </div>
+        <div class="detail-chips">
+            @for (sub of asArray(meta['sub_skills']); track $index) {
+            <span class="detail-chip">{{ sub }}</span>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ══ CRM Modules Used ══ -->
+    @if (getCrmModules().length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-cubes"></i>
+            <h3>Modules CRM utilisés</h3>
+        </div>
+        <div class="crm-modules-grid">
+            @for (mod of getCrmModules(); track mod.module) {
+            <div class="crm-module-card">
+                <div class="crm-module-card__icon">
+                    <i [class]="getCrmModuleIcon(mod.module)"></i>
+                </div>
+                <div class="crm-module-card__content">
+                    <h5 class="crm-module-card__name">{{ getCrmModuleLabel(mod.module) }}</h5>
+                    <p class="crm-module-card__usage">{{ mod.usage }}</p>
+                </div>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ══ Bob Conversation Starters ══ -->
+    @if (asArray(meta['bob_conversation_starters']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-robot"></i>
+            <h3>Discuter avec Bob</h3>
+        </div>
+        <div class="bob-starters">
+            @for (starter of asArray(meta['bob_conversation_starters']); track $index) {
+            <div class="bob-starter-card">
+                <i class="fa-solid fa-comments bob-starter-card__icon"></i>
+                <span class="bob-starter-card__text">{{ starter }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ══ Assessment Criteria ══ -->
+    @if (getObjectKeys(meta['assessment_criteria']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-trophy"></i>
+            <h3>Critères d'évaluation</h3>
+        </div>
+        <div class="assessment-grid">
+            @for (key of getObjectKeys(meta['assessment_criteria']); track key) {
+            <div class="assessment-card">
+                <span class="assessment-card__label">{{ formatKey(key) }}</span>
+                <span class="assessment-card__value">{{ asRecord(meta['assessment_criteria'])[key] }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ══ Key Concepts ══ -->
+    @if (getObjectKeys(meta['key_concepts']).length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-lightbulb"></i>
+            <h3>Concepts clés</h3>
+        </div>
+        <div class="concepts-list">
+            @for (key of getObjectKeys(meta['key_concepts']); track key) {
+            <div class="concept-item">
+                <h5 class="concept-item__title">{{ key }}</h5>
+                <p class="concept-item__desc">{{ asRecord(meta['key_concepts'])[key] }}</p>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- ══ Resources ══ -->
+    @if (skill.resources.length > 0) {
+    <section class="detail-section">
+        <div class="detail-section__header">
+            <i class="fa-solid fa-book"></i>
+            <h3>Ressources ({{ skill.resources.length }})</h3>
+        </div>
+        <div class="resources-list">
+            @for (res of skill.resources; track res.id) {
+            <div class="resource-card">
+                <i class="fa-solid fa-book resource-card__icon"></i>
+                <div class="resource-card__content">
+                    <h5 class="resource-card__title">{{ res.title }}</h5>
+                    <span class="resource-card__type">{{ res.type | uppercase }}</span>
+                    @if (res.content) {
+                    <p class="resource-card__desc">{{ res.content }}</p>
+                    }
+                </div>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+</main>
+}

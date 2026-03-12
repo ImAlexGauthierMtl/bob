@@ -1,0 +1,181 @@
+@if (article) {
+<div class="kb-article-page">
+
+    <!-- ═══════ Header ═══════ -->
+    <header class="article-header" id="article-header">
+        <div class="article-header__nav">
+            <a routerLink="/knowledge-base" class="article-header__back">
+                <i class="fa-solid fa-arrow-left"></i>
+                Back to Knowledge Base
+            </a>
+            <div class="article-header__actions">
+                <button class="article-header__btn" title="Bookmark">
+                    <i class="fa-solid fa-bookmark"></i>
+                </button>
+                <button class="article-header__btn" title="Share">
+                    <i class="fa-solid fa-share-nodes"></i>
+                </button>
+                <button class="article-header__btn" title="Print">
+                    <i class="fa-solid fa-print"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════ Main Layout ═══════ -->
+    <div class="article-layout">
+
+        <!-- Article Content -->
+        <main class="article-main" id="article-content">
+
+            <!-- Article Meta -->
+            <div class="article-meta">
+                <div class="article-meta__badges">
+                    <span class="kb-badge" [class]="getVisibilityClass(article.visibility)">
+                        {{ getVisibilityLabel(article.visibility) }}
+                    </span>
+                    @for (tag of article.tags; track tag) {
+                    <span class="kb-tag">{{ tag }}</span>
+                    }
+                    <span class="article-meta__sep">•</span>
+                    <span class="article-meta__date">Updated {{ article.updated_at | date:'mediumDate' }}</span>
+                </div>
+
+                <h1 class="article-title">{{ article.title }}</h1>
+
+                @if (article.excerpt) {
+                <p class="article-excerpt">{{ article.excerpt }}</p>
+                }
+
+                <div class="article-author-bar">
+                    @if (article.author_name) {
+                    <div class="article-author">
+                        <div class="article-author__avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div>
+                            <p class="article-author__name">{{ article.author_name }}</p>
+                            <p class="article-author__role">{{ article.author_role }}</p>
+                        </div>
+                    </div>
+                    }
+                    <div class="article-stats-bar">
+                        <span><i class="fa-solid fa-clock"></i> {{ article.read_time_minutes }} min read</span>
+                        <span><i class="fa-solid fa-eye"></i> {{ article.view_count }} views</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table of Contents (inline) -->
+            @if (toc.length > 2) {
+            <div class="article-toc-inline" id="table-of-contents">
+                <h3 class="article-toc-inline__title">Table of Contents</h3>
+                <nav>
+                    @for (entry of toc; track entry.id) {
+                    <a class="article-toc-inline__link" [style.padding-left.px]="(entry.level - 1) * 16 + 16"
+                        (click)="scrollToSection(entry.id)">
+                        {{ entry.text }}
+                    </a>
+                    }
+                </nav>
+            </div>
+            }
+
+            <!-- Article Body (rendered markdown) -->
+            <article class="article-body" [innerHTML]="renderedContent"></article>
+
+            <!-- Feedback -->
+            <div class="article-feedback" id="article-feedback">
+                <p class="article-feedback__prompt">Was this article helpful?</p>
+                <div class="article-feedback__buttons">
+                    <button class="article-feedback__btn" [class.article-feedback__btn--active]="feedbackGiven"
+                        [disabled]="feedbackGiven" (click)="sendFeedback(true)">
+                        <i class="fa-solid fa-thumbs-up"></i>
+                        Yes ({{ article.helpful_yes }})
+                    </button>
+                    <button class="article-feedback__btn" [class.article-feedback__btn--active]="feedbackGiven"
+                        [disabled]="feedbackGiven" (click)="sendFeedback(false)">
+                        <i class="fa-solid fa-thumbs-down"></i>
+                        No ({{ article.helpful_no }})
+                    </button>
+                </div>
+            </div>
+
+            <!-- Related Articles -->
+            @if (relatedArticles.length > 0) {
+            <div class="article-related" id="related-articles">
+                <h3 class="article-related__title">Related Articles</h3>
+                <div class="article-related__grid">
+                    @for (rel of relatedArticles; track rel.id) {
+                    <a [routerLink]="['/knowledge-base', rel.slug]" class="article-related__card">
+                        <h4 class="article-related__card-title">{{ rel.title }}</h4>
+                        <p class="article-related__card-excerpt">{{ rel.excerpt }}</p>
+                        <span class="article-related__card-meta">
+                            {{ rel.author_name || 'Team' }} · {{ rel.read_time_minutes }} min
+                        </span>
+                    </a>
+                    }
+                </div>
+            </div>
+            }
+
+        </main>
+
+        <!-- Right Sidebar -->
+        <aside class="article-sidebar" id="sidebar-right">
+
+            <!-- On This Page -->
+            @if (toc.length > 0) {
+            <div class="sidebar-section">
+                <h3 class="sidebar-section__title">On This Page</h3>
+                <nav class="sidebar-toc">
+                    @for (entry of toc; track entry.id) {
+                    <a class="sidebar-toc__link" (click)="scrollToSection(entry.id)">
+                        {{ entry.text }}
+                    </a>
+                    }
+                </nav>
+            </div>
+            }
+
+            <!-- Article Info -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-section__title">Article Info</h3>
+                <div class="sidebar-info">
+                    <div class="sidebar-info__row">
+                        <span>Published</span>
+                        <span>{{ article.created_at | date:'mediumDate' }}</span>
+                    </div>
+                    <div class="sidebar-info__row">
+                        <span>Updated</span>
+                        <span>{{ article.updated_at | date:'mediumDate' }}</span>
+                    </div>
+                    <div class="sidebar-info__row">
+                        <span>Views</span>
+                        <span>{{ article.view_count }}</span>
+                    </div>
+                    <div class="sidebar-info__row">
+                        <span>Helpful</span>
+                        <span>{{ article.helpful_yes }} / {{ article.helpful_yes + article.helpful_no }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ask AI -->
+            <div class="sidebar-section sidebar-section--ai">
+                <div class="sidebar-ai__header">
+                    <div class="sidebar-ai__icon">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <h3 class="sidebar-ai__title">Ask Bob</h3>
+                </div>
+                <p class="sidebar-ai__desc">Have questions about this article? Ask Bob for instant answers.</p>
+                <button class="sidebar-ai__btn">Start Conversation</button>
+            </div>
+
+        </aside>
+
+    </div>
+
+</div>
+}

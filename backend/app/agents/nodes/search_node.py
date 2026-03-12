@@ -8,6 +8,9 @@ import structlog
 
 from app.config import settings
 from app.agents.state import EnrichmentState
+from app.infrastructure.database import SessionLocal
+from app.middleware.usage_tracker import UsageTracker
+from app.domain.entities.usage_transaction import TriggerSource
 
 logger = structlog.get_logger(__name__)
 
@@ -20,6 +23,8 @@ async def search_node(state: EnrichmentState) -> dict:
     Returns updated state with search_results and urls_to_scrape.
     """
     name = state["organization_name"]
+    tenant_id = state.get("tenant_id", "default")
+    user_email = state.get("user_email", "")
     logger.info("search_start", organization=name)
 
     queries = [
@@ -51,6 +56,22 @@ async def search_node(state: EnrichmentState) -> dict:
                         "snippet": item.get("snippet", ""),
                     })
 
+                # ── Track Serper usage ───────────────────
+                try:
+                    db = SessionLocal()
+                    tracker = UsageTracker(db)
+                    tracker.track_search(
+                        tenant_id=tenant_id,
+                        user_id="",
+                        user_email=user_email,
+                        provider="serper",
+                        trigger_source=TriggerSource.ENRICHMENT,
+                        metadata={"query": query, "results": len(data.get("organic", []))},
+                    )
+                    db.close()
+                except Exception as track_err:
+                    logger.warning("search_track_error", error=str(track_err))
+
                 logger.info("search_query_done", query=query, results=len(data.get("organic", [])))
             except Exception as e:
                 logger.error("search_query_error", query=query, error=str(e))
@@ -73,3 +94,4 @@ async def search_node(state: EnrichmentState) -> dict:
         "urls_to_scrape": urls,
         "status": "scraping",
     }
+

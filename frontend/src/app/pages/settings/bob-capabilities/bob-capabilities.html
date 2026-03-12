@@ -1,0 +1,114 @@
+<div class="settings-panel">
+
+    <!-- ═══════ Back to Settings ═══════ -->
+    <div class="auto-back">
+        <a routerLink="/settings/bob" class="auto-back__link">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Bob Assistant</span>
+        </a>
+        <div class="auto-back__title">
+            <h2 class="auto-back__heading">Bob Capabilities</h2>
+            <p class="auto-back__subtitle">Manage what Bob can do — enable or disable capabilities</p>
+        </div>
+    </div>
+
+    <!-- ═══════ Stats Banner ═══════ -->
+    @if (!isLoading) {
+    <div class="cap-stats">
+        <div class="cap-stat">
+            <div class="cap-stat__icon">
+                <i class="fa-solid fa-brain"></i>
+            </div>
+            <div>
+                <p class="cap-stat__value">{{ capabilities.length }}</p>
+                <p class="cap-stat__label">Total Capabilities</p>
+            </div>
+        </div>
+        <div class="cap-stat">
+            <div class="cap-stat__icon cap-stat__icon--green">
+                <i class="fa-solid fa-check-circle"></i>
+            </div>
+            <div>
+                <p class="cap-stat__value">{{ grantedCount }}</p>
+                <p class="cap-stat__label">Active</p>
+            </div>
+        </div>
+        <div class="cap-stat">
+            <div class="cap-stat__icon cap-stat__icon--blue">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div>
+                <p class="cap-stat__value">{{ trustScore }}%</p>
+                <p class="cap-stat__label">Trust Score</p>
+            </div>
+        </div>
+        <div class="cap-stat">
+            <div class="cap-stat__icon cap-stat__icon--purple">
+                <i class="fa-solid fa-robot"></i>
+            </div>
+            <div>
+                <p class="cap-stat__value" style="text-transform: capitalize">{{ agentMode }}</p>
+                <p class="cap-stat__label">Agent Mode</p>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- ═══════ Search ═══════ -->
+    <div class="cap-search">
+        <i class="fa-solid fa-magnifying-glass cap-search__icon"></i>
+        <input type="text" [(ngModel)]="searchQuery" placeholder="Search capabilities..." class="cap-search__input" />
+    </div>
+
+    <!-- ═══════ Loading ═══════ -->
+    @if (isLoading) {
+    <div class="cap-loading">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <p>Loading capabilities...</p>
+    </div>
+    }
+
+    <!-- ═══════ Capabilities List ═══════ -->
+    @if (!isLoading) {
+    <div class="cap-list">
+        @for (cap of filteredCapabilities; track cap.code) {
+        <div class="cap-row" [class.cap-row--disabled]="!cap.granted">
+            <div class="cap-row__info">
+                <div class="cap-row__header">
+                    <h4 class="cap-row__name">{{ cap.name }}</h4>
+                    <div class="cap-row__badges">
+                        <span class="cap-badge" [class]="getRiskClass(cap.risk_level)">
+                            <i [class]="getRiskIcon(cap.risk_level)"></i>
+                            {{ cap.risk_level }}
+                        </span>
+                        <span class="cap-badge cap-badge--scope">
+                            <i [class]="getScopeIcon(cap.scope)"></i>
+                            {{ cap.scope }}
+                        </span>
+                        @if (cap.module) {
+                        <span class="cap-badge cap-badge--module">{{ cap.module }}</span>
+                        }
+                    </div>
+                </div>
+                <p class="cap-row__meta">
+                    <span class="cap-row__code">{{ cap.code }}</span>
+                    <span class="cap-row__source">· Source: {{ cap.source }}</span>
+                </p>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" [checked]="cap.granted" (change)="toggleCapability(cap)" />
+                <div class="toggle__track"></div>
+            </label>
+        </div>
+        }
+
+        @if (filteredCapabilities.length === 0) {
+        <div class="cap-empty">
+            <i class="fa-solid fa-search"></i>
+            <p>No capabilities match your search</p>
+        </div>
+        }
+    </div>
+    }
+
+</div>

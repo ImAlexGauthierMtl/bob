@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automation Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>::-webkit-scrollbar { display: none;}</style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'accent': '#FF4500',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-white font-sans antialiased">
+
+<div id="main-container" class="flex min-h-screen">
+    
+    <aside id="sidebar" class="hidden lg:flex lg:flex-col w-72 border-r border-gray-100 bg-white fixed h-screen overflow-y-auto">
+        <div class="p-10 border-b border-gray-100">
+            <h1 class="text-3xl font-extralight tracking-tight leading-tight">Dynamics<br><span class="font-semibold">Nexus</span></h1>
+            <p class="text-xs text-gray-400 mt-3 tracking-wide">AI-ENHANCED CRM</p>
+        </div>
+        
+        <nav class="flex-1 p-8">
+            <div class="space-y-2">
+                <a href="#" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Dashboard</a>
+                <a href="#organizations" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Organizations</a>
+                <a href="#contacts" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Contacts</a>
+                <a href="#opportunities" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Opportunities</a>
+                <a href="#tasks" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Tasks</a>
+                <a href="#inbox" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Inbox</a>
+                <a href="#" class="block py-4 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Analytics</a>
+            </div>
+            
+            <div class="mt-16 pt-8 border-t border-gray-100">
+                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4 px-5">AI Assistant</p>
+                <div class="bg-gradient-to-br from-gray-50 to-white border border-gray-100 p-6 mb-6">
+                    <div class="flex items-start gap-3 mb-4">
+                        <div class="w-8 h-8 bg-accent rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-wand-magic-sparkles text-white text-xs"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-black mb-1">Automation Ideas</p>
+                            <p class="text-xs text-gray-500 leading-relaxed">12 suggestions ready</p>
+                        </div>
+                    </div>
+                    <button class="w-full py-2 px-4 bg-black text-white text-xs font-medium hover:bg-gray-800 transition-colors">View Suggestions</button>
+                </div>
+                
+                <div class="space-y-2">
+                    <a href="#" class="block py-3 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Team</a>
+                    <a href="#settings" class="block py-3 px-5 text-sm font-light text-gray-500 hover:text-black hover:bg-gray-50 transition-all">Settings</a>
+                    <a href="#automation" class="block py-3 px-5 text-sm font-medium text-black bg-gray-50 border-l-2 border-accent">Automation</a>
+                </div>
+            </div>
+        </nav>
+        
+        <div class="p-8 border-t border-gray-100">
+            <div class="flex items-center gap-4">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="User" class="w-12 h-12 rounded-full object-cover">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-black truncate">Marcus Chen</p>
+                    <p class="text-xs text-gray-400 truncate">Sales Manager</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="main-content" class="flex-1 flex flex-col min-w-0 lg:ml-72">
+        
+        <header id="header" class="bg-white border-b border-gray-100 sticky top-0 z-20">
+            <div class="px-6 lg:px-16 py-8">
+                <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                    <div class="flex items-center gap-6 flex-1">
+                        <button class="lg:hidden text-gray-600">
+                            <i class="fa-solid fa-bars text-xl"></i>
+                        </button>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h2 class="text-3xl lg:text-4xl font-light tracking-tight text-black">Automation Builder</h2>
+                                <div class="px-3 py-1 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 text-xs font-semibold rounded-full">
+                                    <i class="fa-solid fa-sparkles mr-1"></i>AI-POWERED
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-500">Design intelligent workflows that enhance productivity across all levels</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 flex-shrink-0 w-full lg:w-auto">
+                        <button class="flex-1 lg:flex-none px-5 py-3 bg-white border border-gray-200 text-black text-sm font-medium hover:border-accent transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-book text-xs"></i>
+                            Templates
+                        </button>
+                        <button class="flex-1 lg:flex-none px-5 py-3 bg-accent text-white text-sm font-medium hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                            New Automation
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 bg-white overflow-y-auto">
+            
+            <div id="ai-suggestion-banner" class="bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 border-b border-purple-100">
+                <div class="px-6 lg:px-16 py-8">
+                    <div class="flex items-start gap-6">
+                        <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                            <i class="fa-solid fa-brain text-white text-2xl"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-semibold text-purple-900 mb-2">AI Automation Recommendations</h3>
+                            <p class="text-sm text-purple-700 mb-4">Based on your workflow patterns, I've identified 3 high-impact automations that could save your team 8.5 hours per week</p>
+                            <div class="flex flex-wrap gap-3">
+                                <button class="px-4 py-2 bg-white text-purple-700 border border-purple-200 text-sm font-medium hover:bg-purple-50 transition-colors rounded-lg shadow-sm">
+                                    <i class="fa-solid fa-magic-wand-sparkles mr-2"></i>
+                                    View Recommendations
+                                </button>
+                                <button class="px-4 py-2 bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 transition-colors rounded-lg shadow-sm">
+                                    Auto-Generate Workflow
+                                </button>
+                            </div>
+                        </div>
+                        <button class="text-purple-400 hover:text-purple-600 transition-colors">
+                            <i class="fa-solid fa-xmark text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="automation-levels" class="px-6 lg:px-16 py-12 border-b border-gray-100">
+                <div class="mb-8">
+                    <h3 class="text-2xl font-light text-black mb-2">Automation Levels</h3>
+                    <p class="text-sm text-gray-500">Choose the scope and impact of your automation workflow</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <button class="automation-level-btn text-left bg-white border-2 border-gray-200 p-8 hover:border-accent hover:shadow-lg transition-all group" data-level="user">
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center group-hover:bg-blue-500 transition-colors">
+                                <i class="fa-solid fa-user text-blue-600 text-xl group-hover:text-white transition-colors"></i>
+                            </div>
+                            <span class="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full">Personal</span>
+                        </div>
+                        <h4 class="text-lg font-semibold text-black mb-2">User Level</h4>
+                        <p class="text-sm text-gray-600 mb-4 leading-relaxed">Personal automations that enhance individual productivity and streamline your daily tasks</p>
+                        <div class="space-y-2 text-xs text-gray-500">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-check text-blue-600"></i>
+                                <span>Personal task automation</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-check text-blue-600"></i>
+                                <span>Email filters & responses</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-check text-blue-600"></i>
+                                <span>Custom notifications</span>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button class="automation-level-btn text-left bg-white border-2 border-accent p-8 shadow-lg transition-all group" data-level="company">
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="w-14 h-14 bg-accent rounded-2xl flex items-center justify-center shadow-lg">
+                                <i class="fa-solid fa-building text-white text-xl"></i>
+                            </div>
+                            <span class="px-3 py-1 bg-accent text-white text-xs font-semibold rounded-full">Recommended</span>
+                        </div>
+                        <h4 class="text-lg font-semibold text-black mb-2">Company Level</h4>
+                        <p class="text-sm text-gray-600 mb-4 leading-relaxed">Team-wide workflows that coordinate actions across departments and enhance collaboration</p>
+                        <div class="space-y-2 text-xs text-gray-500">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-check text-accent"></i>
+                                <span>Cross-team workflows</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-check text-accent"></i>
+                                <span>Lead assignment rules</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-check text-accent"></i>
+                                <span>Approval processes</span>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button class="automation-level-btn text-left bg-white border-2 border-gray-200 p-8 hover:border-accent hover:shadow-lg transition-all group" data-level="system">
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center group-hover:bg-purple-500 transition-colors">
+                                <i class="fa-solid fa-server text-purple-600 text-xl group-hover:text-white transition-colors"></i>
+                            </div>
+                            <span class="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-semibold rounded-full">Advanced</span>
+                        </div>
+                        <h4 class="text-lg font-semibold text-black mb-2">System Level</h4>
+                        <p class="text-sm text-gray-600 mb-4 leading-relaxed">Enterprise-wide automations that integrate with external systems and manage critical processes</p>
+                        <div class="space-y-2 text-xs text-gray-500">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-check text-purple-600"></i>
+                                <span>API integrations</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-check text-purple-600"></i>
+                                <span>Data synchronization</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-check text-purple-600"></i>
+                                <span>System-wide policies</span>
+                            </div>
+                        </div>
+                    </button>
+
+                </div>
+            </div>
+
+            <div id="workflow-builder" class="px-6 lg:px-16 py-12">
+                
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h3 class="text-2xl font-light text-black mb-2">Active Automations</h3>
+                        <p class="text-sm text-gray-500">Manage and monitor your automation workflows</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <input type="text" placeholder="Search automations..." class="py-2 pl-10 pr-4 border border-gray-200 text-sm text-black placeholder-gray-400 focus:outline-none focus:border-accent transition-colors w-64">
+                        </div>
+                        <select class="py-2 px-4 border border-gray-200 text-sm text-black focus:outline-none focus:border-accent transition-colors">
+                            <option>All Levels</option>
+                            <option>User Level</option>
+                            <option>Company Level</option>
+                            <option>System Level</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 mb-12">
+                    
+                    <div id="automation-card-1" class="bg-white border border-gray-200 hover:border-accent transition-all group">
+                        <div class="p-8">
+                            <div class="flex items-start justify-between mb-6">
+                                <div class="flex items-start gap-4 flex-1">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                                        <i class="fa-solid fa-envelope text-white text-lg"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <h4 class="text-lg font-semibold text-black">Smart Email Prioritization</h4>
+                                            <span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded">User Level</span>
+                                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Active</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 mb-4">Automatically categorizes incoming emails and flags urgent messages requiring immediate attention</p>
+                                        <div class="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-clock"></i>
+                                                <span>Created 14 days ago</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-bolt"></i>
+                                                <span>Triggered 247 times</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-chart-line"></i>
+                                                <span>98.4% success rate</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <button class="w-10 h-10 border border-gray-200 flex items-center justify-center hover:border-accent hover:text-accent transition-all">
+                                        <i class="fa-solid fa-pen text-sm"></i>
+                                    </button>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" checked class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 border border-gray-100 p-6">
+                                <div class="flex items-center gap-4 mb-4">
+                                    <div class="flex-1">
+                                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Workflow Steps</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-white text-xs font-bold">1</span>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">Trigger: New Email Received</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <i class="fa-solid fa-brain text-white text-xs"></i>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">AI Analysis: Content & Sender Priority</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-white text-xs font-bold">2</span>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">Action: Apply Label & Send Notification</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="automation-card-2" class="bg-white border border-gray-200 hover:border-accent transition-all group">
+                        <div class="p-8">
+                            <div class="flex items-start justify-between mb-6">
+                                <div class="flex items-start gap-4 flex-1">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                                        <i class="fa-solid fa-user-plus text-white text-lg"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <h4 class="text-lg font-semibold text-black">Lead Assignment & Distribution</h4>
+                                            <span class="px-2 py-1 bg-orange-50 text-orange-700 text-xs font-semibold rounded">Company Level</span>
+                                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Active</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 mb-4">Intelligently assigns new leads to sales reps based on territory, expertise, and current workload</p>
+                                        <div class="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-clock"></i>
+                                                <span>Created 28 days ago</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-bolt"></i>
+                                                <span>Triggered 1,834 times</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-chart-line"></i>
+                                                <span>99.2% success rate</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <button class="w-10 h-10 border border-gray-200 flex items-center justify-center hover:border-accent hover:text-accent transition-all">
+                                        <i class="fa-solid fa-pen text-sm"></i>
+                                    </button>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" checked class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 border border-gray-100 p-6">
+                                <div class="flex items-center gap-4 mb-4">
+                                    <div class="flex-1">
+                                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Workflow Steps</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-white text-xs font-bold">1</span>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">Trigger: New Lead Created</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <i class="fa-solid fa-brain text-white text-xs"></i>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">AI Routing: Analyze Territory & Skills Match</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-white text-xs font-bold">2</span>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">Condition: Check Team Capacity</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-white text-xs font-bold">3</span>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">Action: Assign to Rep & Notify</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="automation-card-3" class="bg-white border border-gray-200 hover:border-accent transition-all group">
+                        <div class="p-8">
+                            <div class="flex items-start justify-between mb-6">
+                                <div class="flex items-start gap-4 flex-1">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                                        <i class="fa-solid fa-sync text-white text-lg"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <h4 class="text-lg font-semibold text-black">Cross-Platform Data Synchronization</h4>
+                                            <span class="px-2 py-1 bg-purple-50 text-purple-700 text-xs font-semibold rounded">System Level</span>
+                                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Active</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 mb-4">Maintains data consistency across CRM, ERP, and external platforms in real-time</p>
+                                        <div class="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-clock"></i>
+                                                <span>Created 45 days ago</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-bolt"></i>
+                                                <span>Triggered 8,921 times</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-chart-line"></i>
+                                                <span>99.8% success rate</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <button class="w-10 h-10 border border-gray-200 flex items-center justify-center hover:border-accent hover:text-accent transition-all">
+                                        <i class="fa-solid fa-pen text-sm"></i>
+                                    </button>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" checked class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 border border-gray-100 p-6">
+                                <div class="flex items-center gap-4 mb-4">
+                                    <div class="flex-1">
+                                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Workflow Steps</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-white text-xs font-bold">1</span>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">Trigger: Data Change Detected</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-white text-xs font-bold">2</span>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">Validation: Check Data Integrity</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <i class="fa-solid fa-brain text-white text-xs"></i>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">AI Mapping: Transform Data Format</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-white text-xs font-bold">3</span>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">Action: Sync Across All Platforms</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="automation-card-4" class="bg-white border border-gray-200 hover:border-accent transition-all group">
+                        <div class="p-8">
+                            <div class="flex items-start justify-between mb-6">
+                                <div class="flex items-start gap-4 flex-1">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                                        <i class="fa-solid fa-check-double text-white text-lg"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <h4 class="text-lg font-semibold text-black">Smart Task Completion Reminder</h4>
+                                            <span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded">User Level</span>
+                                            <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full">Paused</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 mb-4">Sends contextual reminders for pending tasks based on priority and deadline proximity</p>
+                                        <div class="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-clock"></i>
+                                                <span>Created 7 days ago</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-bolt"></i>
+                                                <span>Triggered 89 times</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-chart-line"></i>
+                                                <span>97.8% success rate</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <button class="w-10 h-10 border border-gray-200 flex items-center justify-center hover:border-accent hover:text-accent transition-all">
+                                        <i class="fa-solid fa-pen text-sm"></i>
+                                    </button>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 border border-gray-100 p-6">
+                                <div class="flex items-center gap-4 mb-4">
+                                    <div class="flex-1">
+                                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Workflow Steps</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-white text-xs font-bold">1</span>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">Trigger: Task Due Within 24 Hours</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <i class="fa-solid fa-brain text-white text-xs"></i>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">AI Analysis: Assess Task Context & Priority</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-white text-xs font-bold">2</span>
+                                        </div>
+                                        <div class="flex-1 bg-white border border-gray-200 p-3">
+                                            <p class="text-sm font-medium text-black">Action: Send Smart Reminder</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div id="automation-templates" class="pt-12 border-t border-gray-100">
+                    <div class="mb-8">
+                        <h3 class="text-2xl font-light text-black mb-2">Quick Start Templates</h3>
+                        <p class="text-sm text-gray-500">Pre-built workflows designed for common business scenarios</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                        
+                        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-6 hover:shadow-lg transition-all cursor-pointer group">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-handshake text-white text-lg"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-base font-semibold text-black mb-1">Welcome New Customers</h4>
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">Company</span>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-700 mb-4">Automatically send onboarding emails, create tasks, and schedule follow-ups for new clients</p>
+                            <button class="w-full py-2 px-4 bg-white text-blue-700 border border-blue-200 text-sm font-medium hover:bg-blue-50 transition-colors">
+                                Use Template
+                            </button>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 p-6 hover:shadow-lg transition-all cursor-pointer group">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-chart-simple text-white text-lg"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-base font-semibold text-black mb-1">Pipeline Stage Updates</h4>
+                                    <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">Company</span>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-700 mb-4">Notify team members and update records when opportunities move through sales stages</p>
+                            <button class="w-full py-2 px-4 bg-white text-purple-700 border border-purple-200 text-sm font-medium hover:bg-purple-50 transition-colors">
+                                Use Template
+                            </button>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 p-6 hover:shadow-lg transition-all cursor-pointer group">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-file-invoice text-white text-lg"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-base font-semibold text-black mb-1">Invoice Generation</h4>
+                                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">System</span>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-700 mb-4">Automatically create and send invoices when deals are marked as closed-won</p>
+                            <button class="w-full py-2 px-4 bg-white text-green-700 border border-green-200 text-sm font-medium hover:bg-green-50 transition-colors">
+                                Use Template
+                            </button>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-orange-50 to-red-50 border border-orange-100 p-6 hover:shadow-lg transition-all cursor-pointer group">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-triangle-exclamation text-white text-lg"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-base font-semibold text-black mb-1">Deal Risk Alerts</h4>
+                                    <span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded">Company</span>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-700 mb-4">AI detects stagnant opportunities and alerts managers to take action</p>
+                            <button class="w-full py-2 px-4 bg-white text-orange-700 border border-orange-200 text-sm font-medium hover:bg-orange-50 transition-colors">
+                                Use Template
+                            </button>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 p-6 hover:shadow-lg transition-all cursor-pointer group">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-calendar-check text-white text-lg"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-base font-semibold text-black mb-1">Meeting Follow-ups</h4>
+                                    <span class="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-semibold rounded">User</span>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-700 mb-4">Create tasks and send summary emails after meetings are completed</p>
+                            <button class="w-full py-2 px-4 bg-white text-indigo-700 border border-indigo-200 text-sm font-medium hover:bg-indigo-50 transition-colors">
+                                Use Template
+                            </button>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-100 p-6 hover:shadow-lg transition-all cursor-pointer group">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-birthday-cake text-white text-lg"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-base font-semibold text-black mb-1">Customer Anniversaries</h4>
+                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded">Company</span>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-700 mb-4">Celebrate customer milestones with personalized messages and offers</p>
+                            <button class="w-full py-2 px-4 bg-white text-yellow-700 border border-yellow-200 text-sm font-medium hover:bg-yellow-50 transition-colors">
+                                Use Template
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const levelButtons = document.querySelectorAll('.automation-level-btn');
+        
+        levelButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                levelButtons.forEach(btn => {
+                    btn.classList.remove('border-accent', 'shadow-lg');
+                    btn.classList.add('border-gray-200');
+                });
+                
+                this.classList.remove('border-gray-200');
+                this.classList.add('border-accent', 'shadow-lg');
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,168 @@
+<div class="settings-panel">
+
+    <!-- Header -->
+    <div class="settings-panel__header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <a routerLink="/settings/integrations" class="integration-card__btn" style="padding: 6px 10px;">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <h3 class="settings-panel__title">
+                    <i class="fa-brands fa-microsoft" style="color: var(--color-accent);"></i>
+                    Microsoft 365
+                </h3>
+                <p class="settings-panel__subtitle">Email and calendar synchronization</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            @if (connection?.isActive) {
+            <span class="status-badge status-badge--green">Connected</span>
+            } @else {
+            <span class="status-badge status-badge--amber">Disconnected</span>
+            }
+        </div>
+    </div>
+
+    @if (loading) {
+    <div style="text-align: center; padding: 48px;">
+        <i class="fa-solid fa-spinner fa-spin fa-2x" style="color: var(--color-text-muted);"></i>
+    </div>
+    } @else if (!connection) {
+    <div style="text-align: center; padding: 48px; color: var(--color-text-muted);">
+        <i class="fa-brands fa-microsoft fa-3x" style="margin-bottom: 16px; display: block;"></i>
+        <p>No Microsoft 365 connection found.</p>
+        <p>Go to <a routerLink="/settings/integrations" style="color: var(--color-accent);">Integrations</a> to connect.
+        </p>
+    </div>
+    } @else {
+
+    <!-- Connection Info -->
+    <div class="settings-section">
+        <div class="integration-grid">
+            <div class="integration-card">
+                <p class="integration-card__name">Connected Account</p>
+                <p class="integration-card__sub">{{ connection.msEmail }}</p>
+            </div>
+            <div class="integration-card">
+                <p class="integration-card__name">Last Email Sync</p>
+                <p class="integration-card__sub">{{ formatDate(connection.lastEmailSync) }}</p>
+            </div>
+            <div class="integration-card">
+                <p class="integration-card__name">Last Calendar Sync</p>
+                <p class="integration-card__sub">{{ formatDate(connection.lastCalendarSync) }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display: flex; gap: 8px; margin-bottom: 24px;">
+        <button class="integration-card__btn integration-card__btn--connect" (click)="forceSync()" [disabled]="syncing">
+            @if (syncing) {
+            <i class="fa-solid fa-spinner fa-spin"></i> Syncing...
+            } @else {
+            <i class="fa-solid fa-rotate"></i> Sync Now
+            }
+        </button>
+        <button class="integration-card__btn integration-card__btn--disconnect" (click)="disconnect()">
+            <i class="fa-solid fa-plug-circle-xmark"></i> Disconnect
+        </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="settings-tabs"
+        style="display: flex; gap: 0; border-bottom: 1px solid var(--color-border); margin-bottom: 16px;">
+        <button class="settings-tab" [class.settings-tab--active]="activeTab === 'emails'" (click)="setTab('emails')"
+            style="padding: 10px 20px; background: none; border: none; cursor: pointer; color: var(--color-text-secondary); border-bottom: 2px solid transparent; font-size: 14px;">
+            <i class="fa-solid fa-envelope"></i>
+            Emails ({{ emailTotal }})
+        </button>
+        <button class="settings-tab" [class.settings-tab--active]="activeTab === 'calendar'"
+            (click)="setTab('calendar')"
+            style="padding: 10px 20px; background: none; border: none; cursor: pointer; color: var(--color-text-secondary); border-bottom: 2px solid transparent; font-size: 14px;">
+            <i class="fa-solid fa-calendar"></i>
+            Calendar ({{ eventTotal }})
+        </button>
+    </div>
+
+    <!-- Email List -->
+    @if (activeTab === 'emails') {
+    @if (emails.length === 0) {
+    <div style="text-align: center; padding: 32px; color: var(--color-text-muted);">
+        <i class="fa-solid fa-inbox fa-2x" style="margin-bottom: 12px; display: block;"></i>
+        <p>No synced emails yet. Click "Sync Now" to start.</p>
+    </div>
+    } @else {
+    <div class="record-table">
+        @for (email of emails; track email.id) {
+        <div class="record-row"
+            style="display: flex; gap: 12px; padding: 12px; border-bottom: 1px solid var(--color-border); align-items: flex-start;">
+            <div style="flex: 1; min-width: 0;">
+                <p style="margin: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    @if (!email.isRead) {
+                    <span
+                        style="width: 8px; height: 8px; background: var(--color-accent); border-radius: 50%; display: inline-block; margin-right: 6px;"></span>
+                    }
+                    {{ email.subject || '(No subject)' }}
+                </p>
+                <p style="margin: 4px 0 0; font-size: 12px; color: var(--color-text-muted);">
+                    {{ email.fromName || email.fromAddress }} — {{ formatDate(email.receivedAt) }}
+                </p>
+                <p
+                    style="margin: 4px 0 0; font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ email.bodyPreview }}
+                </p>
+            </div>
+            @if (email.hasAttachments) {
+            <i class="fa-solid fa-paperclip" style="color: var(--color-text-muted); font-size: 12px;"></i>
+            }
+        </div>
+        }
+    </div>
+    }
+    }
+
+    <!-- Event List -->
+    @if (activeTab === 'calendar') {
+    @if (events.length === 0) {
+    <div style="text-align: center; padding: 32px; color: var(--color-text-muted);">
+        <i class="fa-solid fa-calendar-xmark fa-2x" style="margin-bottom: 12px; display: block;"></i>
+        <p>No synced events yet. Click "Sync Now" to start.</p>
+    </div>
+    } @else {
+    <div class="record-table">
+        @for (event of events; track event.id) {
+        <div class="record-row"
+            style="display: flex; gap: 12px; padding: 12px; border-bottom: 1px solid var(--color-border); align-items: flex-start;">
+            <div style="flex: 1; min-width: 0;">
+                <p style="margin: 0; font-weight: 500;">
+                    {{ event.subject || '(No title)' }}
+                    @if (event.isCancelled) {
+                    <span style="color: var(--color-danger); font-size: 11px; margin-left: 6px;">Cancelled</span>
+                    }
+                </p>
+                <p style="margin: 4px 0 0; font-size: 12px; color: var(--color-text-muted);">
+                    <i class="fa-solid fa-clock"></i>
+                    {{ formatDate(event.startTime) }}
+                    @if (event.endTime) {
+                    — {{ formatDate(event.endTime) }}
+                    }
+                </p>
+                @if (event.location) {
+                <p style="margin: 4px 0 0; font-size: 12px; color: var(--color-text-secondary);">
+                    <i class="fa-solid fa-location-dot"></i> {{ event.location }}
+                </p>
+                }
+                @if (event.onlineMeetingUrl) {
+                <a [href]="event.onlineMeetingUrl" target="_blank" style="font-size: 12px; color: var(--color-accent);">
+                    <i class="fa-solid fa-video"></i> Join meeting
+                </a>
+                }
+            </div>
+        </div>
+        }
+    </div>
+    }
+    }
+    }
+
+</div>

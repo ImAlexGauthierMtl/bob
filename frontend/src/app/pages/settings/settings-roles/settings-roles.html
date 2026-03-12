@@ -1,0 +1,244 @@
+<div class="settings-panel">
+
+    <div class="team-header">
+        <div class="settings-panel__header" style="margin-bottom:0">
+            <h3 class="settings-panel__title">Rôles et permissions</h3>
+            <p class="settings-panel__subtitle">Créez des rôles personnalisés et assignez des permissions granulaires
+            </p>
+        </div>
+        <button class="btn btn-accent" (click)="openCreateDialog()">
+            <i class="fa-solid fa-plus"></i> Nouveau rôle
+        </button>
+    </div>
+
+    <!-- Chargement -->
+    @if (loading) {
+    <div style="text-align:center;padding:3rem;color:var(--color-gray-500)">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem"></i>
+        <p style="margin-top:1rem">Chargement des rôles...</p>
+    </div>
+    }
+
+    <!-- Erreur -->
+    @if (error) {
+    <div style="text-align:center;padding:3rem;color:#dc2626">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size:2rem;margin-bottom:1rem"></i>
+        <p>{{ error }}</p>
+        <button class="btn btn-outline" style="margin-top:1rem" (click)="loadItems()">
+            <i class="fa-solid fa-rotate-right"></i> Réessayer
+        </button>
+    </div>
+    }
+
+    <!-- Liste des rôles -->
+    @if (!loading && !error) {
+    @for (role of roles; track role.id) {
+    <div class="team-card team-card--clickable">
+        <div class="team-card__left" (click)="openPermDialog(role)">
+            <div class="team-card__avatar" style="font-size:1rem">
+                <i [class]="getRoleIcon(role)"></i>
+            </div>
+            <div>
+                <p class="team-card__name">{{ role.name }}</p>
+                <p class="team-card__email">{{ role.description || 'Aucune description' }} · {{ getRolePermCount(role)
+                    }} permissions</p>
+            </div>
+        </div>
+        <div class="team-card__right">
+            <span class="status-badge {{ getRoleBadgeClass(role) }}">{{ role.is_system ? 'Système' : 'Personnalisé'
+                }}</span>
+            @if (!role.is_system) {
+            <button class="team-card__action" title="Modifier le rôle" (click)="openEditDialog(role)">
+                <i class="fa-solid fa-pen"></i>
+            </button>
+            <button class="team-card__action" title="Supprimer le rôle" (click)="deleteItem(role)">
+                <i class="fa-solid fa-trash" style="color:#dc2626"></i>
+            </button>
+            }
+            @if (role.is_system) {
+            <button class="team-card__action" title="Voir les permissions" (click)="openPermDialog(role)">
+                <i class="fa-solid fa-eye"></i>
+            </button>
+            }
+        </div>
+    </div>
+    }
+
+    @if (roles.length === 0) {
+    <div style="text-align:center;padding:3rem;color:var(--color-gray-500)">
+        <i class="fa-solid fa-shield-halved" style="font-size:2rem;margin-bottom:1rem"></i>
+        <p>Aucun rôle configuré</p>
+        <p style="font-size:0.8125rem;margin-top:0.5rem;">Créez votre premier rôle personnalisé pour gérer les
+            permissions.</p>
+    </div>
+    }
+    }
+
+    <!-- ═══════ Dialog Créer un rôle ═══════ -->
+    @if (showCreateDialog) {
+    <div class="dialog-overlay" (click)="closeCreateDialog()">
+        <div class="dialog-modal dialog-modal--sm" (click)="$event.stopPropagation()">
+            <div class="dialog-header">
+                <div class="dialog-header__left">
+                    <div class="dialog-header__icon" style="background:linear-gradient(135deg,#a855f7,#6366f1)">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div>
+                        <h3 class="dialog-header__title">Créer un rôle</h3>
+                        <p class="dialog-header__subtitle">Définissez un nouveau rôle pour votre organisation</p>
+                    </div>
+                </div>
+                <button class="dialog-close" (click)="closeCreateDialog()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="dialog-body">
+                <div class="form-group">
+                    <label class="form-label">Nom du rôle</label>
+                    <input type="text" class="form-input" [(ngModel)]="newRoleName"
+                        placeholder="ex. Directeur des ventes" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input type="text" class="form-input" [(ngModel)]="newRoleDescription"
+                        placeholder="Que peut faire ce rôle ?" />
+                </div>
+
+                @if (statusMessage) {
+                <div class="dialog-status dialog-status--{{ statusType }}">{{ statusMessage }}</div>
+                }
+
+                <div class="dialog-result__actions" style="margin-top:1rem">
+                    <button class="btn btn-accent" (click)="createItem()"
+                        [disabled]="isCreating || !newRoleName.trim()">
+                        @if (isCreating) { <i class="fa-solid fa-spinner fa-spin"></i> Création... }
+                        @else { <i class="fa-solid fa-plus"></i> Créer le rôle }
+                    </button>
+                    <button class="btn btn-outline" (click)="closeCreateDialog()">Annuler</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- ═══════ Dialog Modifier un rôle ═══════ -->
+    @if (showEditDialog && editingRole) {
+    <div class="dialog-overlay" (click)="closeEditDialog()">
+        <div class="dialog-modal dialog-modal--sm" (click)="$event.stopPropagation()">
+            <div class="dialog-header">
+                <div class="dialog-header__left">
+                    <div class="dialog-header__icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb)">
+                        <i class="fa-solid fa-pen"></i>
+                    </div>
+                    <div>
+                        <h3 class="dialog-header__title">Modifier le rôle</h3>
+                        <p class="dialog-header__subtitle">{{ editingRole.name }}</p>
+                    </div>
+                </div>
+                <button class="dialog-close" (click)="closeEditDialog()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="dialog-body">
+                <div class="form-group">
+                    <label class="form-label">Nom du rôle</label>
+                    <input type="text" class="form-input" [(ngModel)]="editName" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input type="text" class="form-input" [(ngModel)]="editDescription" />
+                </div>
+
+                @if (statusMessage) {
+                <div class="dialog-status dialog-status--{{ statusType }}">{{ statusMessage }}</div>
+                }
+
+                <div class="dialog-result__actions" style="margin-top:1rem">
+                    <button class="btn btn-accent" (click)="saveEdit()" [disabled]="isSavingEdit || !editName.trim()">
+                        @if (isSavingEdit) { <i class="fa-solid fa-spinner fa-spin"></i> Sauvegarde... }
+                        @else { <i class="fa-solid fa-check"></i> Sauvegarder }
+                    </button>
+                    <button class="btn btn-outline" (click)="closeEditDialog()">Annuler</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- ═══════ Dialog Permissions ═══════ -->
+    @if (showPermDialog && permRole) {
+    <div class="dialog-overlay" (click)="closePermDialog()">
+        <div class="dialog-modal" style="max-width:640px" (click)="$event.stopPropagation()">
+            <div class="dialog-header">
+                <div class="dialog-header__left">
+                    <div class="dialog-header__icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <div>
+                        <h3 class="dialog-header__title">{{ permRole.is_system ? 'Consulter' : 'Gérer' }} les
+                            permissions</h3>
+                        <p class="dialog-header__subtitle">Rôle : {{ permRole.name }}</p>
+                    </div>
+                </div>
+                <button class="dialog-close" (click)="closePermDialog()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="dialog-body" style="max-height:60vh;overflow-y:auto">
+                @for (group of groupedPermissions; track group.resource) {
+                <div class="perm-group">
+                    <div class="perm-group__header">
+                        <label class="perm-group__toggle">
+                            @if (!permRole.is_system) {
+                            <input type="checkbox" [checked]="isResourceFullySelected(group.resource)"
+                                (change)="toggleAllPermsForResource(group.resource)" />
+                            }
+                            <span class="perm-group__resource">
+                                <i class="fa-solid fa-cube" style="margin-right:0.5rem;color:var(--color-accent)"></i>
+                                {{ capitalizeResource(group.resource) }}
+                            </span>
+                        </label>
+                    </div>
+                    <div class="perm-group__perms">
+                        @for (perm of group.perms; track perm.id) {
+                        <label class="perm-item" [class.perm-item--disabled]="permRole.is_system">
+                            <input type="checkbox" [checked]="selectedPermIds.has(perm.id)"
+                                (change)="togglePerm(perm.id)" [disabled]="permRole.is_system" />
+                            <div>
+                                <span class="perm-item__action">{{ perm.action }}</span>
+                                @if (perm.description) {
+                                <span class="perm-item__desc">{{ perm.description }}</span>
+                                }
+                            </div>
+                        </label>
+                        }
+                    </div>
+                </div>
+                }
+
+                @if (permissions.length === 0) {
+                <div style="text-align:center;padding:2rem;color:var(--color-gray-400)">
+                    <p>Aucune permission définie dans le système.</p>
+                </div>
+                }
+
+                @if (statusMessage) {
+                <div class="dialog-status dialog-status--{{ statusType }}" style="margin-top:1rem">{{ statusMessage }}
+                </div>
+                }
+
+                @if (!permRole.is_system) {
+                <div class="dialog-result__actions" style="margin-top:1.5rem">
+                    <button class="btn btn-accent" (click)="savePermissions()" [disabled]="isSavingPerms">
+                        @if (isSavingPerms) { <i class="fa-solid fa-spinner fa-spin"></i> Sauvegarde... }
+                        @else { <i class="fa-solid fa-check"></i> Sauvegarder les permissions }
+                    </button>
+                    <button class="btn btn-outline" (click)="closePermDialog()">Annuler</button>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+    }
+
+</div>

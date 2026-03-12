@@ -1,0 +1,851 @@
+<!-- Bob FAB Button -->
+@if (!isExpanded) {
+<button class="bob-fab" (click)="toggle()" [class.bob-fab--open]="isOpen">
+    @if (!isOpen) {
+    <span class="bob-fab__text">Bob</span>
+    @if (hasUnread) {
+    <span class="bob-fab__badge"></span>
+    }
+    } @else {
+    <i class="fa-solid fa-xmark"></i>
+    }
+</button>
+}
+
+<!-- Chat Panel -->
+@if (isOpen) {
+<div class="bob-panel" [class.bob-panel--expanded]="isExpanded">
+
+    <!-- ═══════════════════════════════════════════════════════
+         EXPANDED MODE — Full-screen with sidebar
+         ═══════════════════════════════════════════════════════ -->
+    @if (isExpanded) {
+
+    <!-- Sidebar -->
+    <aside class="bob-exp__sidebar">
+        <div class="bob-exp__brand">
+            <img src="croo-logo.png" alt="Croo" class="sidebar__logo" />
+            <div class="sidebar__brand-divider"></div>
+            <div class="sidebar__brand-text">
+                <span class="sidebar__brand-line1">Digital</span>
+                <span class="sidebar__brand-line2">Experience</span>
+            </div>
+        </div>
+
+        <div class="bob-exp__sidebar-scroll">
+            <div class="bob-exp__new-chat">
+                <button class="bob-exp__new-chat-btn" (click)="newConversation()">
+                    <i class="fa-solid fa-plus"></i>
+                    New Conversation
+                </button>
+            </div>
+
+            @for (group of sessionGroups; track group.label) {
+            <div class="bob-exp__session-group">
+                <p class="bob-exp__session-label">{{ group.label }}</p>
+                @for (session of group.sessions; track session.session_id) {
+                <button class="bob-exp__session-item"
+                    [class.bob-exp__session-item--active]="session.session_id === sessionId"
+                    (click)="selectSession(session)">
+                    <span class="bob-exp__session-name">{{ session.title || 'Session #' + session.session_id.slice(0, 8)
+                        }}</span>
+                    <button class="bob-exp__session-del" (click)="deleteSession(session, $event)" title="Delete">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </button>
+                }
+            </div>
+            }
+        </div>
+
+        <div class="bob-exp__user">
+            <div class="bob-exp__user-avatar">{{ userName ? userName[0] : 'U' }}</div>
+            <div class="bob-exp__user-info">
+                <p class="bob-exp__user-name">{{ userName || 'User' }}</p>
+                <p class="bob-exp__user-role">{{ userRole || 'Member' }}</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main chat area -->
+    <div class="bob-exp__main">
+        <!-- Header -->
+        <header class="bob-exp__header">
+            <h2 class="bob-exp__header-title">{{ activeTitle }}</h2>
+            <div class="bob-exp__header-actions">
+                <button class="bob-exp__header-btn" title="Share">
+                    <i class="fa-solid fa-share-nodes"></i>
+                </button>
+                <button class="bob-exp__header-btn" title="Bookmark">
+                    <i class="fa-solid fa-bookmark"></i>
+                </button>
+                <button class="bob-exp__header-btn" (click)="toggleExpand()" title="Réduire">
+                    <i class="fa-solid fa-compress"></i>
+                </button>
+                <button class="bob-exp__header-btn" (click)="close()" title="Fermer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Chat feed -->
+        <div class="bob-exp__chat" #messagesContainer>
+            <div class="bob-exp__chat-inner">
+
+                @if (messages.length <= 1) { <div class="bob-panel__empty-state">
+                    <div class="bob-panel__empty-logo">
+                        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect width="80" height="80" rx="20" fill="var(--color-accent)" fill-opacity="0.1" />
+                            <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-size="40"
+                                font-weight="700" fill="var(--color-accent)" font-family="inherit">B</text>
+                        </svg>
+                    </div>
+                    <h2 class="bob-panel__empty-title">How can I help you today?</h2>
+                    <p class="bob-panel__empty-subtitle">Ask me anything about your CRM data, or use a quick action
+                        below.</p>
+            </div>
+            }
+
+            @for (msg of messages; track msg.time) {
+            <div class="bob-exp__msg" [class.bob-exp__msg--user]="msg.role === 'user'"
+                [class.bob-exp__msg--bob]="msg.role === 'bob'">
+
+                @if (msg.role === 'bob') {
+                <div class="bob-exp__msg-avatar bob-exp__msg-avatar--bot">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
+                } @else {
+                <div class="bob-exp__msg-avatar bob-exp__msg-avatar--user">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                }
+
+                <div class="bob-exp__msg-body">
+                    <p class="bob-exp__msg-sender">{{ msg.role === 'bob' ? 'Bob' : 'You' }}</p>
+
+                    @if (msg.isLoading) {
+                    <div class="bob-thinking">
+                        <div class="bob-thinking__icon"><i class="fa-solid fa-brain fa-fade"></i></div>
+                        <div class="bob-thinking__body">
+                            <p class="bob-thinking__title">Analyse en cours…</p>
+                            <p class="bob-thinking__sub">Recherche et traitement de votre demande</p>
+                        </div>
+                    </div>
+                    } @else {
+                    @if (msg.toolSteps && msg.toolSteps.length > 0) {
+                    <div class="bob-msg__tools">
+                        @for (step of msg.toolSteps; track step.tool) {
+                        <span class="bob-msg__tool-badge">
+                            <i class="fa-solid fa-check"></i> {{ step.tool.replace('_', ' ') }}
+                        </span>
+                        }
+                    </div>
+                    }
+                    @if (msg.artifact) {
+                    <!-- Artifact rendering — expanded mode -->
+                    @if (msg.artifact.type === 'search_results') {
+                    <div class="bob-rolodex" [class.bob-rolodex--building]="msg.artifact.status !== 'complete'">
+                        <div class="bob-rolodex__header">
+                            <div class="bob-rolodex__icon"><i class="fa-solid fa-address-book"></i></div>
+                            <div>
+                                <div class="bob-rolodex__title">{{ msg.artifact.title }}</div>
+                                @if (msg.artifact.fields[0]) {
+                                <div class="bob-rolodex__query">{{ msg.artifact.fields[0].value }}</div>
+                                }
+                            </div>
+                            <span class="bob-artifact__badge"
+                                [class.bob-artifact__badge--complete]="msg.artifact.status === 'complete'">
+                                @if (msg.artifact.status === 'complete') {
+                                <i class="fa-solid fa-check"></i> Complété
+                                } @else {
+                                <i class="fa-solid fa-spinner fa-spin"></i> Recherche...
+                                }
+                            </span>
+                        </div>
+                        @for (field of msg.artifact.fields; track field.label; let i = $index) {
+                        @if (i > 0) {
+                        <div class="bob-rolodex__result">
+                            <div class="bob-rolodex__result-num">{{ field.label }}</div>
+                            <div class="bob-rolodex__result-info">
+                                <div class="bob-rolodex__result-name">{{ field.value }}</div>
+                            </div>
+                        </div>
+                        }
+                        }
+                    </div>
+
+                    } @else if (msg.artifact.type === 'data_table') {
+                    <!-- Data Table -->
+                    <div class="bob-table">
+                        <div class="bob-table__header">
+                            <div class="bob-table__title">{{ msg.artifact.title }}</div>
+                            <span class="bob-artifact__badge"
+                                [class.bob-artifact__badge--complete]="msg.artifact.status === 'complete'">
+                                @if (msg.artifact.status === 'complete') {
+                                <i class="fa-solid fa-check"></i> Complété
+                                } @else {
+                                <i class="fa-solid fa-spinner fa-spin"></i> Chargement...
+                                }
+                            </span>
+                        </div>
+                        @if (msg.artifact.columns && msg.artifact.rows) {
+                        <div class="bob-table__scroll">
+                            <table class="bob-table__grid">
+                                <thead>
+                                    <tr>
+                                        @for (col of msg.artifact.columns; track col) {
+                                        <th>{{ col }}</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (row of msg.artifact.rows; track row) {
+                                    <tr>
+                                        @for (cell of row; track cell) {
+                                        <td>{{ cell }}</td>
+                                        }
+                                    </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        }
+                    </div>
+
+                    } @else if (msg.artifact.type === 'kpi_summary') {
+                    <!-- KPI Summary -->
+                    <div class="bob-kpi">
+                        <div class="bob-kpi__title">{{ msg.artifact.title }}</div>
+                        @if (msg.artifact.items) {
+                        <div class="bob-kpi__grid">
+                            @for (item of msg.artifact.items; track item.label) {
+                            <div class="bob-kpi__card">
+                                <p class="bob-kpi__value">{{ item.value }}</p>
+                                <p class="bob-kpi__label">{{ item.label }}</p>
+                                @if (item.change) {
+                                <span class="bob-kpi__change"
+                                    [class.bob-kpi__change--up]="item.change.startsWith('+')">{{ item.change }}</span>
+                                }
+                            </div>
+                            }
+                        </div>
+                        }
+                    </div>
+
+                    } @else if (msg.artifact.type === 'progress_card') {
+                    <!-- Progress Card -->
+                    <div class="bob-progress">
+                        @if (msg.artifact.items && msg.artifact.items[0]) {
+                        <div class="bob-progress__header">
+                            <p class="bob-progress__title">{{ msg.artifact.title }}</p>
+                            <p class="bob-progress__value">{{ msg.artifact.items[0].value }}</p>
+                        </div>
+                        <div class="bob-progress__bar">
+                            <div class="bob-progress__fill" [style.width.%]="msg.artifact.items[0].percent || 0"></div>
+                        </div>
+                        <div class="bob-progress__meta">
+                            @if (msg.artifact.items[0].description) {
+                            <span>{{ msg.artifact.items[0].description }}</span>
+                            }
+                            @if (msg.artifact.items[0].change) {
+                            <span>{{ msg.artifact.items[0].change }}</span>
+                            }
+                        </div>
+                        }
+                    </div>
+
+                    } @else if (msg.artifact.type === 'checklist') {
+                    <!-- Checklist -->
+                    <div class="bob-checklist">
+                        <p class="bob-checklist__title">{{ msg.artifact.title }}</p>
+                        @if (msg.artifact.items) {
+                        <div class="bob-checklist__items">
+                            @for (item of msg.artifact.items; track item.label) {
+                            <div class="bob-checklist__item">
+                                <div class="bob-checklist__check">
+                                    <i class="fa-solid fa-check"></i>
+                                </div>
+                                <span>{{ item.label }}</span>
+                            </div>
+                            }
+                        </div>
+                        }
+                    </div>
+
+                    } @else if (msg.artifact.type === 'action_plan') {
+                    <!-- Action Plan -->
+                    <div class="bob-plan">
+                        <div class="bob-plan__header">
+                            <p class="bob-plan__title">{{ msg.artifact.title }}</p>
+                        </div>
+                        @if (msg.artifact.sections) {
+                        <div class="bob-plan__sections">
+                            @for (section of msg.artifact.sections; track section.title) {
+                            <div class="bob-plan__section">
+                                <div class="bob-plan__section-head">
+                                    <div>
+                                        <p class="bob-plan__section-title">{{ section.title }}</p>
+                                        @if (section.subtitle) {
+                                        <p class="bob-plan__section-sub">{{ section.subtitle }}</p>
+                                        }
+                                    </div>
+                                    @if (section.badge) {
+                                    <span class="bob-plan__badge">{{ section.badge }}</span>
+                                    }
+                                </div>
+                                @for (task of section.items; track task.label) {
+                                <div class="bob-plan__task">
+                                    <i class="fa-solid fa-circle-dot bob-plan__task-dot"></i>
+                                    <div class="bob-plan__task-body">
+                                        <p class="bob-plan__task-name">{{ task.label }}</p>
+                                        @if (task.description) {
+                                        <p class="bob-plan__task-desc">{{ task.description }}</p>
+                                        }
+                                        @if (task.time) {
+                                        <p class="bob-plan__task-meta">{{ task.time }}</p>
+                                        }
+                                    </div>
+                                </div>
+                                }
+                            </div>
+                            }
+                        </div>
+                        }
+                    </div>
+
+                    } @else if (msg.artifact.type === 'info_list') {
+                    <!-- Info List -->
+                    <div class="bob-info-list">
+                        <p class="bob-info-list__title">{{ msg.artifact.title }}</p>
+                        @if (msg.artifact.items) {
+                        <ul class="bob-info-list__items">
+                            @for (item of msg.artifact.items; track item.label) {
+                            <li class="bob-info-list__item">
+                                <i [class]="'fa-solid ' + (item.icon || 'fa-circle') + ' bob-info-list__icon'"></i>
+                                <span><strong>{{ item.label }}:</strong> {{ item.value }}</span>
+                            </li>
+                            }
+                        </ul>
+                        }
+                    </div>
+
+                    } @else if (msg.artifact.type === 'pipeline') {
+                    <!-- Pipeline -->
+                    <div class="bob-pipeline">
+                        <div class="bob-pipeline__title">{{ msg.artifact.title }}</div>
+                        @if (msg.artifact.items) {
+                        <div class="bob-pipeline__items">
+                            @for (item of msg.artifact.items; track item.label) {
+                            <div class="bob-pipeline__item">
+                                <div class="bob-pipeline__item-head">
+                                    <span class="bob-pipeline__item-name">{{ item.label }}</span>
+                                    <span class="bob-pipeline__item-value">{{ item.value }}</span>
+                                </div>
+                                <div class="bob-pipeline__bar">
+                                    <div class="bob-pipeline__bar-fill" [style.width.%]="item.percent || 0"></div>
+                                </div>
+                            </div>
+                            }
+                        </div>
+                        }
+                    </div>
+
+                    } @else {
+                    <div class="bob-artifact" [class.bob-artifact--complete]="msg.artifact.status === 'complete'"
+                        [class.bob-artifact--enrichment]="msg.artifact.type === 'enrichment'">
+                        <div class="bob-artifact__header">
+                            <div class="bob-artifact__icon">
+                                @if (msg.artifact.type === 'opportunity') {
+                                <i class="fa-solid fa-bullseye"></i>
+                                } @else if (msg.artifact.type === 'contact') {
+                                <i class="fa-solid fa-user"></i>
+                                } @else if (msg.artifact.type === 'organization') {
+                                <i class="fa-solid fa-building"></i>
+                                } @else if (msg.artifact.type === 'enrichment') {
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                } @else {
+                                <i class="fa-solid fa-file"></i>
+                                }
+                            </div>
+                            <div class="bob-artifact__title">{{ msg.artifact.title }}</div>
+                            <span class="bob-artifact__badge"
+                                [class.bob-artifact__badge--complete]="msg.artifact.status === 'complete'">
+                                @if (msg.artifact.status === 'complete') {
+                                <i class="fa-solid fa-check"></i> Créé
+                                } @else {
+                                <i class="fa-solid fa-spinner fa-spin"></i> En cours
+                                }
+                            </span>
+                        </div>
+                        @if (msg.artifact.fields.length > 0) {
+                        <div class="bob-artifact__fields">
+                            @for (field of msg.artifact.fields; track field.label) {
+                            <div class="bob-artifact__field">
+                                <span class="bob-artifact__field-label">{{ field.label }}</span>
+                                <span class="bob-artifact__field-value">{{ field.value }}</span>
+                            </div>
+                            }
+                        </div>
+                        }
+                        @if (msg.artifact.links && msg.artifact.links.length > 0) {
+                        <div class="bob-artifact__links">
+                            @for (link of msg.artifact.links; track link.label) {
+                            <a class="bob-artifact__link" [href]="link.url" target="_blank" rel="noopener">
+                                @if (link.icon) {
+                                <i [class]="'fa-solid ' + link.icon"></i>
+                                }
+                                {{ link.label }}
+                                <i class="fa-solid fa-arrow-up-right-from-square bob-artifact__link-external"></i>
+                            </a>
+                            }
+                        </div>
+                        }
+                    </div>
+                    }
+                    }
+                    <p class="bob-exp__msg-text">{{ msg.text }}</p>
+
+                    @if (msg.role === 'bob' && !msg.isLoading && msg.text) {
+                    <div class="bob-exp__msg-actions">
+                        <button class="bob-exp__action-btn"><i class="fa-solid fa-copy"></i> Copy</button>
+                        <button class="bob-exp__action-btn"><i class="fa-solid fa-download"></i> Export</button>
+                        <button class="bob-exp__action-btn"><i class="fa-solid fa-share-nodes"></i> Share</button>
+                    </div>
+                    }
+                    }
+                </div>
+            </div>
+            }
+        </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="bob-exp__quick">
+        <p class="bob-panel__quick-title">Quick Actions</p>
+        <div class="bob-exp__quick-list">
+            @for (wf of quickWorkflows; track wf.label) {
+            <button class="bob-quick" (click)="launchWorkflow(wf)" [disabled]="isLoading || isVoiceActive">
+                <i [class]="wf.icon"></i>
+                <span>{{ wf.label }}</span>
+            </button>
+            }
+        </div>
+    </div>
+
+    <!-- Input -->
+    <footer class="bob-exp__footer">
+        <div class="bob-exp__input-wrap">
+            <div class="bob-exp__input-row">
+                <textarea class="bob-exp__textarea" rows="1" placeholder="Ask Bob anything…" [(ngModel)]="message"
+                    (keydown)="onTextareaKeydown($event)" (input)="autoGrowTextarea($event)"
+                    [disabled]="isLoading || isVoiceActive"></textarea>
+                <button class="bob-exp__send-btn" (click)="sendMessage()"
+                    [disabled]="!message.trim() || isLoading || isVoiceActive">
+                    @if (isLoading) {
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    } @else {
+                    <i class="fa-solid fa-arrow-up"></i>
+                    }
+                </button>
+            </div>
+            <div class="bob-exp__input-meta">
+                <div class="bob-exp__input-actions">
+                    <button class="bob-exp__input-icon"><i class="fa-solid fa-paperclip"></i></button>
+                    <button class="bob-exp__input-icon"><i class="fa-solid fa-microphone"></i></button>
+                    <button class="bob-exp__input-icon"><i class="fa-solid fa-image"></i></button>
+                </div>
+                <p class="bob-exp__input-hint">Press Enter to send • Shift+Enter for new line</p>
+            </div>
+        </div>
+    </footer>
+</div>
+
+} @else {
+
+<!-- ═══════════════════════════════════════════════════════
+         NORMAL MODE — Floating compact panel
+         ═══════════════════════════════════════════════════════ -->
+
+<!-- Header -->
+<div class="bob-panel__header">
+    <div class="bob-panel__header-left">
+        <div class="bob-panel__avatar">
+            <span>B</span>
+        </div>
+        <div>
+            <p class="bob-panel__name">Bob</p>
+            <p class="bob-panel__status">
+                @if (isVoiceActive) {
+                <span class="bob-panel__dot bob-panel__dot--voice"></span>
+                {{ voiceStatusText }}
+                } @else {
+                <span class="bob-panel__dot"></span> Online
+                }
+            </p>
+        </div>
+    </div>
+    <div class="bob-panel__header-actions">
+        <button class="bob-panel__header-btn" (click)="toggleExpand()"
+            [attr.title]="isExpanded ? 'Réduire' : 'Agrandir'">
+            <i [class]="isExpanded ? 'fa-solid fa-compress' : 'fa-solid fa-expand'"></i>
+        </button>
+        <button class="bob-panel__header-btn" (click)="close()" title="Fermer">
+            <i class="fa-solid fa-minus"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Messages -->
+<div class="bob-panel__messages" #messagesContainer>
+    @for (msg of messages; track msg.time) {
+    <div class="bob-msg" [class.bob-msg--user]="msg.role === 'user'" [class.bob-msg--bob]="msg.role === 'bob'">
+        @if (msg.role === 'bob') {
+        <div class="bob-msg__avatar">
+            <span>B</span>
+        </div>
+        }
+        <div class="bob-msg__bubble">
+            @if (msg.isLoading) {
+            <div class="bob-thinking">
+                <div class="bob-thinking__icon"><i class="fa-solid fa-brain fa-fade"></i></div>
+                <div class="bob-thinking__body">
+                    <p class="bob-thinking__title">Analyse en cours…</p>
+                    <p class="bob-thinking__sub">Recherche et traitement de votre demande</p>
+                </div>
+            </div>
+            } @else {
+            @if (msg.toolSteps && msg.toolSteps.length > 0) {
+            <div class="bob-msg__tools">
+                @for (step of msg.toolSteps; track step.tool) {
+                <span class="bob-msg__tool-badge">
+                    <i class="fa-solid fa-check"></i> {{ step.tool.replace('_', ' ') }}
+                </span>
+                }
+            </div>
+            }
+            @if (msg.artifact) {
+            <!-- Artifact rendering — normal mode -->
+            @if (msg.artifact.type === 'search_results') {
+            <div class="bob-rolodex" [class.bob-rolodex--building]="msg.artifact.status !== 'complete'">
+                <div class="bob-rolodex__header">
+                    <div class="bob-rolodex__icon"><i class="fa-solid fa-address-book"></i></div>
+                    <div>
+                        <div class="bob-rolodex__title">{{ msg.artifact.title }}</div>
+                        @if (msg.artifact.fields[0]) {
+                        <div class="bob-rolodex__query">{{ msg.artifact.fields[0].value }}</div>
+                        }
+                    </div>
+                    <span class="bob-artifact__badge"
+                        [class.bob-artifact__badge--complete]="msg.artifact.status === 'complete'">
+                        @if (msg.artifact.status === 'complete') {
+                        <i class="fa-solid fa-check"></i> Complété
+                        } @else {
+                        <i class="fa-solid fa-spinner fa-spin"></i> Recherche...
+                        }
+                    </span>
+                </div>
+                @for (field of msg.artifact.fields; track field.label; let i = $index) {
+                @if (i > 0) {
+                <div class="bob-rolodex__result">
+                    <div class="bob-rolodex__result-num">{{ field.label }}</div>
+                    <div class="bob-rolodex__result-info">
+                        <div class="bob-rolodex__result-name">{{ field.value }}</div>
+                    </div>
+                </div>
+                }
+                }
+            </div>
+
+            } @else if (msg.artifact.type === 'data_table') {
+            <div class="bob-table">
+                <div class="bob-table__header">
+                    <div class="bob-table__title">{{ msg.artifact.title }}</div>
+                    <span class="bob-artifact__badge"
+                        [class.bob-artifact__badge--complete]="msg.artifact.status === 'complete'">
+                        @if (msg.artifact.status === 'complete') {
+                        <i class="fa-solid fa-check"></i> Complété
+                        } @else {
+                        <i class="fa-solid fa-spinner fa-spin"></i> Chargement...
+                        }
+                    </span>
+                </div>
+                @if (msg.artifact.columns && msg.artifact.rows) {
+                <div class="bob-table__scroll">
+                    <table class="bob-table__grid">
+                        <thead>
+                            <tr>
+                                @for (col of msg.artifact.columns; track col) {
+                                <th>{{ col }}</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (row of msg.artifact.rows; track row) {
+                            <tr>
+                                @for (cell of row; track cell) {
+                                <td>{{ cell }}</td>
+                                }
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+            </div>
+
+            } @else if (msg.artifact.type === 'kpi_summary') {
+            <div class="bob-kpi">
+                <div class="bob-kpi__title">{{ msg.artifact.title }}</div>
+                @if (msg.artifact.items) {
+                <div class="bob-kpi__grid">
+                    @for (item of msg.artifact.items; track item.label) {
+                    <div class="bob-kpi__card">
+                        <p class="bob-kpi__value">{{ item.value }}</p>
+                        <p class="bob-kpi__label">{{ item.label }}</p>
+                        @if (item.change) {
+                        <span class="bob-kpi__change" [class.bob-kpi__change--up]="item.change.startsWith('+')">{{
+                            item.change }}</span>
+                        }
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+
+            } @else if (msg.artifact.type === 'progress_card') {
+            <div class="bob-progress">
+                @if (msg.artifact.items && msg.artifact.items[0]) {
+                <div class="bob-progress__header">
+                    <p class="bob-progress__title">{{ msg.artifact.title }}</p>
+                    <p class="bob-progress__value">{{ msg.artifact.items[0].value }}</p>
+                </div>
+                <div class="bob-progress__bar">
+                    <div class="bob-progress__fill" [style.width.%]="msg.artifact.items[0].percent || 0"></div>
+                </div>
+                <div class="bob-progress__meta">
+                    @if (msg.artifact.items[0].description) {
+                    <span>{{ msg.artifact.items[0].description }}</span>
+                    }
+                    @if (msg.artifact.items[0].change) {
+                    <span>{{ msg.artifact.items[0].change }}</span>
+                    }
+                </div>
+                }
+            </div>
+
+            } @else if (msg.artifact.type === 'checklist') {
+            <div class="bob-checklist">
+                <p class="bob-checklist__title">{{ msg.artifact.title }}</p>
+                @if (msg.artifact.items) {
+                <div class="bob-checklist__items">
+                    @for (item of msg.artifact.items; track item.label) {
+                    <div class="bob-checklist__item">
+                        <div class="bob-checklist__check"><i class="fa-solid fa-check"></i></div>
+                        <span>{{ item.label }}</span>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+
+            } @else if (msg.artifact.type === 'action_plan') {
+            <div class="bob-plan">
+                <div class="bob-plan__header">
+                    <p class="bob-plan__title">{{ msg.artifact.title }}</p>
+                </div>
+                @if (msg.artifact.sections) {
+                <div class="bob-plan__sections">
+                    @for (section of msg.artifact.sections; track section.title) {
+                    <div class="bob-plan__section">
+                        <div class="bob-plan__section-head">
+                            <div>
+                                <p class="bob-plan__section-title">{{ section.title }}</p>
+                                @if (section.subtitle) {
+                                <p class="bob-plan__section-sub">{{ section.subtitle }}</p>
+                                }
+                            </div>
+                            @if (section.badge) {
+                            <span class="bob-plan__badge">{{ section.badge }}</span>
+                            }
+                        </div>
+                        @for (task of section.items; track task.label) {
+                        <div class="bob-plan__task">
+                            <i class="fa-solid fa-circle-dot bob-plan__task-dot"></i>
+                            <div class="bob-plan__task-body">
+                                <p class="bob-plan__task-name">{{ task.label }}</p>
+                                @if (task.description) {
+                                <p class="bob-plan__task-desc">{{ task.description }}</p>
+                                }
+                                @if (task.time) {
+                                <p class="bob-plan__task-meta">{{ task.time }}</p>
+                                }
+                            </div>
+                        </div>
+                        }
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+
+            } @else if (msg.artifact.type === 'info_list') {
+            <div class="bob-info-list">
+                <p class="bob-info-list__title">{{ msg.artifact.title }}</p>
+                @if (msg.artifact.items) {
+                <ul class="bob-info-list__items">
+                    @for (item of msg.artifact.items; track item.label) {
+                    <li class="bob-info-list__item">
+                        <i [class]="'fa-solid ' + (item.icon || 'fa-circle') + ' bob-info-list__icon'"></i>
+                        <span><strong>{{ item.label }}:</strong> {{ item.value }}</span>
+                    </li>
+                    }
+                </ul>
+                }
+            </div>
+
+            } @else if (msg.artifact.type === 'pipeline') {
+            <div class="bob-pipeline">
+                <div class="bob-pipeline__title">{{ msg.artifact.title }}</div>
+                @if (msg.artifact.items) {
+                <div class="bob-pipeline__items">
+                    @for (item of msg.artifact.items; track item.label) {
+                    <div class="bob-pipeline__item">
+                        <div class="bob-pipeline__item-head">
+                            <span class="bob-pipeline__item-name">{{ item.label }}</span>
+                            <span class="bob-pipeline__item-value">{{ item.value }}</span>
+                        </div>
+                        <div class="bob-pipeline__bar">
+                            <div class="bob-pipeline__bar-fill" [style.width.%]="item.percent || 0"></div>
+                        </div>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+
+            } @else {
+            <!-- Default Artifact Card -->
+            <div class="bob-artifact" [class.bob-artifact--complete]="msg.artifact.status === 'complete'"
+                [class.bob-artifact--enrichment]="msg.artifact.type === 'enrichment'">
+                <div class="bob-artifact__header">
+                    <div class="bob-artifact__icon">
+                        @if (msg.artifact.type === 'opportunity') {
+                        <i class="fa-solid fa-bullseye"></i>
+                        } @else if (msg.artifact.type === 'contact') {
+                        <i class="fa-solid fa-user"></i>
+                        } @else if (msg.artifact.type === 'organization') {
+                        <i class="fa-solid fa-building"></i>
+                        } @else if (msg.artifact.type === 'enrichment') {
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        } @else {
+                        <i class="fa-solid fa-file"></i>
+                        }
+                    </div>
+                    <div class="bob-artifact__title">{{ msg.artifact.title }}</div>
+                    <span class="bob-artifact__badge"
+                        [class.bob-artifact__badge--complete]="msg.artifact.status === 'complete'">
+                        @if (msg.artifact.status === 'complete') {
+                        <i class="fa-solid fa-check"></i> Créé
+                        } @else {
+                        <i class="fa-solid fa-spinner fa-spin"></i> En cours
+                        }
+                    </span>
+                </div>
+                @if (msg.artifact.fields.length > 0) {
+                <div class="bob-artifact__fields">
+                    @for (field of msg.artifact.fields; track field.label) {
+                    <div class="bob-artifact__field">
+                        <span class="bob-artifact__field-label">{{ field.label }}</span>
+                        <span class="bob-artifact__field-value">{{ field.value }}</span>
+                    </div>
+                    }
+                </div>
+                }
+                @if (msg.artifact.links && msg.artifact.links.length > 0) {
+                <div class="bob-artifact__links">
+                    @for (link of msg.artifact.links; track link.label) {
+                    <a class="bob-artifact__link" [href]="link.url" target="_blank" rel="noopener">
+                        @if (link.icon) {
+                        <i [class]="'fa-solid ' + link.icon"></i>
+                        }
+                        {{ link.label }}
+                        <i class="fa-solid fa-arrow-up-right-from-square bob-artifact__link-external"></i>
+                    </a>
+                    }
+                </div>
+                }
+            </div>
+            }
+            }
+            <p class="bob-msg__text">{{ msg.text }}</p>
+            <span class="bob-msg__time">{{ formatTime(msg.time) }}</span>
+            }
+        </div>
+    </div>
+    }
+</div>
+
+<!-- Quick Workflows -->
+<div class="bob-panel__quick">
+    <p class="bob-panel__quick-title">Quick Actions</p>
+    <div class="bob-panel__quick-list">
+        @for (wf of quickWorkflows; track wf.label) {
+        <button class="bob-quick" (click)="launchWorkflow(wf)" [disabled]="isLoading || isVoiceActive">
+            <i [class]="wf.icon"></i>
+            <span>{{ wf.label }}</span>
+        </button>
+        }
+    </div>
+</div>
+
+<!-- Input -->
+<div class="bob-panel__input">
+    <div class="bob-panel__input-inner">
+        <!-- Mic button -->
+        <button class="bob-panel__mic" (click)="toggleVoice()" [class.bob-panel__mic--active]="isVoiceActive"
+            [class.bob-panel__mic--listening]="voiceState === 'listening'"
+            [class.bob-panel__mic--speaking]="voiceState === 'speaking'" [disabled]="isLoading">
+            <i [class]="voiceButtonIcon"></i>
+        </button>
+
+        <input type="text" [(ngModel)]="message" (keydown.enter)="sendMessage()" placeholder="Ask Bob anything..."
+            class="bob-panel__field" [disabled]="isLoading || isVoiceActive" />
+        <button class="bob-panel__send" (click)="sendMessage()"
+            [disabled]="!message.trim() || isLoading || isVoiceActive">
+            @if (isLoading) {
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            } @else {
+            <i class="fa-solid fa-paper-plane"></i>
+            }
+        </button>
+    </div>
+</div>
+
+}
+
+<!-- Voice Consent Dialog -->
+@if (showConsentDialog) {
+<div class="bob-consent-overlay">
+    <div class="bob-consent-dialog">
+        <div class="bob-consent-icon">
+            <i class="fa-solid fa-microphone"></i>
+        </div>
+        <h3 class="bob-consent-title">Enable Voice Mode</h3>
+        <p class="bob-consent-text">
+            Bob will use your microphone to listen and respond with voice.
+            Your audio is processed in real-time and is not stored.
+        </p>
+        <div class="bob-consent-actions">
+            <button class="bob-consent-btn bob-consent-btn--decline" (click)="declineVoiceConsent()">
+                Cancel
+            </button>
+            <button class="bob-consent-btn bob-consent-btn--accept" (click)="acceptVoiceConsent()">
+                <i class="fa-solid fa-microphone"></i> Enable Voice
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+</div>
+}

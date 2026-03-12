@@ -43,6 +43,8 @@ class OpportunityResponse(BaseModel):
     source: Optional[str] = None
     organization_id: Optional[str] = None
     contact_id: Optional[str] = None
+    organization_name: Optional[str] = None
+    contact_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

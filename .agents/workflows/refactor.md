@@ -60,4 +60,10 @@ git commit -m "[service] refactor: description"
 python -m pytest tests/ -v --tb=short
 ```
 
+**Si frontend touché → Playwright auto-vérification** (voir `rules/regle-playwright.md`) :
+```bash
+// turbo
+node frontend/playwright-verify.js [pages refactorées]
+```
+
 Déclencher `/overview` puis `/consolidation`.

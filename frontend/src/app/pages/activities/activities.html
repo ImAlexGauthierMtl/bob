@@ -4,7 +4,7 @@
         <div class="page-header__left">
             <div class="page-header__title-row">
                 <h2 class="page-title">Activities</h2>
-                <div class="badge badge--muted">89 ACTIVE</div>
+                <div class="badge badge--muted">{{ total }} ACTIVE</div>
             </div>
             <p class="page-subtitle">TASKS, CALLS, MEETINGS & EVENTS</p>
         </div>
@@ -14,7 +14,7 @@
                 <i class="fa-solid fa-calendar-days"></i>
                 Calendar View
             </button>
-            <button class="btn btn--accent">
+            <button class="btn btn--accent" (click)="openNewDialog()">
                 <i class="fa-solid fa-plus"></i>
                 New Activity
             </button>
@@ -25,518 +25,140 @@
     <div class="search-row">
         <div class="search-box">
             <i class="fa-solid fa-search search-box__icon"></i>
-            <input type="text" class="search-box__input" placeholder="Search activities, tasks, meetings...">
-        </div>
-        <div class="filter-row">
-            <button class="btn-filter"><i class="fa-solid fa-filter"></i> Type <i
-                    class="fa-solid fa-chevron-down"></i></button>
-            <button class="btn-filter"><i class="fa-solid fa-clock"></i> Due Date <i
-                    class="fa-solid fa-chevron-down"></i></button>
-            <button class="btn-filter"><i class="fa-solid fa-user"></i> Assigned To <i
-                    class="fa-solid fa-chevron-down"></i></button>
-            <button class="btn-filter btn-filter--icon"><i class="fa-solid fa-times"></i></button>
+            <input type="text" class="search-box__input" placeholder="Search activities, tasks, meetings..."
+                [(ngModel)]="searchQuery" (input)="onSearch()">
         </div>
     </div>
 
     <!-- Pills -->
     <div class="filter-pills">
-        <button class="pill pill--active">All Activities</button>
-        <button class="pill"><i class="fa-solid fa-check-circle"></i> Tasks</button>
-        <button class="pill"><i class="fa-solid fa-phone"></i> Calls</button>
-        <button class="pill"><i class="fa-solid fa-users"></i> Meetings</button>
-        <button class="pill"><i class="fa-solid fa-envelope"></i> Emails</button>
+        <button class="pill" [class.pill--active]="activeTypeFilter === 'ALL'" (click)="setTypeFilter('ALL')">All
+            Activities</button>
+        <button class="pill" [class.pill--active]="activeTypeFilter === 'TASK'" (click)="setTypeFilter('TASK')"><i
+                class="fa-solid fa-check-circle"></i> Tasks</button>
+        <button class="pill" [class.pill--active]="activeTypeFilter === 'CALL'" (click)="setTypeFilter('CALL')"><i
+                class="fa-solid fa-phone"></i> Calls</button>
+        <button class="pill" [class.pill--active]="activeTypeFilter === 'MEETING'" (click)="setTypeFilter('MEETING')"><i
+                class="fa-solid fa-users"></i> Meetings</button>
+        <button class="pill" [class.pill--active]="activeTypeFilter === 'EMAIL'" (click)="setTypeFilter('EMAIL')"><i
+                class="fa-solid fa-envelope"></i> Emails</button>
+        <button class="pill" [class.pill--active]="activeTypeFilter === 'NOTE'" (click)="setTypeFilter('NOTE')"><i
+                class="fa-solid fa-sticky-note"></i> Notes</button>
     </div>
 </header>
 
 <!-- ── Main Content ────────────────────────────────────────── -->
 <main class="page-main">
 
-    <!-- AI Priority Queue -->
-    <section class="ai-priority">
-        <div class="ai-priority__header">
-            <div class="ai-priority__left">
-                <div class="ai-icon-round"><i class="fa-solid fa-star"></i></div>
-                <div>
-                    <h3 class="ai-title">AI Priority Queue</h3>
-                    <p class="ai-subtitle">Smart-ranked activities requiring immediate attention</p>
-                </div>
-            </div>
-            <button class="link-accent">View Algorithm</button>
-        </div>
+    <!-- Loading state -->
+    @if (isLoading) {
+    <div class="loading-state">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <p>Loading activities...</p>
+    </div>
+    }
 
-        <div class="priority-list">
-            <!-- Priority 1 — URGENT -->
-            <div class="priority-card priority-card--hoverable">
-                <div class="priority-card__body">
-                    <div class="priority-card__left">
-                        <div class="activity-icon activity-icon--red"><i class="fa-solid fa-phone"></i></div>
-                        <div class="priority-card__info">
-                            <div class="priority-card__title-row">
-                                <h4 class="priority-card__title">Follow-up Call: Global Solutions Inc.</h4>
-                                <span class="urgency-badge urgency-badge--red">URGENT</span>
-                            </div>
-                            <p class="priority-card__desc">Discuss Q4 contract renewal and expansion opportunities</p>
-                            <div class="priority-card__meta">
-                                <div><i class="fa-solid fa-clock"></i> Due: Today, 2:00 PM</div>
-                                <div class="meta-avatar">
-                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
-                                        alt="Owner" class="avatar-xs">
-                                    Sarah Johnson
-                                </div>
-                                <div><i class="fa-solid fa-building"></i> $2.4M potential</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="priority-card__right">
-                        <div class="ai-score-block">
-                            <p class="ai-score-val">AI Score: 98%</p>
-                            <p class="ai-score-label">High Impact</p>
-                        </div>
-                        <button class="btn btn--accent btn--sm priority-hover-btn">Start Call</button>
-                    </div>
-                </div>
-            </div>
+    <!-- Empty state -->
+    @if (!isLoading && activities.length === 0) {
+    <div class="empty-state">
+        <i class="fa-solid fa-clipboard-list empty-state__icon"></i>
+        <h3 class="empty-state__title">No activities found</h3>
+        <p class="empty-state__text">Create your first activity to get started.</p>
+        <button class="btn btn--accent" (click)="openNewDialog()">
+            <i class="fa-solid fa-plus"></i>
+            New Activity
+        </button>
+    </div>
+    }
 
-            <!-- Priority 2 — HIGH -->
-            <div class="priority-card priority-card--hoverable">
-                <div class="priority-card__body">
-                    <div class="priority-card__left">
-                        <div class="activity-icon activity-icon--orange"><i class="fa-solid fa-users"></i></div>
-                        <div class="priority-card__info">
-                            <div class="priority-card__title-row">
-                                <h4 class="priority-card__title">Quarterly Review Meeting: Acme Corp</h4>
-                                <span class="urgency-badge urgency-badge--orange">HIGH</span>
-                            </div>
-                            <p class="priority-card__desc">Prepare presentation deck and performance metrics for
-                                stakeholder review</p>
-                            <div class="priority-card__meta">
-                                <div><i class="fa-solid fa-clock"></i> Due: Tomorrow, 10:00 AM</div>
-                                <div class="meta-avatar">
-                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
-                                        alt="Owner" class="avatar-xs">
-                                    Michael Chen
-                                </div>
-                                <div><i class="fa-solid fa-users"></i> 6 attendees</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="priority-card__right">
-                        <div class="ai-score-block">
-                            <p class="ai-score-val">AI Score: 94%</p>
-                            <p class="ai-score-label">Strategic</p>
-                        </div>
-                        <button class="btn btn--dark btn--sm priority-hover-btn">Prepare</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Priority 3 — MEDIUM -->
-            <div class="priority-card priority-card--hoverable">
-                <div class="priority-card__body">
-                    <div class="priority-card__left">
-                        <div class="activity-icon activity-icon--yellow"><i class="fa-solid fa-check-circle"></i></div>
-                        <div class="priority-card__info">
-                            <div class="priority-card__title-row">
-                                <h4 class="priority-card__title">Update CRM Records: TechStart Innovation</h4>
-                                <span class="urgency-badge urgency-badge--yellow">MEDIUM</span>
-                            </div>
-                            <p class="priority-card__desc">Sync recent conversations and update opportunity stage to
-                                "Negotiation"</p>
-                            <div class="priority-card__meta">
-                                <div><i class="fa-solid fa-clock"></i> Due: Today, 5:00 PM</div>
-                                <div class="meta-avatar">
-                                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg"
-                                        alt="Owner" class="avatar-xs">
-                                    Emily Rodriguez
-                                </div>
-                                <div><i class="fa-solid fa-database"></i> Data sync</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="priority-card__right">
-                        <div class="ai-score-block">
-                            <p class="ai-score-val">AI Score: 87%</p>
-                            <p class="ai-score-label">Data Quality</p>
-                        </div>
-                        <button class="btn btn--dark btn--sm priority-hover-btn">Update</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Activity Timeline -->
+    <!-- Activity List -->
+    @if (!isLoading && activities.length > 0) {
     <section class="timeline-section">
         <div class="timeline-header">
             <h3 class="section-title">Activity Timeline</h3>
-            <div class="timeline-tabs">
-                <button class="t-tab t-tab--active">Today</button>
-                <button class="t-tab">This Week</button>
-                <button class="t-tab">This Month</button>
-            </div>
         </div>
 
-        <!-- Today -->
-        <div class="timeline-group">
-            <div class="timeline-group__header">
-                <h4 class="timeline-day">Today</h4>
-                <div class="timeline-line"></div>
-                <span class="timeline-count">8 Activities</span>
-            </div>
+        <div class="timeline-list">
+            @for (activity of activities; track activity.id) {
+            <div class="timeline-item">
+                <div class="timeline-item__body">
+                    <div class="timeline-item__top">
+                        <div class="timeline-item__title-row">
+                            <div class="activity-icon activity-icon--{{ getTypeColor(activity.activity_type) }}">
+                                <i class="fa-solid {{ getTypeIcon(activity.activity_type) }}"></i>
+                            </div>
+                            <div>
+                                <h5 class="timeline-item__title">{{ activity.subject }}</h5>
+                                @if (activity.description) {
+                                <p class="timeline-item__sub">{{ activity.description }}</p>
+                                }
+                            </div>
+                        </div>
+                        <div class="timeline-item__badges">
+                            <span class="type-badge {{ getStatusClass(activity.status) }}">{{ activity.status }}</span>
+                            <span class="urgency-badge {{ getPriorityClass(activity.priority) }}">{{ activity.priority
+                                }}</span>
+                        </div>
+                    </div>
+                    <div class="timeline-item__meta">
+                        @if (activity.due_date) {
+                        <div><i class="fa-solid fa-clock"></i> Due: {{ activity.due_date | date:'mediumDate' }}</div>
+                        }
+                        @if (activity.assigned_to) {
+                        <div><i class="fa-solid fa-user"></i> {{ activity.assigned_to }}</div>
+                        }
+                        <div><i class="fa-solid fa-tag"></i> {{ activity.activity_type }}</div>
 
-            <div class="timeline-list">
-                <!-- 09:00 — Meeting -->
-                <div class="timeline-item">
-                    <div class="timeline-time">
-                        <p class="timeline-time__h">09:00</p>
-                        <p class="timeline-time__p">AM</p>
-                    </div>
-                    <div class="timeline-item__body">
-                        <div class="timeline-item__top">
-                            <div class="timeline-item__title-row">
-                                <div class="activity-icon activity-icon--blue"><i class="fa-solid fa-users"></i></div>
-                                <div>
-                                    <h5 class="timeline-item__title">Team Standup Meeting</h5>
-                                    <p class="timeline-item__sub">Daily sync with sales team</p>
-                                </div>
-                            </div>
-                            <span class="type-badge type-badge--blue">MEETING</span>
-                        </div>
-                        <div class="timeline-item__meta">
-                            <div><i class="fa-solid fa-video"></i> Zoom Meeting</div>
-                            <div><i class="fa-solid fa-clock"></i> 30 minutes</div>
-                            <div class="avatar-stack">
-                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
-                                    alt="" class="avatar-stack__img">
-                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
-                                    alt="" class="avatar-stack__img">
-                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg"
-                                    alt="" class="avatar-stack__img">
-                                <div class="avatar-stack__more">+4</div>
-                            </div>
-                        </div>
-                        <div class="timeline-item__actions">
-                            <button class="btn btn--accent btn--sm">Join Meeting</button>
-                            <button class="btn btn--outline btn--sm">View Details</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 11:30 — Call -->
-                <div class="timeline-item">
-                    <div class="timeline-time">
-                        <p class="timeline-time__h">11:30</p>
-                        <p class="timeline-time__p">AM</p>
-                    </div>
-                    <div class="timeline-item__body">
-                        <div class="timeline-item__top">
-                            <div class="timeline-item__title-row">
-                                <div class="activity-icon activity-icon--green"><i class="fa-solid fa-phone"></i></div>
-                                <div>
-                                    <h5 class="timeline-item__title">Discovery Call: Vertex Systems</h5>
-                                    <p class="timeline-item__sub">Initial consultation for enterprise package</p>
-                                </div>
-                            </div>
-                            <span class="type-badge type-badge--green">CALL</span>
-                        </div>
-                        <div class="timeline-item__meta">
-                            <div><i class="fa-solid fa-building"></i> Vertex Systems</div>
-                            <div><i class="fa-solid fa-clock"></i> 45 minutes</div>
-                            <div class="meta-avatar">
-                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg"
-                                    alt="" class="avatar-xs">
-                                Marcus Chen
-                            </div>
-                        </div>
-                        <div class="ai-talking-points">
-                            <p class="ai-talking-points__title">AI-Generated Talking Points:</p>
-                            <ul class="ai-talking-points__list">
-                                <li><span class="tp-dot"></span> Emphasize integration capabilities with existing tools
-                                </li>
-                                <li><span class="tp-dot"></span> Highlight 3-month ROI case study from similar client
-                                </li>
-                                <li><span class="tp-dot"></span> Address scalability concerns proactively</li>
-                            </ul>
-                        </div>
-                        <div class="timeline-item__actions">
-                            <button class="btn btn--green btn--sm">Start Call</button>
-                            <button class="btn btn--outline btn--sm">View Contact</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 02:00 — Task -->
-                <div class="timeline-item">
-                    <div class="timeline-time">
-                        <p class="timeline-time__h">02:00</p>
-                        <p class="timeline-time__p">PM</p>
-                    </div>
-                    <div class="timeline-item__body">
-                        <div class="timeline-item__top">
-                            <div class="timeline-item__title-row">
-                                <div class="activity-icon activity-icon--purple"><i
-                                        class="fa-solid fa-check-circle"></i></div>
-                                <div>
-                                    <h5 class="timeline-item__title">Complete Proposal: Quantum Enterprises</h5>
-                                    <p class="timeline-item__sub">Finalize pricing and deliverables document</p>
-                                </div>
-                            </div>
-                            <span class="type-badge type-badge--purple">TASK</span>
-                        </div>
-                        <div class="timeline-item__meta">
-                            <div><i class="fa-solid fa-building"></i> Quantum Enterprises</div>
-                            <div><i class="fa-solid fa-dollar-sign"></i> $850K opportunity</div>
-                            <div class="meta-avatar">
-                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-9.jpg"
-                                    alt="" class="avatar-xs">
-                                Robert Lee
-                            </div>
-                        </div>
-                        <div class="progress-row">
-                            <div class="progress-bar">
-                                <div class="progress-bar__fill" style="width:65%"></div>
-                            </div>
-                            <p class="progress-text">65% complete</p>
-                        </div>
-                        <div class="timeline-item__actions">
-                            <button class="btn btn--dark btn--sm">Continue Work</button>
-                            <button class="btn btn--outline btn--sm">View Opportunity</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 04:30 — Email -->
-                <div class="timeline-item">
-                    <div class="timeline-time">
-                        <p class="timeline-time__h">04:30</p>
-                        <p class="timeline-time__p">PM</p>
-                    </div>
-                    <div class="timeline-item__body">
-                        <div class="timeline-item__top">
-                            <div class="timeline-item__title-row">
-                                <div class="activity-icon activity-icon--pink"><i class="fa-solid fa-envelope"></i>
-                                </div>
-                                <div>
-                                    <h5 class="timeline-item__title">Send Follow-up Email: Apex Partners</h5>
-                                    <p class="timeline-item__sub">Thank you note and next steps after demo</p>
-                                </div>
-                            </div>
-                            <span class="type-badge type-badge--pink">EMAIL</span>
-                        </div>
-                        <div class="timeline-item__meta">
-                            <div><i class="fa-solid fa-building"></i> Apex Partners</div>
-                            <div><i class="fa-solid fa-user"></i> Contact: Jennifer Martinez</div>
-                            <div class="meta-avatar">
-                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
-                                    alt="" class="avatar-xs">
-                                Sarah Johnson
-                            </div>
-                        </div>
-                        <div class="ai-talking-points">
-                            <p class="ai-talking-points__title">AI-Drafted Email Preview:</p>
-                            <p class="ai-talking-points__preview">Hi Jennifer, Thank you for taking the time to join our
-                                product demo yesterday. I'm excited about the potential collaboration between Apex
-                                Partners and Dynamics Nexus...</p>
-                        </div>
-                        <div class="timeline-item__actions">
-                            <button class="btn btn--accent btn--sm">Review & Send</button>
-                            <button class="btn btn--outline btn--sm">Edit Draft</button>
-                        </div>
+                        @if (activity.organization_ids?.length) {
+                        @for (orgId of activity.organization_ids; track orgId) {
+                        <a [routerLink]="['/organizations', orgId]" style="text-decoration: none; color: inherit;">
+                            <div><i class="fa-solid fa-building"></i> Linked Org</div>
+                        </a>
+                        }
+                        }
+                        @if (activity.contact_ids?.length) {
+                        @for (contactId of activity.contact_ids; track contactId) {
+                        <a [routerLink]="['/contacts', contactId]" style="text-decoration: none; color: inherit;">
+                            <div><i class="fa-solid fa-address-book"></i> Linked Contact</div>
+                        </a>
+                        }
+                        }
+                        @if (activity.opportunity_ids?.length) {
+                        @for (oppId of activity.opportunity_ids; track oppId) {
+                        <a [routerLink]="['/opportunities', oppId]" style="text-decoration: none; color: inherit;">
+                            <div><i class="fa-solid fa-chart-line"></i> Linked Opp</div>
+                        </a>
+                        }
+                        }
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Tomorrow -->
-        <div class="timeline-group">
-            <div class="timeline-group__header">
-                <h4 class="timeline-day">Tomorrow</h4>
-                <div class="timeline-line"></div>
-                <span class="timeline-count">5 Activities</span>
-            </div>
-
-            <div class="timeline-list">
-                <div class="timeline-item">
-                    <div class="timeline-time">
-                        <p class="timeline-time__h">10:00</p>
-                        <p class="timeline-time__p">AM</p>
-                    </div>
-                    <div class="timeline-item__body">
-                        <div class="timeline-item__top">
-                            <div class="timeline-item__title-row">
-                                <div class="activity-icon activity-icon--orange"><i class="fa-solid fa-users"></i></div>
-                                <div>
-                                    <h5 class="timeline-item__title">Quarterly Review: Acme Corporation</h5>
-                                    <p class="timeline-item__sub">Strategic planning session with leadership team</p>
-                                </div>
-                            </div>
-                            <span class="type-badge type-badge--orange">MEETING</span>
-                        </div>
-                        <div class="timeline-item__meta">
-                            <div><i class="fa-solid fa-building"></i> Acme Corporation HQ</div>
-                            <div><i class="fa-solid fa-clock"></i> 2 hours</div>
-                            <div class="meta-avatar">
-                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
-                                    alt="" class="avatar-xs">
-                                Michael Chen
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="timeline-item">
-                    <div class="timeline-time">
-                        <p class="timeline-time__h">02:30</p>
-                        <p class="timeline-time__p">PM</p>
-                    </div>
-                    <div class="timeline-item__body">
-                        <div class="timeline-item__top">
-                            <div class="timeline-item__title-row">
-                                <div class="activity-icon activity-icon--indigo"><i class="fa-solid fa-phone"></i></div>
-                                <div>
-                                    <h5 class="timeline-item__title">Check-in Call: Innovate Labs</h5>
-                                    <p class="timeline-item__sub">Monthly progress review and support</p>
-                                </div>
-                            </div>
-                            <span class="type-badge type-badge--indigo">CALL</span>
-                        </div>
-                        <div class="timeline-item__meta">
-                            <div><i class="fa-solid fa-building"></i> Innovate Labs</div>
-                            <div><i class="fa-solid fa-clock"></i> 30 minutes</div>
-                            <div class="meta-avatar">
-                                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-7.jpg"
-                                    alt="" class="avatar-xs">
-                                Jessica Williams
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            }
         </div>
     </section>
-
-    <!-- Activity Analytics -->
-    <section class="analytics-section">
-        <h3 class="section-title" style="margin-bottom:2rem">Activity Analytics</h3>
-
-        <div class="stat-grid stat-grid--4">
-            <div class="stat-card">
-                <div class="stat-card__top">
-                    <div class="stat-icon stat-icon--blue"><i class="fa-solid fa-list-check"></i></div>
-                    <span class="stat-label-upper">Total</span>
-                </div>
-                <p class="stat-value-xl">89</p>
-                <p class="stat-sub">Active Activities</p>
-                <div class="stat-card__footer">
-                    <span>vs last week</span>
-                    <span class="stat-change stat-change--green"><i class="fa-solid fa-arrow-up"></i> 12%</span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-card__top">
-                    <div class="stat-icon stat-icon--green"><i class="fa-solid fa-check-double"></i></div>
-                    <span class="stat-label-upper">Completed</span>
-                </div>
-                <p class="stat-value-xl">156</p>
-                <p class="stat-sub">This Month</p>
-                <div class="stat-card__footer">
-                    <span>Completion rate</span>
-                    <span class="stat-change stat-change--green">94%</span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-card__top">
-                    <div class="stat-icon stat-icon--orange"><i class="fa-solid fa-clock"></i></div>
-                    <span class="stat-label-upper">Overdue</span>
-                </div>
-                <p class="stat-value-xl">7</p>
-                <p class="stat-sub">Need Attention</p>
-                <div class="stat-card__footer">
-                    <span>vs last week</span>
-                    <span class="stat-change stat-change--red"><i class="fa-solid fa-arrow-down"></i> 3</span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-card__top">
-                    <div class="stat-icon stat-icon--purple"><i class="fa-solid fa-trophy"></i></div>
-                    <span class="stat-label-upper">Performance</span>
-                </div>
-                <p class="stat-value-xl">4.8</p>
-                <p class="stat-sub">AI Quality Score</p>
-                <div class="stat-card__footer">
-                    <span>Team average</span>
-                    <span class="stat-change stat-change--accent">4.3</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Activity Distribution Chart -->
-        <div class="chart-card">
-            <div class="chart-card__header">
-                <h4 class="chart-card__title">Activity Distribution</h4>
-                <div class="chart-tabs">
-                    <button class="c-tab c-tab--active">Week</button>
-                    <button class="c-tab">Month</button>
-                    <button class="c-tab">Quarter</button>
-                </div>
-            </div>
-            <div class="chart-bars">
-                <div class="chart-bar-group">
-                    <div class="chart-bar-wrap">
-                        <div class="chart-bar chart-bar--purple" style="height:70%"></div>
-                    </div>
-                    <span class="chart-bar-label">Tasks</span>
-                    <span class="chart-bar-count">35</span>
-                </div>
-                <div class="chart-bar-group">
-                    <div class="chart-bar-wrap">
-                        <div class="chart-bar chart-bar--green" style="height:56%"></div>
-                    </div>
-                    <span class="chart-bar-label">Calls</span>
-                    <span class="chart-bar-count">28</span>
-                </div>
-                <div class="chart-bar-group">
-                    <div class="chart-bar-wrap">
-                        <div class="chart-bar chart-bar--blue" style="height:44%"></div>
-                    </div>
-                    <span class="chart-bar-label">Meetings</span>
-                    <span class="chart-bar-count">22</span>
-                </div>
-                <div class="chart-bar-group">
-                    <div class="chart-bar-wrap">
-                        <div class="chart-bar chart-bar--pink" style="height:30%"></div>
-                    </div>
-                    <span class="chart-bar-label">Emails</span>
-                    <span class="chart-bar-count">15</span>
-                </div>
-            </div>
-        </div>
-    </section>
+    }
 
     <!-- Quick Actions -->
     <section class="quickactions-section">
         <h3 class="section-title" style="margin-bottom:2rem">Quick Actions</h3>
 
         <div class="quickaction-grid">
-            <button class="quickaction-card">
+            <button class="quickaction-card" (click)="openNewDialog('TASK')">
                 <div class="quickaction-icon quickaction-icon--blue"><i class="fa-solid fa-check-circle"></i></div>
                 <h5 class="quickaction-title">Create Task</h5>
                 <p class="quickaction-sub">Add a new task or to-do item</p>
             </button>
-            <button class="quickaction-card">
+            <button class="quickaction-card" (click)="openNewDialog('CALL')">
                 <div class="quickaction-icon quickaction-icon--green"><i class="fa-solid fa-phone"></i></div>
                 <h5 class="quickaction-title">Schedule Call</h5>
                 <p class="quickaction-sub">Plan a phone call with contact</p>
             </button>
-            <button class="quickaction-card">
+            <button class="quickaction-card" (click)="openNewDialog('MEETING')">
                 <div class="quickaction-icon quickaction-icon--purple"><i class="fa-solid fa-users"></i></div>
                 <h5 class="quickaction-title">Book Meeting</h5>
                 <p class="quickaction-sub">Schedule a team or client meeting</p>
             </button>
-            <button class="quickaction-card">
+            <button class="quickaction-card" (click)="openNewDialog('EMAIL')">
                 <div class="quickaction-icon quickaction-icon--pink"><i class="fa-solid fa-envelope"></i></div>
                 <h5 class="quickaction-title">Send Email</h5>
                 <p class="quickaction-sub">Compose and send an email</p>
@@ -545,3 +167,68 @@
     </section>
 
 </main>
+
+<!-- ── New Activity Dialog ─────────────────────────────────── -->
+@if (showNewDialog) {
+<div class="dialog-overlay" (click)="closeNewDialog()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+        <div class="dialog__header">
+            <h3 class="dialog__title">New Activity</h3>
+            <button class="dialog__close" (click)="closeNewDialog()"><i class="fa-solid fa-times"></i></button>
+        </div>
+
+        <div class="dialog__body">
+            <div class="form-group">
+                <label class="form-label">Subject *</label>
+                <input class="form-input" type="text" placeholder="Activity subject..."
+                    [(ngModel)]="newActivity.subject">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea class="form-input form-textarea" placeholder="Optional description..."
+                    [(ngModel)]="newActivity.description"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select class="form-input" [(ngModel)]="newActivity.activity_type">
+                        <option value="TASK">Task</option>
+                        <option value="CALL">Call</option>
+                        <option value="MEETING">Meeting</option>
+                        <option value="EMAIL">Email</option>
+                        <option value="NOTE">Note</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Priority</label>
+                    <select class="form-input" [(ngModel)]="newActivity.priority">
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="URGENT">Urgent</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Due Date</label>
+                <input class="form-input" type="datetime-local" [(ngModel)]="newActivity.due_date">
+            </div>
+        </div>
+
+        <div class="dialog__footer">
+            <button class="btn btn--outline" (click)="closeNewDialog()">Cancel</button>
+            <button class="btn btn--accent" (click)="createActivity()"
+                [disabled]="isCreating || !newActivity.subject?.trim()">
+                @if (isCreating) {
+                <i class="fa-solid fa-spinner fa-spin"></i> Creating...
+                } @else {
+                <i class="fa-solid fa-plus"></i> Create Activity
+                }
+            </button>
+        </div>
+    </div>
+</div>
+}

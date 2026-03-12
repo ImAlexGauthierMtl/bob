@@ -1,0 +1,683 @@
+/* =============================================================
+   Bob's Control Center — List Page
+   Norms: angles droits, Inter, noir+blanc+accent #FF4500
+   ============================================================= */
+
+:host {
+    display: block;
+}
+
+/* ── Header ────────────────────────────────────────── */
+
+.bcc-header {
+    margin-bottom: var(--space-8);
+}
+
+.bcc-header__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-6);
+}
+
+.bcc-header__identity {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.bcc-header__avatar {
+    width: 3.5rem;
+    height: 3.5rem;
+    background: linear-gradient(135deg, var(--color-accent), #e03e00);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-white);
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.bcc-header__name {
+    font-size: 1.875rem;
+    font-weight: var(--font-weight-light);
+    letter-spacing: -0.025em;
+    color: var(--color-black);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.bcc-header__meta {
+    font-size: 0.875rem;
+    color: var(--color-gray-400);
+    margin: var(--space-1) 0 0;
+}
+
+/* ── Metrics ───────────────────────────────────────── */
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
+}
+
+.metric-card {
+    border: 1px solid var(--color-gray-100);
+    padding: var(--space-6);
+    transition: border-color var(--transition-base);
+}
+
+.metric-card:hover {
+    border-color: var(--color-accent);
+}
+
+.metric-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-3);
+}
+
+.metric-card__label {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0;
+}
+
+.metric-card__icon {
+    color: var(--color-gray-300);
+}
+
+.metric-card__value {
+    font-size: 1.875rem;
+    font-weight: var(--font-weight-light);
+    color: var(--color-black);
+    margin: 0 0 var(--space-1) 0;
+}
+
+.metric-card__sub {
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+    margin: 0;
+}
+
+/* ── Toolbar ───────────────────────────────────────── */
+
+.bcc-toolbar {
+    margin-bottom: var(--space-6);
+}
+
+.bcc-search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    border: 1px solid var(--color-gray-200);
+    padding: var(--space-3) var(--space-4);
+    transition: border-color var(--transition-base);
+}
+
+.bcc-search:focus-within {
+    border-color: var(--color-accent);
+}
+
+.bcc-search i {
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+}
+
+.bcc-search input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: var(--font-family);
+    font-size: 0.875rem;
+    color: var(--color-black);
+    outline: none;
+}
+
+.bcc-search input::placeholder {
+    color: var(--color-gray-400);
+}
+
+/* ── Loading ───────────────────────────────────────── */
+
+.loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-16) 0;
+    font-size: 0.875rem;
+    color: var(--color-gray-400);
+}
+
+/* ── Role Cards ────────────────────────────────────── */
+
+.bcc-roles {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.bcc-role-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-6);
+    border: 1px solid var(--color-gray-100);
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: border-color var(--transition-base);
+}
+
+.bcc-role-card:hover {
+    border-color: var(--color-accent);
+}
+
+.bcc-role-card__left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex: 1;
+    min-width: 0;
+}
+
+.bcc-role-card__icon {
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-white);
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.bcc-role-card__name {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    margin: 0;
+}
+
+.bcc-role-card__dept {
+    font-size: 0.75rem;
+    color: var(--color-accent);
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin: var(--space-1) 0 0;
+}
+
+.bcc-role-card__desc {
+    font-size: 0.875rem;
+    color: var(--color-gray-500);
+    font-weight: var(--font-weight-light);
+    margin: var(--space-1) 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 500px;
+}
+
+.bcc-role-card__metrics {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    flex-shrink: 0;
+}
+
+.bcc-role-card__metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.bcc-role-card__metric-value {
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-light);
+    color: var(--color-black);
+}
+
+.bcc-role-card__metric-label {
+    font-size: 0.625rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.bcc-role-card__arrow {
+    color: var(--color-gray-300);
+    margin-left: var(--space-2);
+    transition: color var(--transition-base);
+}
+
+.bcc-role-card:hover .bcc-role-card__arrow {
+    color: var(--color-accent);
+}
+
+/* ── Empty ─────────────────────────────────────────── */
+
+.empty-state {
+    border: 1px solid var(--color-gray-100);
+    padding: var(--space-16) var(--space-8);
+    text-align: center;
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-light);
+}
+
+/* ── Dialog ────────────────────────────────────────── */
+
+.dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.dialog {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    width: min(480px, 90vw);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-6);
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.dialog__title {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    margin: 0;
+}
+
+.dialog__close {
+    background: none;
+    border: none;
+    color: var(--color-gray-400);
+    cursor: pointer;
+    padding: var(--space-2);
+    font-size: 1rem;
+    transition: color var(--transition-base);
+}
+
+.dialog__close:hover {
+    color: var(--color-black);
+}
+
+.dialog__body {
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.dialog__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-6);
+    border-top: 1px solid var(--color-gray-100);
+}
+
+/* ── Form Fields ──────────────────────────────────── */
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.form-label {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-input,
+.form-textarea {
+    border: 1px solid var(--color-gray-200);
+    padding: var(--space-3) var(--space-4);
+    color: var(--color-black);
+    font-family: var(--font-family);
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color var(--transition-base);
+}
+
+.form-input:focus,
+.form-textarea:focus {
+    border-color: var(--color-accent);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* ── Responsive ──────────────────────────────────── */
+
+@media (max-width: 768px) {
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .bcc-role-card {
+        flex-direction: column;
+        gap: var(--space-4);
+        align-items: flex-start;
+    }
+
+    .bcc-role-card__metrics {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .bcc-role-card__arrow {
+        display: none;
+    }
+}
+
+/* ── Card Icons ───────────────────────────────────── */
+
+.opp-card__icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-white);
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-right: var(--space-4);
+}
+
+/* ── Card Description ─────────────────────────────── */
+
+.opp-card__desc {
+    font-size: 0.8125rem;
+    color: var(--color-gray-500);
+    font-weight: var(--font-weight-light);
+    line-height: 1.6;
+    margin: var(--space-3) 0 0;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-gray-50);
+}
+
+/* ── Badge Variants ───────────────────────────────── */
+
+.stage-badge--alt {
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+
+.stage-badge--kit {
+    background-color: #f0fdf4;
+    color: #16a34a;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.025em;
+}
+
+/* ── Empty State ──────────────────────────────────── */
+
+.empty-state i {
+    font-size: 2rem;
+    color: var(--color-gray-200);
+}
+
+.btn--sm {
+    font-size: 0.75rem;
+    padding: var(--space-2) var(--space-4);
+}
+
+/* ═══ Cognitive Flow Tree ═══ */
+
+.cognitive-tree {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.cog-domain {
+    border: 1px solid var(--color-gray-100);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: box-shadow 0.15s ease;
+}
+
+.cog-domain:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.cog-domain__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+    cursor: pointer;
+    user-select: none;
+    background: var(--color-gray-25);
+    transition: background 0.15s ease;
+}
+
+.cog-domain__header:hover {
+    background: var(--color-gray-50);
+}
+
+.cog-domain__toggle {
+    width: 16px;
+    color: var(--color-gray-400);
+    font-size: 0.75rem;
+}
+
+.cog-domain__icon {
+    color: var(--color-accent);
+    font-size: 1.1rem;
+}
+
+.cog-domain__name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    flex: 1;
+    margin: 0;
+}
+
+.cog-domain__meta {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.cog-domain__desc {
+    font-size: 0.8rem;
+    color: var(--color-gray-500);
+    margin: 0 0 var(--space-3) 0;
+    padding: 0 var(--space-5);
+}
+
+.cog-domain__body {
+    padding: var(--space-2) var(--space-5) var(--space-4);
+}
+
+/* ── Intent Row ── */
+
+.cog-intent {
+    border-left: 2px solid var(--color-gray-100);
+    margin-left: var(--space-4);
+    margin-bottom: var(--space-1);
+}
+
+.cog-intent__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    cursor: pointer;
+    user-select: none;
+    border-radius: var(--radius-md);
+    transition: background 0.15s ease;
+}
+
+.cog-intent__header:hover {
+    background: var(--color-gray-50);
+}
+
+.cog-intent__toggle {
+    width: 14px;
+    color: var(--color-gray-400);
+    font-size: 0.65rem;
+}
+
+.cog-intent__icon {
+    color: var(--color-gray-400);
+    font-size: 0.75rem;
+}
+
+.cog-intent__name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-gray-800);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.cog-intent__task-count {
+    font-size: 0.7rem;
+    color: var(--color-gray-400);
+    margin-left: auto;
+}
+
+.cog-intent__body {
+    padding: var(--space-2) var(--space-3) var(--space-3) var(--space-8);
+}
+
+/* ── Triggers ── */
+
+.cog-triggers {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    margin-bottom: var(--space-2);
+}
+
+.cog-triggers__label {
+    font-size: 0.7rem;
+    color: var(--color-gray-400);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.cog-chip {
+    font-size: 0.7rem;
+    padding: 1px var(--space-2);
+    border-radius: var(--radius-full);
+    background: var(--color-gray-50);
+    border: 1px solid var(--color-gray-100);
+    color: var(--color-gray-600);
+}
+
+/* ── Task Steps ── */
+
+.cog-task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cog-task {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    transition: background 0.1s ease;
+}
+
+.cog-task:hover {
+    background: var(--color-gray-25);
+}
+
+.cog-task__order {
+    font-size: 0.75rem;
+    color: var(--color-gray-400);
+    font-weight: 600;
+    min-width: 18px;
+}
+
+.cog-task__name {
+    font-size: 0.8rem;
+    color: var(--color-gray-700);
+    text-decoration: none;
+    flex: 1;
+}
+
+.cog-task__name:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+}
+
+/* ── Badges ── */
+
+.cog-badge {
+    font-size: 0.65rem;
+    padding: 1px var(--space-2);
+    border-radius: var(--radius-full);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.cog-badge--domain {
+    background: rgba(59, 130, 246, 0.08);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.cog-badge--task {
+    background: rgba(34, 197, 94, 0.08);
+    color: #16a34a;
+    border: 1px solid rgba(34, 197, 94, 0.15);
+}
+
+.cog-badge--workflow {
+    background: rgba(168, 85, 247, 0.08);
+    color: #9333ea;
+    border: 1px solid rgba(168, 85, 247, 0.15);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.6rem;
+}
+
+.cog-badge--pipeline {
+    background: rgba(245, 158, 11, 0.08);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.15);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.6rem;
+}
+
+.cog-badge--tool {
+    background: rgba(255, 69, 0, 0.06);
+    color: #e03e00;
+    border: 1px solid rgba(255, 69, 0, 0.12);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.6rem;
+}

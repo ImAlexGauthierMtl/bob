@@ -1,0 +1,217 @@
+/* =============================================================
+   Settings Bob — Component-specific styles
+   ============================================================= */
+
+/* ── Setting Group ───────────────────────────────────────── */
+.bob-setting-group {
+    margin-bottom: 1.5rem;
+}
+
+.bob-setting-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    margin-bottom: 0.5rem;
+}
+
+.bob-setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.bob-setting-value {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-accent);
+    background: #f0f5ff;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+}
+
+/* ── Tone Grid ───────────────────────────────────────────── */
+.bob-tone-grid {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.bob-tone-btn {
+    padding: 0.5rem 1rem;
+    font-family: var(--font-family);
+    font-size: 0.8rem;
+    font-weight: var(--font-weight-medium);
+    border: 1.5px solid var(--color-gray-200);
+    background: var(--color-white);
+    color: var(--color-gray-600);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.bob-tone-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+.bob-tone-btn--active {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-white);
+}
+
+/* ── Slider ──────────────────────────────────────────────── */
+.bob-slider {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--color-gray-200);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.bob-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    cursor: pointer;
+    border: 2px solid var(--color-white);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.bob-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    cursor: pointer;
+    border: 2px solid var(--color-white);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.bob-slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--color-gray-400);
+    margin-top: 0.25rem;
+}
+
+/* ── Select ──────────────────────────────────────────────── */
+.bob-select {
+    max-width: 240px;
+}
+
+/* ── Voice Grid ──────────────────────────────────────────── */
+.bob-voice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.75rem;
+}
+
+.bob-voice-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.875rem;
+    background: var(--color-white);
+    border: 1.5px solid var(--color-gray-200);
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--font-family);
+    transition: all var(--transition-base);
+}
+
+.bob-voice-card:hover {
+    border-color: var(--color-accent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.bob-voice-card--active {
+    border-color: var(--color-accent);
+    background: #f8f5ff;
+    box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.bob-voice-card__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.bob-voice-card__gender {
+    font-size: 0.7rem;
+    color: var(--color-gray-400);
+}
+
+.bob-voice-card__name {
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-black);
+}
+
+.bob-voice-card__accent {
+    font-size: 0.7rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-accent);
+}
+
+.bob-voice-card__style {
+    font-size: 0.7rem;
+    color: var(--color-gray-500);
+}
+
+/* ── Session Note ────────────────────────────────────────── */
+.bob-session-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #1d4ed8;
+    margin-bottom: 1.25rem;
+    line-height: 1.4;
+}
+
+.bob-session-note i {
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+}
+
+/* ── Save Bar ────────────────────────────────────────────── */
+
+.bob-save-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding-top: 2rem;
+    margin-top: 2rem;
+    border-top: 1px solid var(--color-gray-100);
+}
+
+.bob-save-msg {
+    font-size: 0.8rem;
+    font-weight: var(--font-weight-medium);
+    color: #16a34a;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.bob-save-msg--error {
+    color: #dc2626;
+}

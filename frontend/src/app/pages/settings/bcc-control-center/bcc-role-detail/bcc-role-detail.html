@@ -1,0 +1,379 @@
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Loading organization...</span>
+</div>
+}
+
+@if (org) {
+<!-- ═══ Header ═══ -->
+<header class="role-header">
+    <div class="role-header__top">
+        <div class="role-header__identity">
+            <a routerLink="/settings/bob-control-center" class="role-header__back">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div class="role-header__icon"
+                [style.background]="'linear-gradient(135deg, ' + (org.color || '#FF4500') + ', #e03e00)'">
+                <i [class]="org.icon || 'fa-solid fa-building'"></i>
+            </div>
+            <div class="role-header__info">
+                <h2 class="role-header__name">{{ org.name }}</h2>
+                <p class="role-header__meta">
+                    {{ org.departments.length }} departments · {{ teams.length }} teams · {{ roles.length }} roles
+                </p>
+            </div>
+        </div>
+        <button class="btn-interview-ceo" (click)="launchCeoInterview()" title="Lancer l'interview CEO avec Bob">
+            <i class="fa-solid fa-microphone-lines"></i>
+            <span>Alex</span>
+        </button>
+    </div>
+
+    <div class="role-header__tabs">
+        <nav class="tabs">
+            <button class="tab" [class.tab--active]="activeTab === 'profile'"
+                (click)="setActiveTab('profile')">Profile</button>
+            @for (kt of knowledgeTabs; track kt.id) {
+            <button class="tab" [class.tab--active]="activeTab === kt.id" (click)="setActiveTab(kt.id)">
+                <i [class]="kt.icon" style="margin-right: 4px; font-size: 0.75rem;"></i>
+                {{ kt.label }}
+            </button>
+            }
+            <button class="tab" [class.tab--active]="activeTab === 'departments'"
+                (click)="setActiveTab('departments')">Départements ({{ org.departments.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'teams'" (click)="setActiveTab('teams')">Équipes ({{
+                teams.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'roles'" (click)="setActiveTab('roles')">Rôles ({{
+                roles.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'regulations'"
+                (click)="setActiveTab('regulations')">Réglementations ({{ org.regulations.length }})</button>
+        </nav>
+    </div>
+
+    <!-- Perspective Filter Bar (only for Knowledge tabs) -->
+    @if (isKnowledgeTab() && profile) {
+    <div class="perspective-bar">
+        @for (p of perspectives; track p.value) {
+        <button class="perspective-btn" [class.perspective-btn--active]="selectedPerspective === p.value"
+            [style.--accent]="p.value === 'all' ? '#6B7280' : getPerspectiveColor(p.value)"
+            (click)="selectPerspective(p.value)">
+            {{ p.label }}
+        </button>
+        }
+        <button class="perspective-btn perspective-btn--history" [class.perspective-btn--active]="showHistory"
+            (click)="toggleHistory()">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            History
+        </button>
+    </div>
+    }
+</header>
+
+<!-- ═══ Content ═══ -->
+<main class="role-content">
+
+    <!-- ══ Profile Tab ══ -->
+    @if (activeTab === 'profile') {
+    <section class="tab-section">
+        <div class="config-section">
+            <h3 class="config-section__title">Organization Information</h3>
+            <div class="config-fields">
+                <div class="config-field">
+                    <span class="config-field__label">Name</span>
+                    <span class="config-field__value">{{ org.name }}</span>
+                </div>
+                <div class="config-field">
+                    <span class="config-field__label">Description</span>
+                    <span class="config-field__value">{{ org.description || '—' }}</span>
+                </div>
+            </div>
+        </div>
+
+        @if (org.profile) {
+        <div class="config-section">
+            <h3 class="config-section__title">Operations Domains</h3>
+            <div class="config-fields">
+                <div class="config-field">
+                    <span class="config-field__label">Domains</span>
+                    <div class="config-field__value">
+                        @for (domain of org.profile.operations_domains || []; track domain) {
+                        <span class="stage-badge" style="margin-right: 4px; margin-bottom: 4px;">{{ domain }}</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h3 class="config-section__title">Jurisdiction</h3>
+            <p class="config-section__desc">Defines the regulatory context applied to this organization.</p>
+            <div class="config-fields">
+                <div class="config-field">
+                    <span class="config-field__label">Country</span>
+                    <span class="config-field__value">{{ org.profile.country || '—' }}</span>
+                </div>
+                <div class="config-field">
+                    <span class="config-field__label">State / Province</span>
+                    <span class="config-field__value">{{ org.profile.state_province || '—' }}</span>
+                </div>
+                <div class="config-field">
+                    <span class="config-field__label">City</span>
+                    <span class="config-field__value">{{ org.profile.city || '—' }}</span>
+                </div>
+            </div>
+        </div>
+        }
+
+        @if (org.industries.length > 0) {
+        <div class="config-section">
+            <h3 class="config-section__title">Linked Industries</h3>
+            <div class="config-fields">
+                @for (ind of org.industries; track ind.id) {
+                <div class="config-field">
+                    <a [routerLink]="['/settings/bob-control-center/library/industry', ind.id]"
+                        class="config-field__label" style="color: #8B5CF6; text-decoration: none;">
+                        <i class="fa-solid fa-industry" style="margin-right: 4px; font-size: 0.75rem;"></i>
+                        {{ ind.name }}
+                    </a>
+                    <span class="config-field__value">{{ ind.description || '—' }}</span>
+                </div>
+                }
+            </div>
+        </div>
+        }
+    </section>
+    }
+
+    <!-- ══ Knowledge Tabs (Vision, Mission, Culture, Competition) ══ -->
+    @for (kt of knowledgeTabs; track kt.id) {
+    @if (activeTab === kt.id && !showHistory) {
+    <section class="tab-section">
+        @if (getEntriesForSection(kt.id).length > 0) {
+        <div class="config-section">
+            <h3 class="config-section__title">
+                <i [class]="kt.icon" style="margin-right: 8px;"></i>
+                {{ kt.label }}
+            </h3>
+
+            @for (entry of getEntriesForSection(kt.id); track entry.id) {
+            <div class="profile-entry">
+                <div class="profile-entry__meta">
+                    <span class="perspective-badge" [style.background]="getPerspectiveColor(entry.perspective)">
+                        {{ getPerspectiveLabel(entry.perspective) }}
+                    </span>
+                    <span class="version-badge">v{{ entry.version }}</span>
+                    <span class="contributor-info">
+                        <i [class]="getMethodIcon(entry.contribution_method)"></i>
+                        {{ entry.contributor_name }}
+                    </span>
+                </div>
+                @if (entry.content) {
+                <p class="detail-section__text">{{ entry.content }}</p>
+                }
+            </div>
+            }
+        </div>
+        } @else {
+        <div class="empty-state">
+            <i [class]="kt.icon" style="font-size: 2rem; margin-bottom: 12px; opacity: 0.3;"></i>
+            <p>No {{ kt.label | lowercase }} defined yet.</p>
+            <p style="font-size: 0.8125rem; opacity: 0.6;">Chat with Bob to add a {{ kt.label | lowercase }} statement.
+            </p>
+        </div>
+        }
+    </section>
+    }
+    }
+
+    <!-- ══ Knowledge History (shared across knowledge tabs) ══ -->
+    @if (isKnowledgeTab() && showHistory) {
+    <section class="tab-section">
+        <div class="config-section">
+            <h3 class="config-section__title">
+                <i class="fa-solid fa-clock-rotate-left" style="margin-right: 8px;"></i>
+                Version History
+            </h3>
+
+            @if (profileHistory.length === 0) {
+            <p class="detail-section__text" style="opacity: 0.6">No version history available.</p>
+            }
+
+            <div class="history-timeline">
+                @for (entry of profileHistory; track entry.id) {
+                <div class="history-entry" [class.history-entry--inactive]="!entry.is_active">
+                    <div class="history-entry__dot"
+                        [style.background]="entry.is_active ? getPerspectiveColor(entry.perspective) : '#374151'">
+                    </div>
+                    <div class="history-entry__content">
+                        <div class="history-entry__header">
+                            <span class="perspective-badge perspective-badge--sm"
+                                [style.background]="getPerspectiveColor(entry.perspective)">
+                                {{ getPerspectiveLabel(entry.perspective) }}
+                            </span>
+                            <strong>{{ formatKey(entry.section) }}</strong>
+                            <span class="version-badge">v{{ entry.version }}</span>
+                            @if (!entry.is_active) {
+                            <span class="version-badge version-badge--inactive">superseded</span>
+                            }
+                        </div>
+                        <p class="history-entry__body">
+                            @if (entry.content) {
+                            {{ entry.content.length > 120 ? entry.content.substring(0, 120) + '...' : entry.content }}
+                            } @else {
+                            <em style="opacity: 0.5">Structured data</em>
+                            }
+                        </p>
+                        <div class="history-entry__footer">
+                            <i [class]="getMethodIcon(entry.contribution_method)"></i>
+                            <span>{{ entry.contributor_name }}</span>
+                            @if (entry.created_at) {
+                            <span>· {{ entry.created_at | date:'short' }}</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                }
+            </div>
+        </div>
+    </section>
+    }
+
+    <!-- ══ Départements Tab ══ -->
+    @if (activeTab === 'departments') {
+    <section class="tab-section">
+        @if (org.departments.length === 0) {
+        <div class="empty-state">No departments defined</div>
+        } @else {
+        <div class="opp-list">
+            @for (dept of org.departments; track dept.id) {
+            <a [routerLink]="['/settings/bob-control-center', org.id, 'departments', dept.id]" class="opp-card"
+                style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
+                <div class="opp-card__main">
+                    <div class="opp-card__info">
+                        <h4 class="opp-card__name">
+                            <i class="fa-solid fa-sitemap" style="margin-right: 6px; color: #3B82F6;"></i>
+                            {{ dept.name }}
+                        </h4>
+                        <div class="opp-card__tags">
+                            <span class="opp-card__meta">{{ getTeamsForDepartment(dept.id).length }} teams</span>
+                        </div>
+                    </div>
+                    <div class="opp-card__value">
+                        <p class="opp-card__amount">{{ getTeamsForDepartment(dept.id).length }}</p>
+                        <p class="opp-card__amount-label">Teams</p>
+                    </div>
+                </div>
+            </a>
+            }
+        </div>
+        }
+    </section>
+    }
+
+    <!-- ══ Équipes Tab ══ -->
+    @if (activeTab === 'teams') {
+    <section class="tab-section">
+        @if (teams.length === 0) {
+        <div class="empty-state">No teams defined</div>
+        } @else {
+        <div class="opp-list">
+            @for (team of teams; track team.id) {
+            <a [routerLink]="['/settings/bob-control-center', org.id, 'teams', team.id]" class="opp-card"
+                style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
+                <div class="opp-card__main">
+                    <div class="opp-card__info">
+                        <h4 class="opp-card__name">
+                            <i class="fa-solid fa-users" style="margin-right: 6px; color: #10B981;"></i>
+                            {{ team.name }}
+                        </h4>
+                        <div class="opp-card__tags">
+                            <span class="opp-card__meta">{{ getRolesForTeam(team.id).length }} roles</span>
+                        </div>
+                    </div>
+                    <div class="opp-card__value">
+                        <p class="opp-card__amount">{{ getRolesForTeam(team.id).length }}</p>
+                        <p class="opp-card__amount-label">Roles</p>
+                    </div>
+                </div>
+            </a>
+            }
+        </div>
+        }
+    </section>
+    }
+
+    <!-- ══ Rôles Tab ══ -->
+    @if (activeTab === 'roles') {
+    <section class="tab-section">
+        @if (roles.length === 0) {
+        <div class="empty-state">No roles defined</div>
+        } @else {
+        <div class="opp-list">
+            @for (role of roles; track role.id) {
+            <a [routerLink]="['/settings/bob-control-center', org.id, 'roles', role.id]" class="opp-card"
+                style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
+                <div class="opp-card__main">
+                    <div class="opp-card__info">
+                        <h4 class="opp-card__name">{{ role.name }}</h4>
+                        <div class="opp-card__tags">
+                            @if (role.department) {
+                            <span class="stage-badge">{{ role.department }}</span>
+                            }
+                            <span class="opp-card__meta">{{ role.skill_count }} skills · {{ role.task_count }}
+                                tasks</span>
+                        </div>
+                    </div>
+                </div>
+                @if (role.description) {
+                <p class="opp-card__role-desc">{{ role.description }}</p>
+                }
+            </a>
+            }
+        </div>
+        }
+    </section>
+    }
+
+    <!-- ══ Réglementations Tab ══ -->
+    @if (activeTab === 'regulations') {
+    <section class="tab-section">
+        @if (org.regulations.length === 0) {
+        <div class="empty-state">No regulations defined for this jurisdiction</div>
+        } @else {
+        <div class="opp-list">
+            @for (reg of org.regulations; track reg.id) {
+            <div class="opp-card">
+                <div class="opp-card__main">
+                    <div class="opp-card__info">
+                        <h4 class="opp-card__name">
+                            <i [class]="getRegulationTypeIcon(reg.type)"
+                                [style.color]="getRegulationTypeColor(reg.type)" style="margin-right: 6px;"></i>
+                            {{ reg.name }}
+                        </h4>
+                        <div class="opp-card__tags">
+                            <span class="stage-badge">{{ reg.type | uppercase }}</span>
+                            <span class="stage-badge">{{ reg.enforcement_level }}</span>
+                            @if (reg.scope) {
+                            <span class="opp-card__meta">{{ getScopeLabel(reg.scope) }}</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                @if (reg.description) {
+                <p class="opp-card__role-desc">{{ reg.description }}</p>
+                }
+            </div>
+            }
+        </div>
+        }
+    </section>
+    }
+
+</main>
+}
+
+@if (showInterview && org) {
+<croo-bcc-interview [orgId]="org.id" [orgName]="org.name" (close)="closeInterview()">
+</croo-bcc-interview>
+}

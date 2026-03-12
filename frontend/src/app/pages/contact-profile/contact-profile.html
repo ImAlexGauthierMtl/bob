@@ -1,23 +1,52 @@
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Loading contact...</span>
+</div>
+}
+
+@if (contact) {
 <!-- Header -->
 <header class="profile-header">
     <div class="profile-header__top">
         <div class="profile-identity">
-            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="David Martinez"
-                class="profile-photo" />
+            <div class="profile-avatar">{{ getInitials() }}</div>
             <div class="profile-info">
                 <div class="profile-name-row">
-                    <h2 class="profile-name">David Martinez</h2>
+                    <h2 class="profile-name">{{ contact.first_name }} {{ contact.last_name }}</h2>
                     <div class="status-dot">
-                        <div class="dot dot--green"></div><span class="status-text status-text--green">ACTIVE</span>
+                        <div class="dot" [class.dot--green]="contact.status === 'ACTIVE'"
+                            [class.dot--yellow]="contact.status === 'LEAD'"
+                            [class.dot--gray]="contact.status === 'INACTIVE'"></div>
+                        <span class="status-text" [class.status-text--green]="contact.status === 'ACTIVE'"
+                            [class.status-text--yellow]="contact.status === 'LEAD'"
+                            [class.status-text--gray]="contact.status === 'INACTIVE'">{{ contact.status }}</span>
                     </div>
                 </div>
-                <p class="profile-role">Chief Technology Officer</p>
-                <p class="profile-meta">ID: CONT-5829 · GLOBAL SOLUTIONS INC.</p>
+                @if (contact.organization_id && orgName) {
+                <p class="profile-meta"><a [routerLink]="'/organizations/' + contact.organization_id"
+                        class="link-accent"><i class="fa-solid fa-building"></i> {{ orgName }}</a></p>
+                }
+                @if (contact.job_title) {
+                <p class="profile-role">{{ contact.job_title }}</p>
+                }
+                <p class="profile-meta">
+                    @if (contact.department) { {{ contact.department }} }
+                </p>
                 <div class="profile-contact-info">
-                    <span><i class="fa-solid fa-envelope"></i> david.m&#64;globalsolutions.com</span>
-                    <span><i class="fa-solid fa-phone"></i> +1 (555) 123-4567</span>
-                    <a routerLink="/organizations/1" class="link-accent"><i class="fa-solid fa-building"></i> View
-                        Organization</a>
+                    @if (contact.email) {
+                    <span><i class="fa-solid fa-envelope"></i> {{ contact.email }}</span>
+                    }
+                    @if (contact.phone) {
+                    <span><i class="fa-solid fa-phone"></i> {{ contact.phone }}</span>
+                    }
+                    @if (contact.mobile) {
+                    <span><i class="fa-solid fa-mobile-screen"></i> {{ contact.mobile }}</span>
+                    }
+                    @if (contact.organization_id) {
+                    <a [routerLink]="'/organizations/' + contact.organization_id" class="link-accent"><i
+                            class="fa-solid fa-building"></i> {{ orgName || 'Organization' }}</a>
+                    }
                 </div>
             </div>
         </div>
@@ -33,11 +62,11 @@
             (click)="setActiveTab('overview')">Overview</button>
         <button class="tab" [class.tab--active]="activeTab === 'interactions'"
             (click)="setActiveTab('interactions')">Interactions</button>
-        <button class="tab" [class.tab--active]="activeTab === 'opportunities'"
-            (click)="setActiveTab('opportunities')">Opportunities</button>
         <button class="tab" [class.tab--active]="activeTab === 'activities'"
             (click)="setActiveTab('activities')">Activities</button>
         <button class="tab" [class.tab--active]="activeTab === 'notes'" (click)="setActiveTab('notes')">Notes</button>
+        <button class="tab" [class.tab--active]="activeTab === 'followers'"
+            (click)="setActiveTab('followers')">Followers</button>
     </div>
 </header>
 
@@ -47,40 +76,42 @@
 
         <!-- OVERVIEW TAB -->
         @if (activeTab === 'overview') {
+
         <!-- AI Contact Intelligence -->
         <section class="ai-intel">
             <div class="ai-intel__header">
                 <div class="ai-icon-round"><i class="fa-solid fa-brain"></i></div>
                 <div class="ai-intel__title-block">
-                    <h3 class="section-title">AI Contact Intelligence</h3>
+                    <h3 class="section-title">Bob Contact Intelligence</h3>
                     <p class="section-subtitle">Real-time behavioral analysis and engagement predictions</p>
                 </div>
-                <span class="ai-confidence">Confidence: 92%</span>
+                <span class="ai-confidence">Bob Enriched</span>
             </div>
-            <p class="ai-intel__text">David Martinez is a highly engaged decision-maker with strong influence over
-                technology procurement. His communication pattern shows consistent responsiveness (avg. reply time: 4.2
-                hours) and increasing engagement over the past 3 months.</p>
+            <p class="ai-intel__text">{{ contact.first_name }} {{ contact.last_name }}
+                @if (contact.job_title) { serves as {{ contact.job_title }} }
+                @if (contact.department) { in the {{ contact.department }} department }.
+                Contact intelligence and engagement analysis will be available once interaction data is collected.
+            </p>
             <div class="ai-intel__metrics">
                 <div>
                     <p class="metric-label">Engagement Score</p>
                     <div class="metric-bar-row">
                         <div class="metric-bar">
-                            <div class="metric-bar__fill" style="width:89%"></div>
-                        </div><span class="metric-bar-value metric-bar-value--green">89/100</span>
+                            <div class="metric-bar__fill" style="width:0%"></div>
+                        </div><span class="metric-bar-value">—</span>
                     </div>
                 </div>
                 <div>
                     <p class="metric-label">Influence Level</p>
                     <div class="metric-inline"><i class="fa-solid fa-arrow-trend-up"
-                            style="color:var(--color-accent)"></i><span class="metric-inline-value">Executive</span>
+                            style="color:var(--color-gray-400)"></i><span class="metric-inline-value">—</span>
                     </div>
                 </div>
                 <div>
-                    <p class="metric-label">Response Time</p><span class="metric-inline-value">4.2 hours avg</span>
+                    <p class="metric-label">Response Time</p><span class="metric-inline-value">—</span>
                 </div>
                 <div>
-                    <p class="metric-label">Next Best Action</p><button class="link-accent text-sm">Share case
-                        study</button>
+                    <p class="metric-label">Next Best Action</p><span class="metric-inline-value">Awaiting data</span>
                 </div>
             </div>
         </section>
@@ -100,15 +131,15 @@
                         <p class="metric-card__label">Total Interactions</p><i
                             class="fa-solid fa-comments metric-card__icon"></i>
                     </div>
-                    <p class="metric-card__value">247</p>
-                    <p class="metric-change metric-change--green">+18% this month</p>
+                    <p class="metric-card__value">0</p>
+                    <p class="metric-card__sub">No interactions yet</p>
                 </div>
                 <div class="metric-card">
                     <div class="metric-card__top">
                         <p class="metric-card__label">Meetings Attended</p><i
                             class="fa-solid fa-calendar-check metric-card__icon"></i>
                     </div>
-                    <p class="metric-card__value">34</p>
+                    <p class="metric-card__value">0</p>
                     <p class="metric-card__sub">Last 12 months</p>
                 </div>
                 <div class="metric-card">
@@ -116,131 +147,29 @@
                         <p class="metric-card__label">Opportunities Involved</p><i
                             class="fa-solid fa-handshake metric-card__icon"></i>
                     </div>
-                    <p class="metric-card__value">8</p>
-                    <p class="metric-card__sub">$3.2M total value</p>
+                    <p class="metric-card__value">0</p>
+                    <p class="metric-card__sub">No active deals</p>
                 </div>
                 <div class="metric-card">
                     <div class="metric-card__top">
                         <p class="metric-card__label">Last Contact</p><i
                             class="fa-solid fa-clock metric-card__icon"></i>
                     </div>
-                    <p class="metric-card__value">2h</p>
-                    <p class="metric-card__sub">Phone call</p>
+                    <p class="metric-card__value">—</p>
+                    <p class="metric-card__sub">Not yet contacted</p>
                 </div>
             </div>
         </section>
 
-        <!-- Professional Background -->
-        <section>
-            <h3 class="section-title-lg">Professional Background</h3>
-            <div class="detail-card">
-                <div class="timeline-item">
-                    <div class="timeline-icon timeline-icon--blue"><i class="fa-solid fa-briefcase"></i></div>
-                    <div class="timeline-content">
-                        <div class="timeline-header">
-                            <div>
-                                <p class="timeline-title">Chief Technology Officer</p>
-                                <p class="timeline-org">Global Solutions Inc.</p>
-                            </div><span class="timeline-date">2019 - Present</span>
-                        </div>
-                        <p class="timeline-desc">Leading technology strategy and digital transformation initiatives.
-                            Responsible for enterprise architecture, infrastructure, and innovation programs across
-                            global operations.</p>
-                    </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-icon timeline-icon--purple"><i class="fa-solid fa-briefcase"></i></div>
-                    <div class="timeline-content">
-                        <div class="timeline-header">
-                            <div>
-                                <p class="timeline-title">VP of Engineering</p>
-                                <p class="timeline-org">TechVision Systems</p>
-                            </div><span class="timeline-date">2015 - 2019</span>
-                        </div>
-                        <p class="timeline-desc">Managed engineering teams of 50+ developers. Spearheaded cloud
-                            migration and DevOps transformation.</p>
-                    </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-icon timeline-icon--green"><i class="fa-solid fa-graduation-cap"></i></div>
-                    <div class="timeline-content">
-                        <div class="timeline-header">
-                            <div>
-                                <p class="timeline-title">Master of Science in Computer Science</p>
-                                <p class="timeline-org">Stanford University</p>
-                            </div><span class="timeline-date">2008 - 2010</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
 
-        <!-- Network & Relationships -->
-        <section>
-            <h3 class="section-title-lg">Network &amp; Relationships</h3>
-            <div class="detail-card">
-                <div class="network-grid">
-                    <div>
-                        <p class="network-section-title">Internal Connections</p>
-                        <div class="network-list">
-                            <div class="network-item"><img
-                                    src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg"
-                                    class="network-avatar" alt="" />
-                                <div>
-                                    <p class="network-name">Jennifer Lee</p>
-                                    <p class="network-role">VP of Operations · Reports to David</p>
-                                </div>
-                            </div>
-                            <div class="network-item"><img
-                                    src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg"
-                                    class="network-avatar" alt="" />
-                                <div>
-                                    <p class="network-name">Robert Chen</p>
-                                    <p class="network-role">Procurement Manager · Collaborates with</p>
-                                </div>
-                            </div>
-                            <div class="network-item"><img
-                                    src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg"
-                                    class="network-avatar" alt="" />
-                                <div>
-                                    <p class="network-name">Michael Torres</p>
-                                    <p class="network-role">CEO · Reports to</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <p class="network-section-title">External Network</p>
-                        <div class="network-list">
-                            <div class="network-item">
-                                <div class="social-icon"><i class="fa-brands fa-linkedin" style="color:#0a66c2"></i>
-                                </div>
-                                <div>
-                                    <p class="network-name">LinkedIn</p>
-                                    <p class="network-role">2,400+ connections</p>
-                                </div>
-                            </div>
-                            <div class="network-item">
-                                <div class="social-icon"><i class="fa-brands fa-twitter" style="color:#1d9bf0"></i>
-                                </div>
-                                <div>
-                                    <p class="network-name">Twitter</p>
-                                    <p class="network-role">&#64;davidmartinez_tech</p>
-                                </div>
-                            </div>
-                            <div class="network-item">
-                                <div class="social-icon"><i class="fa-solid fa-link"
-                                        style="color:var(--color-gray-600)"></i></div>
-                                <div>
-                                    <p class="network-name">Personal Website</p>
-                                    <p class="network-role">davidmartinez.tech</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
+        <!-- Notes Preview -->
+        @if (contact.notes) {
+        <section class="detail-card">
+            <h3 class="section-title-lg">Notes</h3>
+            <p class="note-text">{{ contact.notes }}</p>
         </section>
+        }
         }
 
         <!-- INTERACTIONS TAB -->
@@ -248,135 +177,150 @@
         <section>
             <div class="tab-header">
                 <h3 class="section-title-lg">Communication History</h3>
-            </div>
-            <div class="interaction-list">
-                <div class="interaction-item">
-                    <div class="interaction-icon interaction-icon--blue"><i class="fa-solid fa-phone"></i></div>
-                    <div class="interaction-body">
-                        <div class="interaction-top">
-                            <div>
-                                <p class="interaction-title">Phone Call: Q4 Expansion Discussion</p>
-                                <p class="interaction-desc">45-minute call discussing enterprise platform expansion,
-                                    budget allocation, and implementation timeline for Q1 2025.</p>
-                            </div><span class="interaction-time">2 hours ago</span>
-                        </div>
-                        <div class="interaction-meta">
-                            <div class="owner-col"><img
-                                    src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
-                                    class="owner-avatar" alt="" /><span>Sarah Johnson</span></div><span
-                                class="meta-dot">·</span><span>Duration: 45 min</span><span class="meta-dot">·</span>
-                            <div class="status-dot">
-                                <div class="dot dot--green"></div><span class="status-text status-text--green">Positive
-                                    Sentiment</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="interaction-item">
-                    <div class="interaction-icon interaction-icon--green"><i class="fa-solid fa-envelope"></i></div>
-                    <div class="interaction-body">
-                        <div class="interaction-top">
-                            <div>
-                                <p class="interaction-title">Email: Re: Enterprise Proposal Review</p>
-                                <p class="interaction-desc">David responded to enterprise proposal with detailed
-                                    feedback. Highlighted key requirements for integration.</p>
-                            </div><span class="interaction-time">1 day ago</span>
-                        </div>
-                        <div class="interaction-meta">
-                            <div class="owner-col"><img
-                                    src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
-                                    class="owner-avatar" alt="" /><span>David Martinez</span></div><span
-                                class="meta-dot">·</span><span>Response time: 3.2 hours</span><span
-                                class="meta-dot">·</span>
-                            <div class="status-dot">
-                                <div class="dot dot--green"></div><span
-                                    class="status-text status-text--green">Engaged</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="interaction-item">
-                    <div class="interaction-icon interaction-icon--purple"><i class="fa-solid fa-users"></i></div>
-                    <div class="interaction-body">
-                        <div class="interaction-top">
-                            <div>
-                                <p class="interaction-title">Meeting: Quarterly Business Review</p>
-                                <p class="interaction-desc">Comprehensive QBR with David and executive team. Reviewed
-                                    platform performance metrics.</p>
-                            </div><span class="interaction-time">3 days ago</span>
-                        </div>
-                        <div class="interaction-meta">
-                            <div class="owner-col"><img
-                                    src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
-                                    class="owner-avatar" alt="" /><span>Sarah Johnson</span></div><span
-                                class="meta-dot">·</span><span>Attendees: 5</span><span class="meta-dot">·</span>
-                            <div class="status-dot">
-                                <div class="dot dot--green"></div><span class="status-text status-text--green">Highly
-                                    Positive</span>
-                            </div>
-                        </div>
-                    </div>
+                <div class="tab-header__filters">
+                    <select class="input input--sm">
+                        <option>All Types</option>
+                        <option>Email</option>
+                        <option>Phone</option>
+                        <option>Meeting</option>
+                    </select>
+                    <select class="input input--sm">
+                        <option>Last 30 Days</option>
+                        <option>Last 90 Days</option>
+                        <option>Last Year</option>
+                        <option>All Time</option>
+                    </select>
                 </div>
             </div>
-        </section>
-        }
 
-        <!-- OPPORTUNITIES TAB -->
-        @if (activeTab === 'opportunities') {
-        <section>
-            <div class="tab-header">
-                <h3 class="section-title-lg">Involved Opportunities</h3><button class="btn btn-accent"><i
-                        class="fa-solid fa-plus"></i> Link Opportunity</button>
-            </div>
-            <div class="opp-list">
-                <div class="opp-card">
-                    <div class="opp-card__body">
-                        <h4 class="opp-card__title">Enterprise Platform Expansion</h4>
-                        <p class="opp-card__desc">Upgrade to enterprise tier with 500 additional user licenses and
-                            premium support package.</p>
-                        <div class="opp-card__meta"><span class="opp-stage opp-stage--green">NEGOTIATION</span><span
-                                class="meta-dot">·</span><span>Close Date: Dec 15, 2024</span><span
-                                class="meta-dot">·</span><span>Probability: 75%</span></div>
-                        <div class="opp-card__role"><span class="opp-role-badge opp-role-badge--blue">DECISION
-                                MAKER</span><span class="opp-role-desc">Primary contact for technical evaluation</span>
+            <div class="interaction-list">
+                <!-- Phone Call -->
+                <div class="interaction-item">
+                    <div class="interaction-item__icon interaction-item__icon--blue">
+                        <i class="fa-solid fa-phone"></i>
+                    </div>
+                    <div class="interaction-item__body">
+                        <div class="interaction-item__top">
+                            <div>
+                                <p class="interaction-item__title">Phone Call: Q4 Expansion Discussion</p>
+                                <p class="interaction-item__desc">45-minute call discussing enterprise platform
+                                    expansion, budget allocation, and implementation timeline. Strong interest in
+                                    analytics module and requested technical documentation.</p>
+                            </div>
+                            <span class="interaction-item__time">2 hours ago</span>
+                        </div>
+                        <div class="interaction-item__meta">
+                            <span>Sarah Johnson</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span>Duration: 45 min</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span class="interaction-item__sentiment interaction-item__sentiment--positive"><span
+                                    class="dot dot--green"></span> Positive Sentiment</span>
                         </div>
                     </div>
-                    <div class="opp-card__value">
-                        <p class="opp-value">$850K</p>
-                        <p class="opp-value-label">Value</p>
+                </div>
+
+                <!-- Email -->
+                <div class="interaction-item">
+                    <div class="interaction-item__icon interaction-item__icon--green">
+                        <i class="fa-solid fa-envelope"></i>
+                    </div>
+                    <div class="interaction-item__body">
+                        <div class="interaction-item__top">
+                            <div>
+                                <p class="interaction-item__title">Email: Re: Enterprise Proposal Review</p>
+                                <p class="interaction-item__desc">Responded to enterprise proposal with detailed
+                                    feedback. Highlighted key requirements for integration with existing systems and
+                                    requested clarification on data migration.</p>
+                            </div>
+                            <span class="interaction-item__time">1 day ago</span>
+                        </div>
+                        <div class="interaction-item__meta">
+                            <span>{{ contact.first_name }} {{ contact.last_name }}</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span>Response time: 3.2 hours</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span class="interaction-item__sentiment interaction-item__sentiment--positive"><span
+                                    class="dot dot--green"></span> Engaged</span>
+                        </div>
                     </div>
                 </div>
-                <div class="opp-card">
-                    <div class="opp-card__body">
-                        <h4 class="opp-card__title">Analytics Module Add-on</h4>
-                        <p class="opp-card__desc">Advanced analytics and reporting module with AI-powered insights.</p>
-                        <div class="opp-card__meta"><span class="opp-stage opp-stage--blue">PROPOSAL</span><span
-                                class="meta-dot">·</span><span>Close Date: Jan 30, 2025</span><span
-                                class="meta-dot">·</span><span>Probability: 60%</span></div>
-                        <div class="opp-card__role"><span
-                                class="opp-role-badge opp-role-badge--purple">INFLUENCER</span><span
-                                class="opp-role-desc">Technical evaluation lead</span></div>
+
+                <!-- Meeting -->
+                <div class="interaction-item">
+                    <div class="interaction-item__icon interaction-item__icon--purple">
+                        <i class="fa-solid fa-users"></i>
                     </div>
-                    <div class="opp-card__value">
-                        <p class="opp-value">$320K</p>
-                        <p class="opp-value-label">Value</p>
+                    <div class="interaction-item__body">
+                        <div class="interaction-item__top">
+                            <div>
+                                <p class="interaction-item__title">Meeting: Quarterly Business Review</p>
+                                <p class="interaction-item__desc">Comprehensive QBR with executive team. Reviewed
+                                    platform performance metrics, discussed ROI, and explored expansion opportunities.
+                                    Praised system reliability and user adoption rates.</p>
+                            </div>
+                            <span class="interaction-item__time">3 days ago</span>
+                        </div>
+                        <div class="interaction-item__meta">
+                            <span>Sarah Johnson</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span>Attendees: 5</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span class="interaction-item__sentiment interaction-item__sentiment--positive"><span
+                                    class="dot dot--green"></span> Highly Positive</span>
+                        </div>
                     </div>
                 </div>
-                <div class="opp-card">
-                    <div class="opp-card__body">
-                        <h4 class="opp-card__title">Professional Services Package</h4>
-                        <p class="opp-card__desc">12-month consulting engagement for custom integration and workflow
-                            optimization.</p>
-                        <div class="opp-card__meta"><span class="opp-stage opp-stage--yellow">QUALIFICATION</span><span
-                                class="meta-dot">·</span><span>Close Date: Feb 28, 2025</span><span
-                                class="meta-dot">·</span><span>Probability: 40%</span></div>
-                        <div class="opp-card__role"><span
-                                class="opp-role-badge opp-role-badge--green">CHAMPION</span><span
-                                class="opp-role-desc">Advocating internally for solution</span></div>
+
+                <!-- Email 2 -->
+                <div class="interaction-item">
+                    <div class="interaction-item__icon interaction-item__icon--green">
+                        <i class="fa-solid fa-envelope"></i>
                     </div>
-                    <div class="opp-card__value">
-                        <p class="opp-value">$480K</p>
-                        <p class="opp-value-label">Value</p>
+                    <div class="interaction-item__body">
+                        <div class="interaction-item__top">
+                            <div>
+                                <p class="interaction-item__title">Email: Technical Integration Questions</p>
+                                <p class="interaction-item__desc">Sent detailed technical questions about API
+                                    capabilities and integration architecture. Demonstrates deep technical understanding
+                                    and active evaluation of platform capabilities.</p>
+                            </div>
+                            <span class="interaction-item__time">5 days ago</span>
+                        </div>
+                        <div class="interaction-item__meta">
+                            <span>{{ contact.first_name }} {{ contact.last_name }}</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span>Response time: 2.8 hours</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span class="interaction-item__sentiment interaction-item__sentiment--neutral"><span
+                                    class="dot dot--yellow"></span> Neutral</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phone Call 2 -->
+                <div class="interaction-item">
+                    <div class="interaction-item__icon interaction-item__icon--blue">
+                        <i class="fa-solid fa-phone"></i>
+                    </div>
+                    <div class="interaction-item__body">
+                        <div class="interaction-item__top">
+                            <div>
+                                <p class="interaction-item__title">Phone Call: Initial Discovery</p>
+                                <p class="interaction-item__desc">Introduction call to understand technology needs and
+                                    current pain points. Outlined key challenges with legacy systems and expressed
+                                    interest in modern cloud solutions.</p>
+                            </div>
+                            <span class="interaction-item__time">1 week ago</span>
+                        </div>
+                        <div class="interaction-item__meta">
+                            <span>Sarah Johnson</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span>Duration: 30 min</span>
+                            <span class="interaction-item__sep">·</span>
+                            <span class="interaction-item__sentiment interaction-item__sentiment--positive"><span
+                                    class="dot dot--green"></span> Positive</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -387,60 +331,66 @@
         @if (activeTab === 'activities') {
         <section>
             <div class="tab-header">
-                <h3 class="section-title-lg">Activities &amp; Tasks</h3><button class="btn btn-accent"><i
-                        class="fa-solid fa-plus"></i> New Task</button>
+                <h3 class="section-title-lg">Activities</h3>
+                <button class="btn btn-accent" (click)="openAddActivityDialog()"><i class="fa-solid fa-plus"></i> Add
+                    Activity</button>
             </div>
-            <h4 class="sub-section-title">Upcoming Tasks</h4>
-            <div class="task-list">
-                <div class="task-item"><input type="checkbox" />
-                    <div>
-                        <p class="task-title">Send technical documentation to David</p>
-                        <p class="task-desc">Follow up from phone call - share API documentation and integration
-                            architecture diagrams.</p>
-                        <div class="task-meta"><span class="task-due task-due--accent">Due: Tomorrow</span><span
-                                class="meta-dot">·</span><span class="priority-badge priority-badge--red">HIGH
-                                PRIORITY</span></div>
+
+            @if (activities.length === 0) {
+            <div class="empty-state">
+                <p>No activities yet. Create a follow-up activity for {{ contact.first_name }}.</p>
+            </div>
+            } @else {
+            <div class="activity-list">
+                @for (a of activities; track a.id) {
+                <div class="activity-card">
+                    <div class="activity-card__icon">
+                        @switch (a.activity_type) {
+                        @case ('CALL') { <i class="fa-solid fa-phone" style="color:#16a34a"></i> }
+                        @case ('EMAIL') { <i class="fa-solid fa-envelope" style="color:#db2777"></i> }
+                        @case ('MEETING') { <i class="fa-solid fa-users" style="color:#2563eb"></i> }
+                        @case ('NOTE') { <i class="fa-solid fa-sticky-note" style="color:#ca8a04"></i> }
+                        @default { <i class="fa-solid fa-check-circle" style="color:#9333ea"></i> }
+                        }
                     </div>
-                </div>
-                <div class="task-item"><input type="checkbox" />
-                    <div>
-                        <p class="task-title">Schedule analytics module demo</p>
-                        <p class="task-desc">Coordinate with David's team for technical demonstration of AI-powered
-                            analytics features.</p>
-                        <div class="task-meta"><span class="task-due">Due: Dec 10, 2024</span><span
-                                class="meta-dot">·</span><span
-                                class="priority-badge priority-badge--yellow">MEDIUM</span></div>
-                    </div>
-                </div>
-                <div class="task-item"><input type="checkbox" />
-                    <div>
-                        <p class="task-title">Prepare case study for enterprise accounts</p>
-                        <p class="task-desc">David requested success stories from similar technology companies.</p>
-                        <div class="task-meta"><span class="task-due">Due: Dec 15, 2024</span><span
-                                class="meta-dot">·</span><span class="priority-badge priority-badge--gray">NORMAL</span>
+                    <div class="activity-card__body">
+                        <p class="activity-card__title">{{ a.subject }}</p>
+                        <div class="activity-card__meta">
+                            <span class="stage-badge">{{ a.activity_type }}</span>
+                            <span>·</span>
+                            <span>{{ a.priority }}</span>
+                            <span>·</span>
+                            <span class="stage-badge">{{ a.status }}</span>
+                        </div>
+                        <div class="activity-card__links"
+                            style="margin-top:0.5rem; display:flex; gap:10px; font-size: 0.8rem; color: #6b7280;">
+                            @if (a.organization_ids?.length) {
+                            @for (orgId of a.organization_ids; track orgId) {
+                            <a [routerLink]="['/organizations', orgId]" style="text-decoration: none; color: inherit;">
+                                <i class="fa-solid fa-building"></i> Linked Org
+                            </a>
+                            }
+                            }
+                            @if (a.contact_ids?.length) {
+                            @for (contactId of a.contact_ids; track contactId) {
+                            <a [routerLink]="['/contacts', contactId]" style="text-decoration: none; color: inherit;">
+                                <i class="fa-solid fa-address-book"></i> Linked Contact
+                            </a>
+                            }
+                            }
+                            @if (a.opportunity_ids?.length) {
+                            @for (oppId of a.opportunity_ids; track oppId) {
+                            <a [routerLink]="['/opportunities', oppId]" style="text-decoration: none; color: inherit;">
+                                <i class="fa-solid fa-chart-line"></i> Linked Opp
+                            </a>
+                            }
+                            }
                         </div>
                     </div>
                 </div>
+                }
             </div>
-            <h4 class="sub-section-title">Completed Activities</h4>
-            <div class="completed-list">
-                <div class="completed-item">
-                    <div class="completed-icon"><i class="fa-solid fa-check"></i></div>
-                    <div>
-                        <p class="task-title">Enterprise proposal sent</p>
-                        <p class="task-desc">Comprehensive proposal document shared with David and procurement team.</p>
-                        <span class="completed-date">Completed: 1 day ago</span>
-                    </div>
-                </div>
-                <div class="completed-item">
-                    <div class="completed-icon"><i class="fa-solid fa-check"></i></div>
-                    <div>
-                        <p class="task-title">Quarterly business review completed</p>
-                        <p class="task-desc">Successful QBR meeting with executive team, received positive feedback.</p>
-                        <span class="completed-date">Completed: 3 days ago</span>
-                    </div>
-                </div>
-            </div>
+            }
         </section>
         }
 
@@ -448,62 +398,154 @@
         @if (activeTab === 'notes') {
         <section>
             <div class="tab-header">
-                <h3 class="section-title-lg">Notes</h3><button class="btn btn-accent"><i class="fa-solid fa-plus"></i>
-                    Add Note</button>
+                <h3 class="section-title-lg">Notes</h3>
+                <button class="btn btn-accent"><i class="fa-solid fa-plus"></i> Add Note</button>
             </div>
+
             <div class="notes-list">
+                @if (contact.notes) {
                 <div class="note-card">
                     <div class="note-header">
-                        <div class="owner-col"><img
-                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
-                                class="owner-avatar" alt="" />
+                        <div class="owner-col">
+                            <div class="profile-avatar profile-avatar--sm">{{ getInitials() }}</div>
+                            <div>
+                                <p class="note-author">{{ contact.first_name }} {{ contact.last_name }}</p>
+                                <p class="note-date">Contact note</p>
+                            </div>
+                        </div>
+                        <button class="btn-icon"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                    </div>
+                    <p class="note-text">{{ contact.notes }}</p>
+                </div>
+                }
+
+                <!-- Demo notes from mockup -->
+                <div class="note-card">
+                    <div class="note-header">
+                        <div class="owner-col">
+                            <div class="profile-avatar profile-avatar--sm">SJ</div>
                             <div>
                                 <p class="note-author">Sarah Johnson</p>
                                 <p class="note-date">2 hours ago</p>
                             </div>
                         </div>
+                        <button class="btn-icon"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                     </div>
-                    <h4 class="note-title">Excellent Call - Strong Technical Interest</h4>
-                    <p class="note-text">Had a fantastic 45-minute call with David today. He's incredibly knowledgeable
-                        and asked very specific technical questions about our API architecture and integration
-                        capabilities. His enthusiasm for the analytics module is palpable. Key takeaway: David is a true
-                        champion for our solution internally.</p>
+                    <h4 class="note-card__title">Excellent Call - Strong Technical Interest</h4>
+                    <p class="note-text">Had a fantastic 45-minute call. Very knowledgeable, asked specific technical
+                        questions about API architecture and integration capabilities. Enthusiasm for the analytics
+                        module is clear — mentioned how AI-powered insights would transform their decision-making. Key
+                        takeaway: a true champion for our solution internally. Timeline looks good for Q1 2025
+                        implementation. Strong buy signals throughout the conversation.</p>
                 </div>
+
                 <div class="note-card">
                     <div class="note-header">
-                        <div class="owner-col"><img
-                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
-                                class="owner-avatar" alt="" />
+                        <div class="owner-col">
+                            <div class="profile-avatar profile-avatar--sm">SJ</div>
                             <div>
                                 <p class="note-author">Sarah Johnson</p>
                                 <p class="note-date">1 day ago</p>
                             </div>
                         </div>
+                        <button class="btn-icon"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                     </div>
-                    <h4 class="note-title">Proposal Feedback - Positive Response</h4>
-                    <p class="note-text">David responded to our enterprise proposal within 3 hours - excellent
-                        engagement! His email was detailed and thoughtful, focusing on integration requirements and data
-                        migration. He mentioned they're evaluating two other vendors but emphasized our existing
-                        relationship gives us a significant advantage.</p>
+                    <h4 class="note-card__title">Proposal Feedback — Positive Response</h4>
+                    <p class="note-text">Responded to our enterprise proposal within 3 hours — excellent engagement!
+                        Email was detailed and thoughtful, focusing on integration requirements and data migration.
+                        Doing due diligence, evaluating two other vendors but emphasized our existing relationship gives
+                        us a significant advantage. Need to address technical questions comprehensively to maintain
+                        momentum.</p>
                 </div>
+
                 <div class="note-card">
                     <div class="note-header">
-                        <div class="owner-col"><img
-                                src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
-                                class="owner-avatar" alt="" />
+                        <div class="owner-col">
+                            <div class="profile-avatar profile-avatar--sm">SJ</div>
                             <div>
                                 <p class="note-author">Sarah Johnson</p>
                                 <p class="note-date">3 days ago</p>
                             </div>
                         </div>
+                        <button class="btn-icon"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                     </div>
-                    <h4 class="note-title">QBR Success - Strong Partnership Indicators</h4>
-                    <p class="note-text">Outstanding quarterly business review today. David led the meeting from their
-                        side and presented specific metrics: 47% efficiency increase, 32% reduction in manual processes,
-                        and 94% user adoption. Most importantly, David proactively brought up expansion opportunities.
-                    </p>
+                    <h4 class="note-card__title">QBR Success — Strong Partnership Indicators</h4>
+                    <p class="note-text">Outstanding quarterly business review. Presented specific metrics: 47%
+                        efficiency increase, 32% reduction in manual processes, and 94% user adoption. Executive team
+                        was impressed. Proactively brought up expansion opportunities for European offices (200+ users)
+                        and strong interest in analytics module. Action items: prepare European expansion proposal and
+                        schedule analytics demo.</p>
+                </div>
+
+                <div class="note-card">
+                    <div class="note-header">
+                        <div class="owner-col">
+                            <div class="profile-avatar profile-avatar--sm">SJ</div>
+                            <div>
+                                <p class="note-author">Sarah Johnson</p>
+                                <p class="note-date">1 week ago</p>
+                            </div>
+                        </div>
+                        <button class="btn-icon"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                    </div>
+                    <h4 class="note-card__title">Initial Contact Profile</h4>
+                    <p class="note-text">First substantive conversation. Immediately impressed by technical depth and
+                        strategic thinking. Clearly understands pain points with legacy systems, has a vision for
+                        modernization. Communication style: direct and efficient — appreciates data-driven discussions.
+                        Well-connected internally. This is exactly the type of technical decision-maker we excel at
+                        working with.</p>
                 </div>
             </div>
+        </section>
+        }
+
+        <!-- FOLLOWERS TAB -->
+        @if (activeTab === 'followers') {
+        <section class="tab-pane">
+            <div class="section-header">
+                <h3 class="section-title">LinkedIn Followers</h3>
+            </div>
+
+            @if (contact.linkedin_followers && contact.linkedin_followers.length > 0) {
+            <div class="followers-grid">
+                @for (follower of contact.linkedin_followers; track $index) {
+                <div class="follower-card">
+                    <div class="follower-card__avatar">
+                        @if (follower.profile_picture) {
+                        <img [src]="follower.profile_picture" [alt]="follower.name" />
+                        } @else {
+                        <i class="fa-solid fa-user"></i>
+                        }
+                    </div>
+                    <div class="follower-card__info">
+                        <p class="follower-card__name">{{ follower.name || 'Unknown' }}</p>
+                        <p class="follower-card__headline">{{ follower.headline || '—' }}</p>
+                        @if (follower.url) {
+                        <a [href]="follower.url" target="_blank" class="follower-card__link">
+                            <i class="fa-brands fa-linkedin"></i> View Profile
+                        </a>
+                        }
+                    </div>
+                </div>
+                }
+            </div>
+            } @else {
+            <div class="empty-state">
+                <div class="empty-state__icon">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <h3 class="empty-state__title">No followers data yet</h3>
+                <p class="empty-state__desc">Click <strong>Bob's Rolodex</strong> to enrich this contact with LinkedIn
+                    data including followers.</p>
+                <button class="btn btn-accent" (click)="triggerLinkedInEnrichment()" [disabled]="isEnrichingLinkedIn">
+                    @if (isEnrichingLinkedIn) {
+                    <i class="fa-solid fa-spinner fa-spin"></i> Enriching...
+                    } @else {
+                    <i class="fa-solid fa-address-book"></i> Bob's Rolodex
+                    }
+                </button>
+            </div>
+            }
         </section>
         }
     </div>
@@ -511,55 +553,176 @@
     <!-- Info Panel (Right Sidebar) -->
     <aside class="info-panel">
         <div class="info-section">
-            <h4 class="info-section__title">Contact Information</h4>
-            <div class="info-rows">
-                <div class="info-row"><span class="info-label">Full Name</span><span class="info-value">David
-                        Martinez</span></div>
-                <div class="info-row"><span class="info-label">Job Title</span><span class="info-value">Chief Technology
-                        Officer</span></div>
-                <div class="info-row"><span class="info-label">Department</span><span
-                        class="info-value">Technology</span></div>
-                <div class="info-row"><span class="info-label">Email</span><span
-                        class="info-value link-accent">david.m&#64;globalsolutions.com</span></div>
-                <div class="info-row"><span class="info-label">Phone</span><span class="info-value">+1 (555)
-                        123-4567</span></div>
-                <div class="info-row"><span class="info-label">Location</span><span class="info-value">San Francisco,
-                        CA</span></div>
+            <h4 class="info-section__title">Quick Actions</h4>
+            <div class="panel-actions">
+                <button class="panel-action panel-action--accent" (click)="triggerLinkedInEnrichment()"
+                    [disabled]="isEnrichingLinkedIn">
+                    @if (isEnrichingLinkedIn) {
+                    <i class="fa-solid fa-spinner fa-spin"></i> Enriching...
+                    } @else {
+                    <i class="fa-solid fa-address-book"></i> Bob's Rolodex
+                    }
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-envelope"></i> Send Email
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-calendar"></i> Schedule Meeting
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-phone"></i> Log Call
+                </button>
+                <button class="panel-action">
+                    <i class="fa-solid fa-check-circle"></i> Create Task
+                </button>
             </div>
         </div>
+
+        <div class="info-section">
+            <h4 class="info-section__title">Contact Information</h4>
+            <div class="info-rows">
+                <div class="info-row"><span class="info-label">Full Name</span><span class="info-value">{{
+                        contact.first_name }} {{ contact.last_name }}</span></div>
+                <div class="info-row"><span class="info-label">Job Title</span><span class="info-value">{{
+                        contact.job_title || '—' }}</span></div>
+                <div class="info-row"><span class="info-label">Department</span><span class="info-value">{{
+                        contact.department || '—' }}</span></div>
+                <div class="info-row"><span class="info-label">Email</span>
+                    @if (contact.email) {
+                    <span class="info-value link-accent">{{ contact.email }}</span>
+                    } @else {
+                    <span class="info-value">—</span>
+                    }
+                </div>
+                <div class="info-row"><span class="info-label">Phone</span><span class="info-value">{{ contact.phone
+                        || '—' }}</span></div>
+                <div class="info-row"><span class="info-label">Mobile</span><span class="info-value">{{ contact.mobile
+                        || '—' }}</span></div>
+            </div>
+        </div>
+
+        @if (contact.organization_id) {
         <div class="info-section">
             <h4 class="info-section__title">Organization</h4>
             <div class="info-rows">
-                <div class="info-row"><span class="info-label">Company</span><a routerLink="/organizations/1"
-                        class="info-value link-accent">Global Solutions Inc.</a></div>
-                <div class="info-row"><span class="info-label">Industry</span><span class="info-value">Technology</span>
-                </div>
-                <div class="info-row"><span class="info-label">Employees</span><span
-                        class="info-value">5,000-10,000</span></div>
-                <div class="info-row"><span class="info-label">Revenue</span><span class="info-value">$1.2M ARR</span>
-                </div>
+                <div class="info-row"><span class="info-label">Company</span><a
+                        [routerLink]="'/organizations/' + contact.organization_id" class="info-value link-accent">{{
+                        orgName || 'Organization' }}</a></div>
             </div>
         </div>
+        }
+
         <div class="info-section">
             <h4 class="info-section__title">Tags</h4>
             <div class="info-tags">
-                <span class="tag">Decision Maker</span>
-                <span class="tag">Technical</span>
-                <span class="tag tag--accent">VIP</span>
-                <span class="tag">Enterprise</span>
-                <span class="tag">Q4 Priority</span>
+                <span class="tag">{{ contact.status }}</span>
+                @if (contact.job_title) {
+                <span class="tag">{{ contact.job_title }}</span>
+                }
             </div>
         </div>
+
         <div class="info-section">
-            <h4 class="info-section__title">Account Owner</h4>
-            <div class="owner-card">
-                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg"
-                    class="owner-card__avatar" alt="" />
-                <div>
-                    <p class="owner-card__name">Sarah Johnson</p>
-                    <p class="owner-card__role">Senior Account Executive</p>
-                </div>
+            <h4 class="info-section__title">Status</h4>
+            <div class="info-tags">
+                <span class="tag" [class.tag--accent]="contact.status === 'ACTIVE'">{{ contact.status }}</span>
+            </div>
+        </div>
+
+        @if (contact.linkedin_url || contact.contact_profile?.linkedin) {
+        <div class="info-section">
+            <h4 class="info-section__title">Social Profiles</h4>
+            <div class="panel-socials">
+                @if (contact.linkedin_url) {
+                <a [href]="contact.linkedin_url" target="_blank" class="panel-social">
+                    <i class="fa-brands fa-linkedin"></i> LinkedIn
+                </a>
+                }
+                @if (contact.contact_profile?.linkedin && contact.contact_profile?.linkedin !== contact.linkedin_url) {
+                <a [href]="contact.contact_profile?.linkedin" target="_blank" class="panel-social">
+                    <i class="fa-brands fa-linkedin"></i> LinkedIn (Hunter)
+                </a>
+                }
+            </div>
+        </div>
+        }
+
+        <div class="info-section">
+            <h4 class="info-section__title">Dates</h4>
+            <div class="info-rows">
+                <div class="info-row"><span class="info-label">Created</span><span class="info-value">{{
+                        contact.created_at | slice:0:10 }}</span></div>
+                <div class="info-row"><span class="info-label">Updated</span><span class="info-value">{{
+                        contact.updated_at | slice:0:10 }}</span></div>
             </div>
         </div>
     </aside>
+
 </div>
+
+<!-- ═══════════════ ADD ACTIVITY DIALOG ═══════════════ -->
+@if (showAddActivityDialog) {
+<div class="dialog-overlay" (click)="closeAddActivityDialog()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+        <div class="dialog__header">
+            <h3 class="dialog__title">Add Activity for {{ contact.first_name }} {{ contact.last_name }}</h3>
+            <button class="dialog__close" (click)="closeAddActivityDialog()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="dialog__body">
+            <div class="form-group">
+                <label class="form-label">Subject *</label>
+                <input class="input" type="text" placeholder="Activity subject..." [(ngModel)]="newActivitySubject">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea class="input" placeholder="Optional description..." [(ngModel)]="newActivityDescription"
+                    rows="2"></textarea>
+            </div>
+
+            <div class="form-row-2">
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select class="input" [(ngModel)]="newActivityType">
+                        <option value="TASK">Task</option>
+                        <option value="CALL">Call</option>
+                        <option value="MEETING">Meeting</option>
+                        <option value="EMAIL">Email</option>
+                        <option value="NOTE">Note</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Priority</label>
+                    <select class="input" [(ngModel)]="newActivityPriority">
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="URGENT">Urgent</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Due Date</label>
+                <input class="input" type="datetime-local" [(ngModel)]="newActivityDueDate">
+            </div>
+        </div>
+
+        <div class="dialog__footer">
+            <button class="btn btn-outline" (click)="closeAddActivityDialog()">Cancel</button>
+            <button class="btn btn-accent" (click)="createLinkedActivity()"
+                [disabled]="isCreatingActivity || !newActivitySubject.trim()">
+                @if (isCreatingActivity) {
+                <i class="fa-solid fa-spinner fa-spin"></i> Creating...
+                } @else {
+                <i class="fa-solid fa-plus"></i> Create Activity
+                }
+            </button>
+        </div>
+    </div>
+</div>
+}
+}

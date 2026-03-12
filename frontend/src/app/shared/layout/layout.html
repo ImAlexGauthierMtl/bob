@@ -12,18 +12,45 @@
         </div>
 
         <nav class="sidebar__nav">
+            <!-- Org Switcher (only show if multiple orgs exist) -->
+            @if (activeOrgName && organizations.length > 1) {
+            <div class="sidebar__org-switcher" (click)="toggleOrgDropdown()">
+                <div class="sidebar__org-icon">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+                <span class="sidebar__org-name">{{ activeOrgName }}</span>
+                <i class="fa-solid fa-chevron-down sidebar__org-chevron"
+                    [class.sidebar__org-chevron--open]="showOrgDropdown"></i>
+            </div>
+            @if (showOrgDropdown) {
+            <div class="sidebar__org-dropdown">
+                @for (org of organizations; track org.id) {
+                <button class="sidebar__org-option" [class.sidebar__org-option--active]="org.id === activeOrgId"
+                    (click)="switchOrg(org)">
+                    <i class="fa-solid fa-building"></i>
+                    <span>{{ org.name }}</span>
+                    @if (org.id === activeOrgId) {
+                    <i class="fa-solid fa-check sidebar__org-check"></i>
+                    }
+                </button>
+                }
+            </div>
+            }
+            }
+
             <div class="sidebar__nav-main">
                 <a routerLink="/dashboard" routerLinkActive="sidebar__link--active" class="sidebar__link">Dashboard</a>
                 <a routerLink="/organizations" routerLinkActive="sidebar__link--active"
                     class="sidebar__link">Organizations</a>
-                <a routerLink="/contacts" class="sidebar__link">Contacts</a>
-                <a routerLink="/opportunities" class="sidebar__link">Opportunities</a>
-                <a routerLink="/tasks" class="sidebar__link">Tasks</a>
-                <a routerLink="/analytics" class="sidebar__link">Analytics</a>
+                <a routerLink="/contacts" routerLinkActive="sidebar__link--active" class="sidebar__link">Contacts</a>
+                <a routerLink="/opportunities" routerLinkActive="sidebar__link--active"
+                    class="sidebar__link">Opportunities</a>
+                <a routerLink="/tasks" routerLinkActive="sidebar__link--active" class="sidebar__link">Activities</a>
+                <a routerLink="/analytics" routerLinkActive="sidebar__link--active" class="sidebar__link">Analytics</a>
             </div>
 
             <div class="sidebar__section">
-                <p class="sidebar__section-title">AI Assistant</p>
+                <p class="sidebar__section-title">Bob Assistant</p>
                 <div class="sidebar__ai-card">
                     <div class="sidebar__ai-header">
                         <div class="sidebar__ai-icon">
@@ -40,17 +67,33 @@
                 <div class="sidebar__nav-secondary">
                     <a routerLink="/team" class="sidebar__link sidebar__link--sm">Team</a>
                     <a routerLink="/settings" class="sidebar__link sidebar__link--sm">Settings</a>
-                    <a routerLink="/integrations" class="sidebar__link sidebar__link--sm">Integrations</a>
+                    <a routerLink="/template" routerLinkActive="sidebar__link--active"
+                        class="sidebar__link sidebar__link--sm">Training</a>
                 </div>
+
+                @if (isSuperAdmin) {
+                <div class="sidebar__section sidebar__section--admin" id="sidebar-admin-section">
+                    <p class="sidebar__section-title">Administration</p>
+                    <div class="sidebar__nav-secondary">
+                        <a routerLink="/tenants" routerLinkActive="sidebar__link--active"
+                            class="sidebar__link sidebar__link--sm" id="sidebar-tenants-link">
+                            <i class="fa-solid fa-building-columns"></i> Tenants
+                        </a>
+                        <a routerLink="/usage-logs" routerLinkActive="sidebar__link--active"
+                            class="sidebar__link sidebar__link--sm" id="sidebar-logs-link">
+                            <i class="fa-solid fa-chart-line"></i> Logs
+                        </a>
+                    </div>
+                </div>
+                }
             </div>
         </nav>
 
         <div class="sidebar__user">
-            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="User"
-                class="sidebar__avatar" />
+            <div class="sidebar__avatar-placeholder">{{ userName ? userName[0] : 'U' }}</div>
             <div class="sidebar__user-info">
-                <p class="sidebar__user-name">Marcus Chen</p>
-                <p class="sidebar__user-role">Sales Manager</p>
+                <p class="sidebar__user-name">{{ userName || 'User' }}</p>
+                <p class="sidebar__user-role">{{ userRole || 'Member' }}</p>
             </div>
         </div>
     </aside>
@@ -62,11 +105,15 @@
         <footer class="app-footer">
             <p class="app-footer__copyright">© 2026 Croo Digital Experience. All rights reserved.</p>
             <div class="app-footer__links">
-                <a href="#">Help Center</a>
+                <a routerLink="/knowledge-base">Knowledge Base</a>
                 <a href="#">API Docs</a>
                 <a href="#">Privacy</a>
             </div>
         </footer>
     </div>
+
+    <!-- Bob Chat FAB (global) -->
+    <croo-bob-chat />
+    <croo-bob-display-overlay />
 
 </div>

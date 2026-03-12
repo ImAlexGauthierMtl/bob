@@ -1063,3 +1063,223 @@ tr:hover .row-action {
         display: inline-flex;
     }
 }
+
+/* ── Loading & empty states ───────────────────────────────── */
+.loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 6rem 2rem;
+    color: var(--color-gray-400);
+    font-size: 1rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+}
+
+.account-link {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    text-decoration: none;
+}
+
+.account-link:hover {
+    color: var(--color-accent);
+}
+
+.priority-badge {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stage-badge--red {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+}
+
+.dot--red {
+    background-color: #ef4444;
+}
+
+/* ── Dialog (agent-driven) ────────────────────────────────── */
+.dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.dialog {
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    width: 90%;
+    max-width: 32rem;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.dialog--wide {
+    max-width: 40rem;
+}
+
+.dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.dialog__title {
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-light);
+}
+
+.dialog__close {
+    background: none;
+    border: none;
+    color: var(--color-gray-400);
+    cursor: pointer;
+    font-size: 1.25rem;
+    transition: color var(--transition-base);
+}
+
+.dialog__close:hover {
+    color: var(--color-accent);
+}
+
+.dialog__body {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.dialog__hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    background-color: var(--color-gray-50);
+    border: 1px solid var(--color-gray-100);
+    font-size: 0.875rem;
+    color: var(--color-gray-600);
+    line-height: 1.5;
+}
+
+.dialog__hint i {
+    color: var(--color-accent);
+    margin-top: 0.125rem;
+}
+
+.search-row {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.search-input--textarea {
+    flex: 1;
+    font-family: var(--font-family);
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-light);
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-gray-200);
+    background-color: var(--color-white);
+    outline: none;
+    resize: vertical;
+    min-height: 3rem;
+    transition: border-color var(--transition-base);
+}
+
+.search-input--textarea:focus {
+    border-color: var(--color-accent);
+}
+
+.search-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    color: var(--color-accent);
+    font-size: 0.875rem;
+}
+
+.result-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--color-gray-200);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.result-card:hover {
+    border-color: var(--color-accent);
+    background-color: var(--color-gray-50);
+}
+
+.result-card--disabled {
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.result-card__main {
+    flex: 1;
+}
+
+.result-card__name {
+    font-weight: var(--font-weight-medium);
+    margin-bottom: 0.5rem;
+}
+
+.result-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.result-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    background-color: var(--color-gray-50);
+    border: 1px solid var(--color-gray-200);
+    font-size: 0.75rem;
+    color: var(--color-gray-600);
+}
+
+.result-card__action {
+    color: var(--color-accent);
+    font-size: 1rem;
+}
+
+.results-label {
+    font-size: 0.75rem;
+    color: var(--color-gray-400);
+    text-align: center;
+}
+
+.dialog__status {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+}
+
+.dialog__status--error {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}

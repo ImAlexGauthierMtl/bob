@@ -1,6 +1,7 @@
 """User entity for authentication."""
 
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Text, Float, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 import bcrypt
 
 from app.domain.entities.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
@@ -16,6 +17,23 @@ class User(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
     password_hash = Column(String(255), nullable=False)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
+
+    # Profile fields
+    job_title = Column(String(150), nullable=True)
+    phone = Column(String(30), nullable=True)
+    bio = Column(Text, nullable=True)
+    location = Column(String(150), nullable=True)
+    timezone = Column(String(50), nullable=True, default="America/Montreal")
+    role = Column(String(30), nullable=False, default="member")
+    is_super_admin = Column(Boolean, default=False, nullable=False, comment="Platform super-admin flag")
+    trust_score = Column(Float, nullable=False, default=0.1)
+
+    # Active BCC organization context
+    active_organization_id = Column(String(36), ForeignKey("bcc_organizations.id"), nullable=True)
+
+    # Relationships — owned entities
+    bob_settings = relationship("BobUserSettings", foreign_keys="BobUserSettings.user_id", uselist=False, passive_deletes=True)
+
 
     @staticmethod
     def hash_password(password: str) -> str:

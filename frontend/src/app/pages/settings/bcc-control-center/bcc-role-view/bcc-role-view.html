@@ -1,0 +1,290 @@
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Loading role...</span>
+</div>
+}
+
+@if (role) {
+<!-- ═══ Header ═══ -->
+<header class="role-header">
+    <div class="role-header__top">
+        <div class="role-header__identity">
+            <a [routerLink]="['/settings/bob-control-center', orgId]" class="role-header__back">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div class="role-header__icon"
+                [style.background]="role.color || 'linear-gradient(135deg, #FF4500, #e03e00)'">
+                <i [class]="role.icon || 'fa-solid fa-user-tie'"></i>
+            </div>
+            <div class="role-header__info">
+                <h2 class="role-header__name">{{ role.name }}</h2>
+                <p class="role-header__meta">
+                    @if (role.department) { {{ role.department | uppercase }} · }
+                    {{ role.skills.length }} skills · {{ role.tasks.length }} tasks
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="role-header__tabs">
+        <nav class="tabs">
+            <button class="tab" [class.tab--active]="activeTab === 'skills'" (click)="setActiveTab('skills')">Skills ({{
+                role.skills.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'tasks'" (click)="setActiveTab('tasks')">Tasks ({{
+                role.tasks.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'milestones'"
+                (click)="setActiveTab('milestones')">Milestones ({{ role.milestones.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'config'"
+                (click)="setActiveTab('config')">Configuration</button>
+        </nav>
+    </div>
+</header>
+
+<!-- ═══ Content ═══ -->
+<div class="role-split">
+    <main class="role-content">
+
+        <!-- ══ Skills Tab ══ -->
+        @if (activeTab === 'skills') {
+        <section class="tab-section">
+            @if (role.skills.length === 0) {
+            <div class="empty-state">No skills assigned to this role yet</div>
+            } @else {
+            @for (stage of stages; track stage) {
+            @if (getSkillsByStage(stage).length > 0) {
+            <div class="stage-group">
+                <div class="stage-group__header">
+                    <span class="stage-group__label">{{ stageLabels[stage] }}</span>
+                    <span class="stage-group__desc">{{ stageDescs[stage] }}</span>
+                    <span class="stage-group__count">{{ getSkillsByStage(stage).length }}</span>
+                </div>
+                <div class="stage-group__items">
+                    @for (skill of getSkillsByStage(stage); track skill.id) {
+                    <div class="skill-card" [class.skill-card--expanded]="isSkillExpanded(skill.id)">
+                        <div class="skill-card__header" (click)="toggleSkill(skill.id)">
+                            <div class="skill-card__left">
+                                <i [class]="getSkillTypeIcon(skill.type)" class="skill-card__type-icon"></i>
+                                <div>
+                                    <a [routerLink]="['/settings/bob-control-center', orgId, 'roles', role.id, 'skills', skill.id]"
+                                        class="skill-card__name-link" (click)="$event.stopPropagation()">
+                                        <h5 class="skill-card__name">{{ skill.name }}</h5>
+                                    </a>
+                                    <span class="skill-card__type-label">{{ getSkillTypeLabel(skill.type) }}</span>
+                                </div>
+                            </div>
+                            <div class="skill-card__right">
+                                <div class="skill-card__priority">
+                                    @for (dot of getPriorityDots(skill.priority); track $index) {
+                                    <span class="priority-dot priority-dot--active"></span>
+                                    }
+                                    @for (dot of getPriorityDots(5 - skill.priority); track $index) {
+                                    <span class="priority-dot"></span>
+                                    }
+                                </div>
+                                @if (skill.resources.length > 0) {
+                                <span class="skill-card__resource-count">{{ skill.resources.length }} res.</span>
+                                }
+                                <i class="fa-solid fa-chevron-down skill-card__expand"></i>
+                            </div>
+                        </div>
+                        @if (isSkillExpanded(skill.id)) {
+                        <div class="skill-card__body">
+                            @if (skill.description) {
+                            <p class="skill-card__desc">{{ skill.description }}</p>
+                            }
+                            @if (skill.resources.length > 0) {
+                            <p class="skill-card__resources-title">Resources</p>
+                            @for (res of skill.resources; track res.id) {
+                            <div class="resource-item">
+                                <i class="resource-item__icon fa-solid fa-book"></i>
+                                <div>
+                                    <p class="resource-item__title">{{ res.title }}</p>
+                                    <span class="resource-item__type">{{ res.type }}</span>
+                                </div>
+                            </div>
+                            }
+                            }
+                        </div>
+                        }
+                    </div>
+                    }
+                </div>
+            </div>
+            }
+            }
+            }
+        </section>
+        }
+
+        <!-- ══ Tasks Tab ══ -->
+        @if (activeTab === 'tasks') {
+        <section class="tab-section">
+            @if (role.tasks.length === 0) {
+            <div class="empty-state">No tasks assigned to this role yet</div>
+            } @else {
+            @for (stage of stages; track stage) {
+            @if (getTasksByStage(stage).length > 0) {
+            <div class="stage-group">
+                <div class="stage-group__header">
+                    <span class="stage-group__label">{{ stageLabels[stage] }}</span>
+                    <span class="stage-group__desc">{{ stageDescs[stage] }}</span>
+                    <span class="stage-group__count">{{ getTasksByStage(stage).length }}</span>
+                </div>
+                <div class="stage-group__items">
+                    @for (task of getTasksByStage(stage); track task.id) {
+                    <div class="task-card" [class.task-card--expanded]="isTaskExpanded(task.id)">
+                        <div class="task-card__header" (click)="toggleTask(task.id)">
+                            <div class="task-card__left">
+                                <i class="fa-solid fa-list-check task-card__icon"></i>
+                                <div>
+                                    <a [routerLink]="['/settings/bob-control-center', orgId, 'roles', role.id, 'tasks', task.id]"
+                                        class="task-card__name-link" (click)="$event.stopPropagation()">
+                                        <h5 class="task-card__name">{{ task.name }}</h5>
+                                    </a>
+                                    <div class="task-card__tags">
+                                        <span class="freq-badge" [style.color]="getFrequencyColor(task.frequency)"
+                                            [style.border-color]="getFrequencyColor(task.frequency)">
+                                            {{ getFrequencyLabel(task.frequency) }}
+                                        </span>
+                                        @if (task.category) {
+                                        <span class="task-card__cat">{{ task.category }}</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="task-card__right">
+                                @if (task.steps.length > 0) {
+                                <span class="task-card__step-count">{{ task.steps.length }} steps</span>
+                                }
+                                <i class="fa-solid fa-chevron-down task-card__expand"></i>
+                            </div>
+                        </div>
+                        @if (isTaskExpanded(task.id)) {
+                        <div class="task-card__body">
+                            @if (task.description) {
+                            <p class="task-card__desc">{{ task.description }}</p>
+                            }
+                            @if (task.steps.length > 0) {
+                            <div class="task-card__steps">
+                                @for (step of task.steps; track step.id) {
+                                <div class="step-item">
+                                    <span class="step-item__number">{{ step.step_number }}</span>
+                                    <span class="step-item__text">{{ step.instruction }}</span>
+                                </div>
+                                }
+                            </div>
+                            }
+                        </div>
+                        }
+                    </div>
+                    }
+                </div>
+            </div>
+            }
+            }
+            }
+        </section>
+        }
+
+        <!-- ══ Milestones Tab ══ -->
+        @if (activeTab === 'milestones') {
+        <section class="tab-section">
+            @if (role.milestones.length === 0) {
+            <div class="empty-state">No milestones defined for this role yet</div>
+            } @else {
+            <div class="milestone-timeline">
+                @for (stage of stages; track stage) {
+                @for (ms of getMilestonesByStage(stage); track ms.id) {
+                <div class="milestone-item">
+                    <div class="milestone-item__marker"></div>
+                    <div class="milestone-item__content">
+                        <span class="milestone-item__stage">{{ stageLabels[stage] }}</span>
+                        <h5 class="milestone-item__name">{{ ms.name }}</h5>
+                        @if (ms.criteria) {
+                        <div class="milestone-item__criteria">
+                            @for (entry of ms.criteria | keyvalue; track entry.key) {
+                            <span class="milestone-item__criterion">{{ entry.key }}: {{ entry.value }}</span>
+                            }
+                        </div>
+                        }
+                    </div>
+                </div>
+                }
+                }
+            </div>
+            }
+        </section>
+        }
+
+        <!-- ══ Configuration Tab ══ -->
+        @if (activeTab === 'config') {
+        <section class="tab-section">
+            <div class="config-section">
+                <h3 class="config-section__title">Role Information</h3>
+                <div class="config-fields">
+                    <div class="config-field">
+                        <span class="config-field__label">Name</span>
+                        <span class="config-field__value">{{ role.name }}</span>
+                    </div>
+                    <div class="config-field">
+                        <span class="config-field__label">Department</span>
+                        <span class="config-field__value">{{ role.department || '—' }}</span>
+                    </div>
+                    <div class="config-field">
+                        <span class="config-field__label">Description</span>
+                        <span class="config-field__value">{{ role.description || '—' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            @if (getKpiEntries().length > 0) {
+            <div class="config-section">
+                <h3 class="config-section__title">KPIs</h3>
+                <div class="config-fields">
+                    @for (entry of getKpiEntries(); track entry[0]) {
+                    <div class="config-field">
+                        <span class="config-field__label">{{ formatKpiKey(entry[0]) }}</span>
+                        <span class="config-field__value">{{ entry[1] }}</span>
+                    </div>
+                    }
+                </div>
+            </div>
+            }
+        </section>
+        }
+
+    </main>
+
+    <!-- ═══ Sidebar ═══ -->
+    <aside class="role-sidebar">
+        <div class="detail-section">
+            <div class="detail-section__header">
+                <i class="fa-solid fa-clipboard-list"></i>
+                <h3>Session Notes</h3>
+            </div>
+            @if (sessionNotes) {
+            <p class="detail-section__text">{{ sessionNotes }}</p>
+            } @else {
+            <p class="detail-section__text" style="opacity: 0.4; font-style: italic;">
+                No session notes yet — chat with Bob to start capturing onboarding insights.
+            </p>
+            }
+        </div>
+
+        <div class="detail-section">
+            <div class="detail-section__header">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <h3>Missing Elements</h3>
+            </div>
+            @if (missingElements) {
+            <p class="detail-section__text">{{ missingElements }}</p>
+            } @else {
+            <p class="detail-section__text" style="opacity: 0.4; font-style: italic;">
+                No missing elements identified yet — Bob will inventory gaps during your sessions.
+            </p>
+            }
+        </div>
+    </aside>
+</div>
+}

@@ -9,9 +9,13 @@ from pydantic import BaseModel
 from typing import List, Optional
 import httpx
 import structlog
+from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.infrastructure.database import get_db
 from app.presentation.routes.auth_routes import get_current_user
+from app.middleware.usage_tracker import UsageTracker
+from app.domain.entities.usage_transaction import TriggerSource
 
 logger = structlog.get_logger(__name__)
 
@@ -52,6 +56,7 @@ class SearchResponse(BaseModel):
 async def search_maps(
     body: SearchRequest,
     current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Search Google Maps via Serper for organizations.
 
@@ -75,6 +80,20 @@ async def search_maps(
             )
             response.raise_for_status()
             data = response.json()
+
+        # ── Track Serper usage ───────────────────────────
+        try:
+            tracker = UsageTracker(db)
+            tracker.track_search(
+                tenant_id=current_user["tenant_id"],
+                user_id=current_user["user_id"],
+                user_email=current_user["email"],
+                provider="serper",
+                trigger_source=TriggerSource.BOB_CHAT,
+                metadata={"query": query, "results": len(data.get("places", []))},
+            )
+        except Exception as track_err:
+            logger.warning("search_track_error", error=str(track_err))
 
         places = []
         for place in data.get("places", []):
@@ -107,3 +126,4 @@ async def search_maps(
     except Exception as e:
         logger.error("maps_search_error", query=query, error=str(e))
         raise HTTPException(status_code=500, detail="Search failed")
+

@@ -19,6 +19,38 @@
     color: var(--color-gray-400);
 }
 
+/* ── Not Found ────────────────────────────────────────────── */
+
+.not-found-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-16) var(--space-8);
+    text-align: center;
+    min-height: 60vh;
+}
+
+.not-found-state__icon {
+    font-size: 3rem;
+    color: var(--color-gray-300);
+    margin-bottom: var(--space-6);
+}
+
+.not-found-state__title {
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-light);
+    color: var(--color-black);
+    margin: 0 0 var(--space-3) 0;
+}
+
+.not-found-state__desc {
+    font-size: 0.875rem;
+    color: var(--color-gray-500);
+    margin: 0 0 var(--space-8) 0;
+    max-width: 30rem;
+}
+
 /* ── Responsive Helpers ───────────────────────────────────── */
 
 .lg-hidden {
@@ -398,6 +430,183 @@
     font-weight: var(--font-weight-light);
 }
 
+/* ── Recent Activities & Documents ───────────────────────── */
+
+.activity-item {
+    padding: var(--space-6);
+    display: flex;
+    gap: var(--space-4);
+    align-items: flex-start;
+    border-bottom: 1px solid var(--color-gray-100);
+    transition: background-color var(--transition-base);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-item:hover {
+    background-color: var(--color-gray-50);
+}
+
+.activity-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    /* Adjust to standard design in Bob CRM if needed, or keep square as in HTML */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.activity-icon--call {
+    background-color: #dbeafe;
+    /* Tailwind blue-100 */
+    color: #2563eb;
+    /* Tailwind blue-600 */
+}
+
+.activity-icon--email {
+    background-color: #dcfce7;
+    /* Tailwind green-100 */
+    color: #16a34a;
+    /* Tailwind green-600 */
+}
+
+.activity-icon--meeting {
+    background-color: #f3e8ff;
+    /* Tailwind purple-100 */
+    color: #9333ea;
+    /* Tailwind purple-600 */
+}
+
+.activity-icon--task {
+    background-color: #ffedd5;
+    /* Tailwind orange-100 */
+    color: #ea580c;
+    /* Tailwind orange-600 */
+}
+
+.activity-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.activity-title {
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    margin: 0 0 var(--space-1) 0;
+}
+
+.activity-desc {
+    font-size: 0.875rem;
+    color: var(--color-gray-600);
+    margin: 0 0 var(--space-2) 0;
+}
+
+.activity-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+
+.activity-meta-text {
+    font-size: 0.75rem;
+    color: var(--color-gray-400);
+}
+
+.activity-meta-user {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.activity-meta-avatar {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+    background-color: var(--color-gray-300);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: white;
+}
+
+.activity-meta-name {
+    font-size: 0.75rem;
+    color: var(--color-gray-600);
+}
+
+/* ── Documents List ──────────────────────────────────────── */
+
+.document-item {
+    padding: var(--space-6);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--color-gray-100);
+    transition: background-color var(--transition-base);
+}
+
+.document-item:last-child {
+    border-bottom: none;
+}
+
+.document-item:hover {
+    background-color: var(--color-gray-50);
+}
+
+.document-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex: 1;
+}
+
+.document-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.document-icon--pdf {
+    background-color: #fee2e2;
+    /* Tailwind red-100 */
+    color: #dc2626;
+    /* Tailwind red-600 */
+}
+
+.document-title {
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    margin: 0;
+}
+
+.document-meta {
+    font-size: 0.75rem;
+    color: var(--color-gray-400);
+    margin: 0;
+}
+
+.document-action {
+    color: var(--color-gray-400);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color var(--transition-base);
+}
+
+.document-action:hover {
+    color: var(--color-accent);
+}
+
 /* ── Data Table ──────────────────────────────────────────── */
 
 .table-container {
@@ -754,6 +963,17 @@
 
 .panel-action i {
     font-size: 0.75rem;
+}
+
+.panel-action--accent {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    font-weight: var(--font-weight-semibold);
+}
+
+.panel-action--accent:hover {
+    background: var(--color-accent);
+    color: #fff;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1141,12 +1361,257 @@
     color: var(--color-accent);
 }
 
+/* ── List Items (for intelligence sections) ──────────────── */
+
+.profile-list-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.profile-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    font-size: 0.8125rem;
+    color: var(--color-gray-700);
+    font-weight: var(--font-weight-light);
+    line-height: 1.5;
+    background-color: var(--color-gray-50);
+    transition: background-color var(--transition-base);
+}
+
+.profile-list-item:hover {
+    background-color: var(--color-accent-10);
+}
+
+.profile-list-item__icon {
+    font-size: 0.5rem;
+    color: var(--color-accent);
+    margin-top: 0.35rem;
+    flex-shrink: 0;
+}
+
+/* ── Compact Data Table ─────────────────────────────────── */
+
+.data-table--compact {
+    font-size: 0.8125rem;
+}
+
+.data-table--compact th {
+    padding: var(--space-3) var(--space-4);
+    font-size: 0.7rem;
+}
+
+.data-table--compact td {
+    padding: var(--space-3) var(--space-4);
+}
+
 /* ── Profile Actions ─────────────────────────────────────── */
 
 .profile-actions {
     margin-top: var(--space-8);
     padding-top: var(--space-8);
     border-top: 1px solid var(--color-gray-100);
+}
+
+/* ── Dialog ───────────────────────────────────────────────── */
+
+.dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    backdrop-filter: blur(4px);
+}
+
+.dialog {
+    background-color: var(--color-white);
+    width: 100%;
+    max-width: 32rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.dialog--wide {
+    max-width: 40rem;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.dialog__title {
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-light);
+}
+
+.dialog__close {
+    background: none;
+    border: none;
+    color: var(--color-gray-400);
+    cursor: pointer;
+    font-size: 1.125rem;
+    padding: 0.25rem;
+    transition: color var(--transition-base);
+}
+
+.dialog__close:hover {
+    color: var(--color-black);
+}
+
+.dialog__body {
+    padding: 2rem;
+}
+
+.dialog__hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    background-color: var(--color-accent-10);
+    color: var(--color-accent);
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+}
+
+.dialog__hint i {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+}
+
+.dialog__status {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background-color: var(--color-gray-50);
+    font-size: 0.875rem;
+    color: var(--color-gray-700);
+}
+
+.dialog__status--error {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
+.search-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.search-input {
+    flex: 1;
+}
+
+.search-input--textarea {
+    resize: vertical;
+    font-family: var(--font-family);
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-light);
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-gray-200);
+    background-color: var(--color-white);
+    outline: none;
+    transition: border-color var(--transition-base);
+    min-height: 3.5rem;
+}
+
+.search-input--textarea:focus {
+    border-color: var(--color-accent);
+}
+
+.search-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 2rem;
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+}
+
+.results-label {
+    font-size: 0.875rem;
+    color: var(--color-gray-500);
+    text-align: center;
+}
+
+.result-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--color-gray-200);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    margin-bottom: 0.5rem;
+}
+
+.result-card:hover {
+    border-color: var(--color-accent);
+    background-color: var(--color-accent-10);
+}
+
+.result-card--disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.result-card__main {
+    flex: 1;
+    min-width: 0;
+}
+
+.result-card__name {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-black);
+    margin-bottom: 0.25rem;
+}
+
+.result-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.result-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+    background-color: var(--color-gray-50);
+    padding: 0.1875rem 0.5rem;
+}
+
+.result-tag i {
+    font-size: 0.625rem;
+}
+
+.result-card__action {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-gray-300);
+    flex-shrink: 0;
+    margin-left: 1rem;
+    transition: color var(--transition-base);
+}
+
+.result-card:hover .result-card__action {
+    color: var(--color-accent);
 }
 
 /* ── Desktop: two-column field grid ──────────────────────── */

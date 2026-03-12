@@ -2,6 +2,100 @@
     display: block;
 }
 
+/* ── Loading State ───────────────────────────────────────── */
+.loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 4rem 0;
+    font-size: 0.875rem;
+    color: var(--color-gray-400);
+}
+
+/* ── Empty State Card ────────────────────────────────────── */
+.empty-state-card {
+    border: 1px solid var(--color-gray-100);
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.empty-state-icon {
+    width: 3rem;
+    height: 3rem;
+    margin: 0 auto 1.5rem;
+    background-color: var(--color-gray-100);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: var(--color-gray-400);
+}
+
+.empty-state-title {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-light);
+    margin: 0 0 0.5rem;
+}
+
+.empty-state-desc {
+    font-size: 0.875rem;
+    color: var(--color-gray-500);
+    font-weight: var(--font-weight-light);
+    margin: 0;
+    max-width: 32rem;
+    margin-inline: auto;
+}
+
+/* ── Stage Badge Variants ────────────────────────────────── */
+.stage-badge--blue {
+    background-color: #dbeafe;
+    border: 1px solid #93c5fd;
+    color: #1d4ed8;
+}
+
+.stage-badge--yellow {
+    background-color: #fef9c3;
+    border: 1px solid #fde047;
+    color: #a16207;
+}
+
+.stage-badge--purple {
+    background-color: #f3e8ff;
+    border: 1px solid #d8b4fe;
+    color: #7e22ce;
+}
+
+.stage-badge--red {
+    background-color: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #dc2626;
+}
+
+/* ── Priority Badges ─────────────────────────────────────── */
+.priority-badge {
+    display: inline-flex;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-semibold);
+}
+
+.priority-badge--blue {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+}
+
+.priority-badge--yellow {
+    background-color: #fef9c3;
+    color: #a16207;
+}
+
+.priority-badge--red {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
 /* ── Profile Header (shared pattern with contact-profile) ── */
 .profile-header {
     border-bottom: 1px solid var(--color-gray-100);
@@ -1123,4 +1217,259 @@
     .docs-grid {
         grid-template-columns: 1fr 1fr;
     }
+}
+
+/* ── Products Table ──────────────────────────────────────── */
+.products-table-container {
+    border: 1px solid var(--color-gray-100);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.products-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.products-table th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-500);
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.products-table td {
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    border-bottom: 1px solid var(--color-gray-50);
+}
+
+.products-table tbody tr:hover {
+    background: var(--color-gray-50);
+}
+
+.products-table tfoot td {
+    padding: 1rem;
+    border-bottom: none;
+    border-top: 2px solid var(--color-gray-100);
+}
+
+.text-right {
+    text-align: right;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+.total-cell {
+    color: var(--color-accent);
+}
+
+.product-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.product-name-cell i {
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+}
+
+.sku-label {
+    font-size: 0.75rem;
+    color: var(--color-gray-400);
+    background: var(--color-gray-50);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+}
+
+.category-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-gray-500);
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.375rem;
+    border-radius: 0.375rem;
+    color: var(--color-gray-400);
+    transition: all 0.15s;
+}
+
+.btn-icon:hover {
+    background: var(--color-gray-100);
+}
+
+.btn-icon--danger:hover {
+    color: #ef4444;
+    background: #fef2f2;
+}
+
+/* ── Dialog ──────────────────────────────────────────────── */
+.dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(2px);
+}
+
+.dialog {
+    background: white;
+    border-radius: 0.75rem;
+    width: 32rem;
+    max-width: 95vw;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.dialog-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.dialog-body {
+    padding: 1rem 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.dialog-search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.dialog-search i {
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+}
+
+.dialog-search-input {
+    border: none;
+    outline: none;
+    flex: 1;
+    font-size: 0.875rem;
+    background: transparent;
+}
+
+.dialog-product-list {
+    max-height: 20rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.dialog-product-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 2px solid transparent;
+}
+
+.dialog-product-item:hover {
+    background: var(--color-gray-50);
+}
+
+.dialog-product-item.selected {
+    border-color: var(--color-accent);
+    background: #fff7ed;
+}
+
+.dialog-product-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.dialog-product-info i {
+    color: var(--color-gray-400);
+    font-size: 1rem;
+}
+
+.dialog-product-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.dialog-product-meta {
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+}
+
+.dialog-product-price {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-700);
+}
+
+.dialog-empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+}
+
+.dialog-quantity {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-gray-100);
+}
+
+.dialog-quantity label {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.quantity-input {
+    width: 5rem;
+    padding: 0.375rem 0.5rem;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--color-gray-100);
 }

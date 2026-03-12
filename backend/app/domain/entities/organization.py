@@ -2,8 +2,10 @@
 
 import enum
 
-from sqlalchemy import Column, String, Text, Enum as SAEnum, Integer, Float, JSON
+from sqlalchemy import Column, String, Text, Enum as SAEnum, Integer, Float, JSON, ForeignKey
 from sqlalchemy.orm import relationship
+
+from app.domain.entities.activity import activity_organizations
 
 from app.domain.entities.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
 
@@ -63,6 +65,23 @@ class Organization(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
     logo_url = Column(String(500), nullable=True)
     organization_profile = Column(JSON, nullable=True, comment="Deep enrichment profile (services, contacts, social, etc.)")
 
-    # Relations (future)
-    # contacts = relationship("Contact", back_populates="organization")
-    # opportunities = relationship("Opportunity", back_populates="organization")
+    # Bright Data LinkedIn enrichment
+    linkedin_followers = Column(Integer, nullable=True, comment="LinkedIn follower count")
+    linkedin_employees = Column(Integer, nullable=True, comment="Employees on LinkedIn")
+    linkedin_specialties = Column(JSON, nullable=True, comment="LinkedIn specialties/skills")
+
+    # Owner (RBAC)
+    owner_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+
+    # Relations
+    contacts = relationship("Contact", back_populates="organization", passive_deletes=True)
+    opportunities = relationship("Opportunity", back_populates="organization", passive_deletes=True)
+    quotes = relationship("Quote", back_populates="organization", passive_deletes=True)
+
+    # M:N with Activities
+    linked_activities = relationship(
+        "Activity",
+        secondary=activity_organizations,
+        back_populates="organizations",
+        lazy="selectin"
+    )

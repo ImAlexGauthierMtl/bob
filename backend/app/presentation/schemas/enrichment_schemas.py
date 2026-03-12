@@ -17,10 +17,11 @@ class EnrichmentStatusResponse(BaseModel):
     """Enrichment result status."""
 
     organization_id: str
-    status: str  # "done" | "error"
+    status: str  # "enriching" | "done" | "partial" | "error"
     fields_updated: int
     fields: Dict[str, Any]
     error: Optional[str] = None
+    run_id: Optional[str] = None
 
 
 class SearchResultItem(BaseModel):

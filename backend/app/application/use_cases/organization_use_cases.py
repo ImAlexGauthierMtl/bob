@@ -72,15 +72,19 @@ class UpdateOrganizationUseCase:
 
 
 class DeleteOrganizationUseCase:
-    """Soft-delete an organization."""
+    """Soft-delete an organization (with child dependency protection)."""
 
     def __init__(self, db: Session):
+        self.db = db
         self.repo = OrganizationRepository(db)
 
     def execute(self, org_id: str, tenant_id: str, deleted_by: str) -> bool:
-        """Returns True if deleted, False if not found."""
+        """Returns True if deleted, False if not found. Raises 409 if children exist."""
+        from app.middleware.dependency_guard import guard_delete
+
         org = self.repo.get_by_id(org_id, tenant_id)
         if not org:
             return False
+        guard_delete(self.db, "organizations", org_id, tenant_id)
         self.repo.soft_delete(org, deleted_by)
         return True

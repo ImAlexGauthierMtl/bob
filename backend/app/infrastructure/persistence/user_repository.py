@@ -40,3 +40,25 @@ class UserRepository:
         self.db.commit()
         self.db.refresh(user)
         return user
+
+    def list_by_tenant(
+        self, tenant_id: str, skip: int = 0, limit: int = 50
+    ) -> tuple[List[User], int]:
+        """List users for a tenant with pagination."""
+        query = self.db.query(User).filter(
+            User.tenant_id == tenant_id,
+            User.is_deleted == False,
+        )
+        total = query.count()
+        users = query.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
+        return users, total
+
+    def soft_delete(self, user_id: str) -> bool:
+        """Soft-delete a user. Returns True if found."""
+        user = self.get_by_id(user_id)
+        if not user:
+            return False
+        user.is_deleted = True
+        user.version += 1
+        self.db.commit()
+        return True

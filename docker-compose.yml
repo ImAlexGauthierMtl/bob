@@ -27,17 +27,19 @@ services:
       dockerfile: Dockerfile
     container_name: croo-api
     restart: unless-stopped
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql://croo:croo@db:5432/croo_digital_experience
       ENVIRONMENT: development
       DEBUG: "true"
-      API_PORT: "8001"
+      API_PORT: "4500"
       SECRET_KEY: dev-secret-key-change-in-production
-      CORS_ORIGINS: '["http://localhost:4200"]'
+      CORS_ORIGINS: '["http://localhost:4200", "http://localhost:4700"]'
       ADMIN_EMAIL: admin@croo.digital
       ADMIN_PASSWORD: Admin123!
     ports:
-      - "8001:8001"
+      - "4500:4500"
     depends_on:
       db:
         condition: service_healthy

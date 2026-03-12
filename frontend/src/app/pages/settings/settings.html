@@ -1,0 +1,227 @@
+<div class="settings-layout" [class.settings-layout--full]="isFullWidth">
+
+    <!-- Settings Sidebar Nav — hidden on automation routes -->
+    @if (!isFullWidth) {
+    <aside class="settings-nav">
+
+        <!-- Bob Configuration Card -->
+        <div class="bob-config-card">
+            <div class="bob-config-card__header">
+                <div class="bob-config-card__icon">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <div>
+                    <p class="bob-config-card__title">Bob Configuration</p>
+                    <p class="bob-config-card__subtitle">Optimize your assistant</p>
+                </div>
+            </div>
+            <a routerLink="bob" class="bob-config-card__btn">Configure Bob</a>
+        </div>
+
+        <!-- General -->
+        <div class="settings-nav__section">
+            <h3 class="settings-nav__heading">General</h3>
+            <nav class="settings-nav__list">
+                <a routerLink="profile" routerLinkActive="settings-nav__link--active" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Profile</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a routerLink="security" routerLinkActive="settings-nav__link--active" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <span>Account & Security</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a routerLink="notifications" routerLinkActive="settings-nav__link--active" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-bell"></i>
+                        <span>Notifications</span>
+                    </div>
+                    <span class="settings-nav__badge">3</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Bob Features -->
+        <div class="settings-nav__section">
+            <h3 class="settings-nav__heading">Bob Features</h3>
+            <nav class="settings-nav__list">
+                <a routerLink="bob" routerLinkActive="settings-nav__link--active" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>Bob Assistant</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a routerLink="automation" routerLinkActive="settings-nav__link--active" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Automation</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a routerLink="bob-control-center" routerLinkActive="settings-nav__link--active"
+                    class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>Control Center</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Organization -->
+        <div class="settings-nav__section">
+            <h3 class="settings-nav__heading">Organization</h3>
+            <nav class="settings-nav__list">
+                <a routerLink="team" routerLinkActive="settings-nav__link--active" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-users"></i>
+                        <span>Team Members</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a routerLink="roles" routerLinkActive="settings-nav__link--active" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>Roles & Permissions</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Modules -->
+        <div class="settings-nav__section">
+            <h3 class="settings-nav__heading">Modules</h3>
+            <nav class="settings-nav__list">
+                <a routerLink="/dashboard" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-gauge"></i>
+                        <span>Overview</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a routerLink="/organizations" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-building"></i>
+                        <span>Organization</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a routerLink="/contacts" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-address-book"></i>
+                        <span>Contact</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a routerLink="/opportunities" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-handshake"></i>
+                        <span>Opportunity</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a routerLink="/quotes" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                        <span>Quote</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a routerLink="products" routerLinkActive="settings-nav__link--active" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-box"></i>
+                        <span>Products</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-tags"></i>
+                        <span>Price Lists</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                        <span>Orders</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-diagram-project"></i>
+                        <span>Projects</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-repeat"></i>
+                        <span>Subscriptions</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a routerLink="/tasks" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-list-check"></i>
+                        <span>Activities</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a routerLink="/analytics" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Analytics</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+                <a routerLink="/template" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                        <span>Training</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+            </nav>
+        </div>
+
+        <!-- System -->
+        <div class="settings-nav__section">
+            <h3 class="settings-nav__heading">System</h3>
+            <nav class="settings-nav__list">
+                <a routerLink="integrations" routerLinkActive="settings-nav__link--active" class="settings-nav__link">
+                    <div class="settings-nav__link-left">
+                        <i class="fa-solid fa-plug"></i>
+                        <span>Integrations</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right settings-nav__chevron"></i>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Sign Out -->
+        <div class="settings-nav__footer">
+            <button class="settings-nav__signout">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                <span>Sign Out</span>
+            </button>
+        </div>
+
+    </aside>
+    }
+
+    <!-- Settings Content -->
+    <section class="settings-content">
+        <router-outlet></router-outlet>
+    </section>
+
+</div>

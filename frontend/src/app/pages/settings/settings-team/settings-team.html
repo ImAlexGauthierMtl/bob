@@ -1,0 +1,254 @@
+<div class="settings-panel" (click)="closeAllMenus()">
+
+    <div class="team-header">
+        <div class="settings-panel__header" style="margin-bottom:0">
+            <h3 class="settings-panel__title">Team Members</h3>
+            <p class="settings-panel__subtitle">Manage your team and their access levels</p>
+        </div>
+        <button class="btn btn-accent" (click)="openAddDialog()">
+            <i class="fa-solid fa-user-plus"></i> Invite Member
+        </button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-bar">
+        <i class="fa-solid fa-search search-bar__icon"></i>
+        <input type="text" [(ngModel)]="searchQuery" placeholder="Search team members..." class="search-bar__input" />
+    </div>
+
+    <!-- Loading -->
+    @if (isLoading) {
+    <div style="text-align:center;padding:3rem;color:var(--color-gray-500)">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem"></i>
+        <p style="margin-top:1rem">Loading team...</p>
+    </div>
+    }
+
+    <!-- User List -->
+    @if (!isLoading) {
+    @for (user of filteredUsers; track user.id) {
+    <div class="team-card" [class.team-card--clickable]="true" (click)="openUserMenu(user, $event)">
+        <div class="team-card__left">
+            <div class="team-card__avatar">{{ getInitials(user) }}</div>
+            <div>
+                <p class="team-card__name">{{ user.first_name }} {{ user.last_name }}</p>
+                <p class="team-card__email">{{ user.email }}</p>
+            </div>
+        </div>
+        <div class="team-card__right">
+            <span class="status-badge {{ getRoleBadgeClass(user.role) }}">{{ getRoleLabel(user.role) }}</span>
+            <button class="team-card__action" (click)="openUserMenu(user, $event)">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+        </div>
+
+        <!-- Dropdown Menu -->
+        @if (activeMenuUserId === user.id) {
+        <div class="dropdown-menu" (click)="$event.stopPropagation()">
+            <button class="dropdown-menu__item" (click)="openRoleDialog(user)">
+                <i class="fa-solid fa-shield-halved"></i> Change Role
+            </button>
+            <button class="dropdown-menu__item" (click)="resetUserPassword(user)">
+                <i class="fa-solid fa-key"></i> Reset Password
+            </button>
+            <div class="dropdown-menu__divider"></div>
+            <button class="dropdown-menu__item dropdown-menu__item--danger" (click)="deactivateUser(user)">
+                <i class="fa-solid fa-user-slash"></i> Deactivate
+            </button>
+        </div>
+        }
+    </div>
+    }
+
+    @if (filteredUsers.length === 0) {
+    <div style="text-align:center;padding:3rem;color:var(--color-gray-500)">
+        <i class="fa-solid fa-users" style="font-size:2rem;margin-bottom:1rem"></i>
+        <p>No team members found</p>
+    </div>
+    }
+    }
+
+    <!-- ═══════ Change Role Dialog ═══════ -->
+    @if (showRoleDialog && selectedUser) {
+    <div class="dialog-overlay" (click)="closeRoleDialog()">
+        <div class="dialog-modal dialog-modal--sm" (click)="$event.stopPropagation()">
+            <div class="dialog-header">
+                <div class="dialog-header__left">
+                    <div class="dialog-header__icon" style="background:linear-gradient(135deg,#a855f7,#6366f1)">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div>
+                        <h3 class="dialog-header__title">Change Role</h3>
+                        <p class="dialog-header__subtitle">{{ selectedUser.first_name }} {{ selectedUser.last_name }}
+                        </p>
+                    </div>
+                </div>
+                <button class="dialog-close" (click)="closeRoleDialog()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="dialog-body">
+                <div class="role-options">
+                    @for (opt of roleOptions; track opt.value) {
+                    <label class="radio-card" [class.radio-card--active]="selectedRole === opt.value">
+                        <div class="radio-card__row">
+                            <input type="radio" name="userRole" class="radio-card__input" [value]="opt.value"
+                                [(ngModel)]="selectedRole" />
+                            <div>
+                                <p class="radio-card__name">
+                                    <i [class]="opt.icon" style="margin-right:0.5rem;color:var(--color-accent)"></i>
+                                    {{ opt.label }}
+                                </p>
+                                <p class="radio-card__desc">{{ opt.desc }}</p>
+                            </div>
+                        </div>
+                    </label>
+                    }
+                </div>
+
+                @if (roleStatusMessage) {
+                <div class="dialog-status dialog-status--{{ roleStatusType }}" style="margin-top:1rem">
+                    {{ roleStatusMessage }}
+                </div>
+                }
+
+                <div class="dialog-result__actions" style="margin-top:1.5rem">
+                    <button class="btn btn-accent" (click)="saveRole()"
+                        [disabled]="isSavingRole || selectedRole === selectedUser.role">
+                        @if (isSavingRole) {
+                        <i class="fa-solid fa-spinner fa-spin"></i> Saving...
+                        } @else {
+                        <i class="fa-solid fa-check"></i> Save Role
+                        }
+                    </button>
+                    <button class="btn btn-outline" (click)="closeRoleDialog()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- ═══════ Add User Dialog ═══════ -->
+    @if (showAddDialog) {
+    <div class="dialog-overlay" (click)="closeAddDialog()">
+        <div class="dialog-modal" (click)="$event.stopPropagation()">
+
+            <!-- Header -->
+            <div class="dialog-header">
+                <div class="dialog-header__left">
+                    <div class="dialog-header__icon">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <div>
+                        <h3 class="dialog-header__title">Invite Team Member</h3>
+                        <p class="dialog-header__subtitle">Bob will extract the details for you</p>
+                    </div>
+                </div>
+                <button class="dialog-close" (click)="closeAddDialog()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Input -->
+            <div class="dialog-body">
+                <p class="dialog-hint">
+                    Type or paste member info — Bob will extract name, email, role, and title automatically.
+                </p>
+                <div class="dialog-search-row">
+                    <textarea [(ngModel)]="userInput" class="dialog-textarea" rows="3"
+                        placeholder="e.g. Jennifer Williams jennifer.w@company.com Manager Sales Director"
+                        (keydown.enter)="$event.preventDefault(); processInput()">
+                        </textarea>
+                    <button class="btn btn-accent" (click)="processInput()"
+                        [disabled]="isProcessing || !userInput.trim()">
+                        @if (isProcessing) {
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        } @else {
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Parse
+                        }
+                    </button>
+                </div>
+
+                <!-- Processing -->
+                @if (isProcessing) {
+                <div class="dialog-processing">
+                    <i class="fa-solid fa-brain fa-beat-fade"></i>
+                    <span>Bob is analyzing...</span>
+                </div>
+                }
+
+                <!-- Error -->
+                @if (statusMessage) {
+                <div class="dialog-status dialog-status--{{ statusType }}">
+                    {{ statusMessage }}
+                </div>
+                }
+
+                <!-- Preview -->
+                @if (parsedPreview && !isProcessing) {
+                <div class="dialog-result">
+                    <h4 class="dialog-result__title">
+                        <i class="fa-solid fa-check-circle" style="color:var(--color-accent)"></i>
+                        Bob extracted:
+                    </h4>
+                    <div class="dialog-result__grid">
+                        @if (parsedPreview.first_name) {
+                        <div class="dialog-result__field">
+                            <span class="dialog-result__label">First Name</span>
+                            <span class="dialog-result__value">{{ parsedPreview.first_name }}</span>
+                        </div>
+                        }
+                        @if (parsedPreview.last_name) {
+                        <div class="dialog-result__field">
+                            <span class="dialog-result__label">Last Name</span>
+                            <span class="dialog-result__value">{{ parsedPreview.last_name }}</span>
+                        </div>
+                        }
+                        @if (parsedPreview.email) {
+                        <div class="dialog-result__field">
+                            <span class="dialog-result__label">Email</span>
+                            <span class="dialog-result__value">{{ parsedPreview.email }}</span>
+                        </div>
+                        }
+                        @if (parsedPreview.role) {
+                        <div class="dialog-result__field">
+                            <span class="dialog-result__label">Role</span>
+                            <span class="dialog-result__value">{{ parsedPreview.role }}</span>
+                        </div>
+                        }
+                        @if (parsedPreview.job_title) {
+                        <div class="dialog-result__field">
+                            <span class="dialog-result__label">Job Title</span>
+                            <span class="dialog-result__value">{{ parsedPreview.job_title }}</span>
+                        </div>
+                        }
+                        @if (parsedPreview.phone) {
+                        <div class="dialog-result__field">
+                            <span class="dialog-result__label">Phone</span>
+                            <span class="dialog-result__value">{{ parsedPreview.phone }}</span>
+                        </div>
+                        }
+                    </div>
+
+                    <div class="dialog-result__actions">
+                        <button class="btn btn-accent" (click)="createFromParsed()"
+                            [disabled]="isCreating || !parsedPreview.email">
+                            @if (isCreating) {
+                            <i class="fa-solid fa-spinner fa-spin"></i> Creating...
+                            } @else {
+                            <i class="fa-solid fa-user-plus"></i> Create Member
+                            }
+                        </button>
+                        <button class="btn btn-outline" (click)="resetDialog()">
+                            <i class="fa-solid fa-rotate-left"></i> Try Again
+                        </button>
+                    </div>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+    }
+
+</div>

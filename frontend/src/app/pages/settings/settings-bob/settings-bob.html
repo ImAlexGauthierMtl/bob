@@ -1,0 +1,190 @@
+<div class="settings-panel">
+
+    <div class="settings-panel__header">
+        <h3 class="settings-panel__title">Bob Assistant Configuration</h3>
+        <p class="settings-panel__subtitle">Customize Bob's personality, behavior, and voice</p>
+    </div>
+
+    <!-- ═══ PERSONALITY SECTION ═══════════════════════════════ -->
+
+    <div>
+        <h4 class="settings-section__title">
+            <i class="fa-solid fa-masks-theater"></i> Personality
+        </h4>
+
+        <!-- Tone -->
+        <div class="bob-setting-group">
+            <label class="bob-setting-label">Tone</label>
+            <div class="bob-tone-grid">
+                @for (t of availableTones; track t) {
+                <button class="bob-tone-btn" [class.bob-tone-btn--active]="tone === t" (click)="tone = t">
+                    {{ toneName(t) }}
+                </button>
+                }
+            </div>
+        </div>
+
+        <!-- Formality slider -->
+        <div class="bob-setting-group">
+            <div class="bob-setting-row">
+                <label class="bob-setting-label">Formality</label>
+                <span class="bob-setting-value">{{ formalityLabel }}</span>
+            </div>
+            <input type="range" class="bob-slider" min="0" max="1" step="0.05" [(ngModel)]="formality" />
+            <div class="bob-slider-labels">
+                <span>Casual</span>
+                <span>Formal</span>
+            </div>
+        </div>
+
+        <!-- Creativity slider -->
+        <div class="bob-setting-group">
+            <div class="bob-setting-row">
+                <label class="bob-setting-label">Creativity</label>
+                <span class="bob-setting-value">{{ creativityLabel }}</span>
+            </div>
+            <input type="range" class="bob-slider" min="0" max="1" step="0.05" [(ngModel)]="creativity" />
+            <div class="bob-slider-labels">
+                <span>Precise</span>
+                <span>Creative</span>
+            </div>
+        </div>
+
+        <!-- Response Length -->
+        <div class="bob-setting-group">
+            <label class="bob-setting-label">Response Length</label>
+            <div class="bob-tone-grid">
+                <button class="bob-tone-btn" [class.bob-tone-btn--active]="responseLength === 'concise'"
+                    (click)="responseLength = 'concise'">
+                    <i class="fa-solid fa-compress"></i> Concise
+                </button>
+                <button class="bob-tone-btn" [class.bob-tone-btn--active]="responseLength === 'balanced'"
+                    (click)="responseLength = 'balanced'">
+                    <i class="fa-solid fa-scale-balanced"></i> Balanced
+                </button>
+                <button class="bob-tone-btn" [class.bob-tone-btn--active]="responseLength === 'detailed'"
+                    (click)="responseLength = 'detailed'">
+                    <i class="fa-solid fa-expand"></i> Detailed
+                </button>
+            </div>
+        </div>
+
+        <!-- Language -->
+        <div class="bob-setting-group">
+            <label class="bob-setting-label">Response Language</label>
+            <select class="form-input bob-select" [(ngModel)]="language" (ngModelChange)="onLanguageChange()">
+                @for (lang of availableLanguages; track lang.code) {
+                <option [value]="lang.code">{{ lang.name }}</option>
+                }
+            </select>
+        </div>
+
+        <!-- Emoji toggle -->
+        <div class="toggle-row">
+            <div class="toggle-row__info">
+                <p class="toggle-row__name">Allow Emoji</p>
+                <p class="toggle-row__desc">Let Bob use emoji in text responses</p>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" [(ngModel)]="emojiUsage" />
+                <div class="toggle__track"></div>
+            </label>
+        </div>
+    </div>
+
+    <!-- ═══ VOICE SECTION ════════════════════════════════════ -->
+
+    <div class="settings-section">
+        <h4 class="settings-section__title">
+            <i class="fa-solid fa-microphone"></i> Voice
+        </h4>
+
+        <!-- Session note -->
+        <div class="bob-session-note">
+            <i class="fa-solid fa-circle-info"></i>
+            Voice and language changes apply at the start of your <strong>next session</strong>.
+            If Bob is currently active, reconnect to apply.
+        </div>
+
+        <!-- Voice selector grid -->
+        <div class="bob-setting-group">
+            <label class="bob-setting-label">Bob's Voice</label>
+            <p class="bob-setting-hint" style="font-size:0.8rem;color:var(--text-secondary);margin:-0.25rem 0 0.5rem">
+                @if (language === 'en') {
+                Orpheus voices — optimized for English
+                } @else {
+                Qwen voices — multilingual with emotion control
+                }
+            </p>
+            <div class="bob-voice-grid">
+                @for (v of availableVoices; track v.id) {
+                <button class="bob-voice-card" [class.bob-voice-card--active]="selectedVoice === v.id"
+                    (click)="selectVoice(v.id)">
+                    <div class="bob-voice-card__header">
+                        <i [class]="getGenderIcon(v.gender)" class="bob-voice-card__gender"></i>
+                        <span class="bob-voice-card__name">{{ v.name }}</span>
+                    </div>
+                    <span class="bob-voice-card__accent">{{ v.accent }}</span>
+                    <span class="bob-voice-card__style">{{ v.style }}</span>
+                </button>
+                }
+            </div>
+        </div>
+
+        <!-- Speed slider -->
+        <div class="bob-setting-group">
+            <div class="bob-setting-row">
+                <label class="bob-setting-label">Speech Speed</label>
+                <span class="bob-setting-value">{{ speedLabel }} ({{ voiceSpeed }}x)</span>
+            </div>
+            <input type="range" class="bob-slider" min="0.5" max="3.0" step="0.1" [(ngModel)]="voiceSpeed" />
+            <div class="bob-slider-labels">
+                <span>0.5x Slow</span>
+                <span>3.0x Fast</span>
+            </div>
+        </div>
+
+        <!-- Auto-listen toggle -->
+        <div class="toggle-row">
+            <div class="toggle-row__info">
+                <p class="toggle-row__name">Auto-listen after response</p>
+                <p class="toggle-row__desc">Automatically reactivate microphone after Bob finishes speaking</p>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" [(ngModel)]="autoListen" />
+                <div class="toggle__track"></div>
+            </label>
+        </div>
+    </div>
+
+    <!-- ═══ CAPABILITIES LINK ════════════════════════════════ -->
+
+    <div class="settings-section">
+        <h4 class="settings-section__title">Bob Capabilities</h4>
+        <p class="settings-section__desc">Manage what Bob can read, analyze, and execute.</p>
+        <a routerLink="/settings/bob/capabilities" class="btn btn--outline"
+            style="display:inline-flex;align-items:center;gap:0.5rem">
+            <i class="fa-solid fa-shield-halved"></i> Manage Capabilities
+        </a>
+    </div>
+
+    <!-- ═══ SAVE BAR ═════════════════════════════════════════ -->
+
+    <div class="bob-save-bar">
+        @if (saveMessage) {
+        <span class="bob-save-msg" [class.bob-save-msg--error]="saveMessage.includes('Error')">
+            <i class="fa-solid" [class.fa-check]="!saveMessage.includes('Error')"
+                [class.fa-xmark]="saveMessage.includes('Error')"></i>
+            {{ saveMessage }}
+        </span>
+        }
+        <button class="btn btn-accent" (click)="saveSettings()" [disabled]="isSaving">
+            @if (isSaving) {
+            <i class="fa-solid fa-spinner fa-spin"></i> Saving...
+            } @else {
+            <i class="fa-solid fa-floppy-disk"></i> Save Settings
+            }
+        </button>
+    </div>
+
+</div>

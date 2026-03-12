@@ -1,12 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import {
-    OrganizationService,
-    Organization,
-    PlaceResult,
-    CreateOrganizationRequest,
-} from '../../shared/services/organization.service';
+import { Subscription } from 'rxjs';
+import { OrganizationService } from '../../shared/services/organization.service';
+import { BobActionService } from '../../shared/services/bob-action.service';
+import { Organization, PlaceResult, CreateOrganizationDto } from '../../shared/models/organization.model';
 
 @Component({
     selector: 'croo-organizations',
@@ -15,16 +13,24 @@ import {
     templateUrl: './organizations.html',
     styleUrl: './organizations.css',
 })
-export class OrganizationsComponent implements OnInit {
+export class OrganizationsComponent implements OnInit, OnDestroy {
     organizations: Organization[] = [];
     total = 0;
     isLoading = true;
 
+    // Pagination
+    currentPage = 1;
+    pageSize = 50;
+    totalPages = 1;
+    Math = Math;
+
     // Dialog state
     showAddDialog = false;
+    searchMode = false;
     searchQuery = '';
     isSearching = false;
     searchResults: PlaceResult[] = [];
+    dbSearchResults: Organization[] = [];
     hasSearched = false;
 
     // Manual entry
@@ -39,21 +45,57 @@ export class OrganizationsComponent implements OnInit {
     statusMessage = '';
     statusType: 'info' | 'success' | 'error' = 'info';
 
-    constructor(
-        private orgService: OrganizationService,
-        private router: Router,
-    ) { }
+    private bobActionSub?: Subscription;
+
+    private orgService = inject(OrganizationService);
+    private router = inject(Router);
+    private bobActionService = inject(BobActionService);
 
     ngOnInit(): void {
         this.loadOrganizations();
+
+        console.log('[Organizations] subscribing to BobActionService.action$');
+        this.bobActionSub = this.bobActionService.action$.subscribe(action => {
+            console.log('[Organizations] received action:', JSON.stringify(action));
+            if (action.type === 'search_entity' && action.entity === 'organization') {
+                console.log('[Organizations] ✅ search_entity! calling openSearchDialog()');
+                this.openSearchDialog(action.name);
+            } else if (action.type === 'open_create_dialog' && action.entity === 'organization') {
+                console.log('[Organizations] ✅ match! calling openAddDialog()');
+                this.openAddDialog(action.name);
+            } else if (action.type === 'ui_update_input' && this.showAddDialog) {
+                if (action.text !== undefined) {
+                    this.searchQuery = action.text;
+                }
+                if (action.submit) {
+                    if (this.searchMode) {
+                        this.searchDB();
+                    } else {
+                        this.searchMaps();
+                    }
+                }
+            } else if (action.type === 'ui_select_result' && this.showAddDialog) {
+                if (this.searchMode && action.index !== undefined && action.index > 0 && this.dbSearchResults.length >= action.index) {
+                    this.goToOrg(this.dbSearchResults[action.index - 1]);
+                } else if (action.index !== undefined && action.index > 0 && this.searchResults.length >= action.index) {
+                    this.selectPlace(this.searchResults[action.index - 1]);
+                }
+            }
+        });
+    }
+
+    ngOnDestroy(): void {
+        this.bobActionSub?.unsubscribe();
     }
 
     loadOrganizations(): void {
         this.isLoading = true;
-        this.orgService.list().subscribe({
+        const skip = (this.currentPage - 1) * this.pageSize;
+        this.orgService.getAll(skip, this.pageSize).subscribe({
             next: (res) => {
                 this.organizations = res.items;
                 this.total = res.total;
+                this.totalPages = Math.max(1, Math.ceil(this.total / this.pageSize));
                 this.isLoading = false;
             },
             error: () => {
@@ -62,20 +104,59 @@ export class OrganizationsComponent implements OnInit {
         });
     }
 
+    goToPage(page: number): void {
+        if (page < 1 || page > this.totalPages) return;
+        this.currentPage = page;
+        this.loadOrganizations();
+    }
+
+    onPageSizeChange(event: Event): void {
+        this.pageSize = +(event.target as HTMLSelectElement).value;
+        this.currentPage = 1;
+        this.loadOrganizations();
+    }
+
+    getPages(): number[] {
+        const pages: number[] = [];
+        const max = Math.min(this.totalPages, 5);
+        let start = Math.max(1, this.currentPage - Math.floor(max / 2));
+        const end = Math.min(this.totalPages, start + max - 1);
+        start = Math.max(1, end - max + 1);
+        for (let i = start; i <= end; i++) pages.push(i);
+        return pages;
+    }
+
     // ── Dialog ──────────────────────────────
 
-    openAddDialog(): void {
+    openAddDialog(name?: string): void {
         this.showAddDialog = true;
+        this.searchMode = false;
         this.resetDialog();
+        if (name) {
+            this.searchQuery = name;
+            setTimeout(() => this.searchMaps(), 100);
+        }
+    }
+
+    openSearchDialog(name?: string): void {
+        this.showAddDialog = true;
+        this.searchMode = true;
+        this.resetDialog();
+        if (name) {
+            this.searchQuery = name;
+            setTimeout(() => this.searchDB(), 100);
+        }
     }
 
     closeAddDialog(): void {
         this.showAddDialog = false;
+        this.searchMode = false;
     }
 
     resetDialog(): void {
         this.searchQuery = '';
         this.searchResults = [];
+        this.dbSearchResults = [];
         this.hasSearched = false;
         this.showManualForm = false;
         this.isSearching = false;
@@ -118,13 +199,42 @@ export class OrganizationsComponent implements OnInit {
         });
     }
 
+    // ── Search DB ────────────────────────────
+
+    searchDB(): void {
+        if (!this.searchQuery.trim()) return;
+        this.isSearching = true;
+        this.hasSearched = false;
+        this.dbSearchResults = [];
+
+        this.orgService.search(this.searchQuery.trim()).subscribe({
+            next: (res) => {
+                this.dbSearchResults = res.items;
+                this.hasSearched = true;
+                this.isSearching = false;
+            },
+            error: () => {
+                this.isSearching = false;
+                this.hasSearched = true;
+                this.statusMessage = '⚠️ Search failed.';
+                this.statusType = 'error';
+            },
+        });
+    }
+
+    goToOrg(org: Organization): void {
+        this.showAddDialog = false;
+        this.searchMode = false;
+        this.router.navigate(['/organizations', org.id]);
+    }
+
     // ── Step 2: Select → Create → Redirect ──
 
     selectPlace(place: PlaceResult): void {
         this.isCreating = true;
 
         const addressParts = place.address.split(', ');
-        const createData: CreateOrganizationRequest = {
+        const createData: CreateOrganizationDto = {
             name: place.title,
             industry: place.industry || undefined,
             website: place.website || undefined,
@@ -166,7 +276,7 @@ export class OrganizationsComponent implements OnInit {
 
     // ── Create → fire enrich in background → redirect ──
 
-    private createAndRedirect(data: CreateOrganizationRequest): void {
+    private createAndRedirect(data: CreateOrganizationDto): void {
         this.orgService.create(data).subscribe({
             next: (org) => {
                 // Fire enrichment in background (non-blocking, returns immediately)

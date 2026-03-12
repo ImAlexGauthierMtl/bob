@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.infrastructure.database import get_db
 from app.presentation.routes.auth_routes import get_current_user
+from app.middleware.authorization import require_permission
 from app.domain.entities.quote import Quote
 from app.infrastructure.persistence.quote_repository import QuoteRepository
 from app.presentation.schemas.quote_schemas import (
@@ -33,7 +34,8 @@ async def list_quotes(
     )
 
 
-@router.post("", response_model=QuoteResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=QuoteResponse, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(require_permission("quote:write"))])
 async def create_quote(
     data: QuoteCreate,
     current_user: dict = Depends(get_current_user),
@@ -41,7 +43,13 @@ async def create_quote(
 ):
     repo = QuoteRepository(db)
     quote = Quote(**data.model_dump(exclude_none=True), tenant_id=current_user["tenant_id"], created_by=current_user["email"])
-    return QuoteResponse.model_validate(repo.create(quote))
+    created = repo.create(quote)
+    import asyncio
+    from app.agents.event_bus import event_bus
+    asyncio.ensure_future(event_bus.publish(
+        "quote.created", {"quote_id": created.id}, db, current_user["tenant_id"], current_user["email"]
+    ))
+    return QuoteResponse.model_validate(created)
 
 
 @router.get("/{quote_id}", response_model=QuoteResponse)
@@ -57,7 +65,8 @@ async def get_quote(
     return QuoteResponse.model_validate(quote)
 
 
-@router.patch("/{quote_id}", response_model=QuoteResponse)
+@router.patch("/{quo_id}", response_model=QuoteResponse,
+              dependencies=[Depends(require_permission("quote:write"))])
 async def update_quote(
     quote_id: str,
     data: QuoteUpdate,
@@ -71,10 +80,17 @@ async def update_quote(
     for k, v in data.model_dump(exclude_none=True).items():
         setattr(quote, k, v)
     quote.updated_by = current_user["email"]
-    return QuoteResponse.model_validate(repo.update(quote))
+    updated = repo.update(quote)
+    import asyncio
+    from app.agents.event_bus import event_bus
+    asyncio.ensure_future(event_bus.publish(
+        "quote.updated", {"quote_id": quote_id}, db, current_user["tenant_id"], current_user["email"]
+    ))
+    return QuoteResponse.model_validate(updated)
 
 
-@router.delete("/{quote_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{quo_id}", status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(require_permission("quote:delete"))])
 async def delete_quote(
     quote_id: str,
     current_user: dict = Depends(get_current_user),
@@ -85,3 +101,8 @@ async def delete_quote(
     if not quote:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quote not found")
     repo.soft_delete(quote, current_user["email"])
+    import asyncio
+    from app.agents.event_bus import event_bus
+    asyncio.ensure_future(event_bus.publish(
+        "quote.deleted", {"quote_id": quote_id}, db, current_user["tenant_id"], current_user["email"]
+    ))

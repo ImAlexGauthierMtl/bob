@@ -1,0 +1,268 @@
+<div class="settings-panel">
+
+    <!-- ═══════ Back to Settings ═══════ -->
+    <div class="auto-back">
+        <a routerLink="/settings/profile" class="auto-back__link">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Settings</span>
+        </a>
+        <div class="auto-back__title">
+            <h2 class="auto-back__heading">Automation</h2>
+            <p class="auto-back__subtitle">Configure and manage your workflow automations</p>
+        </div>
+    </div>
+
+    <!-- ═══════ Bob Recommendation Banner ═══════ -->
+    @if (showBanner && capabilities) {
+    <div class="ai-banner">
+        <div class="ai-banner__row">
+            <div class="ai-banner__icon">
+                <i class="fa-solid fa-brain"></i>
+            </div>
+            <div class="ai-banner__body">
+                <h3 class="ai-banner__title">Bob Automation Engine</h3>
+                <p class="ai-banner__text">
+                    Agent Mode: <strong>{{ capabilities.agent_mode | titlecase }}</strong> ·
+                    Trust Score: <strong>{{ (capabilities.trust_score * 100).toFixed(0) }}%</strong> ·
+                    {{ capabilities.capabilities.length }} capabilities loaded
+                </p>
+                <div class="ai-banner__actions">
+                    <button class="btn btn-outline--purple">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> View Recommendations
+                    </button>
+                    <button class="btn btn-purple">
+                        Auto-Generate Workflow
+                    </button>
+                </div>
+            </div>
+            <button class="ai-banner__close" (click)="dismissBanner()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+    }
+
+    <!-- ═══════ Automation Levels ═══════ -->
+    <div class="auto-section">
+        <div class="settings-panel__header" style="margin-bottom:1.5rem">
+            <h3 class="settings-panel__title">Automation Levels</h3>
+            <p class="settings-panel__subtitle">Choose the scope and impact of your automation workflow</p>
+        </div>
+
+        <div class="level-grid">
+            <!-- User Level -->
+            <button class="level-card" [class.level-card--active]="selectedLevel === 'user'"
+                (click)="selectLevel('user')">
+                <div class="level-card__top">
+                    <div class="level-card__icon level-card__icon--blue">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <span class="level-card__tag level-card__tag--blue">Personal</span>
+                </div>
+                <h4 class="level-card__name">User Level</h4>
+                <p class="level-card__desc">Personal automations that enhance individual productivity and streamline
+                    your daily tasks</p>
+                <div class="level-card__features">
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--blue"></i> Personal
+                        task automation</div>
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--blue"></i> Email
+                        filters & responses</div>
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--blue"></i> Custom
+                        notifications</div>
+                </div>
+            </button>
+
+            <!-- Company Level -->
+            <button class="level-card level-card--recommended" [class.level-card--active]="selectedLevel === 'company'"
+                (click)="selectLevel('company')">
+                <div class="level-card__top">
+                    <div class="level-card__icon level-card__icon--accent">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <span class="level-card__tag level-card__tag--accent">Recommended</span>
+                </div>
+                <h4 class="level-card__name">Company Level</h4>
+                <p class="level-card__desc">Team-wide workflows that coordinate actions across departments and enhance
+                    collaboration</p>
+                <div class="level-card__features">
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--accent"></i>
+                        Cross-team workflows</div>
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--accent"></i> Lead
+                        assignment rules</div>
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--accent"></i>
+                        Approval processes</div>
+                </div>
+            </button>
+
+            <!-- System Level -->
+            <button class="level-card" [class.level-card--active]="selectedLevel === 'system'"
+                (click)="selectLevel('system')">
+                <div class="level-card__top">
+                    <div class="level-card__icon level-card__icon--purple">
+                        <i class="fa-solid fa-server"></i>
+                    </div>
+                    <span class="level-card__tag level-card__tag--purple">Advanced</span>
+                </div>
+                <h4 class="level-card__name">System Level</h4>
+                <p class="level-card__desc">Enterprise-wide automations that integrate with external systems and manage
+                    critical processes</p>
+                <div class="level-card__features">
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--purple"></i> API
+                        integrations</div>
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--purple"></i> Data
+                        synchronization</div>
+                    <div class="level-card__feature"><i class="fa-solid fa-check level-card__check--purple"></i>
+                        System-wide policies</div>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════ Active Automations ═══════ -->
+    <div class="auto-section">
+        <div class="auto-section__header">
+            <div>
+                <h3 class="settings-panel__title" style="margin-bottom:0.25rem">Workflows</h3>
+                <p class="settings-panel__subtitle">Manage and monitor your automation workflows</p>
+            </div>
+            <div class="auto-section__filters">
+                <div class="search-bar" style="margin-bottom:0">
+                    <i class="fa-solid fa-search search-bar__icon"></i>
+                    <input type="text" [(ngModel)]="searchQuery" placeholder="Search workflows..."
+                        class="search-bar__input" />
+                </div>
+                <button class="btn btn-purple" (click)="createNewWorkflow()" style="white-space:nowrap">
+                    <i class="fa-solid fa-plus"></i> New Workflow
+                </button>
+            </div>
+        </div>
+
+        @if (isLoading) {
+        <div style="text-align:center;padding:3rem;color:var(--color-gray-500)">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;margin-bottom:1rem"></i>
+            <p>Loading workflows...</p>
+        </div>
+        }
+
+        @for (wf of filteredWorkflows; track wf.id) {
+        <div class="auto-card">
+            <div class="auto-card__header">
+                <div class="auto-card__left">
+                    <div class="auto-card__icon" [class]="'auto-card__icon--' + wf.level">
+                        <i [class]="getModeIcon(wf.execution_mode)"></i>
+                    </div>
+                    <div class="auto-card__info">
+                        <div class="auto-card__title-row">
+                            <h4 class="auto-card__name">{{ wf.name }}</h4>
+                            <span class="auto-badge" [class]="getLevelBadgeClass(wf.level)">{{ getLevelLabel(wf.level)
+                                }}</span>
+                            <span class="auto-badge" [class.auto-badge--green]="wf.is_active"
+                                [class.auto-badge--gray]="!wf.is_active">
+                                {{ wf.is_active ? 'Active' : 'Paused' }}
+                            </span>
+                            <span class="auto-badge auto-badge--outline" style="font-size:0.65rem">
+                                <i [class]="getModeIcon(wf.execution_mode)" style="margin-right:0.25rem"></i>
+                                {{ getModeLabel(wf.execution_mode) }}
+                            </span>
+                        </div>
+                        <p class="auto-card__desc">{{ wf.description }}</p>
+                        <div class="auto-card__stats">
+                            <span><i class="fa-solid fa-clock"></i> {{ formatDate(wf.created_at) }}</span>
+                            <span><i class="fa-solid fa-layer-group"></i> {{ wf.steps.length }} steps</span>
+                            @if (wf.trigger_type !== 'manual') {
+                            <span><i class="fa-solid fa-bolt"></i> {{ wf.trigger_type }}</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="auto-card__actions">
+                    @if (wf.level !== 'system') {
+                    <button class="auto-card__edit-btn" title="Edit" (click)="openBuilder(wf)">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button class="auto-card__edit-btn" title="Run" (click)="runWorkflow(wf)"
+                        [disabled]="runningWorkflowId === wf.id">
+                        @if (runningWorkflowId === wf.id) {
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        } @else {
+                        <i class="fa-solid fa-play"></i>
+                        }
+                    </button>
+                    <button class="auto-card__edit-btn" title="Delete" (click)="deleteWorkflow(wf)">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                    } @else {
+                    <button class="auto-card__edit-btn" title="View" (click)="openBuilder(wf)">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                    }
+                    <label class="toggle">
+                        <input type="checkbox" [checked]="wf.is_active" (change)="toggleAutomation(wf)" />
+                        <span class="toggle__track"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Workflow Steps -->
+            @if (wf.steps.length > 0) {
+            <div class="auto-card__steps">
+                <p class="section-label" style="margin-bottom:0.75rem">Workflow Steps</p>
+                <div class="auto-steps">
+                    @for (step of wf.steps; track step.id; let i = $index) {
+                    <div class="auto-step">
+                        <div class="auto-step__num" [class]="getStepColor(step.step_type)">
+                            @if (step.step_type === 'ai_analysis') {
+                            <i class="fa-solid fa-brain"></i>
+                            } @else if (step.step_type === 'human_approval') {
+                            <i class="fa-solid fa-user-check"></i>
+                            } @else {
+                            <span>{{ i + 1 }}</span>
+                            }
+                        </div>
+                        <div class="auto-step__label">{{ step.name }}</div>
+                    </div>
+                    }
+                </div>
+            </div>
+            }
+        </div>
+        }
+
+        @if (!isLoading && filteredWorkflows.length === 0) {
+        <div style="text-align:center;padding:3rem;color:var(--color-gray-500)">
+            <i class="fa-solid fa-robot" style="font-size:2rem;margin-bottom:1rem"></i>
+            <p>No workflows found. Create one or use a template below.</p>
+        </div>
+        }
+    </div>
+
+    <!-- ═══════ Quick Start Templates ═══════ -->
+    @if (templates.length > 0) {
+    <div class="auto-section auto-section--border-top">
+        <div class="settings-panel__header" style="margin-bottom:1.5rem">
+            <h3 class="settings-panel__title">Quick Start Templates</h3>
+            <p class="settings-panel__subtitle">Pre-built workflows designed for common business scenarios</p>
+        </div>
+
+        <div class="template-grid">
+            @for (tpl of templates; track tpl.id) {
+            <div class="auto-tpl">
+                <div class="auto-tpl__header">
+                    <div class="auto-tpl__icon">
+                        <i [class]="getTemplateIcon(tpl)"></i>
+                    </div>
+                    <div class="auto-tpl__meta">
+                        <h4 class="auto-tpl__name">{{ tpl.name }}</h4>
+                        <span class="auto-badge" [class]="getLevelBadgeClass(tpl.level)">{{ getLevelLabel(tpl.level)
+                            }}</span>
+                    </div>
+                </div>
+                <p class="auto-tpl__desc">{{ tpl.description }}</p>
+                <button class="auto-tpl__btn" (click)="useTemplate(tpl)">Use Template</button>
+            </div>
+            }
+        </div>
+    </div>
+    }
+
+</div>

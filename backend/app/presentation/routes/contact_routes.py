@@ -6,7 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.infrastructure.database import get_db
 from app.presentation.routes.auth_routes import get_current_user
+from app.middleware.authorization import require_permission
 from app.domain.entities.contact import Contact
+from app.agents.event_bus import event_bus
 from app.infrastructure.persistence.contact_repository import ContactRepository
 from app.presentation.schemas.contact_schemas import (
     ContactCreate, ContactUpdate, ContactResponse, ContactListResponse,
@@ -33,7 +35,8 @@ async def list_contacts(
     )
 
 
-@router.post("", response_model=ContactResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ContactResponse, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(require_permission("contact:write"))])
 async def create_contact(
     data: ContactCreate,
     current_user: dict = Depends(get_current_user),
@@ -41,7 +44,13 @@ async def create_contact(
 ):
     repo = ContactRepository(db)
     contact = Contact(**data.model_dump(exclude_none=True), tenant_id=current_user["tenant_id"], created_by=current_user["email"])
-    return ContactResponse.model_validate(repo.create(contact))
+    created = repo.create(contact)
+    # Fire event for workflow triggers
+    import asyncio
+    asyncio.ensure_future(event_bus.publish(
+        "contact.created", {"contact_id": created.id}, db, current_user["tenant_id"], current_user["email"]
+    ))
+    return ContactResponse.model_validate(created)
 
 
 @router.get("/{contact_id}", response_model=ContactResponse)
@@ -57,7 +66,8 @@ async def get_contact(
     return ContactResponse.model_validate(contact)
 
 
-@router.patch("/{contact_id}", response_model=ContactResponse)
+@router.patch("/{con_id}", response_model=ContactResponse,
+              dependencies=[Depends(require_permission("contact:write"))])
 async def update_contact(
     contact_id: str,
     data: ContactUpdate,
@@ -74,7 +84,8 @@ async def update_contact(
     return ContactResponse.model_validate(repo.update(contact))
 
 
-@router.delete("/{contact_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{con_id}", status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(require_permission("contact:delete"))])
 async def delete_contact(
     contact_id: str,
     current_user: dict = Depends(get_current_user),
@@ -84,4 +95,62 @@ async def delete_contact(
     contact = repo.get_by_id(contact_id, current_user["tenant_id"])
     if not contact:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found")
+    from app.middleware.dependency_guard import guard_delete
+    guard_delete(db, "contacts", contact_id, current_user["tenant_id"])
     repo.soft_delete(contact, current_user["email"])
+    # Fire event for workflow triggers
+    import asyncio
+    asyncio.ensure_future(event_bus.publish(
+        "contact.deleted", {"contact_id": contact_id}, db, current_user["tenant_id"], current_user["email"]
+    ))
+
+
+@router.post("/{contact_id}/enrich-linkedin")
+async def enrich_contact_linkedin(
+    contact_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Trigger Bob's Rolodex (Bright Data LinkedIn enrichment) for a contact.
+
+    Returns immediately, runs enrichment in background.
+    """
+    import asyncio
+    from app.infrastructure.database import SessionLocal
+
+    repo = ContactRepository(db)
+    contact = repo.get_by_id(contact_id, current_user["tenant_id"])
+    if not contact:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found")
+
+    # Check linkedin_url OR contact_profile.linkedin (Hunter.io stores it there)
+    linkedin_url = contact.linkedin_url
+    if not linkedin_url and contact.contact_profile:
+        linkedin_url = contact.contact_profile.get("linkedin")
+    if not linkedin_url:
+        raise HTTPException(status_code=400, detail="No LinkedIn URL on this contact")
+
+    async def _run_in_background():
+        bg_db = SessionLocal()
+        try:
+            from app.application.use_cases.enrich_contact_linkedin import EnrichContactLinkedInUseCase
+            use_case = EnrichContactLinkedInUseCase(bg_db)
+            await use_case.execute(
+                contact_id=contact_id,
+                tenant_id=current_user["tenant_id"],
+                user_email=current_user["email"],
+            )
+        except Exception as e:
+            import structlog
+            structlog.get_logger().error("contact_enrich_bg_error", error=str(e))
+        finally:
+            bg_db.close()
+
+    asyncio.create_task(_run_in_background())
+
+    return {
+        "contact_id": contact_id,
+        "status": "enriching",
+        "message": "Bob's Rolodex enrichment started",
+    }
+

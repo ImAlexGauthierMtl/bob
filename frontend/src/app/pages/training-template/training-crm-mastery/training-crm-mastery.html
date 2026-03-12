@@ -1,0 +1,444 @@
+<div class="training">
+
+    <!-- ═══════ Header ═══════ -->
+    <header class="training-header" id="training-header">
+        <div class="training-header__inner">
+            <div class="training-header__left">
+                <div class="training-header__brand">
+                    <img src="croo-logo.png" alt="Croo Digital Experience" class="training-header__logo-img">
+                    <div class="training-header__divider"></div>
+                    <div>
+                        <div class="training-header__title-row">
+                            <h2 class="training-header__title">CRM Mastery — Croo Digital Experience</h2>
+                        </div>
+                        <p class="training-header__subtitle">MODULE {{ currentSlideData.module }} : {{
+                            currentSlideData.moduleTitle | uppercase }} • SLIDE {{ currentSlide + 1 }} OF {{ totalSlides
+                            }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="training-header__actions">
+                <button class="training-btn training-btn--icon" id="bookmark-btn">
+                    <i class="fa-solid fa-bookmark"></i>
+                </button>
+                <button class="training-btn training-btn--accent" id="mark-complete-btn">
+                    <i class="fa-solid fa-check"></i>
+                    Mark Complete
+                </button>
+                <div class="training-header__divider training-header__divider--short"></div>
+                <div class="training-header__user">
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-8.jpg" alt="User"
+                        class="training-header__avatar">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════ Main Content ═══════ -->
+    <main class="training-main">
+
+        <!-- ═══════ Left Panels ═══════ -->
+        <div class="training-sidebar" id="left-panels">
+
+            <!-- ── Notes Panel (live from DB) ── -->
+            <div class="training-panel" id="notes-panel">
+                <div class="training-panel__header training-panel__header--neutral">
+                    <div class="training-panel__header-left">
+                        <i class="fa-solid fa-note-sticky training-panel__header-icon"></i>
+                        <h3 class="training-panel__title">Session Notes</h3>
+                        <span class="training-panel__count" *ngIf="notes.length">{{ notes.length }}</span>
+                    </div>
+                </div>
+
+                <div class="training-panel__body">
+                    <div class="training-notes">
+
+                        <!-- Empty state -->
+                        <div *ngIf="notes.length === 0" class="training-panel__empty">
+                            <i class="fa-solid fa-microphone"></i>
+                            <p>Say "take a note" to Bob to capture insights during training</p>
+                        </div>
+
+                        <!-- Live notes from DB -->
+                        <div *ngFor="let note of notes" class="training-note"
+                            [class]="'training-note training-note--' + noteColor(note.note_type)">
+                            <div class="training-note__dot"
+                                [class]="'training-note__dot training-note__dot--' + noteColor(note.note_type)">
+                                <i [class]="noteIcon(note.note_type)"></i>
+                            </div>
+                            <div class="training-note__content">
+                                <p class="training-note__meta">Slide {{ (note.slide_id || 0) + 1 }} • {{ note.note_type
+                                    }}</p>
+                                <p class="training-note__text">{{ note.content }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Missing Elements Panel (live from DB) ── -->
+            <div class="training-panel" id="missing-panel">
+                <div class="training-panel__header training-panel__header--neutral">
+                    <div class="training-panel__header-left">
+                        <i class="fa-solid fa-puzzle-piece training-panel__header-icon"></i>
+                        <h3 class="training-panel__title">Missing Elements</h3>
+                        <span class="training-panel__count" *ngIf="missingElements.length">{{ missingElements.length
+                            }}</span>
+                    </div>
+                </div>
+
+                <div class="training-panel__body">
+                    <div class="training-reminders">
+
+                        <!-- Empty state -->
+                        <div *ngIf="missingElements.length === 0" class="training-panel__empty">
+                            <i class="fa-solid fa-plug"></i>
+                            <p>Tell Bob about missing integrations or features</p>
+                        </div>
+
+                        <!-- Live missing elements from DB -->
+                        <div *ngFor="let item of missingElements" class="training-reminder training-reminder--blue">
+                            <div class="training-reminder__dot training-reminder__dot--blue">
+                                <i [class]="categoryIcon(item.category)"></i>
+                            </div>
+                            <div class="training-reminder__content">
+                                <p class="training-reminder__title">{{ item.label }}</p>
+                                <p class="training-reminder__due" *ngIf="item.description">{{ item.description }}</p>
+                                <p class="training-reminder__due" *ngIf="!item.description">{{ item.category | uppercase
+                                    }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="training-progress-card">
+                <div class="training-progress-card__header">
+                    <div class="training-progress-card__icon">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </div>
+                    <div>
+                        <p class="training-progress-card__title">Course Progress</p>
+                        <p class="training-progress-card__subtitle">{{ currentSlideData.module }} of 8 modules
+                        </p>
+                    </div>
+                </div>
+                <div class="training-progress-bar">
+                    <div class="training-progress-bar__fill" [style.width.%]="(currentSlideData.module / 8) * 100">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ═══════ Presentation Area ═══════ -->
+        <div class="training-presentation" id="presentation-area">
+
+            <div class="training-slide-container">
+                <div class="training-slide">
+                    <div class="training-slide__content">
+
+                        <!-- ══ TITLE SLIDE ══ -->
+                        @if (currentSlideData.type === 'title') {
+                        <div class="slide-title">
+                            @if (currentSlideData.badge) {
+                            <div class="slide-title__badge">{{ currentSlideData.badge }}</div>
+                            }
+                            <h1 class="slide-title__heading" [innerHTML]="currentSlideData.title.replace('\n', '<br>')">
+                            </h1>
+                            @if (currentSlideData.subtitle) {
+                            <p class="slide-title__subtitle">{{ currentSlideData.subtitle }}</p>
+                            }
+                            <div class="slide-title__bar"></div>
+                            @if (currentSlideData.content) {
+                            <p class="slide-title__desc">{{ currentSlideData.content }}</p>
+                            }
+                        </div>
+                        }
+
+                        <!-- ══ GRID SLIDE ══ -->
+                        @if (currentSlideData.type === 'grid') {
+                        <div class="slide-grid">
+                            @if (currentSlideData.badge) {
+                            <div class="slide-grid__badge">{{ currentSlideData.badge }}</div>
+                            }
+                            <h1 class="slide-grid__title">{{ currentSlideData.title }}</h1>
+                            <div class="slide-grid__accent-bar"></div>
+                            <div class="slide-grid__cards"
+                                [class.slide-grid__cards--3col]="(currentSlideData.cards?.length || 0) > 4">
+                                @for (card of currentSlideData.cards; track card.title) {
+                                <div class="slide-card">
+                                    <div class="slide-card__icon" [style.background]="card.iconBg">
+                                        <i [class]="card.icon" [style.color]="card.iconColor"></i>
+                                    </div>
+                                    <h3 class="slide-card__title">{{ card.title }}</h3>
+                                    <p class="slide-card__desc">{{ card.desc }}</p>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                        }
+
+                        <!-- ══ FEATURE SLIDE ══ -->
+                        @if (currentSlideData.type === 'feature') {
+                        <div class="slide-feature">
+                            @if (currentSlideData.badge) {
+                            <div class="slide-feature__badge">{{ currentSlideData.badge }}</div>
+                            }
+                            <h1 class="slide-feature__title">{{ currentSlideData.title }}</h1>
+                            @if (currentSlideData.subtitle) {
+                            <p class="slide-feature__subtitle">{{ currentSlideData.subtitle }}</p>
+                            }
+                            <div class="slide-feature__accent-bar"></div>
+                            @if (currentSlideData.content) {
+                            <p class="slide-feature__desc">{{ currentSlideData.content }}</p>
+                            }
+                            @if (currentSlideData.items) {
+                            <ul class="slide-feature__list">
+                                @for (item of currentSlideData.items; track item) {
+                                <li class="slide-feature__list-item">
+                                    <i class="fa-solid fa-check-circle slide-feature__list-icon"></i>
+                                    {{ item }}
+                                </li>
+                                }
+                            </ul>
+                            }
+                            @if (currentSlideData.cards) {
+                            <div class="slide-grid__cards">
+                                @for (card of currentSlideData.cards; track card.title) {
+                                <div class="slide-card">
+                                    <div class="slide-card__icon" [style.background]="card.iconBg">
+                                        <i [class]="card.icon" [style.color]="card.iconColor"></i>
+                                    </div>
+                                    <h3 class="slide-card__title">{{ card.title }}</h3>
+                                    <p class="slide-card__desc">{{ card.desc }}</p>
+                                </div>
+                                }
+                            </div>
+                            }
+                            @if (currentSlideData.kpis) {
+                            <div class="slide-kpi__grid">
+                                @for (kpi of currentSlideData.kpis; track kpi.label) {
+                                <div class="slide-kpi__card">
+                                    <div class="slide-kpi__dot" [style.background]="kpi.color"></div>
+                                    <div>
+                                        <p class="slide-kpi__label">{{ kpi.label }}</p>
+                                        <p class="slide-kpi__value">{{ kpi.value }}</p>
+                                    </div>
+                                </div>
+                                }
+                            </div>
+                            }
+                        </div>
+                        }
+
+                        <!-- ══ CHECKLIST SLIDE ══ -->
+                        @if (currentSlideData.type === 'checklist') {
+                        <div class="slide-checklist">
+                            @if (currentSlideData.badge) {
+                            <div class="slide-checklist__badge">{{ currentSlideData.badge }}</div>
+                            }
+                            <h1 class="slide-checklist__title">{{ currentSlideData.title }}</h1>
+                            @if (currentSlideData.subtitle) {
+                            <p class="slide-checklist__subtitle">{{ currentSlideData.subtitle }}</p>
+                            }
+                            <div class="slide-checklist__accent-bar"></div>
+                            <div class="slide-checklist__steps">
+                                @for (step of currentSlideData.steps; track step.number) {
+                                <div class="slide-step">
+                                    <div class="slide-step__number">{{ step.number }}</div>
+                                    <p class="slide-step__text">{{ step.text }}</p>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                        }
+
+                        <!-- ══ KPI SLIDE ══ -->
+                        @if (currentSlideData.type === 'kpi') {
+                        <div class="slide-kpi">
+                            @if (currentSlideData.badge) {
+                            <div class="slide-kpi__badge">{{ currentSlideData.badge }}</div>
+                            }
+                            <h1 class="slide-kpi__title">{{ currentSlideData.title }}</h1>
+                            @if (currentSlideData.subtitle) {
+                            <p class="slide-kpi__sub">{{ currentSlideData.subtitle }}</p>
+                            }
+                            <div class="slide-kpi__accent-bar"></div>
+                            <div class="slide-kpi__grid">
+                                @for (kpi of currentSlideData.kpis; track kpi.label) {
+                                <div class="slide-kpi__card">
+                                    <div class="slide-kpi__dot" [style.background]="kpi.color"></div>
+                                    <div>
+                                        <p class="slide-kpi__label">{{ kpi.label }}</p>
+                                        <p class="slide-kpi__value">{{ kpi.value }}</p>
+                                    </div>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                        }
+
+                        <!-- ══ TIMELINE SLIDE ══ -->
+                        @if (currentSlideData.type === 'timeline') {
+                        <div class="slide-timeline">
+                            @if (currentSlideData.badge) {
+                            <div class="slide-timeline__badge">{{ currentSlideData.badge }}</div>
+                            }
+                            <h1 class="slide-timeline__title">{{ currentSlideData.title }}</h1>
+                            <div class="slide-timeline__accent-bar"></div>
+                            <div class="slide-timeline__steps">
+                                @for (step of currentSlideData.timelineSteps; track step; let i = $index) {
+                                <div class="slide-timeline__step">
+                                    <div class="slide-timeline__marker">
+                                        <div class="slide-timeline__dot"></div>
+                                        @if (i < (currentSlideData.timelineSteps?.length || 0) - 1) { <div
+                                            class="slide-timeline__line">
+                                    </div>
+                                    }
+                                </div>
+                                <div class="slide-timeline__content">
+                                    <p class="slide-timeline__text">{{ step }}</p>
+                                </div>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+
+                    <!-- ══ ALERT SLIDE ══ -->
+                    @if (currentSlideData.type === 'alert') {
+                    <div class="slide-alert" [class.slide-alert--warning]="currentSlideData.alertType === 'warning'"
+                        [class.slide-alert--info]="currentSlideData.alertType === 'info'">
+                        @if (currentSlideData.badge) {
+                        <div class="slide-alert__badge">{{ currentSlideData.badge }}</div>
+                        }
+                        <div class="slide-alert__icon-row">
+                            @if (currentSlideData.alertType === 'warning') {
+                            <i class="fa-solid fa-triangle-exclamation slide-alert__big-icon"></i>
+                            }
+                            @if (currentSlideData.alertType === 'info') {
+                            <i class="fa-solid fa-circle-info slide-alert__big-icon"></i>
+                            }
+                        </div>
+                        <h1 class="slide-alert__title">{{ currentSlideData.title }}</h1>
+                        @if (currentSlideData.subtitle) {
+                        <p class="slide-alert__subtitle">{{ currentSlideData.subtitle }}</p>
+                        }
+                        <div class="slide-alert__accent-bar"></div>
+                        @if (currentSlideData.content) {
+                        <p class="slide-alert__desc">{{ currentSlideData.content }}</p>
+                        }
+                        @if (currentSlideData.items) {
+                        <ul class="slide-alert__list">
+                            @for (item of currentSlideData.items; track item) {
+                            <li class="slide-alert__list-item">
+                                <i class="fa-solid fa-circle-exclamation slide-alert__list-icon"></i>
+                                {{ item }}
+                            </li>
+                            }
+                        </ul>
+                        }
+                    </div>
+                    }
+
+                    <!-- ══ LIST SLIDE ══ -->
+                    @if (currentSlideData.type === 'list') {
+                    <div class="slide-list">
+                        @if (currentSlideData.badge) {
+                        <div class="slide-list__badge">{{ currentSlideData.badge }}</div>
+                        }
+                        <h1 class="slide-list__title">{{ currentSlideData.title }}</h1>
+                        @if (currentSlideData.subtitle) {
+                        <p class="slide-list__subtitle">{{ currentSlideData.subtitle }}</p>
+                        }
+                        <div class="slide-list__accent-bar"></div>
+                        <div class="slide-list__items">
+                            @for (item of currentSlideData.items; track item; let i = $index) {
+                            <div class="slide-list__item">
+                                <div class="slide-list__number">{{ i + 1 }}</div>
+                                <p class="slide-list__text">{{ item }}</p>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+
+                    <!-- ══ ASSESSMENT SLIDE ══ -->
+                    @if (currentSlideData.type === 'assessment') {
+                    <div class="slide-assessment">
+                        @if (currentSlideData.badge) {
+                        <div class="slide-assessment__badge">{{ currentSlideData.badge }}</div>
+                        }
+                        <h1 class="slide-assessment__title">{{ currentSlideData.title }}</h1>
+                        @if (currentSlideData.subtitle) {
+                        <p class="slide-assessment__subtitle">{{ currentSlideData.subtitle }}</p>
+                        }
+                        <div class="slide-assessment__accent-bar"></div>
+                        <div class="slide-assessment__grid">
+                            @for (kpi of currentSlideData.kpis; track kpi.label) {
+                            <div class="slide-assessment__card">
+                                <div class="slide-assessment__indicator" [style.background]="kpi.color"></div>
+                                <div class="slide-assessment__info">
+                                    <p class="slide-assessment__label">{{ kpi.label }}</p>
+                                    <p class="slide-assessment__value">{{ kpi.value }}</p>
+                                </div>
+                                <i class="fa-solid fa-circle-check slide-assessment__check"></i>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+
+                    <!-- ══ Footer ══ -->
+                    @if (currentSlideData.footerText) {
+                    <div class="training-slide__footer">
+                        <p class="training-slide__footer-text">{{ currentSlideData.footerText }}</p>
+                    </div>
+                    }
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Controls Bar ── -->
+        <div class="training-controls" id="training-controls">
+            <div class="training-controls__inner">
+                <div class="training-controls__nav">
+                    <button class="training-controls__btn" id="prev-slide-btn" (click)="prevSlide()"
+                        [disabled]="currentSlide === 0">
+                        <i class="fa-solid fa-backward"></i>
+                    </button>
+                    <button class="training-controls__btn training-controls__btn--accent" id="play-pause-btn">
+                        <i class="fa-solid fa-pause"></i>
+                    </button>
+                    <button class="training-controls__btn" id="next-slide-btn" (click)="nextSlide()"
+                        [disabled]="currentSlide === totalSlides - 1">
+                        <i class="fa-solid fa-forward"></i>
+                    </button>
+                </div>
+
+                <div class="training-controls__progress">
+                    <span class="training-controls__counter">{{ currentSlide + 1 }} / {{ totalSlides }}</span>
+                    <div class="training-controls__bar">
+                        <div class="training-controls__bar-fill" [style.width.%]="progressPercent"></div>
+                    </div>
+                    <span class="training-controls__percent">{{ progressPercent }}% Complete</span>
+                </div>
+
+                <div class="training-controls__tools">
+                    <button class="training-controls__btn" id="volume-btn">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                    <button class="training-controls__btn" id="captions-btn">
+                        <i class="fa-solid fa-closed-captioning"></i>
+                    </button>
+                    <button class="training-controls__btn" id="fullscreen-btn">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+</div>
+
+</main>
+</div>

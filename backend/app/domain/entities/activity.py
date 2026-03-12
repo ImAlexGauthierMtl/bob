@@ -2,7 +2,7 @@
 
 import enum
 
-from sqlalchemy import Column, String, Text, Enum as SAEnum, DateTime, ForeignKey
+from sqlalchemy import Column, String, Text, Enum as SAEnum, DateTime, ForeignKey, Table
 from sqlalchemy.orm import relationship
 
 from app.domain.entities.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
@@ -30,6 +30,29 @@ class ActivityStatus(str, enum.Enum):
     CANCELLED = "CANCELLED"
 
 
+# Association tables for Many-to-Many relationships
+activity_organizations = Table(
+    "activity_organizations",
+    Base.metadata,
+    Column("activity_id", String(36), ForeignKey("activities.id", ondelete="CASCADE"), primary_key=True),
+    Column("organization_id", String(36), ForeignKey("organizations.id", ondelete="CASCADE"), primary_key=True),
+)
+
+activity_contacts = Table(
+    "activity_contacts",
+    Base.metadata,
+    Column("activity_id", String(36), ForeignKey("activities.id", ondelete="CASCADE"), primary_key=True),
+    Column("contact_id", String(36), ForeignKey("contacts.id", ondelete="CASCADE"), primary_key=True),
+)
+
+activity_opportunities = Table(
+    "activity_opportunities",
+    Base.metadata,
+    Column("activity_id", String(36), ForeignKey("activities.id", ondelete="CASCADE"), primary_key=True),
+    Column("opportunity_id", String(36), ForeignKey("opportunities.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
 class Activity(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
     """Activity entity — calls, emails, meetings, tasks, notes."""
 
@@ -48,17 +71,36 @@ class Activity(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
     due_date = Column(DateTime(timezone=True), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
 
-    # FK → Organization
+    # Organization Associations (M:N)
+    # Kept for backward compatibility when transitioning
     organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
-    organization = relationship("Organization", backref="activities")
+    organizations = relationship(
+        "Organization",
+        secondary=activity_organizations,
+        back_populates="linked_activities",
+        lazy="selectin"
+    )
 
-    # FK → Contact
+    # Contact Associations (M:N)
     contact_id = Column(String(36), ForeignKey("contacts.id"), nullable=True, index=True)
-    contact = relationship("Contact", backref="activities")
+    contacts = relationship(
+        "Contact",
+        secondary=activity_contacts,
+        back_populates="linked_activities",
+        lazy="selectin"
+    )
 
-    # FK → Opportunity
+    # Opportunity Associations (M:N)
     opportunity_id = Column(String(36), ForeignKey("opportunities.id"), nullable=True, index=True)
-    opportunity = relationship("Opportunity", backref="activities")
+    opportunities = relationship(
+        "Opportunity",
+        secondary=activity_opportunities,
+        back_populates="linked_activities",
+        lazy="selectin"
+    )
 
     # Assigned to
     assigned_to = Column(String(100), nullable=True)
+
+    # Owner (RBAC)
+    owner_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)

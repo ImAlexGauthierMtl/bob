@@ -1,0 +1,72 @@
+/* ═══════════════════════════════════════════════════════════════
+   BCC Role View — Layout & Sidebar Overrides
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Split Layout: Content + Sidebar ─────────────── */
+
+.role-split {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: var(--space-6, 1.5rem);
+    padding: var(--space-6, 1.5rem) var(--space-8, 2rem);
+}
+
+.role-split .role-content {
+    padding: 0;
+    max-width: none;
+}
+
+/* ── Sidebar ─────────────────────────────────────── */
+
+.role-sidebar {
+    position: sticky;
+    top: var(--space-6, 1.5rem);
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4, 1rem);
+}
+
+.role-sidebar .detail-section {
+    border: 1px solid var(--color-gray-100, #f0f0f0);
+    padding: var(--space-5, 1.25rem);
+    margin-bottom: 0;
+}
+
+.role-sidebar .detail-section__header {
+    margin-bottom: var(--space-3, 0.75rem);
+}
+
+.role-sidebar .detail-section__header i {
+    font-size: 0.875rem;
+}
+
+.role-sidebar .detail-section__header h3 {
+    font-size: 0.75rem;
+}
+
+.role-sidebar .detail-section__text {
+    font-size: 0.8125rem;
+    line-height: 1.6;
+}
+
+/* ── Responsive: stack on smaller screens ─────────── */
+
+@media (max-width: 1200px) {
+    .role-split {
+        grid-template-columns: 1fr;
+    }
+
+    .role-sidebar {
+        position: static;
+    }
+}
+
+/* ── Desktop: wider sidebar on large screens ─────── */
+
+@media (min-width: 1400px) {
+    .role-split {
+        grid-template-columns: 1fr 360px;
+        padding: var(--space-8, 2rem) var(--space-16, 4rem);
+    }
+}

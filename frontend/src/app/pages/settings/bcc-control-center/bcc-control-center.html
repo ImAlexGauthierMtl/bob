@@ -1,0 +1,329 @@
+@if (isLoading) {
+<div class="loading-state">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+    <span>Loading Control Center...</span>
+</div>
+}
+
+@if (!isLoading) {
+<!-- ═══ Sticky Header ═══ -->
+<header class="org-header">
+    <div class="org-header__top">
+        <div class="org-header__identity">
+            <div class="org-header__identity-inner">
+                <div class="org-header__avatar" style="background: linear-gradient(135deg, #FF4500, #e03e00)">
+                    <i class="fa-solid fa-sliders"></i>
+                </div>
+                <div class="org-header__info">
+                    <div class="org-header__name-row">
+                        <h2 class="org-header__name">Bob's Control Center</h2>
+                    </div>
+                    <p class="org-header__meta">MULTI-DIMENSIONAL · ROLE MANAGEMENT</p>
+                </div>
+            </div>
+        </div>
+        <div class="org-header__actions lg-only">
+            <button class="btn btn-accent" (click)="openAddDialog()">
+                <i class="fa-solid fa-plus"></i> New Organization
+            </button>
+        </div>
+    </div>
+
+    <div class="org-header__tabs">
+        <nav class="tabs">
+            <button class="tab" [class.tab--active]="activeTab === 'cognitive'"
+                (click)="setActiveTab('cognitive')">
+                <i class="fa-solid fa-brain"></i> Cognitive Flow
+            </button>
+            <button class="tab" [class.tab--active]="activeTab === 'organizations'"
+                (click)="setActiveTab('organizations')">Organizations ({{ organizations.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'industries'"
+                (click)="setActiveTab('industries')">Industries ({{ industries.length }})</button>
+            <button class="tab" [class.tab--active]="activeTab === 'careers'" (click)="setActiveTab('careers')">Careers
+                ({{ careers.length }})</button>
+        </nav>
+    </div>
+</header>
+
+<!-- ═══ Main Content ═══ -->
+<main class="org-main">
+    <div class="org-content">
+
+        <!-- ══ Cognitive Flow Tab ══ -->
+        @if (activeTab === 'cognitive') {
+        <section class="tab-section">
+            @if (cognitiveMap.length === 0) {
+            <div class="empty-state">No cognitive structure defined — use the Deep Agent to build it.</div>
+            } @else {
+            <div class="cognitive-tree">
+                @for (domain of cognitiveMap; track domain.id) {
+                <div class="cog-domain" [class.cog-domain--expanded]="expandedDomains.has(domain.id)">
+                    <div class="cog-domain__header" (click)="toggleDomain(domain.id)">
+                        <div class="cog-domain__toggle">
+                            <i class="fa-solid" [class.fa-chevron-down]="expandedDomains.has(domain.id)"
+                                [class.fa-chevron-right]="!expandedDomains.has(domain.id)"></i>
+                        </div>
+                        @if (domain.icon) {
+                        <i [class]="domain.icon" class="cog-domain__icon"></i>
+                        }
+                        <h3 class="cog-domain__name">{{ domain.name }}</h3>
+                        <div class="cog-domain__meta">
+                            <span class="cog-badge cog-badge--domain">{{ domain.intent_count }} intents</span>
+                            <span class="cog-badge cog-badge--task">{{ domain.task_count }} tasks</span>
+                        </div>
+                    </div>
+
+                    @if (expandedDomains.has(domain.id)) {
+                    <div class="cog-domain__body">
+                        @if (domain.description) {
+                        <p class="cog-domain__desc">{{ domain.description }}</p>
+                        }
+                        @for (intent of domain.intents; track intent.id) {
+                        <div class="cog-intent" [class.cog-intent--expanded]="expandedIntents.has(intent.id)">
+                            <div class="cog-intent__header" (click)="toggleIntent(intent.id)">
+                                <div class="cog-intent__toggle">
+                                    <i class="fa-solid" [class.fa-chevron-down]="expandedIntents.has(intent.id)"
+                                        [class.fa-chevron-right]="!expandedIntents.has(intent.id)"></i>
+                                </div>
+                                <i class="fa-solid fa-bullseye cog-intent__icon"></i>
+                                <span class="cog-intent__name">{{ intent.name }}</span>
+                                @if (intent.workflow_key) {
+                                <span class="cog-badge cog-badge--workflow">workflow: {{ intent.workflow_key }}</span>
+                                }
+                                @if (intent.pipeline_key) {
+                                <span class="cog-badge cog-badge--pipeline">pipeline: {{ intent.pipeline_key }}</span>
+                                }
+                                <span class="cog-intent__task-count">{{ intent.tasks.length }} tasks</span>
+                            </div>
+
+                            @if (expandedIntents.has(intent.id)) {
+                            <div class="cog-intent__body">
+                                @if (intent.trigger_phrases && intent.trigger_phrases.length > 0) {
+                                <div class="cog-triggers">
+                                    <span class="cog-triggers__label">Triggers:</span>
+                                    @for (phrase of intent.trigger_phrases; track phrase) {
+                                    <span class="cog-chip">{{ phrase }}</span>
+                                    }
+                                </div>
+                                }
+
+                                <div class="cog-task-list">
+                                    @for (task of intent.tasks; track task.id) {
+                                    <div class="cog-task">
+                                        <span class="cog-task__order">{{ task.sort_order + 1 }}.</span>
+                                        @if (task.task_template) {
+                                        <a [routerLink]="['/settings/bob-control-center/library/task-template', task.task_template.id]"
+                                            class="cog-task__name">
+                                            {{ task.task_template.name }}
+                                        </a>
+                                        }
+                                        @if (task.tool_name) {
+                                        <span class="cog-badge cog-badge--tool">{{ task.tool_name }}</span>
+                                        }
+                                    </div>
+                                    }
+                                </div>
+                            </div>
+                            }
+                        </div>
+                        }
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+            }
+        </section>
+        }
+
+        <!-- ══ Organizations Tab ══ -->
+        @if (activeTab === 'organizations') {
+        <section class="tab-section">
+            @if (organizations.length === 0) {
+            <div class="empty-state">No organizations yet</div>
+            } @else {
+            <div class="opp-list">
+                @for (org of organizations; track org.id) {
+                <a [routerLink]="['/settings/bob-control-center', org.id]" class="opp-card"
+                    style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
+                    <div class="opp-card__main">
+                        <div class="opp-card__info">
+                            <h4 class="opp-card__name">{{ org.name }}</h4>
+                            <div class="opp-card__tags">
+                                @if (org.profile?.country) {
+                                <span class="stage-badge">{{ org.profile?.country }}</span>
+                                }
+                                @if (org.profile?.state_province) {
+                                <span class="stage-badge">{{ org.profile?.state_province }}</span>
+                                }
+                                <span class="opp-card__meta">{{ org.department_count }} depts · {{ org.industry_count }}
+                                    industries</span>
+                            </div>
+                        </div>
+                        <div class="opp-card__value">
+                            <p class="opp-card__amount">{{ org.department_count }}</p>
+                            <p class="opp-card__amount-label">Departments</p>
+                        </div>
+                    </div>
+                </a>
+                }
+            </div>
+            }
+        </section>
+        }
+
+        <!-- ══ Industries Tab ══ -->
+        @if (activeTab === 'industries') {
+        <section class="tab-section">
+            @if (industries.length === 0) {
+            <div class="empty-state">No industries defined</div>
+            } @else {
+            <div class="opp-list">
+                @for (ind of industries; track ind.id) {
+                <a [routerLink]="['/settings/bob-control-center/library/industry', ind.id]" class="opp-card"
+                    style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
+                    <div class="opp-card__main">
+                        <div class="opp-card__info">
+                            <h4 class="opp-card__name">{{ ind.name }}</h4>
+                            <div class="opp-card__tags">
+                                <span class="stage-badge">Library Kit</span>
+                                @if (ind.description) {
+                                <span class="opp-card__meta">{{ ind.description }}</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                }
+            </div>
+            }
+        </section>
+        }
+
+        <!-- ══ Careers Tab ══ -->
+        @if (activeTab === 'careers') {
+        <section class="tab-section">
+            @if (careers.length === 0) {
+            <div class="empty-state">No careers defined</div>
+            } @else {
+            <div class="opp-list">
+                @for (career of careers; track career.id) {
+                <a [routerLink]="['/settings/bob-control-center/library/career', career.id]" class="opp-card"
+                    style="text-decoration: none; color: inherit; cursor: pointer; display: block;">
+                    <div class="opp-card__main">
+                        <div class="opp-card__info">
+                            <h4 class="opp-card__name">{{ career.name }}</h4>
+                            <div class="opp-card__tags">
+                                <span class="stage-badge">Library Kit</span>
+                                @if (career.typical_skills) {
+                                <span class="opp-card__meta">{{ career.typical_skills!.length }} skills · {{
+                                    career.typical_tasks?.length || 0 }} tasks</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                }
+            </div>
+            }
+        </section>
+        }
+
+
+    </div>
+
+    <!-- Right Panel -->
+    <aside class="org-panel">
+        @if (activeTab === 'cognitive') {
+        <div class="panel-section">
+            <h4 class="panel-section__title">Cognitive Structure</h4>
+            <div class="panel-fields">
+                <div class="panel-field">
+                    <p class="panel-field__label">Domains</p>
+                    <p class="panel-field__value">{{ cognitiveStats.domains }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Intents</p>
+                    <p class="panel-field__value">{{ cognitiveStats.intents }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Tasks</p>
+                    <p class="panel-field__value">{{ cognitiveStats.tasks }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Unique Tools</p>
+                    <p class="panel-field__value">{{ cognitiveStats.tools }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Workflows</p>
+                    <p class="panel-field__value">{{ cognitiveStats.workflows }}</p>
+                </div>
+            </div>
+        </div>
+        } @else {
+        <div class="panel-section">
+            <h4 class="panel-section__title">Library</h4>
+            <div class="panel-fields">
+                <div class="panel-field">
+                    <p class="panel-field__label">Organizations</p>
+                    <p class="panel-field__value">{{ organizations.length }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Industries</p>
+                    <p class="panel-field__value">{{ industries.length }}</p>
+                </div>
+                <div class="panel-field">
+                    <p class="panel-field__label">Careers</p>
+                    <p class="panel-field__value">{{ careers.length }}</p>
+                </div>
+            </div>
+        </div>
+        }
+
+        <div class="panel-section">
+            <h4 class="panel-section__title">Quick Actions</h4>
+            <div class="panel-actions">
+                <button class="panel-action" (click)="openAddDialog()">
+                    <i class="fa-solid fa-plus"></i> Add Organization
+                </button>
+            </div>
+        </div>
+    </aside>
+</main>
+
+<!-- ═══ Add Organization Dialog ═══ -->
+@if (showAddDialog) {
+<div class="dialog-overlay" (click)="closeAddDialog()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+        <div class="dialog__header">
+            <h3 class="dialog__title">New Organization</h3>
+            <button class="dialog__close" (click)="closeAddDialog()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="dialog__body">
+            <div class="form-group">
+                <label class="form-label">Organization Name *</label>
+                <input type="text" [(ngModel)]="newOrgName" placeholder="e.g. The Croo Group" class="form-input" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea [(ngModel)]="newOrgDesc" placeholder="What does this organization do?" class="form-textarea"
+                    rows="3"></textarea>
+            </div>
+        </div>
+        <div class="dialog__footer">
+            <button class="btn btn-outline" (click)="closeAddDialog()">Cancel</button>
+            <button class="btn btn-accent" (click)="createOrganization()" [disabled]="isCreating || !newOrgName.trim()">
+                @if (isCreating) {
+                <i class="fa-solid fa-spinner fa-spin"></i> Creating...
+                } @else {
+                <i class="fa-solid fa-plus"></i> Create
+                }
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+}
