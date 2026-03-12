@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # PostgreSQL Database
   db:
@@ -20,7 +18,7 @@ services:
       timeout: 3s
       retries: 5
 
-  # Backend API
+  # Backend API (port 8555 = frontend API_URL)
   api:
     build:
       context: ./backend
@@ -33,16 +31,28 @@ services:
       DATABASE_URL: postgresql://croo:croo@db:5432/croo_digital_experience
       ENVIRONMENT: development
       DEBUG: "true"
-      API_PORT: "4500"
+      API_PORT: "8555"
       SECRET_KEY: dev-secret-key-change-in-production
-      CORS_ORIGINS: '["http://localhost:4200", "http://localhost:4700"]'
+      CORS_ORIGINS: '["http://localhost:4200", "http://localhost:4700", "http://localhost:80", "http://localhost"]'
       ADMIN_EMAIL: admin@croo.digital
       ADMIN_PASSWORD: Admin123!
     ports:
-      - "4500:4500"
+      - "8555:8555"
     depends_on:
       db:
         condition: service_healthy
+
+  # Frontend Angular (optionnel : pour tout faire tourner dans Docker)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: croo-frontend
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
 
 volumes:
   pgdata:

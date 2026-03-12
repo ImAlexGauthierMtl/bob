@@ -89,6 +89,11 @@ export const routes: Routes = [
                     ),
             },
             {
+                path: 'chat',
+                loadComponent: () =>
+                    import('./pages/chat/chat').then((m) => m.ChatComponent),
+            },
+            {
                 path: 'tasks',
                 loadComponent: () =>
                     import('./pages/activities/activities').then(

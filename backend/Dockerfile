@@ -15,6 +15,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Application code
 COPY . .
 
-EXPOSE 4500
+EXPOSE 8555
 
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${API_PORT:-4500} --reload"]
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${API_PORT:-8555} --reload"]
