@@ -1,5 +1,4 @@
 services:
-  # PostgreSQL Database
   db:
     image: postgres:16-alpine
     container_name: croo-db
@@ -13,36 +12,46 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U croo -d croo_digital_experience" ]
+      test: ["CMD-SHELL", "pg_isready -U croo -d croo_digital_experience"]
       interval: 5s
       timeout: 3s
       retries: 5
 
-  # Backend API (port 8555 = frontend API_URL)
   api:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: croo-api
     restart: unless-stopped
-    env_file:
-      - ./backend/.env
     environment:
-      DATABASE_URL: postgresql://croo:croo@db:5432/croo_digital_experience
       ENVIRONMENT: development
       DEBUG: "true"
-      API_PORT: "8555"
-      SECRET_KEY: dev-secret-key-change-in-production
-      CORS_ORIGINS: '["http://localhost:4200", "http://localhost:4700", "http://localhost:80", "http://localhost"]'
+      API_PORT: "4500"
+      DATABASE_URL: postgresql://croo:croo@db:5432/croo_digital_experience
+      SECRET_KEY: a4f8c3e1b9d7f2a0e6c5d4b3a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      REFRESH_TOKEN_EXPIRE_DAYS: "7"
+      CORS_ORIGINS: '["http://localhost:4200","http://localhost:4511","http://localhost:4700"]'
+      RATE_LIMIT_MAX_ATTEMPTS: "5"
+      RATE_LIMIT_WINDOW_MINUTES: "15"
       ADMIN_EMAIL: admin@croo.digital
-      ADMIN_PASSWORD: Admin123!
+      ADMIN_PASSWORD: Cr00-Adm1n-S3cure!2026
+      ADMIN_FIRST_NAME: Admin
+      ADMIN_LAST_NAME: Croo
+      GROQ_API_KEY: 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
+      HUNTER_API_KEY: "1326894581db8916decde29ac315fa317f495860"
+      SERPER_API_KEY: 31d2bde1ac96c477f5a03e459a62e7ef23c56f2d
+      WEBHOOK_API_KEY: croo-wh-349f47dd877cbf24961ea68415e37b0d
+      DASHSCOPE_API_KEY: sk-60e8397a0aaf4344a5a6324fe6b59829
+      OPENROUTER_API_KEY: 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
+      RICK_REF_AUDIO_PATH: /app/app/voice/rick_ref.wav
     ports:
-      - "8555:8555"
+      - "4500:4500"
     depends_on:
       db:
         condition: service_healthy
 
-  # Frontend Angular (optionnel : pour tout faire tourner dans Docker)
   frontend:
     build:
       context: ./frontend
@@ -50,7 +59,7 @@ services:
     container_name: croo-frontend
     restart: unless-stopped
     ports:
-      - "4200:80"
+      - "4700:4700"
     depends_on:
       - api
 
