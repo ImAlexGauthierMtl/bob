@@ -131,7 +131,6 @@ from app.presentation.routes.tenant_routes import router as tenant_router
 from app.presentation.routes.product_routes import router as product_router
 from app.presentation.routes.usage_routes import router as usage_router
 from app.presentation.routes.ms365_routes import router as ms365_router
-from app.presentation.routes.chat_routes import router as chat_router
 from app.middleware.metrics import router as metrics_router
 
 app.include_router(auth_router, tags=["auth"])
@@ -159,7 +158,6 @@ app.include_router(tenant_router, tags=["tenants"])
 app.include_router(product_router, tags=["products"])
 app.include_router(usage_router, tags=["usage"])
 app.include_router(ms365_router, tags=["ms365"])
-app.include_router(chat_router, tags=["chat"])
 app.include_router(metrics_router, tags=["metrics"])
 
 
