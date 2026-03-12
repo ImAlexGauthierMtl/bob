@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { BobService } from '../services/bob.service';
+import { BobArtifact, BobSessionInfo } from '../models/bob.model';
 import { AuthService } from '../services/auth.service';
 import { BobActionService, BobAction, BobMission } from '../services/bob-action.service';
 import { PipecatClient, RTVIEvent } from '@pipecat-ai/client-js';
@@ -14,12 +15,18 @@ interface ChatMessage {
     time: Date;
     isLoading?: boolean;
     toolSteps?: { tool: string; status: string }[];
+    artifact?: BobArtifact;
 }
 
 interface QuickWorkflow {
     icon: string;
     label: string;
     description: string;
+}
+
+interface SessionGroup {
+    label: string;
+    sessions: BobSessionInfo[];
 }
 
 type VoiceState = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking';
@@ -47,11 +54,18 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     private missionUpdateSub?: Subscription;
 
     isOpen = false;
+    isExpanded = false;
     message = '';
     hasUnread = true;
     isLoading = false;
     sessionId: string | undefined;
     private shouldScrollToBottom = false;
+
+    // ── Expanded sidebar state ──────────────────────────
+    sessionGroups: SessionGroup[] = [];
+    activeTitle = 'New Conversation';
+    userName = '';
+    userRole = '';
 
     // ── Mission state ───────────────────────────────────
     activeMissionPrompt: string | undefined;
@@ -84,9 +98,9 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
             description: 'Créer une organisation et enrichir automatiquement',
         },
         {
-            icon: 'fa-solid fa-user-plus',
-            label: 'Enrich Contacts',
-            description: 'Auto-enrich new contacts with AI',
+            icon: 'fa-solid fa-briefcase',
+            label: 'Business Advisor',
+            description: 'Conseils d\'affaires et analyses stratégiques',
         },
         {
             icon: 'fa-solid fa-chart-line',
@@ -106,6 +120,14 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         });
         this.missionUpdateSub = this.bobActionService.missionUpdate$.subscribe((mission: BobMission) => {
             this.updateMission(mission);
+        });
+
+        // User info for expanded sidebar
+        this.authService.user$.subscribe((user) => {
+            if (user) {
+                this.userName = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email || 'User';
+                this.userRole = 'Member';
+            }
         });
     }
 
@@ -128,13 +150,108 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
             this.hasUnread = false;
             this.shouldScrollToBottom = true;
         } else {
+            this.isExpanded = false;
             this.disconnectVoice();
         }
     }
 
     close(): void {
         this.isOpen = false;
+        this.isExpanded = false;
         this.disconnectVoice();
+    }
+
+    toggleExpand(): void {
+        this.isExpanded = !this.isExpanded;
+        this.shouldScrollToBottom = true;
+        if (this.isExpanded) {
+            this.loadSessions();
+        }
+    }
+
+    // ── Session management (expanded sidebar) ───────────
+
+    loadSessions(): void {
+        this.bobService.listSessions().subscribe({
+            next: (sessions) => {
+                this.sessionGroups = this.groupSessions(sessions);
+            },
+            error: () => {
+                this.sessionGroups = [];
+            },
+        });
+    }
+
+    private groupSessions(sessions: BobSessionInfo[]): SessionGroup[] {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const yesterday = today - 86400000;
+        const weekAgo = today - 7 * 86400000;
+
+        const groups: Record<string, BobSessionInfo[]> = {
+            'Today': [],
+            'Yesterday': [],
+            'Last 7 Days': [],
+            'Older': [],
+        };
+
+        for (const s of sessions) {
+            const ts = s.last_activity * 1000;
+            if (ts >= today) {
+                groups['Today'].push(s);
+            } else if (ts >= yesterday) {
+                groups['Yesterday'].push(s);
+            } else if (ts >= weekAgo) {
+                groups['Last 7 Days'].push(s);
+            } else {
+                groups['Older'].push(s);
+            }
+        }
+
+        return Object.entries(groups)
+            .filter(([, list]) => list.length > 0)
+            .map(([label, list]) => ({ label, sessions: list }));
+    }
+
+    selectSession(session: BobSessionInfo): void {
+        this.sessionId = session.session_id;
+        this.activeTitle = session.title || `Session #${session.session_id.slice(0, 8)}`;
+        this.messages = [
+            { role: 'bob', text: 'Resuming conversation…', time: new Date() },
+        ];
+        this.shouldScrollToBottom = true;
+    }
+
+    deleteSession(session: BobSessionInfo, event: Event): void {
+        event.stopPropagation();
+        this.bobService.deleteSession(session.session_id).subscribe(() => {
+            this.loadSessions();
+            if (this.sessionId === session.session_id) {
+                this.newConversation();
+            }
+        });
+    }
+
+    newConversation(): void {
+        this.sessionId = undefined;
+        this.activeTitle = 'New Conversation';
+        this.messages = [
+            { role: 'bob', text: 'Hello! I\'m Bob, your AI assistant. How can I help you today?', time: new Date() },
+        ];
+        this.shouldScrollToBottom = true;
+    }
+
+    onTextareaKeydown(event: KeyboardEvent): void {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            this.sendMessage();
+        }
+    }
+
+    autoGrowTextarea(event: Event): void {
+        const el = event.target as HTMLTextAreaElement;
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 200) + 'px';
     }
 
     // ── Text chat ───────────────────────────────────────
@@ -171,11 +288,19 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
                     text: response.response,
                     time: new Date(),
                     toolSteps: response.tool_steps?.length ? response.tool_steps : undefined,
+                    artifact: response.artifact || undefined,
                 });
 
                 this.sessionId = response.session_id;
                 this.isLoading = false;
                 this.shouldScrollToBottom = true;
+
+                // Update active title from session_title
+                if (response.session_title) {
+                    this.activeTitle = response.session_title;
+                    // Refresh sidebar sessions if expanded
+                    if (this.isExpanded) this.loadSessions();
+                }
 
                 // After first mission message is sent, clear the prompt
                 // (backend session already has it, no need to resend)

@@ -40,6 +40,7 @@ Se poser les questions suivantes — répondre à chacune en **une ligne** :
 | Ω₃ | **Dépendances** : L'étape suivante dépend-elle de quelque chose que je n'ai pas fait ? | |
 | Ω₄ | **Risques** : Qu'est-ce qui pourrait casser ? (tests, imports circulaires, migrations) | |
 | Ω₅ | **Qualité** : Le code livré est-il testable, lisible, et conforme aux normes du projet ? | |
+| Ω₆ | **Visuel** (si frontend touché) : Playwright exécuté et screenshots vérifiés ? | |
 
 ### 3. Validation ou correction
 

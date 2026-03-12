@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     bob_max_history: int = 20
     bob_session_ttl_minutes: int = 60
 
+    # Context Router (Layer 0 — intelligent model routing)
+    router_enabled: bool = True
+    router_model: str = "qwen/qwen3-32b"
+    router_max_tokens: int = 64
+    technical_model: str = "anthropic/claude-sonnet-4"
+    technical_model_max_tokens: int = 8192
+
     # Voice (Phase 2 — Pipecat)
     groq_whisper_model: str = "whisper-large-v3-turbo"
     groq_tts_model: str = "canopylabs/orpheus-v1-english"
@@ -61,6 +68,14 @@ class Settings(BaseSettings):
 
     # OpenRouter (Deep Agent — Claude Opus 4.6 via OpenRouter)
     openrouter_api_key: str = ""
+
+    # KB Article Generation (Kimi K2.5 via OpenRouter)
+    kb_generation_model: str = "moonshotai/kimi-k2.5"
+
+    # Business Advisor (Kimi K2.5 via OpenRouter)
+    advisor_model: str = "moonshotai/kimi-k2.5"
+    advisor_max_tokens: int = 8192
+    advisor_temperature: float = 0.4
 
     # Redis (session store)
     redis_url: str = ""

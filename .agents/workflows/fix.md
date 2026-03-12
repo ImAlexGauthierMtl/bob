@@ -76,7 +76,13 @@ python -m pytest tests/test_{module}.py::test_{bug_case} -v
 python -m pytest tests/test_{module}.py -v
 ```
 
-4. **Vérifier qu'aucune régression n'est introduite**
+4. **Si frontend touché → Playwright auto-vérification** (voir `rules/regle-playwright.md`)
+```bash
+// turbo
+node frontend/playwright-verify.js [pages du bug]
+```
+
+5. **Vérifier qu'aucune régression n'est introduite**
 ```bash
 python -m pytest tests/ -v --tb=short
 ```

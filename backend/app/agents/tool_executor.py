@@ -345,7 +345,48 @@ async def execute_bob_tool(tool_name: str, args: Dict[str, Any], user_context: d
             org_id=org_id,
             user_id=user_context["user_id"],
         )
-        return {"status": "ok", "opportunity_id": str(opp.id), "message": f"Opportunity created: {name}"}
+
+        # Build artifact fields
+        artifact_fields = [
+            {"label": "Nom", "value": name},
+            {"label": "Étape", "value": stage},
+            {"label": "Source", "value": source},
+        ]
+        if amount:
+            artifact_fields.append({"label": "Montant", "value": f"${amount:,.2f}"})
+        if org_id:
+            org_name = ""
+            try:
+                _org = db.query(Organization).filter(Organization.id == org_id).first()
+                if _org:
+                    org_name = _org.name
+            except Exception:
+                pass
+            if org_name:
+                artifact_fields.append({"label": "Organisation", "value": org_name})
+        if contact_id:
+            contact_name = ""
+            try:
+                _ct = db.query(Contact).filter(Contact.id == contact_id).first()
+                if _ct:
+                    contact_name = f"{_ct.first_name} {_ct.last_name}"
+            except Exception:
+                pass
+            if contact_name:
+                artifact_fields.append({"label": "Contact", "value": contact_name})
+
+        return {
+            "status": "ok",
+            "opportunity_id": str(opp.id),
+            "message": f"Opportunity created: {name}",
+            "artifact": {
+                "type": "opportunity",
+                "title": name,
+                "fields": artifact_fields,
+                "status": "complete",
+                "entity_id": str(opp.id),
+            },
+        }
 
     elif tool_name == "link_product_to_opportunity":
         from app.domain.entities.opportunity import Opportunity

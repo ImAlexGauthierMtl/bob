@@ -57,6 +57,8 @@ SUPPORTED_INTENTS = [
     "today_activities",     # activities due today
     "overdue_activities",   # overdue/past due activities
     "build_bcc",            # configure Bob, set up BCC, deep agent invocation
+    "create_kb_article",    # create a KB article, procedure, documentation
+    "business_advisor",     # business advice, strategy, market analysis, advisor mode
     "general_chat",         # everything else — free conversation
 ]
 
@@ -80,8 +82,9 @@ CLASSIFY_TOOL = {
                         "The user's primary intent. Use 'create_prospect' for any request to "
                         "create an opportunity, prospect, deal, or add a new client account with "
                         "an opportunity. Use 'search_entity' for finding/searching existing records. "
-                        "Use 'navigate' to go to a CRM page. Use 'general_chat' for questions, "
-                        "greetings, or anything that doesn't map to CRM actions."
+                        "Use 'navigate' to go to a CRM page. Use 'business_advisor' for business "
+                        "strategy, market analysis, industry advice, or when user asks for counsel/recommendations. "
+                        "Use 'general_chat' for questions, greetings, or anything that doesn't map to CRM actions."
                     ),
                 },
                 "entities": {
@@ -133,6 +136,10 @@ CLASSIFY_TOOL = {
                             "enum": ["organization", "contact", "opportunity"],
                             "description": "Type of entity being searched for",
                         },
+                        "kb_topic": {
+                            "type": "string",
+                            "description": "Topic/subject for a KB article or procedure when intent is create_kb_article",
+                        },
                     },
                 },
             },
@@ -150,29 +157,48 @@ CLASSIFIER_PROMPT = """You are a CRM intent classifier. Your ONLY job is to:
 You MUST call the 'classify' tool with your analysis. Do NOT respond with text.
 IMPORTANT: Only include entity fields that have real values. Do NOT include fields with null values. Omit any field you don't have data for.
 
-Intent guidelines:
+## CRITICAL — Tone-Aware Classification
+
+BEFORE choosing an intent, assess the tone of the message:
+
+**DIRECTIVE** (specific action → classify with a workflow intent):
+- "montre-moi les comptes en construction" → accounts_by_industry
+- "liste mes top 5 deals" → top_opportunities
+- "combien de contacts sans email ?" → contacts_no_email
+
+**EXPLORATOIRE** (vague, open-ended → classify as general_chat):
+- "comment va le secteur de la construction" → general_chat
+- "parle-moi de mes ventes" → general_chat
+- "quoi de neuf avec mes comptes" → general_chat
+- "comment va mon pipeline" → general_chat
+- "qu'est-ce que je devrais prioriser" → general_chat
+
+Rule: If the user is asking a BROAD question, exploring a topic, or seeking advice (no specific action verb like "montre", "liste", "crée", "cherche"), classify as **general_chat** — even if the message mentions a sector, industry, or CRM concept. Let the assistant engage conversationally first.
+
+## Intent guidelines:
 - "create_prospect" = user wants to add a new business opportunity, prospect, deal, or client
 - "search_entity" = user wants to find, search, or look up an existing record
 - "navigate" = user wants to go to a specific page in the CRM
 - "get_pipeline" = user asks about pipeline, sales stats, deal overview
 - "create_contact" = user wants to add a contact WITHOUT creating an opportunity
-- "top_opportunities" = user asks for their best deals, top opportunities, biggest deals
-- "closing_this_month" = user asks what's closing this month, upcoming closes
-- "stale_deals" = user asks about stuck deals, stagnant opportunities, inactive deals
-- "pipeline_value" = user asks about pipeline value, deal amounts, revenue breakdown
-- "dormant_contacts" = user asks who they haven't called, dormant contacts, inactive contacts
-- "recent_contacts" = user asks about recently added contacts, new contacts
-- "contacts_no_email" = user asks about contacts missing emails, incomplete data
-- "accounts_no_opp" = user asks about accounts without deals, untapped potential
-- "most_active_accounts" = user asks about their most active accounts, best clients
-- "accounts_by_industry" = user asks for industry breakdown, accounts by sector
-- "list_products" = user asks to see products, catalog, available services
-- "daily_summary" = user asks for a summary, morning briefing, standup prep, "comment va mon pipeline"
+- "top_opportunities" = user EXPLICITLY asks for their best deals, top opportunities, biggest deals
+- "closing_this_month" = user EXPLICITLY asks what's closing this month, upcoming closes
+- "stale_deals" = user EXPLICITLY asks about stuck deals, stagnant opportunities
+- "pipeline_value" = user EXPLICITLY asks about pipeline value, deal amounts by stage
+- "dormant_contacts" = user EXPLICITLY asks who they haven't called, dormant contacts
+- "recent_contacts" = user EXPLICITLY asks about recently added contacts
+- "contacts_no_email" = user EXPLICITLY asks about contacts missing emails
+- "accounts_no_opp" = user EXPLICITLY asks about accounts without deals
+- "most_active_accounts" = user EXPLICITLY asks about their most active accounts
+- "accounts_by_industry" = user EXPLICITLY asks for industry breakdown, "répartition par industrie"
+- "list_products" = user EXPLICITLY asks to see products, catalog
+- "daily_summary" = user asks for a morning briefing, standup prep, "résumé du jour"
 - "create_activity" = user wants to log a call, note an email, schedule a meeting, create a task or note
-- "today_activities" = user asks about today's activities, schedule, what's planned
-- "overdue_activities" = user asks about overdue activities, missed tasks, late reminders
-- "build_bcc" = user wants to configure Bob, set up domains/intents/tasks in the BCC, "make this happen to the BCC"
-- "general_chat" = greetings, questions, help, anything else
+- "today_activities" = user EXPLICITLY asks about today's activities, schedule
+- "overdue_activities" = user EXPLICITLY asks about overdue activities, missed tasks
+- "build_bcc" = user wants to configure Bob, set up domains/intents/tasks in the BCC
+- "create_kb_article" = user wants to create a knowledge base article, procedure, documentation
+- "general_chat" = greetings, questions, help, vague/exploratory topics, anything else
 
 For contact names, split into first and last name when possible.
 For organizations, extract the business/company name exactly as stated.
@@ -194,6 +220,7 @@ class ExtractedEntities:
     page: Optional[str] = None
     search_query: Optional[str] = None
     entity_type: Optional[str] = None
+    kb_topic: Optional[str] = None
 
 
 @dataclass
@@ -219,6 +246,7 @@ def _parse_entities(raw: dict) -> ExtractedEntities:
         page=raw.get("page") or None,
         search_query=raw.get("search_query") or None,
         entity_type=raw.get("entity_type") or None,
+        kb_topic=raw.get("kb_topic") or None,
     )
 
 

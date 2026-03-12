@@ -115,3 +115,6 @@ Pour chaque action **UNRULED** :
 - Appliquer les règles générales (`context/projet.md`)
 
 Déclencher `/implante` pour la boucle Code → Test → /overview → Commit.
+
+> [!IMPORTANT]
+> **Si frontend touché** → `/implante` Phase B inclut automatiquement la vérification Playwright (`node frontend/playwright-verify.js`). Voir `rules/regle-playwright.md`.

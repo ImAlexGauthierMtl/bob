@@ -28,6 +28,7 @@ class WorkflowResult:
     paused: bool = False
     resume_key: Optional[str] = None
     state: dict = field(default_factory=dict)
+    artifact: Optional[dict] = None
 
 
 @dataclass
@@ -40,10 +41,12 @@ class WorkflowContext:
     entities: Any  # ExtractedEntities from classifier
     user_message: str
     state: dict = field(default_factory=dict)
+    session_messages: list[dict] = field(default_factory=list)  # full chat history for LLM extraction
 
     # Internal accumulators
     _actions: list[dict] = field(default_factory=list, repr=False)
     _tool_steps: list[dict] = field(default_factory=list, repr=False)
+    _artifact: Optional[dict] = field(default=None, repr=False)
 
     def emit_action(self, action_type: str, **kwargs) -> None:
         """Emit a UI action to be sent to the frontend."""
@@ -54,6 +57,34 @@ class WorkflowContext:
         """Record a tool execution step for the frontend badge display."""
         self._tool_steps.append({"tool": tool, "status": status})
 
+    def emit_artifact(
+        self,
+        artifact_type: str,
+        title: str,
+        fields: Optional[list[dict]] = None,
+        status: str = "complete",
+        columns: Optional[list[str]] = None,
+        rows: Optional[list[list[str]]] = None,
+        items: Optional[list[dict]] = None,
+        sections: Optional[list[dict]] = None,
+    ) -> None:
+        """Set the inline artifact card to display in the chat."""
+        art: dict = {
+            "type": artifact_type,
+            "title": title,
+            "fields": fields or [],
+            "status": status,
+        }
+        if columns is not None:
+            art["columns"] = columns
+        if rows is not None:
+            art["rows"] = rows
+        if items is not None:
+            art["items"] = items
+        if sections is not None:
+            art["sections"] = sections
+        self._artifact = art
+
     def pause(self, message: str, resume_key: str) -> WorkflowResult:
         """Pause the workflow and wait for user input."""
         return WorkflowResult(
@@ -63,6 +94,7 @@ class WorkflowContext:
             paused=True,
             resume_key=resume_key,
             state=dict(self.state),
+            artifact=self._artifact,
         )
 
     def complete(self, message: str) -> WorkflowResult:
@@ -73,6 +105,7 @@ class WorkflowContext:
             tool_steps=list(self._tool_steps),
             paused=False,
             state=dict(self.state),
+            artifact=self._artifact,
         )
 
 
@@ -154,121 +187,387 @@ load_generated_workflows()
 
 
 # ═══════════════════════════════════════════════════════════════
-#  WORKFLOW: create_prospect
-#  Triggered by: "nouveau prospect", "ajoute une opportunité", etc.
+#  WORKFLOW: create_prospect (SMART WIZARD with LLM Entity Extraction)
+#
+#  Uses entity_extractor to read chat history and collect all
+#  info the user already gave. Only asks for what's missing.
+#
+#  Flow: extract → Rolodex search → pick → ask missing → finalize
 # ═══════════════════════════════════════════════════════════════
+
+# Required + optional fields for create_prospect
+_PROSPECT_REQUIRED_FIELDS = {
+    "org_name": "Organization/company/business name",
+}
+_PROSPECT_OPTIONAL_FIELDS = {
+    "contact_first": "Contact first name",
+    "contact_last": "Contact last name",
+    "contact_email": "Contact email address",
+    "opp_name": "Opportunity/deal name",
+    "amount": "Deal monetary value",
+    "product_name": "Product or service name",
+}
+
 
 @workflow("create_prospect")
 def create_prospect_flow(ctx: WorkflowContext) -> WorkflowResult:
-    """Full prospect creation flow: search org → popup → contact → opportunity."""
-    from app.domain.entities.organization import Organization
+    """Smart Step 1 — Extract entities from chat history, then decide next action."""
+    from app.agents.entity_extractor import run_extraction
 
-    org_name = ctx.entities.org_name or ""
+    # Run LLM extraction on the full chat history
+    collected, missing = run_extraction(
+        chat_history=ctx.session_messages,
+        required_fields=_PROSPECT_REQUIRED_FIELDS,
+        optional_fields=_PROSPECT_OPTIONAL_FIELDS,
+    )
 
-    # Step 1 — ALWAYS search for existing org
+    # Store everything we got from extraction into workflow state
+    for key, value in collected.items():
+        if value and key not in ctx.state:
+            ctx.state[key] = value
+
+    logger.info(
+        "prospect_extraction",
+        collected=list(collected.keys()),
+        missing=missing,
+    )
+
+    # If we have org_name → go straight to Rolodex search
+    org_name = ctx.state.get("org_name")
     if org_name:
-        orgs = ctx.db.query(Organization).filter(
-            Organization.tenant_id == ctx.tenant_id,
-            Organization.name.ilike(f"%{org_name}%"),
-        ).limit(5).all()
-    else:
-        orgs = []
+        ctx.state["org_query"] = org_name
+        return _search_rolodex_and_show(ctx, org_name)
 
-    if orgs:
-        # Existing org(s) found — show popup and ask user to pick
-        org_list = [
-            {"id": str(o.id), "name": o.name, "industry": o.industry, "phone": o.phone}
-            for o in orgs
-        ]
+    # Still need org_name — ask for it
+    return ctx.pause(
+        message="What's the name of the organization? I'll check Bob's Rolodex 📇",
+        resume_key="prospect_ask_org_name",
+    )
 
-        ctx.add_tool_step("search organizations")
-        ctx.emit_action("search_entity", entity="organization", page="organizations", name=org_name)
-        ctx.emit_action("ui_update_input", text=org_name, submit=True)
 
-        # Build numbered list for the message
-        org_lines = []
-        for i, o in enumerate(org_list, 1):
-            line = f"#{i} — {o['name']}"
-            if o.get("industry"):
-                line += f" ({o['industry']})"
-            org_lines.append(line)
+@resume_handler("prospect_ask_org_name")
+def resume_prospect_ask_org_name(ctx: WorkflowContext) -> WorkflowResult:
+    """Resume — User gave the org name. Extract from history + search Rolodex."""
+    from app.agents.entity_extractor import run_extraction
 
-        ctx.state["org_results"] = org_list
-        ctx.state["original_entities"] = {
-            "contact_first": ctx.entities.contact_first,
-            "contact_last": ctx.entities.contact_last,
-            "email": ctx.entities.email,
-            "phone": ctx.entities.phone,
-            "product_name": ctx.entities.product_name,
-            "quantity": ctx.entities.quantity,
-            "amount": ctx.entities.amount,
-        }
+    # Re-run extraction with the new message in context
+    collected, _ = run_extraction(
+        chat_history=ctx.session_messages,
+        required_fields=_PROSPECT_REQUIRED_FIELDS,
+        optional_fields=_PROSPECT_OPTIONAL_FIELDS,
+        already_collected={k: v for k, v in ctx.state.items() if v},
+    )
+    for key, value in collected.items():
+        if value and key not in ctx.state:
+            ctx.state[key] = value
+
+    # org_name could come from extraction or direct message
+    org_query = ctx.state.get("org_name") or ctx.user_message.strip()
+    if not org_query:
+        return ctx.pause(
+            message="I need a name to search. What's the organization called?",
+            resume_key="prospect_ask_org_name",
+        )
+    ctx.state["org_query"] = org_query
+    return _search_rolodex_and_show(ctx, org_query)
+
+
+def _search_rolodex_and_show(ctx: WorkflowContext, query: str) -> WorkflowResult:
+    """Search Serper Maps API and present results to user."""
+    import httpx
+    from app.config import settings
+
+    SERPER_URL = "https://google.serper.dev/maps"
+
+    ctx.emit_artifact(
+        artifact_type="search_results",
+        title="Bob's Rolodex Search",
+        fields=[{"label": "Query", "value": query}],
+        status="building",
+    )
+
+    try:
+        # Synchronous call (workflow engine is sync)
+        with httpx.Client(timeout=15.0) as client:
+            response = client.post(
+                SERPER_URL,
+                json={"q": query, "num": 8},
+                headers={
+                    "X-API-KEY": settings.serper_api_key,
+                    "Content-Type": "application/json",
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        places = data.get("places", [])
+        ctx.add_tool_step("search rolodex")
+
+        if not places:
+            logger.info("rolodex_search_empty", query=query)
+            ctx.emit_artifact(
+                artifact_type="search_results",
+                title="Bob's Rolodex",
+                fields=[{"label": "Query", "value": query}, {"label": "Results", "value": "0"}],
+                status="complete",
+            )
+            ctx.state["org_name"] = query
+            return ctx.pause(
+                message=(
+                    f"No results in Bob's Rolodex for **{query}**.\n\n"
+                    f"I'll create a new organization called **{query}**.\n"
+                    f"Who is the primary contact? (Name, email if you have it)"
+                ),
+                resume_key="prospect_ask_contact",
+            )
+
+        # Store results for selection
+        rolodex_results = []
+        for place in places:
+            rolodex_results.append({
+                "title": place.get("title", "Unknown"),
+                "address": place.get("address", "N/A"),
+                "phone": place.get("phoneNumber", ""),
+                "website": place.get("website", ""),
+                "industry": place.get("type", ""),
+                "rating": place.get("rating"),
+            })
+        ctx.state["rolodex_results"] = rolodex_results
+
+        # Build artifact with results — include ALL Maps data per result
+        result_fields = [{"label": "Query", "value": query}]
+        for i, r in enumerate(rolodex_results, 1):
+            # Build a rich description with all Maps data
+            parts = [r["title"]]
+            if r.get("industry"):
+                parts[0] += f" ({r['industry']})"
+            parts.append(f"📍 {r['address']}")
+            if r.get("phone"):
+                parts.append(f"📞 {r['phone']}")
+            if r.get("website"):
+                parts.append(f"🌐 {r['website']}")
+            if r.get("rating"):
+                parts.append(f"⭐ {r['rating']}/5")
+
+            result_fields.append({"label": f"#{i}", "value": " — ".join(parts)})
+
+        ctx.emit_artifact(
+            artifact_type="search_results",
+            title="Bob's Rolodex",
+            fields=result_fields,
+            status="complete",
+        )
+
+        # Build text list
+        lines = [f"📇 **Bob's Rolodex** found **{len(rolodex_results)}** result(s) for **{query}**:\n"]
+        for i, r in enumerate(rolodex_results, 1):
+            line = f"**{i}.** {r['title']}"
+            if r.get("industry"):
+                line += f" ({r['industry']})"
+            line += f"\n   📍 {r['address']}"
+            if r.get("phone"):
+                line += f"\n   📞 {r['phone']}"
+            if r.get("website"):
+                line += f"\n   🌐 {r['website']}"
+            lines.append(line)
+
+        lines.append(f"\nWhich one? (Enter a number, or type a name to create a new one)")
+
+        logger.info("rolodex_search_done", query=query, results=len(rolodex_results))
 
         return ctx.pause(
+            message="\n".join(lines),
+            resume_key="prospect_rolodex_pick",
+        )
+
+    except Exception as e:
+        logger.error("rolodex_search_error", query=query, error=str(e))
+        ctx.state["org_name"] = query
+        return ctx.pause(
             message=(
-                f"J'ai trouvé {len(orgs)} organisation(s) correspondant à « {org_name} ». "
-                f"Veuillez choisir par numéro :\n\n"
-                + "\n".join(org_lines)
-                + "\n\nOu tapez « nouveau » pour créer une nouvelle organisation."
+                f"Bob's Rolodex is temporarily unavailable.\n"
+                f"I'll create **{query}** as a new organization.\n"
+                f"Who is the primary contact? (Name, email if you have it)"
             ),
-            resume_key="prospect_org_selected",
+            resume_key="prospect_ask_contact",
         )
+
+
+@resume_handler("prospect_rolodex_pick")
+def resume_prospect_rolodex_pick(ctx: WorkflowContext) -> WorkflowResult:
+    """Step 3 — User picked a Rolodex result or typed a new name."""
+    import re
+
+    user_msg = ctx.user_message.strip()
+    rolodex_results = ctx.state.get("rolodex_results", [])
+
+    # Check if user typed a number
+    num_match = re.search(r"^#?(\d+)$", user_msg)
+    if num_match and rolodex_results:
+        idx = int(num_match.group(1)) - 1
+        if 0 <= idx < len(rolodex_results):
+            selected = rolodex_results[idx]
+            ctx.state["org_name"] = selected["title"]
+            ctx.state["org_address"] = selected.get("address", "")
+            ctx.state["org_phone"] = selected.get("phone", "")
+            ctx.state["org_website"] = selected.get("website", "")
+            ctx.state["org_industry"] = selected.get("industry", "")
+
+            ctx.add_tool_step("select result")
+            ctx.emit_artifact(
+                artifact_type="organization",
+                title=selected["title"],
+                fields=[
+                    {"label": "Name", "value": selected["title"]},
+                    {"label": "Address", "value": selected.get("address", "—")},
+                    {"label": "Industry", "value": selected.get("industry", "—")},
+                ],
+                status="building",
+            )
+            return ctx.pause(
+                message=(
+                    f"✅ Got it! Creating **{selected['title']}** from Bob's Rolodex.\n\n"
+                    f"Who is the primary contact for this account? (Name, email if you have it)\n"
+                    f"Or type **skip** to continue without a contact."
+                ),
+                resume_key="prospect_ask_contact",
+            )
+
+    # User typed a new name or re-search
+    if user_msg.lower() in ["new", "nouveau", "nouvelle", "créer"]:
+        return ctx.pause(
+            message="What name for the new organization?",
+            resume_key="prospect_manual_org_name",
+        )
+
+    # Treat as new org name directly
+    ctx.state["org_name"] = user_msg
+    return ctx.pause(
+        message=(
+            f"Got it! I'll create **{user_msg}** as a new organization.\n\n"
+            f"Who is the primary contact? (Name, email if you have it)\n"
+            f"Or type **skip** to continue without a contact."
+        ),
+        resume_key="prospect_ask_contact",
+    )
+
+
+@resume_handler("prospect_manual_org_name")
+def resume_prospect_manual_org_name(ctx: WorkflowContext) -> WorkflowResult:
+    """User wants a manually-named org."""
+    org_name = ctx.user_message.strip()
+    if not org_name:
+        return ctx.pause(
+            message="I need a name. What's the organization called?",
+            resume_key="prospect_manual_org_name",
+        )
+    ctx.state["org_name"] = org_name
+    return ctx.pause(
+        message=(
+            f"Creating **{org_name}**.\n\n"
+            f"Who is the primary contact? (Name, email if you have it)\n"
+            f"Or type **skip** to continue without a contact."
+        ),
+        resume_key="prospect_ask_contact",
+    )
+
+
+@resume_handler("prospect_ask_contact")
+def resume_prospect_ask_contact(ctx: WorkflowContext) -> WorkflowResult:
+    """Resume — Got contact info. Extract from history + ask for opp name."""
+    from app.agents.entity_extractor import run_extraction
+    user_msg = ctx.user_message.strip()
+
+    if user_msg.lower() not in ["skip", "passer", "non", "no", "-", ""]:
+        # Re-run extraction to pick up contact from chat history
+        collected, _ = run_extraction(
+            chat_history=ctx.session_messages,
+            required_fields={"contact_first": "Contact first name", "contact_last": "Contact last name"},
+            optional_fields={"contact_email": "Contact email", "opp_name": "Opportunity name"},
+            already_collected={k: v for k, v in ctx.state.items() if v},
+        )
+        for key, value in collected.items():
+            if value and key not in ctx.state:
+                ctx.state[key] = value
+
+        # Fallback: parse contact manually if extraction missed it
+        if not ctx.state.get("contact_first"):
+            import re
+            email_match = re.search(r'[\w.+-]+@[\w-]+\.[\w.]+', user_msg)
+            if email_match:
+                ctx.state["contact_email"] = email_match.group(0)
+                name_part = user_msg.replace(email_match.group(0), "").strip().strip(",").strip()
+            else:
+                name_part = user_msg
+            parts = name_part.split(None, 1)
+            ctx.state["contact_first"] = parts[0] if parts else ""
+            ctx.state["contact_last"] = parts[1] if len(parts) > 1 else ""
+
+    # If we already have opp_name from extraction, skip asking
+    if ctx.state.get("opp_name"):
+        return _finalize_prospect(ctx)
+
+    org_name = ctx.state.get("org_name", "")
+    return ctx.pause(
+        message=f"What should we call this opportunity? (or I'll use **{org_name}** by default)",
+        resume_key="prospect_ask_opp_name",
+    )
+
+
+@resume_handler("prospect_ask_opp_name")
+def resume_prospect_ask_opp_name(ctx: WorkflowContext) -> WorkflowResult:
+    """Step 5 — Create everything and offer enrichment."""
+    user_msg = ctx.user_message.strip()
+    org_name = ctx.state.get("org_name", "New Organization")
+
+    # Use user's answer or default to org name
+    if user_msg.lower() in ["", "default", "oui", "yes", "ok"]:
+        opp_name = org_name
     else:
-        # No existing org — create new one
-        return _create_prospect_with_new_org(ctx, org_name)
+        opp_name = user_msg
+
+    ctx.state["opp_name"] = opp_name
+
+    return _finalize_prospect(ctx)
 
 
-def _create_prospect_with_new_org(ctx: WorkflowContext, org_name: str) -> WorkflowResult:
-    """Create prospect with a brand new organization."""
+def _finalize_prospect(ctx: WorkflowContext) -> WorkflowResult:
+    """Create org, contact, opportunity and offer enrichment."""
     from app.domain.entities.organization import Organization
-
-    if org_name:
-        org = Organization(
-            name=org_name,
-            tenant_id=ctx.tenant_id,
-            created_by=ctx.user_email,
-        )
-        ctx.db.add(org)
-        ctx.db.commit()
-        ctx.db.refresh(org)
-        ctx.add_tool_step("create organization")
-        ctx.state["org_id"] = str(org.id)
-        ctx.state["org_name"] = org.name
-        logger.info("workflow_org_created", org_id=str(org.id), name=org_name)
-    else:
-        ctx.state["org_id"] = None
-        ctx.state["org_name"] = ""
-
-    return _create_contact_and_opportunity(ctx)
-
-
-def _create_contact_and_opportunity(ctx: WorkflowContext) -> WorkflowResult:
-    """Create contact + opportunity using accumulated state."""
     from app.domain.entities.contact import Contact
     from app.domain.entities.opportunity import Opportunity
 
-    org_id = ctx.state.get("org_id")
-    org_name = ctx.state.get("org_name", "")
-    entities = ctx.entities
+    org_name = ctx.state.get("org_name", "New Organization")
+    opp_name = ctx.state.get("opp_name", org_name)
 
-    # Resolve entity data (from original or resumed state)
-    contact_first = entities.contact_first or ctx.state.get("contact_first", "")
-    contact_last = entities.contact_last or ctx.state.get("contact_last", "")
-    email = entities.email or ctx.state.get("email", "")
-    phone = entities.phone or ctx.state.get("phone", "")
-    product_name = entities.product_name or ctx.state.get("product_name", "")
-    quantity = entities.quantity or ctx.state.get("quantity")
-    amount = entities.amount or ctx.state.get("amount")
+    # ── Create organization ────────────────────────
+    org = Organization(
+        name=org_name,
+        address=ctx.state.get("org_address", ""),
+        phone=ctx.state.get("org_phone", ""),
+        website=ctx.state.get("org_website", ""),
+        industry=ctx.state.get("org_industry", ""),
+        tenant_id=ctx.tenant_id,
+        created_by=ctx.user_email,
+    )
+    ctx.db.add(org)
+    ctx.db.commit()
+    ctx.db.refresh(org)
+    ctx.add_tool_step("Create Organization")
+    logger.info("workflow_org_created", org_id=str(org.id), name=org_name)
 
-    # Create contact if we have at least a name
+    # ── Create contact (if provided) ───────────────
     contact_id = None
-    if contact_first or contact_last or email:
+    contact_first = ctx.state.get("contact_first", "")
+    contact_last = ctx.state.get("contact_last", "")
+    contact_email = ctx.state.get("contact_email", "")
+
+    if contact_first or contact_last or contact_email:
         contact = Contact(
-            first_name=contact_first or "",
-            last_name=contact_last or "",
-            email=email or "",
-            phone=phone or "",
-            organization_id=org_id,
+            first_name=contact_first,
+            last_name=contact_last,
+            email=contact_email,
+            organization_id=org.id,
             tenant_id=ctx.tenant_id,
             created_by=ctx.user_email,
         )
@@ -276,91 +575,143 @@ def _create_contact_and_opportunity(ctx: WorkflowContext) -> WorkflowResult:
         ctx.db.commit()
         ctx.db.refresh(contact)
         contact_id = str(contact.id)
-        ctx.add_tool_step("create contact")
+        ctx.add_tool_step("Create Contact")
         logger.info("workflow_contact_created", contact_id=contact_id)
 
-    # Build opportunity name
-    opp_name = product_name or "Nouvelle opportunité"
-    if quantity:
-        opp_name += f" - {quantity} users"
-
+    # ── Create opportunity ─────────────────────────
     opp = Opportunity(
         name=opp_name,
-        organization_id=org_id,
+        organization_id=org.id,
         contact_id=contact_id,
         stage="PROSPECTING",
         source="Bob",
-        amount=amount,
         tenant_id=ctx.tenant_id,
         created_by=ctx.user_email,
     )
     ctx.db.add(opp)
     ctx.db.commit()
     ctx.db.refresh(opp)
-    ctx.add_tool_step("create opportunity")
+    ctx.add_tool_step("Create Opportunity")
     logger.info("workflow_opp_created", opp_id=str(opp.id))
 
-    # Build success message
-    parts = [f"✅ Opportunité créée : **{opp_name}**"]
-    if org_name:
-        parts.append(f"Organisation : **{org_name}**")
+    # ── Build final artifact ───────────────────────
+    artifact_fields = [
+        {"label": "Name", "value": opp_name},
+        {"label": "Organization", "value": org_name},
+        {"label": "Stage", "value": "PROSPECTING"},
+        {"label": "Source", "value": "Bob"},
+    ]
     if contact_first or contact_last:
-        parts.append(f"Contact : **{contact_first} {contact_last}**" + (f" ({email})" if email else ""))
-    if amount:
-        parts.append(f"Valeur : **{amount:,.0f}$**")
+        artifact_fields.append({"label": "Contact", "value": f"{contact_first} {contact_last}".strip()})
 
-    return ctx.complete(message="\n".join(parts))
-
-
-@resume_handler("prospect_org_selected")
-def resume_prospect_org_selected(ctx: WorkflowContext) -> WorkflowResult:
-    """Resume after user selects an org from the search popup."""
-    user_msg = ctx.user_message.strip().lower()
-    org_results = ctx.state.get("org_results", [])
-    original_entities = ctx.state.get("original_entities", {})
-
-    # Restore original entities into state for downstream steps
-    for key, val in original_entities.items():
-        if val is not None:
-            ctx.state[key] = val
-
-    # Parse user choice
-    selected_org = None
-
-    # Check for "nouveau" / "new"
-    if "nouveau" in user_msg or "new" in user_msg or "créer" in user_msg:
-        org_name = ctx.state.get("org_name_query", "")
-        return _create_prospect_with_new_org(ctx, org_name)
-
-    # Try to extract a number (#1, le 1, 1, etc.)
-    import re
-    num_match = re.search(r"#?(\d+)", user_msg)
-    if num_match:
-        idx = int(num_match.group(1)) - 1  # 0-based
-        if 0 <= idx < len(org_results):
-            selected_org = org_results[idx]
-
-    # Fallback: first org if message seems affirmative
-    if not selected_org and org_results:
-        affirmative = any(w in user_msg for w in ["oui", "yes", "ok", "premier", "first", "1"])
-        if affirmative:
-            selected_org = org_results[0]
-
-    if selected_org:
-        ctx.state["org_id"] = selected_org["id"]
-        ctx.state["org_name"] = selected_org["name"]
-        logger.info("workflow_org_selected", org_id=selected_org["id"], name=selected_org["name"])
-        return _create_contact_and_opportunity(ctx)
-
-    # Could not parse selection — ask again
-    org_lines = [f"#{i+1} — {o['name']}" for i, o in enumerate(org_results)]
-    return ctx.pause(
-        message=(
-            "Je n'ai pas compris votre choix. Veuillez indiquer le numéro :\n\n"
-            + "\n".join(org_lines)
-        ),
-        resume_key="prospect_org_selected",
+    ctx.emit_artifact(
+        artifact_type="opportunity",
+        title=opp_name,
+        fields=artifact_fields,
+        status="complete",
     )
+
+    # Store org_id for enrichment
+    ctx.state["org_id"] = str(org.id)
+
+    # ── Success message + Enrichment offer ─────────
+    parts = []
+    parts.append(f"✅ **Account created!**")
+    parts.append(f"- Organization: [**{org_name}**](/organizations/{org.id})")
+    if contact_first or contact_last:
+        parts.append(f"- Contact: **{contact_first} {contact_last}**")
+    parts.append(f"- Opportunity: [**{opp_name}**](/opportunities/{opp.id})")
+    parts.append("")
+    parts.append("✨ **Make my magic with my rolodex?**")
+    parts.append("Say **yes** and I'll deep-enrich this account with Bob's Rolodex.")
+
+    return ctx.pause(
+        message="\n".join(parts),
+        resume_key="prospect_enrich_offer",
+    )
+
+
+@resume_handler("prospect_enrich_offer")
+def resume_prospect_enrich_offer(ctx: WorkflowContext) -> WorkflowResult:
+    """Step 6 (optional) — User accepts or declines enrichment."""
+    user_msg = ctx.user_message.strip().lower()
+    org_id = ctx.state.get("org_id")
+
+    affirmative = any(w in user_msg for w in [
+        "oui", "yes", "ok", "go", "magic", "rolodex", "enrich", "enrichir",
+        "yep", "sure", "let's go", "do it", "vas-y", "fais-le",
+    ])
+
+    if not affirmative or not org_id:
+        return ctx.complete(
+            message="No problem! Your account is ready. Let me know if you need anything else 👋"
+        )
+
+    # Launch enrichment
+    from app.domain.entities.organization import Organization
+    from app.application.use_cases.enrich_organization import EnrichOrganizationUseCase
+    from app.domain.entities.user import User
+
+    org = ctx.db.query(Organization).filter(Organization.id == org_id).first()
+    user = ctx.db.query(User).filter(User.id == ctx.user_id).first()
+
+    if not org or not user:
+        return ctx.complete(message="Could not find the organization for enrichment.")
+
+    ctx.emit_artifact(
+        artifact_type="enrichment",
+        title=f"Enriching {org.name}...",
+        fields=[{"label": "Status", "value": "Running..."}],
+        status="building",
+    )
+
+    try:
+        use_case = EnrichOrganizationUseCase(ctx.db)
+        result = use_case.execute(
+            organization_id=str(org.id),
+            tenant_id=ctx.tenant_id,
+            user_email=ctx.user_email,
+            user_id=str(user.id),
+        )
+
+        fields_updated = result.get("fields_updated", 0)
+        contacts_created = result.get("contacts_created", 0)
+        status = result.get("status", "done")
+
+        enrich_fields = [
+            {"label": "Status", "value": "✅ Complete" if status == "done" else f"⚠️ {status}"},
+            {"label": "Fields Updated", "value": str(fields_updated)},
+            {"label": "Contacts Found", "value": str(contacts_created)},
+        ]
+
+        ctx.emit_artifact(
+            artifact_type="enrichment",
+            title=f"✨ {org.name} — Enriched",
+            fields=enrich_fields,
+            status="complete",
+        )
+        ctx.add_tool_step("Enrich Account")
+
+        return ctx.complete(
+            message=(
+                f"✨ **Enrichment complete for {org.name}!**\n"
+                f"- **{fields_updated}** fields updated\n"
+                f"- **{contacts_created}** contacts discovered\n\n"
+                f"[View enriched account →](/organizations/{org.id})"
+            )
+        )
+
+    except Exception as e:
+        logger.error("workflow_enrichment_error", org_id=org_id, error=str(e))
+        ctx.emit_artifact(
+            artifact_type="enrichment",
+            title=f"{org.name} — Enrichment",
+            fields=[{"label": "Status", "value": f"Error: {str(e)[:100]}"}],
+            status="partial",
+        )
+        return ctx.complete(
+            message=f"⚠️ Enrichment encountered an issue: {str(e)[:200]}\n\nYour account is still created though!"
+        )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -532,24 +883,19 @@ def top_opportunities_flow(ctx: WorkflowContext) -> WorkflowResult:
     if not opps:
         return ctx.complete(message="Aucune opportunité avec montant trouvée.")
 
-    items = []
-    for i, opp in enumerate(opps, 1):
-        tags = [{"label": opp.stage, "icon": "fa-solid fa-layer-group"}]
-        if opp.organization_name:
-            tags.append({"label": opp.organization_name, "icon": "fa-solid fa-building"})
-        items.append({
-            "id": str(opp.id), "number": i, "title": opp.name,
-            "subtitle": opp.organization_name or "",
-            "tags": tags,
-            "value": f"{float(opp.amount or 0):,.0f}$",
-            "value_label": "Montant",
-            "route": f"/opportunities/{opp.id}",
-        })
+    rows = []
+    for opp in opps:
+        rows.append([
+            opp.name,
+            opp.organization_name or "—",
+            opp.stage or "—",
+            f"{float(opp.amount or 0):,.0f}$",
+        ])
 
-    ctx.emit_action("bob_display",
-        display_type="list", title="Top 5 Opportunités",
-        subtitle="Triées par montant", icon="fa-solid fa-trophy",
-        items=items,
+    ctx.emit_artifact("data_table",
+        title=f"Top {len(opps)} Opportunités",
+        columns=["Nom", "Organisation", "Étape", "Montant"],
+        rows=rows,
     )
     ctx.add_tool_step("list top opportunities")
     return ctx.complete(message=f"Voici vos **{len(opps)} meilleures opportunités** par montant :")
@@ -578,23 +924,20 @@ def closing_this_month_flow(ctx: WorkflowContext) -> WorkflowResult:
     if not opps:
         return ctx.complete(message="Aucune opportunité à conclure ce mois-ci.")
 
-    items = []
-    for i, opp in enumerate(opps, 1):
-        tags = [{"label": opp.stage, "icon": "fa-solid fa-layer-group"}]
-        if opp.close_date:
-            tags.append({"label": str(opp.close_date), "icon": "fa-solid fa-calendar"})
-        items.append({
-            "id": str(opp.id), "number": i, "title": opp.name,
-            "subtitle": opp.organization_name or "",
-            "tags": tags,
-            "value": f"{float(opp.amount or 0):,.0f}$" if opp.amount else "—",
-            "route": f"/opportunities/{opp.id}",
-        })
+    rows = []
+    for opp in opps:
+        rows.append([
+            opp.name,
+            opp.organization_name or "—",
+            opp.stage or "—",
+            str(opp.close_date) if opp.close_date else "—",
+            f"{float(opp.amount or 0):,.0f}$" if opp.amount else "—",
+        ])
 
-    ctx.emit_action("bob_display",
-        display_type="list", title="À closer ce mois",
-        subtitle=f"{now.strftime('%B %Y')}", icon="fa-solid fa-calendar-check",
-        items=items,
+    ctx.emit_artifact("data_table",
+        title=f"À closer — {now.strftime('%B %Y')}",
+        columns=["Nom", "Organisation", "Étape", "Date", "Montant"],
+        rows=rows,
     )
     ctx.add_tool_step("closing this month")
     return ctx.complete(message=f"**{len(opps)}** opportunité(s) à conclure ce mois-ci.")
@@ -621,25 +964,21 @@ def stale_deals_flow(ctx: WorkflowContext) -> WorkflowResult:
     if not opps:
         return ctx.complete(message="Aucun deal stagnant — bravo ! 🎉")
 
-    items = []
-    for i, opp in enumerate(opps, 1):
+    rows = []
+    for opp in opps:
         days_stale = (datetime.utcnow() - opp.updated_at).days if opp.updated_at else 0
-        tags = [
-            {"label": opp.stage, "icon": "fa-solid fa-layer-group"},
-            {"label": f"{days_stale} jours", "icon": "fa-solid fa-clock", "color": "#ef4444"},
-        ]
-        items.append({
-            "id": str(opp.id), "number": i, "title": opp.name,
-            "subtitle": opp.organization_name or "",
-            "tags": tags,
-            "value": f"{float(opp.amount or 0):,.0f}$" if opp.amount else "—",
-            "route": f"/opportunities/{opp.id}",
-        })
+        rows.append([
+            opp.name,
+            opp.organization_name or "—",
+            opp.stage or "—",
+            f"{days_stale}j",
+            f"{float(opp.amount or 0):,.0f}$" if opp.amount else "—",
+        ])
 
-    ctx.emit_action("bob_display",
-        display_type="list", title="Deals stagnants",
-        subtitle="+30 jours sans mouvement", icon="fa-solid fa-hourglass-half",
-        items=items,
+    ctx.emit_artifact("data_table",
+        title="Deals stagnants (+30j)",
+        columns=["Nom", "Organisation", "Étape", "Inactif", "Montant"],
+        rows=rows,
     )
     ctx.add_tool_step("stale deals")
     return ctx.complete(message=f"⚠️ **{len(opps)}** deal(s) stagnant(s) depuis plus de 30 jours.")
@@ -666,31 +1005,20 @@ def pipeline_value_flow(ctx: WorkflowContext) -> WorkflowResult:
     if not stats_q:
         return ctx.complete(message="Le pipeline est vide.")
 
-    stats = []
+    kpi_items = []
     total_value = 0.0
     total_count = 0
     for stage, count, value in stats_q:
         val = float(value or 0)
         total_count += count
         total_value += val
-        stats.append({
-            "label": stage, "value": f"{val:,.0f}$",
-            "icon": "fa-solid fa-layer-group",
-        })
+        kpi_items.append({"label": stage, "value": f"{val:,.0f}$"})
 
-    stats.insert(0, {
-        "label": "Total Pipeline", "value": f"{total_value:,.0f}$",
-        "icon": "fa-solid fa-chart-line", "color": "#22c55e",
-    })
-    stats.insert(1, {
-        "label": "Total Deals", "value": str(total_count),
-        "icon": "fa-solid fa-handshake",
-    })
+    kpi_items.insert(0, {"label": "Total Pipeline", "value": f"{total_value:,.0f}$", "change": f"{total_count} deals"})
 
-    ctx.emit_action("bob_display",
-        display_type="stats", title="Valeur du Pipeline",
-        subtitle="Répartition par étape", icon="fa-solid fa-chart-pie",
-        stats=stats,
+    ctx.emit_artifact("kpi_summary",
+        title="Valeur du Pipeline",
+        items=kpi_items,
     )
     ctx.add_tool_step("pipeline value")
     return ctx.complete(message=f"📊 Pipeline : **{total_count}** deals — **{total_value:,.0f}$**")
@@ -716,25 +1044,16 @@ def dormant_contacts_flow(ctx: WorkflowContext) -> WorkflowResult:
     if not contacts:
         return ctx.complete(message="Tous vos contacts ont été contactés récemment ! ✅")
 
-    items = []
-    for i, c in enumerate(contacts, 1):
+    rows = []
+    for c in contacts:
         days = (datetime.utcnow() - c.updated_at).days if c.updated_at else 0
         name = f"{c.first_name or ''} {c.last_name or ''}".strip() or "Sans nom"
-        tags = []
-        if c.email:
-            tags.append({"label": c.email, "icon": "fa-solid fa-envelope"})
-        tags.append({"label": f"{days} jours", "icon": "fa-solid fa-clock", "color": "#f59e0b"})
-        items.append({
-            "id": str(c.id), "number": i, "title": name,
-            "subtitle": c.email or "",
-            "tags": tags,
-            "route": f"/contacts/{c.id}",
-        })
+        rows.append([name, c.email or "—", f"{days}j"])
 
-    ctx.emit_action("bob_display",
-        display_type="list", title="Contacts dormants",
-        subtitle="Pas contactés depuis 5+ mois", icon="fa-solid fa-user-clock",
-        items=items,
+    ctx.emit_artifact("data_table",
+        title="Contacts dormants (5+ mois)",
+        columns=["Nom", "Email", "Inactif"],
+        rows=rows,
     )
     ctx.add_tool_step("dormant contacts")
     return ctx.complete(message=f"📞 **{len(contacts)}** contact(s) à relancer — inactifs depuis plus de 5 mois.")
@@ -756,25 +1075,20 @@ def recent_contacts_flow(ctx: WorkflowContext) -> WorkflowResult:
     if not contacts:
         return ctx.complete(message="Aucun contact dans le CRM.")
 
-    items = []
-    for i, c in enumerate(contacts, 1):
+    rows = []
+    for c in contacts:
         name = f"{c.first_name or ''} {c.last_name or ''}".strip() or "Sans nom"
-        tags = []
-        if c.email:
-            tags.append({"label": c.email, "icon": "fa-solid fa-envelope"})
-        if c.phone:
-            tags.append({"label": c.phone, "icon": "fa-solid fa-phone"})
-        items.append({
-            "id": str(c.id), "number": i, "title": name,
-            "subtitle": str(c.created_at.date()) if c.created_at else "",
-            "tags": tags,
-            "route": f"/contacts/{c.id}",
-        })
+        rows.append([
+            name,
+            c.email or "—",
+            c.phone or "—",
+            str(c.created_at.date()) if c.created_at else "—",
+        ])
 
-    ctx.emit_action("bob_display",
-        display_type="list", title="Contacts récents",
-        subtitle="Derniers ajoutés", icon="fa-solid fa-user-plus",
-        items=items,
+    ctx.emit_artifact("data_table",
+        title="Contacts récents",
+        columns=["Nom", "Email", "Téléphone", "Ajouté le"],
+        rows=rows,
     )
     ctx.add_tool_step("recent contacts")
     return ctx.complete(message=f"Voici les **{len(contacts)} derniers contacts** ajoutés :")
@@ -798,22 +1112,15 @@ def contacts_no_email_flow(ctx: WorkflowContext) -> WorkflowResult:
     if not contacts:
         return ctx.complete(message="Tous vos contacts ont un email ! ✅")
 
-    items = []
-    for i, c in enumerate(contacts, 1):
+    rows = []
+    for c in contacts:
         name = f"{c.first_name or ''} {c.last_name or ''}".strip() or "Sans nom"
-        tags = [{"label": "Email manquant", "icon": "fa-solid fa-triangle-exclamation", "color": "#ef4444"}]
-        if c.phone:
-            tags.append({"label": c.phone, "icon": "fa-solid fa-phone"})
-        items.append({
-            "id": str(c.id), "number": i, "title": name,
-            "tags": tags,
-            "route": f"/contacts/{c.id}",
-        })
+        rows.append([name, c.phone or "—"])
 
-    ctx.emit_action("bob_display",
-        display_type="list", title="Contacts sans email",
-        subtitle="Données incomplètes", icon="fa-solid fa-at",
-        items=items,
+    ctx.emit_artifact("data_table",
+        title="Contacts sans email",
+        columns=["Nom", "Téléphone"],
+        rows=rows,
     )
     ctx.add_tool_step("contacts no email")
     return ctx.complete(message=f"⚠️ **{len(contacts)}** contact(s) sans adresse email.")
@@ -844,24 +1151,14 @@ def accounts_no_opp_flow(ctx: WorkflowContext) -> WorkflowResult:
     if not orgs:
         return ctx.complete(message="Tous vos comptes ont au moins une opportunité ! ✅")
 
-    items = []
-    for i, o in enumerate(orgs, 1):
-        tags = []
-        if o.industry:
-            tags.append({"label": o.industry, "icon": "fa-solid fa-building"})
-        if o.status:
-            tags.append({"label": o.status, "icon": "fa-solid fa-circle"})
-        items.append({
-            "id": str(o.id), "number": i, "title": o.name,
-            "subtitle": o.industry or "",
-            "tags": tags,
-            "route": f"/organizations/{o.id}",
-        })
+    rows = []
+    for o in orgs:
+        rows.append([o.name, o.industry or "—", o.status or "—"])
 
-    ctx.emit_action("bob_display",
-        display_type="list", title="Comptes sans opportunité",
-        subtitle="Potentiel inexploité", icon="fa-solid fa-building-circle-exclamation",
-        items=items,
+    ctx.emit_artifact("data_table",
+        title="Comptes sans opportunité",
+        columns=["Nom", "Industrie", "Statut"],
+        rows=rows,
     )
     ctx.add_tool_step("accounts without opportunity")
     return ctx.complete(message=f"📋 **{len(orgs)}** compte(s) sans aucune opportunité — du potentiel inexploité !")
@@ -892,23 +1189,19 @@ def most_active_accounts_flow(ctx: WorkflowContext) -> WorkflowResult:
     if not results:
         return ctx.complete(message="Aucun compte avec opportunité trouvé.")
 
-    items = []
-    for i, row in enumerate(results, 1):
-        tags = [{"label": f"{row.opp_count} opps", "icon": "fa-solid fa-handshake"}]
-        if row.industry:
-            tags.append({"label": row.industry, "icon": "fa-solid fa-building"})
-        items.append({
-            "id": str(row.id), "number": i, "title": row.name,
-            "tags": tags,
-            "value": f"{float(row.total_amount or 0):,.0f}$",
-            "value_label": "Total",
-            "route": f"/organizations/{row.id}",
-        })
+    rows = []
+    for row in results:
+        rows.append([
+            row.name,
+            row.industry or "—",
+            str(row.opp_count),
+            f"{float(row.total_amount or 0):,.0f}$",
+        ])
 
-    ctx.emit_action("bob_display",
-        display_type="list", title="Comptes les plus actifs",
-        subtitle="Par nombre d'opportunités", icon="fa-solid fa-fire",
-        items=items,
+    ctx.emit_artifact("data_table",
+        title="Comptes les plus actifs",
+        columns=["Nom", "Industrie", "Opps", "Montant total"],
+        rows=rows,
     )
     ctx.add_tool_step("most active accounts")
     return ctx.complete(message=f"🔥 Voici vos **{len(results)} comptes les plus actifs** :")
@@ -937,18 +1230,15 @@ def accounts_by_industry_flow(ctx: WorkflowContext) -> WorkflowResult:
     if not results:
         return ctx.complete(message="Aucune donnée d'industrie disponible.")
 
-    stats = []
+    total = sum(c for _, c in results)
+    kpi_items = []
     for industry, count in results:
-        stats.append({
-            "label": industry or "Non spécifié",
-            "value": str(count),
-            "icon": "fa-solid fa-building",
-        })
+        pct = f"{count / total * 100:.0f}%" if total else "0%"
+        kpi_items.append({"label": industry or "Non spécifié", "value": str(count), "change": pct})
 
-    ctx.emit_action("bob_display",
-        display_type="stats", title="Comptes par industrie",
-        subtitle="Répartition", icon="fa-solid fa-chart-bar",
-        stats=stats,
+    ctx.emit_artifact("pipeline",
+        title=f"Comptes par industrie ({len(results)})",
+        items=[{"label": industry or "Non spécifié", "value": str(count), "percent": round(count / total * 100) if total else 0} for industry, count in results],
     )
     ctx.add_tool_step("accounts by industry")
     return ctx.complete(message=f"📊 Répartition de vos comptes par industrie ({len(results)} industries) :")
@@ -970,26 +1260,19 @@ def list_products_flow(ctx: WorkflowContext) -> WorkflowResult:
     if not products:
         return ctx.complete(message="Aucun produit dans le catalogue.")
 
-    items = []
-    for i, p in enumerate(products, 1):
-        tags = []
-        if p.category:
-            tags.append({"label": p.category, "icon": "fa-solid fa-tag"})
-        if p.sku:
-            tags.append({"label": p.sku, "icon": "fa-solid fa-barcode"})
-        items.append({
-            "id": str(p.id), "number": i, "title": p.name,
-            "subtitle": p.category or "",
-            "tags": tags,
-            "value": f"{float(p.price or 0):,.2f}$" if p.price else "—",
-            "value_label": "Prix",
-            "route": f"/products/{p.id}",
-        })
+    rows = []
+    for p in products:
+        rows.append([
+            p.name,
+            p.category or "—",
+            p.sku or "—",
+            f"{float(p.price or 0):,.2f}$" if p.price else "—",
+        ])
 
-    ctx.emit_action("bob_display",
-        display_type="list", title="Catalogue Produits",
-        subtitle=f"{len(products)} produits", icon="fa-solid fa-box",
-        items=items,
+    ctx.emit_artifact("data_table",
+        title=f"Catalogue Produits ({len(products)})",
+        columns=["Nom", "Catégorie", "SKU", "Prix"],
+        rows=rows,
     )
     ctx.add_tool_step("list products")
     return ctx.complete(message=f"Voici les **{len(products)} produits** du catalogue :")
@@ -1041,18 +1324,17 @@ def daily_summary_flow(ctx: WorkflowContext) -> WorkflowResult:
         Organization.tenant_id == ctx.tenant_id,
     ).scalar() or 0
 
-    stats = [
-        {"label": "Pipeline actif", "value": f"{total_value:,.0f}$", "icon": "fa-solid fa-chart-line", "color": "#22c55e"},
-        {"label": "Deals ouverts", "value": str(total_opps), "icon": "fa-solid fa-handshake"},
-        {"label": "Deals stagnants", "value": str(stale_count), "icon": "fa-solid fa-hourglass-half", "color": "#ef4444" if stale_count > 0 else "#22c55e"},
-        {"label": "Contacts", "value": str(contact_count), "icon": "fa-solid fa-users"},
-        {"label": "Organisations", "value": str(org_count), "icon": "fa-solid fa-building"},
+    kpi_items = [
+        {"label": "Pipeline actif", "value": f"{total_value:,.0f}$"},
+        {"label": "Deals ouverts", "value": str(total_opps)},
+        {"label": "Deals stagnants", "value": str(stale_count), "change": "⚠️" if stale_count > 0 else "✅"},
+        {"label": "Contacts", "value": str(contact_count)},
+        {"label": "Organisations", "value": str(org_count)},
     ]
 
-    ctx.emit_action("bob_display",
-        display_type="stats", title="Résumé de votre journée",
-        subtitle=now.strftime("%A %d %B %Y"), icon="fa-solid fa-sun",
-        stats=stats,
+    ctx.emit_artifact("kpi_summary",
+        title=f"Résumé — {now.strftime('%A %d %B %Y')}",
+        items=kpi_items,
     )
     ctx.add_tool_step("daily summary")
     return ctx.complete(
@@ -1166,46 +1448,24 @@ def today_activities_flow(ctx: WorkflowContext) -> WorkflowResult:
     if not activities:
         return ctx.complete(message="📭 Aucune activité prévue pour aujourd'hui.")
 
-    items = []
-    for i, a in enumerate(activities, 1):
-        type_icons = {
-            "CALL": "fa-solid fa-phone",
-            "EMAIL": "fa-solid fa-envelope",
-            "MEETING": "fa-solid fa-users",
-            "TASK": "fa-solid fa-list-check",
-            "NOTE": "fa-solid fa-note-sticky",
-        }
-        status_colors = {
-            "PENDING": "#f59e0b",
-            "IN_PROGRESS": "#3b82f6",
-            "COMPLETED": "#22c55e",
-            "CANCELLED": "#6b7280",
-        }
-        tags = [
-            {"label": a.activity_type.value if hasattr(a.activity_type, 'value') else str(a.activity_type),
-             "icon": type_icons.get(a.activity_type.value if hasattr(a.activity_type, 'value') else str(a.activity_type), "fa-solid fa-circle")},
-            {"label": a.status.value if hasattr(a.status, 'value') else str(a.status),
-             "icon": "fa-solid fa-circle",
-             "color": status_colors.get(a.status.value if hasattr(a.status, 'value') else str(a.status), "#6b7280")},
-        ]
-        if a.priority and hasattr(a.priority, 'value') and a.priority.value in ("HIGH", "URGENT"):
-            tags.append({"label": a.priority.value, "icon": "fa-solid fa-flag", "color": "#ef4444"})
-
-        items.append({
-            "id": str(a.id), "number": i, "title": a.subject,
-            "subtitle": a.description[:60] + "..." if a.description and len(a.description) > 60 else (a.description or ""),
-            "tags": tags,
-            "route": f"/activities",
-        })
+    rows = []
+    for a in activities:
+        atype = a.activity_type.value if hasattr(a.activity_type, 'value') else str(a.activity_type)
+        status = a.status.value if hasattr(a.status, 'value') else str(a.status)
+        rows.append([
+            a.subject,
+            atype,
+            status,
+            a.description[:60] + "..." if a.description and len(a.description) > 60 else (a.description or "—"),
+        ])
 
     completed = sum(1 for a in activities if (a.status.value if hasattr(a.status, 'value') else str(a.status)) == "COMPLETED")
     pending = len(activities) - completed
 
-    ctx.emit_action("bob_display",
-        display_type="list", title="Activités du jour",
-        subtitle=f"{now.strftime('%A %d %B')} — {completed} complétées, {pending} restantes",
-        icon="fa-solid fa-calendar-day",
-        items=items,
+    ctx.emit_artifact("data_table",
+        title=f"Activités du jour — {now.strftime('%A %d %B')}",
+        columns=["Sujet", "Type", "Statut", "Description"],
+        rows=rows,
     )
     ctx.add_tool_step("today activities")
     return ctx.complete(message=f"📅 **{len(activities)}** activité(s) aujourd'hui — {completed} complétées, {pending} restantes.")
@@ -1233,34 +1493,21 @@ def overdue_activities_flow(ctx: WorkflowContext) -> WorkflowResult:
     if not activities:
         return ctx.complete(message="✅ Aucun rappel en retard — tout est à jour !")
 
-    items = []
-    for i, a in enumerate(activities, 1):
+    rows = []
+    for a in activities:
         days_overdue = (now - a.due_date).days if a.due_date else 0
-        type_icons = {
-            "CALL": "fa-solid fa-phone",
-            "EMAIL": "fa-solid fa-envelope",
-            "MEETING": "fa-solid fa-users",
-            "TASK": "fa-solid fa-list-check",
-            "NOTE": "fa-solid fa-note-sticky",
-        }
-        tags = [
-            {"label": a.activity_type.value if hasattr(a.activity_type, 'value') else str(a.activity_type),
-             "icon": type_icons.get(a.activity_type.value if hasattr(a.activity_type, 'value') else str(a.activity_type), "fa-solid fa-circle")},
-            {"label": f"{days_overdue}j en retard", "icon": "fa-solid fa-clock", "color": "#ef4444"},
-        ]
+        atype = a.activity_type.value if hasattr(a.activity_type, 'value') else str(a.activity_type)
+        rows.append([
+            a.subject,
+            atype,
+            str(a.due_date.date()) if a.due_date else "—",
+            f"{days_overdue}j",
+        ])
 
-        items.append({
-            "id": str(a.id), "number": i, "title": a.subject,
-            "subtitle": str(a.due_date.date()) if a.due_date else "",
-            "tags": tags,
-            "route": f"/activities",
-        })
-
-    ctx.emit_action("bob_display",
-        display_type="list", title="Rappels en retard",
-        subtitle=f"{len(activities)} activité(s) en souffrance",
-        icon="fa-solid fa-triangle-exclamation",
-        items=items,
+    ctx.emit_artifact("data_table",
+        title=f"Rappels en retard ({len(activities)})",
+        columns=["Sujet", "Type", "Échéance", "Retard"],
+        rows=rows,
     )
     ctx.add_tool_step("overdue activities")
     return ctx.complete(message=f"⚠️ **{len(activities)}** activité(s) en retard — à traiter rapidement !")

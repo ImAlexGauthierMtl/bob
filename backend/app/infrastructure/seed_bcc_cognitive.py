@@ -1251,10 +1251,195 @@ BOB_SELF_MANAGEMENT = {
 
 
 # ═══════════════════════════════════════════════════════════════
+#  DOMAIN 8: DOCUMENTATION & KB
+# ═══════════════════════════════════════════════════════════════
+
+DOCUMENTATION_KB = {
+    "name": "Documentation & KB",
+    "description": "Knowledge Base article creation and management. Bob creates structured KB articles with step-by-step procedures, screenshots, and Quebec-based company examples.",
+    "icon": "fa-solid fa-book",
+    "intents": [
+        {
+            "name": "create_kb_article",
+            "workflow_key": "create_kb_article",
+            "description": "Create a Knowledge Base article/procedure/documentation. Multi-turn flow: clarify topic → propose plan → generate content via Kimi K2.5 → publish article → return link.",
+            "category": "documentation",
+            "trigger_phrases": [
+                "créer un article", "nouvelle procédure", "documenter",
+                "article de KB", "base de connaissances", "create KB article",
+                "write documentation", "new procedure", "crée une procédure",
+                "ajouter un article", "documentation", "how-to guide",
+            ],
+            "tasks": [
+                {
+                    "name": "Clarify article requirements",
+                    "tool_name": None,
+                    "description": "Ask the user about module, audience, scenario, and category for the KB article. Pause workflow to collect answers.",
+                    "context": {
+                        "procedure": [
+                            "1. Extract topic from kb_topic entity or user_message",
+                            "2. Ask clarification questions: module, audience, scenario",
+                            "3. Pause workflow with resume_key='kb_clarification_done'",
+                        ],
+                        "required_info": ["kb_topic"],
+                        "expected_output": "Clarification questions sent to user",
+                        "pause_resume_key": "kb_clarification_done",
+                    },
+                },
+                {
+                    "name": "Propose article plan",
+                    "tool_name": None,
+                    "description": "Based on user answers, propose a structured article plan (title, steps, categories). Pause for validation.",
+                    "context": {
+                        "procedure": [
+                            "1. Parse user clarification answers",
+                            "2. Infer module, audience, and scenario",
+                            "3. Generate title and slug",
+                            "4. Build step-by-step plan",
+                            "5. Present plan for user validation",
+                            "6. Pause with resume_key='kb_plan_approved'",
+                        ],
+                        "required_info": ["topic", "module", "audience", "scenario"],
+                        "expected_output": "Article plan presented for validation",
+                        "pause_resume_key": "kb_plan_approved",
+                    },
+                },
+                {
+                    "name": "Generate article content",
+                    "tool_name": None,
+                    "description": "Call Kimi K2.5 via OpenRouter to generate full markdown content following the normalized template.",
+                    "context": {
+                        "procedure": [
+                            "1. Build generation prompt with title, module, audience, scenario, plan",
+                            "2. Call Kimi K2.5 via OpenRouter with KB_GENERATION_SYSTEM_PROMPT",
+                            "3. Clean generated content (remove code fences, thinking tags)",
+                            "4. Extract excerpt from Aperçu section",
+                            "5. Estimate read time",
+                        ],
+                        "model_hint": "moonshotai/kimi-k2.5 via OpenRouter",
+                        "expected_output": "Full markdown article content",
+                    },
+                },
+                {
+                    "name": "Publish article to KB",
+                    "tool_name": None,
+                    "description": "Create the article via KBArticle entity in the database. Set visibility, category, tags, and publish status.",
+                    "context": {
+                        "procedure": [
+                            "1. Find matching KBCategory by slug",
+                            "2. Check for slug uniqueness, append suffix if needed",
+                            "3. Create KBArticle with all fields",
+                            "4. Set author_name='Bob AI', author_role='Assistant IA'",
+                            "5. Commit to database",
+                            "6. Navigate user to /knowledge-base/{slug}",
+                            "7. Return success message with link",
+                        ],
+                        "db_table": "kb_articles",
+                        "db_operation": "INSERT",
+                        "expected_output": "✅ Article publié — link to /knowledge-base/{slug}",
+                    },
+                },
+            ],
+        },
+    ],
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+#  DOMAIN 8 — Business Advisor (Kimi K2.5 via OpenRouter)
+# ═══════════════════════════════════════════════════════════════
+
+BUSINESS_ADVISOR = {
+    "name": "Conseil d'Affaires",
+    "description": "Mode conseiller stratégique — analyses business, tendances marché, recommandations appuyées par recherche web et contexte organisationnel.",
+    "icon": "fa-solid fa-briefcase",
+    "intents": [
+        {
+            "name": "business_advisor",
+            "workflow_key": "business_advisor",
+            "description": "Engage le mode conseiller d'affaires. Analyse stratégique avec recherche web (Serper) et contexte BCC (vision/mission/regulations). Powered by Kimi K2.5 via OpenRouter.",
+            "category": "advisory",
+            "trigger_phrases": [
+                "conseille-moi", "business advisor", "mode conseil",
+                "analyse de marché", "stratégie", "recommandation business",
+                "what do you think about", "donne-moi ton avis sur",
+                "analyse cette opportunité", "advisor mode",
+                "conseil d'affaires", "strategic analysis", "market research",
+                "que penses-tu de", "recommande-moi", "aide-moi à analyser",
+            ],
+            "tasks": [
+                {
+                    "name": "Validate Input (Guardrail)",
+                    "tool_name": None,
+                    "description": "Groq guardrail — classify message safety before processing. Blocks injection, harmful, personal, and restricted requests.",
+                    "context": {
+                        "procedure": [
+                            "1. Send user message to Groq llama-3.3-70b-versatile",
+                            "2. Classify as: business (safe), personal, injection, harmful, restricted",
+                            "3. If unsafe → return polite refusal message",
+                            "4. If safe → proceed to next step",
+                        ],
+                        "model_hint": "llama-3.3-70b-versatile via Groq",
+                        "latency_target": "~200ms",
+                    },
+                },
+                {
+                    "name": "Load BCC Context",
+                    "tool_name": None,
+                    "description": "Load organizational context from BCC: vision, mission, culture, regulations, industries, user role.",
+                    "context": {
+                        "procedure": [
+                            "1. Query bcc_organizations + bcc_org_profiles for org info",
+                            "2. Query bcc_profile_entries for vision/mission/culture sections",
+                            "3. Query bcc_regulations for regulatory constraints",
+                            "4. Query bcc_industries via bcc_org_industries for industry context",
+                            "5. Query bcc_user_roles + bcc_roles for user's role/KPIs",
+                        ],
+                        "source": "bcc_profile_entries + bcc_regulations + bcc_industries",
+                    },
+                },
+                {
+                    "name": "Web Research (conditional)",
+                    "tool_name": None,
+                    "description": "Search web via Serper if user question involves market data, trends, competitors, or current information.",
+                    "context": {
+                        "procedure": [
+                            "1. Check message for market/trend/competitor keywords",
+                            "2. If triggered → query Serper dev with search query",
+                            "3. Collect top 5 results with title/snippet/link",
+                            "4. Format as web context for LLM prompt",
+                        ],
+                        "tool": "serper_search",
+                        "conditional": True,
+                    },
+                },
+                {
+                    "name": "Advisory Generation",
+                    "tool_name": None,
+                    "description": "Call Kimi K2.5 via OpenRouter to generate executive-level business analysis with org context and web data.",
+                    "context": {
+                        "procedure": [
+                            "1. Build system prompt with org context + web results",
+                            "2. Include last 20 messages of conversation history",
+                            "3. Call Kimi K2.5 (128k context, temp 0.4, max 8192 tokens)",
+                            "4. Track usage via UsageTracker",
+                            "5. Return structured advisory response",
+                        ],
+                        "model_hint": "moonshotai/kimi-k2.5 via OpenRouter",
+                        "max_tokens": 8192,
+                    },
+                },
+            ],
+        },
+    ],
+}
+
+
+# ═══════════════════════════════════════════════════════════════
 #  ASSEMBLE ALL STRUCTURES
 # ═══════════════════════════════════════════════════════════════
 
-COGNITIVE_STRUCTURE = [CRM_SALES, CRM_ANALYTICS, CRM_INTELLIGENCE, PRODUCTS_OVERVIEW, ACTIVITIES, BOB_SELF_MANAGEMENT]
+COGNITIVE_STRUCTURE = [CRM_SALES, CRM_ANALYTICS, CRM_INTELLIGENCE, PRODUCTS_OVERVIEW, ACTIVITIES, BOB_SELF_MANAGEMENT, DOCUMENTATION_KB, BUSINESS_ADVISOR]
 PIPELINE_VISIBILITY_STRUCTURE = [DATA_ENRICHMENT, KNOWLEDGE_RETRIEVAL]
 
 

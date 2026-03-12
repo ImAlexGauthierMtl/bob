@@ -14,12 +14,56 @@ export interface BobChatAction {
     name?: string;
 }
 
+export interface BobArtifactField {
+    label: string;
+    value: string;
+}
+
+export interface BobArtifactLink {
+    label: string;
+    url: string;
+    icon?: string;
+}
+
+export interface BobArtifactItem {
+    label: string;
+    value: string;
+    change?: string;       // kpi: "+18%"
+    icon?: string;         // info_list: FontAwesome icon class
+    percent?: number;      // pipeline/progress: 0-100
+    time?: string;         // action_plan: date/time
+    description?: string;  // extended description
+}
+
+export interface BobArtifactSection {
+    title: string;
+    subtitle?: string;
+    badge?: string;           // e.g. "Priority"
+    items: BobArtifactItem[];
+}
+
+export interface BobArtifact {
+    type: string;
+    title: string;
+    fields: BobArtifactField[];
+    status: 'building' | 'complete' | 'partial';
+    entityId?: string;
+    links?: BobArtifactLink[];
+    // Structured data for new display types
+    columns?: string[];
+    rows?: string[][];
+    items?: BobArtifactItem[];
+    sections?: BobArtifactSection[];
+}
+
 export interface BobChatResponse {
     response: string;
     session_id: string;
     turn_count: number;
     actions: BobChatAction[];
     tool_steps?: { tool: string; status: string }[];
+    artifact?: BobArtifact;
+    session_title?: string;
 }
 
 export interface BobSessionInfo {
@@ -30,4 +74,5 @@ export interface BobSessionInfo {
     created_at: number;
     last_activity: number;
     message_count: number;
+    title?: string;
 }

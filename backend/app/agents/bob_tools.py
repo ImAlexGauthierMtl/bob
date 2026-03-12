@@ -337,6 +337,117 @@ BOB_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "show_artifact",
+            "description": (
+                "Display a rich inline artifact in the chat. UI-ONLY — does NOT create/modify data. "
+                "Choose the type that BEST matches the data structure:\n"
+                "- card types (opportunity/contact/organization): single-record detail → use fields[]\n"
+                "- search_results: numbered selection list → use fields[]\n"
+                "- data_table: multi-column list (contacts, opps, orders) → use columns[] + rows[][]\n"
+                "- kpi_summary: 2-4 numeric metrics side by side → use items[]\n"
+                "- progress_card: projection with progress bar → use items[] with percent\n"
+                "- checklist: action items with checkboxes → use items[]\n"
+                "- action_plan: phased timeline with tasks → use sections[]\n"
+                "- info_list: bullet points with icons → use items[] with icon\n"
+                "- pipeline: progress bars by stage → use items[] with percent"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "opportunity", "contact", "organization", "search_results",
+                            "data_table", "kpi_summary", "progress_card", "checklist",
+                            "action_plan", "info_list", "pipeline",
+                        ],
+                        "description": "Display type — pick based on data shape.",
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Title of the artifact card.",
+                    },
+                    "fields": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {"type": "string"},
+                                "value": {"type": "string"},
+                            },
+                            "required": ["label", "value"],
+                        },
+                        "description": "Label/value pairs for card types and search_results.",
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["building", "complete"],
+                        "default": "building",
+                    },
+                    "columns": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Column headers for data_table.",
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                        "description": "Row data for data_table. Each row is an array of cell values matching columns.",
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {"type": "string", "description": "Item label/name"},
+                                "value": {"type": "string", "description": "Item value"},
+                                "change": {"type": "string", "description": "kpi: change indicator e.g. '+18%'"},
+                                "icon": {"type": "string", "description": "info_list: FontAwesome icon e.g. 'fa-circle'"},
+                                "percent": {"type": "number", "description": "pipeline/progress: percentage 0-100"},
+                                "time": {"type": "string", "description": "action_plan: date/time"},
+                                "description": {"type": "string", "description": "Extended description"},
+                            },
+                            "required": ["label", "value"],
+                        },
+                        "description": "Items for kpi_summary, pipeline, progress_card, checklist, info_list.",
+                    },
+                    "sections": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "title": {"type": "string"},
+                                "subtitle": {"type": "string"},
+                                "badge": {"type": "string", "description": "Optional badge text e.g. 'Priority'"},
+                                "items": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "label": {"type": "string"},
+                                            "value": {"type": "string"},
+                                            "description": {"type": "string"},
+                                            "time": {"type": "string"},
+                                        },
+                                        "required": ["label"],
+                                    },
+                                },
+                            },
+                            "required": ["title", "items"],
+                        },
+                        "description": "Sections for action_plan (phased timeline).",
+                    },
+                },
+                "required": ["type", "title"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_recent_activities",
             "description": "Get recent activities (calls, emails, meetings) from the CRM.",
             "parameters": {
@@ -547,6 +658,50 @@ BOB_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "enrich_account",
+            "description": (
+                "Launch Bob's Rolodex deep enrichment on an existing account. "
+                "Call this when the user agrees to enrich after account creation "
+                "(e.g. they say 'yes' to 'Make my magic with my rolodex?'). "
+                "Returns enriched company data as an artifact displayed in the chat."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "organization_id": {
+                        "type": "string",
+                        "description": "UUID of the organization to enrich",
+                    },
+                },
+                "required": ["organization_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_rolodex",
+            "description": (
+                "Search Bob's Rolodex (company directory) for organizations matching a name or query. "
+                "Returns a numbered list of matching businesses with name, address, phone, website, and industry. "
+                "Use this FIRST when the user wants to add/create an account, BEFORE calling open_create_dialog. "
+                "Present the results to the user so they can pick one."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Business name or search query",
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+    },
 ]
 
 
@@ -619,6 +774,10 @@ async def execute_tool(
             return await _change_training_slide(**arguments)
         elif tool_name == "invoke_deep_agent":
             return await _invoke_deep_agent(db_session, user_id=user_id, **arguments)
+        elif tool_name == "enrich_account":
+            return await _enrich_account(db_session, user_id=user_id, **arguments)
+        elif tool_name == "search_rolodex":
+            return await _search_rolodex(db_session, user_id=user_id, **arguments)
         else:
             dynamic_result = await _execute_dynamic_tool(db_session, user_id, tool_name, arguments)
             if dynamic_result is not None:
@@ -1143,4 +1302,188 @@ async def _execute_dynamic_tool(
     except Exception as e:
         logger.error("dynamic_tool_error", tool=tool_name, error=str(e))
         return f"Dynamic tool {tool_name} error: {str(e)}"
+
+
+async def _enrich_account(
+    db_session,
+    user_id: str,
+    organization_id: str,
+) -> dict:
+    """Run Bob's Rolodex deep enrichment on an existing account.
+
+    Calls the full pipeline (Hunter.io + scrape + extraction + Compound)
+    and returns a structured result with an artifact for inline display.
+    """
+    from app.domain.entities.organization import Organization
+    from app.application.use_cases.enrich_organization import EnrichOrganizationUseCase
+    from app.domain.entities.user import User
+
+    # Resolve tenant + email from user_id
+    user = db_session.query(User).filter(User.id == user_id).first()
+    if not user:
+        return {"status": "error", "message": "User not found"}
+
+    tenant_id = user.tenant_id
+    user_email = user.email
+
+    # Verify org exists
+    org = db_session.query(Organization).filter(
+        Organization.id == organization_id,
+        Organization.tenant_id == tenant_id,
+    ).first()
+
+    if not org:
+        return {"status": "error", "message": f"Organization {organization_id} not found"}
+
+    logger.info(
+        "enrich_account_tool_start",
+        org_id=organization_id,
+        org_name=org.name,
+        user_id=user_id,
+    )
+
+    # Run the enrichment pipeline
+    use_case = EnrichOrganizationUseCase(db_session)
+    result = await use_case.execute(
+        org_id=organization_id,
+        tenant_id=tenant_id,
+        user_email=user_email,
+    )
+
+    # Build artifact fields from enrichment results
+    artifact_fields = []
+    fields = result.get("fields", {})
+    profile = result.get("organization_profile", {})
+
+    # Company overview
+    if fields.get("industry"):
+        artifact_fields.append({"label": "Industry", "value": fields["industry"]})
+    if fields.get("employee_count"):
+        artifact_fields.append({"label": "Employees", "value": str(fields["employee_count"])})
+    if fields.get("annual_revenue"):
+        artifact_fields.append({"label": "Revenue", "value": str(fields["annual_revenue"])})
+    if fields.get("description"):
+        desc = fields["description"]
+        artifact_fields.append({"label": "Description", "value": desc[:200] + "..." if len(desc) > 200 else desc})
+    if fields.get("linkedin_url"):
+        artifact_fields.append({"label": "LinkedIn", "value": fields["linkedin_url"]})
+    if fields.get("website"):
+        artifact_fields.append({"label": "Website", "value": fields["website"]})
+
+    # Hunter contacts summary
+    hunter_contacts = result.get("hunter_contacts", [])
+    if hunter_contacts:
+        contact_lines = []
+        for hc in hunter_contacts[:5]:
+            name = f"{hc.get('first_name', '')} {hc.get('last_name', '')}".strip()
+            pos = hc.get("position", "")
+            email = hc.get("email", "")
+            contact_lines.append(f"{name} — {pos} ({email})" if pos else f"{name} ({email})")
+        artifact_fields.append({
+            "label": f"Contacts ({len(hunter_contacts)})",
+            "value": "\n".join(contact_lines),
+        })
+
+    # Intelligence sections
+    intelligence = result.get("intelligence_sections")
+    if intelligence and isinstance(intelligence, int) and intelligence > 0:
+        artifact_fields.append({"label": "Intelligence", "value": f"{intelligence} sections generated"})
+
+    artifact = {
+        "type": "enrichment",
+        "title": f"🔍 Enrichment — {org.name}",
+        "status": "complete" if result.get("status") == "done" else result.get("status", "partial"),
+        "fields": artifact_fields,
+        "links": [
+            {"label": "View Account", "url": f"/organizations/{organization_id}", "icon": "fa-building"},
+        ],
+    }
+
+    logger.info(
+        "enrich_account_tool_done",
+        org_id=organization_id,
+        status=result.get("status"),
+        fields_updated=result.get("fields_updated"),
+        contacts_created=result.get("contacts_created"),
+    )
+
+    return {
+        "status": result.get("status", "done"),
+        "message": f"Enrichment complete for {org.name}. {result.get('fields_updated', 0)} fields updated, {result.get('contacts_created', 0)} contacts created.",
+        "artifact": artifact,
+    }
+
+
+async def _search_rolodex(
+    db_session,
+    user_id: str,
+    query: str,
+) -> str:
+    """Search Bob's Rolodex (Serper Maps API) and return formatted results.
+
+    Same logic as search_routes.py but called directly from Bob's tool,
+    so results appear inline in the chat conversation.
+    """
+    import httpx
+    from app.config import settings
+
+    SERPER_URL = "https://google.serper.dev/maps"
+
+    if not query.strip():
+        return "Please provide a name or query to search Bob's Rolodex."
+
+    logger.info("search_rolodex_start", query=query, user_id=user_id)
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post(
+                SERPER_URL,
+                json={"q": query, "num": 10},
+                headers={
+                    "X-API-KEY": settings.serper_api_key,
+                    "Content-Type": "application/json",
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        places = data.get("places", [])
+
+        if not places:
+            logger.info("search_rolodex_empty", query=query)
+            return f"No results found in Bob's Rolodex for \"{query}\". You can create the organization manually."
+
+        # Format results as a numbered list for the LLM
+        lines = [f"Bob's Rolodex found {len(places)} result(s) for \"{query}\":\n"]
+        for i, place in enumerate(places, 1):
+            title = place.get("title", "Unknown")
+            address = place.get("address", "N/A")
+            phone = place.get("phoneNumber", "")
+            website = place.get("website", "")
+            industry = place.get("type", "")
+            rating = place.get("rating")
+
+            line = f"{i}. **{title}**"
+            if industry:
+                line += f" ({industry})"
+            line += f"\n   📍 {address}"
+            if phone:
+                line += f"\n   📞 {phone}"
+            if website:
+                line += f"\n   🌐 {website}"
+            if rating:
+                line += f"\n   ⭐ {rating}"
+            lines.append(line)
+
+        lines.append("\nAsk the user which one to select, then call open_create_dialog with the selected name.")
+
+        logger.info("search_rolodex_done", query=query, results=len(places))
+        return "\n".join(lines)
+
+    except httpx.HTTPStatusError as e:
+        logger.error("search_rolodex_http_error", query=query, status=e.response.status_code)
+        return "Bob's Rolodex search encountered an error. You can create the organization manually."
+    except Exception as e:
+        logger.error("search_rolodex_error", query=query, error=str(e))
+        return f"Bob's Rolodex search failed: {str(e)}. You can create the organization manually."
 

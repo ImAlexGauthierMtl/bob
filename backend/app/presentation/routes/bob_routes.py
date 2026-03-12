@@ -57,6 +57,21 @@ class ToolStep(BaseModel):
     status: str = "ok"
 
 
+class ArtifactField(BaseModel):
+    """A single field in an inline artifact card."""
+    label: str
+    value: str
+
+
+class BobArtifact(BaseModel):
+    """An inline artifact card to display in the chat."""
+    type: str  # 'opportunity', 'contact', 'organization'
+    title: str
+    fields: list[ArtifactField] = []
+    status: str = "building"  # 'building' | 'complete'
+    entity_id: Optional[str] = None
+
+
 class ChatResponse(BaseModel):
     """Bob's response to a chat message."""
     response: str
@@ -64,6 +79,8 @@ class ChatResponse(BaseModel):
     turn_count: int
     actions: list[BobAction] = []
     tool_steps: list[ToolStep] = []
+    artifact: Optional[BobArtifact] = None
+    session_title: Optional[str] = None
 
 
 class SessionInfo(BaseModel):
@@ -75,6 +92,7 @@ class SessionInfo(BaseModel):
     created_at: float
     last_activity: float
     message_count: int
+    title: Optional[str] = None
 
 
 # ── Routes ───────────────────────────────────────
@@ -109,7 +127,7 @@ async def bob_chat(
     )
 
     try:
-        response_text, actions, tool_steps = bob_agent.chat(
+        response_text, actions, tool_steps, artifact = bob_agent.chat(
             session_id=session_id,
             user_message=request.message,
             tenant_id=current_user["tenant_id"],
@@ -122,6 +140,8 @@ async def bob_chat(
             turn_count=session.turn_count,
             actions=[BobAction(**a) for a in actions],
             tool_steps=[ToolStep(**s) for s in tool_steps],
+            artifact=BobArtifact(**artifact) if artifact else None,
+            session_title=session.title,
         )
 
     except ValueError as e:

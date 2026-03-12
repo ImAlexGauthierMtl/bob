@@ -39,35 +39,96 @@ When the user asks to FIND, SEARCH, LOOK UP an entity (e.g., "cherche Bell Canad
 2. Tell the user what was found and ask them to pick by number
 3. When they pick a number, use `ui_select_result` with the chosen index (or call `search_and_open_entity` to navigate directly)
 
-### Creating an Opportunity (STRICT MULTI-STEP FLOW)
-When the user asks to CREATE/ADD an opportunity:
+### Creating an Opportunity (GUIDED WIZARD with show_artifact)
+When the user asks to CREATE/ADD an opportunity, you MUST follow this step-by-step wizard. At each step, call `show_artifact` to display progress inline in the chat. NEVER skip steps. ALWAYS wait for the user's answer before moving to the next step.
 
-YOU MUST follow these steps IN ORDER — do NOT skip any step:
+**Step 1 — Ask for the opportunity name:**
+- Call `show_artifact` with type="opportunity", title="New Opportunity", fields=[{"label": "Name", "value": "—"}], status="building"
+- Ask: "What would you like to name this opportunity?"
+- WAIT for the user's answer.
 
-1. **Identify the organization**: If the user mentions a company name, call `search_organizations` to find it. This opens a search popup. Tell the user the results and ask them to confirm which one (e.g., "J'ai trouvé 2 résultats: #1 Bell Canada Central Office, #2 Bell Canada Montreal. Lequel?"). WAIT for their answer.
-2. **Identify the contact**: After the org is confirmed, ask the user for a contact name and email. If the contact doesn't exist yet, tell the user you'll create it. Call `create_contact` with the org_id.
-3. **Create the opportunity**: Call `create_opportunity` with the name, organization_id, and contact_id.
-4. **Link products** (optional): If the user mentions a product, call `link_product_to_opportunity`.
+**Step 2 — Name received, ask about organization:**
+- Call `show_artifact` with type="opportunity", title="New Opportunity", fields=[{"label": "Name", "value": "<the name they gave>"}], status="building"
+- Ask: "Is this for a new or existing organization?"
+- WAIT for the user's answer.
+
+**Step 3a — If EXISTING organization:**
+- Call `search_organizations` with the company name (if given) or ask for it
+- When results come back, call `show_artifact` with type="search_results", title="Organizations Found", fields=[{"label": "1", "value": "Company A"}, {"label": "2", "value": "Company B"}, ...], status="building"
+- Ask: "Which one? (enter the number)"
+- WAIT for the user to pick by number.
+
+**Step 3b — If NEW organization:**
+- Call `open_create_dialog` with entity="organization" and the name mentioned
+- Tell the user: "I've opened the organization creation dialog for you."
+
+**Step 4 — Create the opportunity:**
+- Once the organization is resolved (org_id from search or creation), call `create_opportunity` with the name and organization_id.
+- Call `show_artifact` with type="opportunity", title="<opp name>", fields with all details (Name, Organization, Stage, Source), status="complete"
+- Confirm to the user: "Opportunity created! ✓"
 
 IMPORTANT RULES:
-- NEVER call `create_opportunity` without first resolving the organization_id from a search
-- NEVER skip the contact step — always ask if a contact should be associated
-- NEVER use `open_create_dialog` for creating opportunities — ONLY use the API tools
+- ALWAYS call `show_artifact` at each step to display progress — this is what the user sees
+- NEVER call `create_opportunity` without first resolving the organization
+- NEVER skip the organization step
 
-### Creating Other Entities (Organization + Contact)
-When the user asks to CREATE, ADD, or NEW an organization or contact:
+### Adding an Account (Ajouter un compte) — GUIDED WIZARD
+When the user asks to ADD, CREATE, or NEW an account/organization, follow this step-by-step wizard.
+IMPORTANT: The search/lookup feature is called **Bob's Rolodex**. NEVER say "Google Maps", "Google", or "Places API". Always say "Bob's Rolodex".
 
-1. **Ask for missing required info** before executing:
-   - Organization: name (REQUIRED), domain, industry
-   - Contact: first_name + last_name (REQUIRED), email, phone, organization_id
-2. **Execute** using API tools: `create_organization`, `create_contact`
-3. **Confirm** to the user what was created
+**Step 1 — Search Bob's Rolodex:**
+- Ask: "What's the name of the new organization?"
+- WAIT for the user's answer.
+- When they give a name, call `search_rolodex` with the query. This returns results from Bob's Rolodex.
+- Present the numbered results to the user IN THE CHAT. Example: "Here's what I found in Bob's Rolodex: 1. Acme Corp (Consulting) 📍 123 Main St ..."
+- Ask: "Which one should I use? (or type a new name to search again)"
+- WAIT for the user to pick a number or give a new name.
+- Once the user picks a result, call `open_create_dialog` with entity="organization" and the selected name.
+- Tell the user: "Creating **[name]** from Bob's Rolodex..."
+
+**Step 2 — Organization Created:**
+- Once they select a result and the org is created, call `show_artifact` with type="organization", title=org name, status="complete", fields showing the details.
+- Include the org link: "[View Account](/organizations/{org_id})" — the user can click to open in a new tab.
+- Confirm: "✅ Organization **[name]** created!"
+
+**Step 3 — Contact:**
+- Ask: "Who is the primary contact for this account? (name, email if you have it)"
+- WAIT for the user's answer.
+- Call `create_contact` with the info provided, linked to the org via the `company` field.
+- Call `show_artifact` with type="contact", status="complete".
+
+**Step 4 — Opportunity:**
+- Ask: "What should we call this opportunity?"
+- WAIT for the user's answer. If they already gave an opportunity name earlier, use that.
+- Call `create_opportunity` with the name and the organization_id.
+- Call `show_artifact` with type="opportunity", status="complete", fields including Name, Organization, Stage.
+- Include the opportunity link: "[View Opportunity](/opportunities/{opp_id})"
+- Include the org link: "[View Account](/organizations/{org_id})"
+
+**Step 5 — Enrichment Offer:**
+- After everything is created, ask EXACTLY: "✨ **Make my magic with my rolodex?**"
+- If the user says YES/oui/go/do it → call `enrich_account` with the organization_id.
+- The enrichment results will be displayed as an artifact.
+- If the user says NO → say "No worries! Your account is all set. 🎯"
+
+IMPORTANT RULES:
+- ALWAYS follow ALL 5 steps in order. NEVER skip the contact step.
+- ALWAYS use the term "Bob's Rolodex" — NEVER say "Google Maps" or "Google".
+- ALWAYS call `show_artifact` at each creation step.
+- ALWAYS include clickable links after creating entities.
+
+### Creating a Standalone Contact
+When the user asks to CREATE only a contact (not a full account):
+1. Ask for first_name + last_name (REQUIRED), email, phone
+2. Call `create_contact`
+3. Confirm with `show_artifact`
 
 ### Tool Priority Rules
+- For **ADDING AN ACCOUNT**: follow the guided wizard above (search_rolodex → open_create_dialog → create_contact → create_opportunity → enrich_account)
 - For **CREATING**: use `create_organization`, `create_contact`, `create_opportunity`, `link_product_to_opportunity`
 - For **SEARCHING/FINDING**: use `search_organizations`, `search_contacts` (these automatically open the search popup UI)
 - For **OPENING a specific record**: use `search_and_open_entity`
-- NEVER use `open_create_dialog` — it opens the Google Maps add dialog, not a search
+- For **ENRICHMENT**: use `enrich_account` when the user agrees to enrich
 
 ### Handling Ambiguous Requests
 If the user says something like "ajoute le compte X avec contact Y et une opportunité Z":
@@ -79,12 +140,55 @@ If the user says something like "ajoute le compte X avec contact Y et une opport
 UI Controls (for navigation only):
 - When the user says "choose number X", "select the second one", use `ui_select_result` with the requested index.
 
+## Tone Detection & Response Mode
+
+BEFORE calling any tool, detect the tone of the user's message:
+
+### Mode EXPLORATOIRE
+Signals: vague questions, open topics, "comment va...", "quoi de neuf", "parle-moi de...", industry/market questions, no specific entity named, broad curiosity.
+
+Response flow:
+1. **Reformulate** what you understood in your own words (1 sentence)
+2. **Propose 2-3 angles** you can explore — as natural suggestions, not a numbered menu
+3. **Ask ONE clarifying question** to focus the conversation
+4. Do NOT call any data tool yet — wait for the user to guide you
+
+Example:
+User: "comment va le secteur de la construction"
+Bob: "Tu veux voir comment se portent tes comptes dans le secteur construction — bonne question. Je peux regarder la répartition de tes comptes dans cette industrie, les opportunités actives, ou les contacts à relancer. Tu cherches plutôt un portrait global ou tu as un angle précis en tête ?"
+
+### Mode DIRECTIF
+Signals: specific action verb (montre, liste, crée, ajoute, cherche, ouvre), named entity, clear metric request ("combien de..."), explicit command.
+
+Response flow:
+- Execute immediately — call the appropriate tool/workflow
+- Present the result with the inline artifact
+- Keep the response tight
+
+Example:
+User: "montre-moi les comptes en construction"
+Bob: [calls accounts_by_industry] + artifact + brief summary
+
+### Mode RAPIDE
+Signals: simple factual question ("combien de contacts j'ai ?"), yes/no, single-number answer expected.
+
+Response flow:
+- Answer in 1-2 sentences, no artifact needed
+- Offer to dig deeper only if relevant
+
+### Rules
+- When in doubt between exploratoire and directif, choose **exploratoire** — it's better to ask than to dump unwanted data
+- After an exploratoire exchange, when the user gives direction, switch to **directif** immediately
+- NEVER be robotic about it — no "Mode détecté: exploratoire". Just be natural, like a smart colleague thinking out loud
+- The whole point is to feel like a conversation, not a query engine
+
 Communication style:
-- Professional but friendly
+- Professional but warm — like a sharp colleague, not a chatbot
 - Concise and actionable — prefer short answers
 - Use bullet points for lists
 - When you can help with a specific action, offer to do it
 - If you don't know something, say so honestly
+- Vary your tone — don't start every message the same way
 
 Language: Respond in the same language as the user's message.
 If the user speaks French, respond in French. If English, respond in English.
@@ -120,9 +224,12 @@ class ChatSession:
         self.total_tokens_in = 0
         self.total_tokens_out = 0
         self.turn_count = 0
+        self.title: Optional[str] = None
         # Intent Router: paused workflow state for multi-turn flows
         self.workflow_state: Optional[dict] = None
         self.workflow_resume_key: Optional[str] = None
+        # Context Router: history of routing categories for sticky routing
+        self.routing_history: list[str] = []
 
     def to_dict(self) -> dict:
         """Serialize session to a dict for external storage."""
@@ -138,8 +245,10 @@ class ChatSession:
             "total_tokens_in": self.total_tokens_in,
             "total_tokens_out": self.total_tokens_out,
             "turn_count": self.turn_count,
+            "title": self.title,
             "workflow_state": self.workflow_state,
             "workflow_resume_key": self.workflow_resume_key,
+            "routing_history": self.routing_history[-10:],
         }
 
     @classmethod
@@ -158,14 +267,19 @@ class ChatSession:
         session.total_tokens_in = data.get("total_tokens_in", 0)
         session.total_tokens_out = data.get("total_tokens_out", 0)
         session.turn_count = data.get("turn_count", 0)
+        session.title = data.get("title")
         session.workflow_state = data.get("workflow_state")
         session.workflow_resume_key = data.get("workflow_resume_key")
+        session.routing_history = data.get("routing_history", [])
         return session
 
     def add_user_message(self, text: str) -> None:
         """Add a user message to the session history."""
         self.messages.append({"role": "user", "content": text})
         self.last_activity = time.time()
+        # Auto-generate title from first user message
+        if self.title is None and text.strip():
+            self.title = text.strip()[:60]
 
     def add_assistant_message(self, text: str) -> None:
         """Add Bob's response to the session history."""
@@ -270,7 +384,7 @@ class BobChatAgent:
         user_message: str,
         tenant_id: str = "",
         user_id: str = "",
-    ) -> tuple[str, list[dict]]:
+    ) -> tuple[str, list[dict], list[dict], dict | None]:
         """Send a message to Bob and get a response + optional actions.
 
         Args:
@@ -280,7 +394,7 @@ class BobChatAgent:
             user_id: Optional user for isolation key
 
         Returns:
-            Tuple of (response_text, actions_list)
+            Tuple of (response_text, actions_list, tool_steps, artifact_or_none)
         """
         isolation_key = f"{tenant_id}:{user_id}:{session_id}" if tenant_id and user_id else session_id
         session = self._sessions.get(isolation_key)
@@ -308,7 +422,7 @@ class BobChatAgent:
                     intent_label=intent_label,
                 )
                 if workflow_result is not None:
-                    text, actions, tool_steps = workflow_result
+                    text, actions, tool_steps, w_artifact = workflow_result
                     session.add_assistant_message(text)
                     self._persist(isolation_key, session)
                     logger.info(
@@ -317,7 +431,7 @@ class BobChatAgent:
                         actions=len(actions),
                         tools=len(tool_steps),
                     )
-                    return text, actions, tool_steps
+                    return text, actions, tool_steps, w_artifact
             except Exception as wr_err:
                 logger.warning("intent_router_fallback", error=str(wr_err))
                 # Fall through to legacy flow
@@ -598,6 +712,7 @@ Personality (from user preferences):
 
             choice = response.choices[0]
             actions: list[dict] = []
+            artifact: dict | None = None
 
             # ── Debug: trace LLM tool behavior ──────────
             finish_reason = choice.finish_reason
@@ -777,6 +892,19 @@ Personality (from user preferences):
                             "page": args.get("tab_name", ""),
                         })
                         tool_results[tc.id] = '{"status": "ok"}'
+                    elif fn == "show_artifact":
+                        # UI-only: display a rich inline artifact
+                        artifact = {
+                            "type": args.get("type", "opportunity"),
+                            "title": args.get("title", ""),
+                            "fields": args.get("fields", []),
+                            "status": args.get("status", "building"),
+                        }
+                        # Pass structured data for new display types
+                        for key in ("columns", "rows", "items", "sections"):
+                            if key in args:
+                                artifact[key] = args[key]
+                        tool_results[tc.id] = '{"status": "ok"}'
                     elif fn in ("search_organizations", "search_contacts"):
                         # Execute the search + also open UI popup
                         import concurrent.futures
@@ -925,6 +1053,16 @@ Personality (from user preferences):
                             tool_results[tc.id] = future.result(timeout=30)
 
                     tool_steps.append({"tool": fn, "status": "ok"})
+
+                    # ── Extract artifact from tool result ──
+                    _tool_result_str = tool_results.get(tc.id, "")
+                    try:
+                        _tool_result_obj = json.loads(_tool_result_str) if _tool_result_str else {}
+                        if isinstance(_tool_result_obj, dict) and "artifact" in _tool_result_obj:
+                            artifact = _tool_result_obj["artifact"]
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
                     logger.info(
                         "bob_tool_call",
                         session_id=session_id,
@@ -1046,7 +1184,7 @@ Personality (from user preferences):
             # Persist session to backing store after each turn
             self._persist(isolation_key, session)
 
-            return response_text, actions, tool_steps
+            return response_text, actions, tool_steps, artifact
 
         except Exception as e:
             logger.error(
@@ -1056,6 +1194,226 @@ Personality (from user preferences):
             )
             raise
 
+    # ── Context Router handlers ──────────────────────────────────
+
+    def _handle_strategic_routing(
+        self,
+        session: "ChatSession",
+        user_message: str,
+        session_id: str,
+    ) -> tuple[str, list[dict], list[dict], dict | None]:
+        """Handle STRATEGIC routing — Kimi K2.5 via advisor pipeline.
+
+        Reuses the existing advisor infrastructure (guardrail, context loading,
+        Kimi K2.5) but bypasses the intent classifier since the context router
+        already determined this is a strategic message.
+        """
+        from app.agents.advisor_guardrail import classify_message as guardrail_classify
+        from app.agents.advisor_context_loader import load_advisor_context
+        from app.agents.advisor_llm_client import advisor_chat
+
+        # Step 1: Safety guardrail
+        guard_result = guardrail_classify(user_message)
+        if not guard_result.safe:
+            logger.info(
+                "strategic_guardrail_blocked",
+                category=guard_result.category,
+                session_id=session_id,
+            )
+            return (
+                guard_result.refusal_message,
+                [],
+                [{"tool": "safety_check", "status": "blocked"}],
+                None,
+            )
+
+        # Step 2: Load BCC organizational context
+        from app.infrastructure.database import SessionLocal as _StratSessionLocal
+        _strat_db = _StratSessionLocal()
+        try:
+            org_context = load_advisor_context(
+                db=_strat_db,
+                tenant_id=session.tenant_id,
+                user_id=session.user_id,
+            )
+        finally:
+            _strat_db.close()
+
+        # Step 3: Build conversation history
+        conv_history = []
+        if session.messages:
+            for msg in session.messages[-20:]:
+                conv_history.append({
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", ""),
+                })
+
+        # Step 4: Call Kimi K2.5
+        response = advisor_chat(
+            message=user_message,
+            conversation_history=conv_history,
+            org_context=org_context,
+            tenant_id=session.tenant_id,
+            user_id=session.user_id,
+            user_email=session.user_email,
+        )
+
+        tool_steps = [
+            {"tool": "context_router", "status": "strategic"},
+            {"tool": "safety_check", "status": "passed"},
+            {"tool": "advisor_analysis", "status": "done"},
+        ]
+
+        logger.info(
+            "strategic_response_generated",
+            session_id=session_id,
+            response_length=len(response),
+        )
+
+        return response, [], tool_steps, None
+
+    def _handle_technical_routing(
+        self,
+        session: "ChatSession",
+        user_message: str,
+        session_id: str,
+        intent_id: str,
+    ) -> tuple[str, list[dict], list[dict], dict | None]:
+        """Handle TECHNICAL routing — Claude Sonnet via OpenRouter.
+
+        Used for code generation, SQL, data analysis, statistics,
+        and other technical tasks that benefit from Claude's stronger
+        reasoning capabilities.
+        """
+        import httpx
+
+        api_key = settings.openrouter_api_key
+        if not api_key:
+            logger.warning("technical_routing_no_api_key", session_id=session_id)
+            return None  # Fall back to Qwen3
+
+        model = settings.technical_model  # anthropic/claude-sonnet-4
+
+        # Build system prompt
+        system_prompt = (
+            "You are Bob, a technical assistant integrated into a CRM platform "
+            "(Croo Digital Experience). You excel at code generation, data analysis, "
+            "SQL queries, statistics, and technical problem-solving.\n\n"
+            "Guidelines:\n"
+            "- Write clean, well-commented code\n"
+            "- Use appropriate code blocks with language tags\n"
+            "- Explain your reasoning step by step\n"
+            "- When writing SQL, target PostgreSQL syntax\n"
+            "- Respond in the same language as the user\n"
+            "- Be concise but thorough\n"
+        )
+
+        # Build messages
+        messages = [{"role": "system", "content": system_prompt}]
+
+        # Add conversation history (last 10 messages)
+        if session.messages:
+            for msg in session.messages[-10:]:
+                messages.append({
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", ""),
+                })
+
+        messages.append({"role": "user", "content": user_message})
+
+        # Call Claude Sonnet via OpenRouter
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.2,
+            "max_tokens": settings.technical_model_max_tokens,
+        }
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://croo.digital",
+            "X-Title": "Bob Technical Assistant",
+        }
+
+        logger.info(
+            "technical_llm_request",
+            model=model,
+            message_count=len(messages),
+            session_id=session_id,
+        )
+
+        with httpx.Client(timeout=120.0) as client:
+            response = client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                json=payload,
+                headers=headers,
+            )
+
+        if response.status_code != 200:
+            error_text = response.text[:500]
+            logger.error(
+                "technical_llm_error",
+                status=response.status_code,
+                error=error_text,
+                session_id=session_id,
+            )
+            return None  # Fall back to Qwen3
+
+        data = response.json()
+        choices = data.get("choices", [])
+        if not choices:
+            return None
+
+        content = choices[0].get("message", {}).get("content", "")
+
+        usage = data.get("usage", {})
+        tokens_in = usage.get("prompt_tokens", 0)
+        tokens_out = usage.get("completion_tokens", 0)
+
+        logger.info(
+            "technical_llm_response",
+            model=model,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            content_length=len(content),
+            session_id=session_id,
+        )
+
+        # Track usage
+        if session.tenant_id:
+            try:
+                from app.infrastructure.database import SessionLocal
+                from app.middleware.usage_tracker import UsageTracker
+                from app.domain.entities.usage_transaction import TriggerSource
+
+                db = SessionLocal()
+                try:
+                    tracker = UsageTracker(db)
+                    tracker.track_llm(
+                        tenant_id=session.tenant_id,
+                        user_id=session.user_id,
+                        user_email=session.user_email,
+                        provider="openrouter",
+                        model=model,
+                        input_tokens=tokens_in,
+                        output_tokens=tokens_out,
+                        trigger_source=TriggerSource.BOB_CHAT,
+                        correlation_id=intent_id,
+                    )
+                    db.commit()
+                finally:
+                    db.close()
+            except Exception as track_err:
+                logger.warning("technical_usage_track_error", error=str(track_err))
+
+        tool_steps = [
+            {"tool": "context_router", "status": "technical"},
+            {"tool": "claude_sonnet", "status": "done"},
+        ]
+
+        return content, [], tool_steps, None
+
     def _try_intent_workflow(
         self,
         session: "ChatSession",
@@ -1063,10 +1421,10 @@ Personality (from user preferences):
         session_id: str,
         intent_id: str,
         intent_label: str,
-    ) -> Optional[tuple[str, list[dict], list[dict]]]:
+    ) -> Optional[tuple[str, list[dict], list[dict], dict | None]]:
         """Try to handle the message via Intent Router workflows.
 
-        Returns (text, actions, tool_steps) if handled,
+        Returns (text, actions, tool_steps, artifact) if handled,
         or None to fall back to legacy 18-tool flow.
         """
         from app.infrastructure.database import SessionLocal
@@ -1103,6 +1461,7 @@ Personality (from user preferences):
                         entities=entities,
                         user_message=user_message,
                         state=dict(session.workflow_state),
+                        session_messages=list(session.messages) if session.messages else [],
                     )
 
                     result = handler(ctx)
@@ -1121,11 +1480,60 @@ Personality (from user preferences):
                         paused=result.paused,
                         actions=len(result.actions),
                     )
-                    return result.message, result.actions, result.tool_steps
+                    return result.message, result.actions, result.tool_steps, result.artifact
                 finally:
                     db.close()
 
-        # ── 2. Classify intent (BCC-driven when possible) ──
+        # ── 2. LAYER 0 — Context Router (micro-classifier) ──
+        from app.agents.context_router import route_message, RoutingDecision
+        from app.agents.model_registry import RoutingCategory
+
+        routing = route_message(
+            message=user_message,
+            conversation_history=session.messages[-4:] if session.messages else None,
+            session_routing_history=session.routing_history,
+        )
+
+        # Record routing decision for sticky routing
+        session.routing_history.append(routing.category.value)
+        # Keep history bounded
+        if len(session.routing_history) > 20:
+            session.routing_history = session.routing_history[-10:]
+
+        logger.info(
+            "layer0_routing_decision",
+            category=routing.category.value,
+            model=routing.model.id,
+            reason=routing.reason,
+            session_id=session_id,
+        )
+
+        # ── 2a. STRATEGIC routing → Kimi K2.5 (advisor) ──
+        if routing.category == RoutingCategory.STRATEGIC:
+            try:
+                return self._handle_strategic_routing(
+                    session=session,
+                    user_message=user_message,
+                    session_id=session_id,
+                )
+            except Exception as strat_err:
+                logger.warning("strategic_routing_fallback", error=str(strat_err))
+                # Fall through to intent classifier
+
+        # ── 2b. TECHNICAL routing → Claude Sonnet (OpenRouter) ──
+        if routing.category == RoutingCategory.TECHNICAL:
+            try:
+                return self._handle_technical_routing(
+                    session=session,
+                    user_message=user_message,
+                    session_id=session_id,
+                    intent_id=intent_id,
+                )
+            except Exception as tech_err:
+                logger.warning("technical_routing_fallback", error=str(tech_err))
+                # Fall through to intent classifier
+
+        # ── 3. LAYER 1 — Intent classifier for LIGHTWEIGHT/PROCEDURE ──
         from app.agents.intent_classifier import classify_message
         from app.infrastructure.database import SessionLocal as _ClassifySessionLocal
 
@@ -1146,9 +1554,80 @@ Personality (from user preferences):
             session_id=session_id,
         )
 
-        # ── 3. Route to workflow or fall back ──
+        # ── 4. Route to workflow or fall back ──
         if classification.intent == "general_chat":
-            return None  # Fall back to legacy 18-tool flow
+            return None  # Fall back to LLM flow
+
+        # ── 4a. Business Advisor mode (Kimi K2.5) — via intent classifier ──
+        if classification.intent == "business_advisor":
+            try:
+                from app.agents.advisor_guardrail import classify_message as guardrail_classify
+                from app.agents.advisor_context_loader import load_advisor_context
+                from app.agents.advisor_llm_client import advisor_chat
+
+                # Step 1: Guardrail (Groq)
+                guard_result = guardrail_classify(user_message)
+                if not guard_result.safe:
+                    logger.info(
+                        "advisor_guardrail_blocked",
+                        category=guard_result.category,
+                        reason=guard_result.reason,
+                    )
+                    return (
+                        guard_result.refusal_message,
+                        [],
+                        [{"tool": "safety_check", "status": "blocked"}],
+                        None,
+                    )
+
+                # Step 2: Load BCC context
+                from app.infrastructure.database import SessionLocal as _AdvisorSessionLocal
+                _adv_db = _AdvisorSessionLocal()
+                try:
+                    org_context = load_advisor_context(
+                        db=_adv_db,
+                        tenant_id=session.tenant_id,
+                        user_id=session.user_id,
+                    )
+                finally:
+                    _adv_db.close()
+
+                # Step 3: Build conversation history
+                conv_history = []
+                if session.messages:
+                    for msg in session.messages[-20:]:
+                        conv_history.append({
+                            "role": msg.get("role", "user"),
+                            "content": msg.get("content", ""),
+                        })
+
+                # Step 4: Call Kimi K2.5
+                advisor_response = advisor_chat(
+                    message=user_message,
+                    conversation_history=conv_history,
+                    org_context=org_context,
+                    tenant_id=session.tenant_id,
+                    user_id=session.user_id,
+                    user_email=session.user_email,
+                )
+
+                tool_steps = [
+                    {"tool": "safety_check", "status": "passed"},
+                    {"tool": "load_context", "status": "done"},
+                    {"tool": "advisor_analysis", "status": "done"},
+                ]
+
+                logger.info(
+                    "advisor_response_generated",
+                    session_id=session_id,
+                    response_length=len(advisor_response),
+                )
+
+                return advisor_response, [], tool_steps, None
+
+            except Exception as adv_err:
+                logger.error("advisor_mode_error", error=str(adv_err))
+                return None  # Fall back to normal LLM flow
 
         wf = get_workflow(classification.intent)
         if not wf:
@@ -1163,6 +1642,7 @@ Personality (from user preferences):
                 user_email=session.user_email,
                 entities=classification.entities,
                 user_message=user_message,
+                session_messages=list(session.messages) if session.messages else [],
             )
 
             result = wf(ctx)
@@ -1182,7 +1662,7 @@ Personality (from user preferences):
                 actions=len(result.actions),
                 tools=len(result.tool_steps),
             )
-            return result.message, result.actions, result.tool_steps
+            return result.message, result.actions, result.tool_steps, result.artifact
         finally:
             db.close()
 
@@ -1341,6 +1821,7 @@ Retourne SEULEMENT ce JSON, rien d'autre:
             "created_at": session.created_at,
             "last_activity": session.last_activity,
             "message_count": len(session.messages),
+            "title": session.title,
         }
 
     def list_sessions(self, user_id: str, tenant_id: str = "") -> list[dict]:

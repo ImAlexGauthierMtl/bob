@@ -24,6 +24,7 @@ git diff --stat HEAD~1
    - L'architecture définie dans `context/projet.md` est-elle respectée ?
    - Les mocks de services externes sont-ils bien marqués ?
    - Les migrations sont-elles commitées ?
+   - **Si frontend touché** : Playwright exécuté ? Screenshots dans le walkthrough ? (voir `rules/regle-playwright.md`)
 
 5. **Vérification des gaps** :
    - Relire `.agents/docs/gaps.md`
