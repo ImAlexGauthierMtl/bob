@@ -29,6 +29,7 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     mission_prompt: Optional[str] = None
     mission_context: Optional[dict] = None
+    channel: Optional[str] = "compact"  # compact | workspace | voice_app | voice_phone
 
 
 class BobAction(BaseModel):
@@ -63,13 +64,45 @@ class ArtifactField(BaseModel):
     value: str
 
 
+class ArtifactItem(BaseModel):
+    """A single item in a list-based artifact."""
+    label: str
+    value: str = ""
+    change: Optional[str] = None
+    icon: Optional[str] = None
+    percent: Optional[float] = None
+    time: Optional[str] = None
+    description: Optional[str] = None
+
+
+class ArtifactSection(BaseModel):
+    """A section in a structured artifact."""
+    title: str
+    subtitle: Optional[str] = None
+    badge: Optional[str] = None
+    items: list[ArtifactItem] = []
+
+
+class ArtifactLink(BaseModel):
+    """A link in an artifact card."""
+    label: str
+    url: str
+    icon: Optional[str] = None
+
+
 class BobArtifact(BaseModel):
     """An inline artifact card to display in the chat."""
-    type: str  # 'opportunity', 'contact', 'organization'
+    type: str  # 'opportunity', 'contact', 'organization', 'data_table', etc.
     title: str
     fields: list[ArtifactField] = []
-    status: str = "building"  # 'building' | 'complete'
+    status: str = "building"  # 'building' | 'complete' | 'partial'
     entity_id: Optional[str] = None
+    # Structured data for rich artifact types
+    columns: Optional[list[str]] = None
+    rows: Optional[list[list[str]]] = None
+    items: Optional[list[ArtifactItem]] = None
+    sections: Optional[list[ArtifactSection]] = None
+    links: Optional[list[ArtifactLink]] = None
 
 
 class ChatResponse(BaseModel):
@@ -132,6 +165,7 @@ async def bob_chat(
             user_message=request.message,
             tenant_id=current_user["tenant_id"],
             user_id=current_user["user_id"],
+            channel=request.channel or "compact",
         )
 
         return ChatResponse(

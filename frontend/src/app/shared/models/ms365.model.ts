@@ -2,64 +2,67 @@
 
 export interface MS365Connection {
     id: string;
-    userId: string;
-    msEmail: string | null;
-    isActive: boolean;
-    lastEmailSync: string | null;
-    lastCalendarSync: string | null;
-    createdAt: string;
-    updatedAt: string;
+    user_id: string;
+    ms_email: string | null;
+    is_active: boolean;
+    last_email_sync: string | null;
+    last_calendar_sync: string | null;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface MS365AuthUrl {
-    authUrl: string;
+    auth_url: string;
 }
 
 export interface SyncedEmail {
     id: string;
-    userId: string;
-    msMessageId: string;
+    user_id: string;
+    ms_message_id: string;
     subject: string | null;
-    bodyPreview: string | null;
-    bodyHtml: string | null;
-    fromAddress: string | null;
-    fromName: string | null;
-    toAddresses: EmailAddress[] | null;
-    ccAddresses: EmailAddress[] | null;
-    receivedAt: string | null;
-    isRead: boolean;
+    body_preview: string | null;
+    body_html: string | null;
+    from_address: string | null;
+    from_name: string | null;
+    to_addresses: EmailAddress[] | null;
+    cc_addresses: EmailAddress[] | null;
+    received_at: string | null;
+    is_read: boolean;
     importance: string;
-    hasAttachments: boolean;
-    attachmentsMeta: AttachmentMeta[] | null;
+    has_attachments: boolean;
+    attachments_meta: AttachmentMeta[] | null;
     folder: string;
-    conversationId: string | null;
-    linkedContactId: string | null;
-    linkedOrganizationId: string | null;
-    createdAt: string;
-    updatedAt: string;
+    conversation_id: string | null;
+    linked_contact_id: string | null;
+    linked_organization_id: string | null;
+    smart_label?: string | null;
+    ai_summary?: string | null;
+    ai_action_items?: string[] | null;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface SyncedEvent {
     id: string;
-    userId: string;
-    msEventId: string;
+    user_id: string;
+    ms_event_id: string;
     subject: string | null;
-    bodyHtml: string | null;
+    body_html: string | null;
     location: string | null;
-    startTime: string | null;
-    endTime: string | null;
-    isAllDay: boolean;
-    organizerEmail: string | null;
-    organizerName: string | null;
+    start_time: string | null;
+    end_time: string | null;
+    is_all_day: boolean;
+    organizer_email: string | null;
+    organizer_name: string | null;
     attendees: Attendee[] | null;
     status: string;
-    isCancelled: boolean;
+    is_cancelled: boolean;
     recurrence: Record<string, unknown> | null;
-    onlineMeetingUrl: string | null;
-    linkedContactId: string | null;
-    linkedOrganizationId: string | null;
-    createdAt: string;
-    updatedAt: string;
+    online_meeting_url: string | null;
+    linked_contact_id: string | null;
+    linked_organization_id: string | null;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface EmailAddress {
@@ -70,7 +73,7 @@ export interface EmailAddress {
 export interface AttachmentMeta {
     name: string;
     size: number;
-    contentType: string;
+    content_type: string;
 }
 
 export interface Attendee {
@@ -94,7 +97,32 @@ export interface SyncedEventListResponse {
 }
 
 export interface SyncStatus {
-    emailsSynced: number;
-    eventsSynced: number;
+    emails_synced: number;
+    events_synced: number;
     status: string;
+}
+
+export interface EmailAiInsightResponse {
+    summary: string;
+    smart_label: string;
+    action_items: string[];
+}
+
+export interface SendEmailRequest {
+    subject: string;
+    body_content: string;
+    to_recipients: string[];
+    cc_recipients?: string[];
+    bcc_recipients?: string[];
+    body_type?: string;
+}
+
+export interface ReplyEmailRequest {
+    comment: string;
+    reply_all?: boolean;
+}
+
+export interface ForwardEmailRequest {
+    to_recipients: string[];
+    comment?: string;
 }

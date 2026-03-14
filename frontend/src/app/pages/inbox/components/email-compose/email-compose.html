@@ -1,0 +1,86 @@
+<div class="fixed inset-0 bg-black/40 xl:bg-transparent xl:pointer-events-none z-50 flex items-end sm:items-center justify-center xl:justify-end xl:items-end xl:pr-[620px] xl:pb-6 transition-opacity">
+    
+    <!-- Compose Window -->
+    <div class="bg-white pointer-events-auto shadow-2xl rounded-t-xl sm:rounded-xl w-full sm:w-[600px] h-[90vh] sm:h-[600px] flex flex-col overflow-hidden border border-gray-200 animate-slide-up sm:animate-fade-in z-50">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between px-4 py-3 bg-gray-900 text-white shrink-0">
+            <h3 class="text-sm font-medium">New Message</h3>
+            <div class="flex items-center gap-2">
+                <button class="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition-colors text-white/70 hover:text-white">
+                    <i class="fa-solid fa-minus text-xs"></i>
+                </button>
+                <button class="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition-colors text-white/70 hover:text-white">
+                    <i class="fa-solid fa-expand text-xs"></i>
+                </button>
+                <button (click)="closeModal()" class="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition-colors text-white/70 hover:text-white">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form [formGroup]="composeForm" (ngSubmit)="sendEmail()" class="flex-1 flex flex-col overflow-hidden">
+            <!-- Error Banner -->
+            <div *ngIf="errorMsg" class="bg-red-50 text-red-600 px-4 py-2 text-xs font-medium border-b border-red-100 flex items-center gap-2">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                {{ errorMsg }}
+            </div>
+
+            <!-- Fields -->
+            <div class="flex border-b border-gray-100 px-4 py-2 text-sm focus-within:border-gray-300 transition-colors group relative">
+                <span class="text-gray-400 w-12 flex-shrink-0 pt-0.5">To</span>
+                <input formControlName="to" type="text" class="flex-1 outline-none text-black bg-transparent w-full placeholder-gray-300" placeholder="Recipients (comma separated)">
+                
+                <div *ngIf="composeForm.get('to')?.touched && composeForm.get('to')?.invalid" class="absolute right-4 top-1/2 -translate-y-1/2 text-red-500">
+                    <i class="fa-solid fa-circle-exclamation text-xs"></i>
+                </div>
+            </div>
+            
+            <div class="flex border-b border-gray-100 px-4 py-2 text-sm focus-within:border-gray-300 transition-colors group relative">
+                <span class="text-gray-400 w-12 flex-shrink-0 pt-0.5">Cc</span>
+                <input formControlName="cc" type="text" class="flex-1 outline-none text-black bg-transparent w-full">
+            </div>
+
+            <div class="flex border-b border-gray-100 px-4 py-2 text-sm focus-within:border-gray-300 transition-colors group relative">
+                <span class="text-gray-400 font-medium w-12 flex-shrink-0 pt-0.5 sr-only">Subject</span>
+                <input formControlName="subject" type="text" class="flex-1 outline-none font-medium text-black bg-transparent w-full placeholder-gray-400" placeholder="Subject">
+                
+                <div *ngIf="composeForm.get('subject')?.touched && composeForm.get('subject')?.invalid" class="absolute right-4 top-1/2 -translate-y-1/2 text-red-500">
+                    <i class="fa-solid fa-circle-exclamation text-xs"></i>
+                </div>
+            </div>
+
+            <!-- Body Editor Area -->
+            <div class="flex-1 p-4 relative group">
+                <textarea formControlName="body" class="w-full h-full resize-none outline-none text-sm text-gray-800 bg-transparent" placeholder="Write your message here..."></textarea>
+            </div>
+
+            <!-- Toolbar / Footer -->
+            <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-4">
+                    <button type="submit" [disabled]="isSending" class="px-6 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-medium rounded-md shadow-sm transition-all disabled:opacity-50 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-notch fa-spin" *ngIf="isSending"></i>
+                        <i class="fa-regular fa-paper-plane" *ngIf="!isSending"></i>
+                        Send
+                    </button>
+                    
+                    <div class="flex items-center gap-1 border-l border-gray-300 pl-4">
+                        <button type="button" class="w-8 h-8 flex items-center justify-center rounded text-gray-500 hover:bg-gray-200 transition-colors" title="Formatting options">
+                            <i class="fa-solid fa-font text-sm"></i>
+                        </button>
+                        <button type="button" class="w-8 h-8 flex items-center justify-center rounded text-gray-500 hover:bg-gray-200 transition-colors" title="Attach files">
+                            <i class="fa-solid fa-paperclip text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center">
+                    <button type="button" (click)="closeModal()" class="w-8 h-8 flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Discard draft">
+                        <i class="fa-solid fa-trash-can text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

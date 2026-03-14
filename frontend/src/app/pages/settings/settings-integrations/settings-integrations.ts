@@ -49,7 +49,7 @@ export class SettingsIntegrationsComponent implements OnInit {
         this.ms365Service.getAuthUrl().subscribe({
             next: (data) => {
                 // Redirect to Microsoft login
-                window.location.href = data.authUrl;
+                window.location.href = data.auth_url;
             },
             error: () => {
                 this.ms365Loading = false;
@@ -87,6 +87,6 @@ export class SettingsIntegrationsComponent implements OnInit {
     }
 
     get ms365IsConnected(): boolean {
-        return !!this.ms365Connection?.isActive;
+        return !!this.ms365Connection?.is_active;
     }
 }

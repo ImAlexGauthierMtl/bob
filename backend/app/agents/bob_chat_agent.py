@@ -384,6 +384,7 @@ class BobChatAgent:
         user_message: str,
         tenant_id: str = "",
         user_id: str = "",
+        channel: str = "compact",
     ) -> tuple[str, list[dict], list[dict], dict | None]:
         """Send a message to Bob and get a response + optional actions.
 
@@ -392,6 +393,7 @@ class BobChatAgent:
             user_message: The user's message text
             tenant_id: Optional tenant for isolation key
             user_id: Optional user for isolation key
+            channel: Channel identifier (compact, workspace, voice_app, voice_phone)
 
         Returns:
             Tuple of (response_text, actions_list, tool_steps, artifact_or_none)
@@ -408,6 +410,45 @@ class BobChatAgent:
         intent_label = user_message[:80].strip()
 
         # ═══════════════════════════════════════════════════════
+        # WORKSPACE MODE — Agentic CRM Chat (Kimi K2 via Groq)
+        # Bypasses context router + intent classifier entirely.
+        # Bob becomes an agent with tool-calling for CRM queries.
+        # ═══════════════════════════════════════════════════════
+        if channel == "workspace" and not session.mission_prompt:
+            try:
+                from app.agents.workspace_agent import workspace_chat
+
+                conv_history = []
+                if session.messages:
+                    for msg in session.messages[-20:]:
+                        conv_history.append({
+                            "role": msg.get("role", "user"),
+                            "content": msg.get("content", ""),
+                        })
+
+                ws_text, ws_tool_steps = workspace_chat(
+                    user_message=user_message,
+                    conversation_history=conv_history,
+                    tenant_id=session.tenant_id,
+                    user_id=session.user_id,
+                    user_email=session.user_email,
+                )
+
+                session.add_assistant_message(ws_text)
+                self._persist(isolation_key, session)
+
+                logger.info(
+                    "workspace_agent_handled",
+                    session_id=session_id,
+                    tools_used=len(ws_tool_steps),
+                )
+                return ws_text, [], ws_tool_steps, None
+
+            except Exception as ws_err:
+                logger.warning("workspace_agent_fallback", error=str(ws_err))
+                # Fall through to legacy flow
+
+        # ═══════════════════════════════════════════════════════
         # INTENT ROUTER — classify first, workflow if applicable
         # Falls back to legacy 18-tool flow for general_chat
         # and mission mode conversations.
@@ -420,6 +461,7 @@ class BobChatAgent:
                     session_id=session_id,
                     intent_id=intent_id,
                     intent_label=intent_label,
+                    channel=channel,
                 )
                 if workflow_result is not None:
                     text, actions, tool_steps, w_artifact = workflow_result
@@ -541,6 +583,40 @@ Personality (from user preferences):
                                     phrases = ', '.join(f'"{p}"' for p in intent.trigger_phrases[:3])
                                     org_lines.append(f"  Triggers: {phrases}")
 
+                        # ── Regulations (guardrails) ─────────────
+                        if org.profile:
+                            from app.domain.entities.bcc_entities import BccRegulation
+                            regs = db_bcc.query(BccRegulation).filter(
+                                BccRegulation.profile_id == org.profile.id
+                            ).all()
+                            if regs:
+                                org_lines.append("\n### ⚠️ Regulatory Guardrails:")
+                                for r in regs:
+                                    line = f"- **{r.name}** ({r.enforcement_level})"
+                                    if r.description:
+                                        line += f": {r.description}"
+                                    org_lines.append(line)
+
+                        # ── User Role & KPIs ─────────────────────
+                        from app.domain.entities.bcc_entities import BccUserRole, BccRole
+                        user_role = db_bcc.query(BccUserRole).filter(
+                            BccUserRole.tenant_id == session.tenant_id,
+                            BccUserRole.user_id == session.user_id,
+                        ).first()
+                        if user_role:
+                            role = db_bcc.query(BccRole).filter(BccRole.id == user_role.role_id).first()
+                            if role:
+                                org_lines.append(f"\n### Your Role: {role.name}")
+                                if role.description:
+                                    org_lines.append(role.description)
+                                if role.kpis:
+                                    org_lines.append("**KPIs:**")
+                                    for k, v in role.kpis.items():
+                                        org_lines.append(f"- {k}: {v}")
+                                if role.context:
+                                    for k, v in role.context.items():
+                                        org_lines.append(f"- {k}: {v}")
+
                         org_context = "\n".join(org_lines)
                         logger.info("org_context_injected", org_name=org.name, org_id=active_org_id)
 
@@ -608,7 +684,10 @@ Personality (from user preferences):
         except Exception as bcc_err:
             logger.warning("bcc_task_injection_failed", error=str(bcc_err))
 
-        system_prompt = BOB_SYSTEM_PROMPT + personality_directives + org_context + bcc_procedures
+        # ── Build channel-aware system prompt ────────────────────
+        from app.agents.bob_prompts import get_system_prompt_for_channel
+        base_channel_prompt = get_system_prompt_for_channel(channel)
+        system_prompt = base_channel_prompt + personality_directives + org_context + bcc_procedures
 
         # ── First-turn greeting — use user's first name ─────────
         if session.turn_count == 1:
@@ -658,14 +737,25 @@ Personality (from user preferences):
                 ),
             })
 
-        # ── Setup tools: BCC-driven with hardcoded fallback
+        # ── Setup tools: BCC-driven with hardcoded fallback, then channel filter
         from app.agents.bob_tools import BOB_TOOLS, load_tools_from_bcc
+        from app.agents.bob_channel_registry import get_tools_for_channel
         from app.infrastructure.database import SessionLocal as _ToolSessionLocal
         _tool_db = _ToolSessionLocal()
         try:
-            active_tools = load_tools_from_bcc(_tool_db, session.tenant_id)
+            all_tools = load_tools_from_bcc(_tool_db, session.tenant_id)
         finally:
             _tool_db.close()
+
+        # Filter tools based on channel capabilities
+        active_tools = get_tools_for_channel(channel, all_tools)
+        logger.info(
+            "channel_tools_loaded",
+            channel=channel,
+            total_tools=len(all_tools),
+            active_tools=len(active_tools),
+            session_id=session_id,
+        )
 
         try:
             client = Groq(api_key=settings.groq_api_key)
@@ -824,45 +914,6 @@ Personality (from user preferences):
                             "page": "template/crm-mastery",
                         })
                         tool_results[tc.id] = '{"status": "ok"}'
-                    elif fn == "search_and_open_entity":
-                        import concurrent.futures
-                        import asyncio
-                        from app.agents.tool_executor import execute_bob_tool
-                        from app.infrastructure.database import SessionLocal
-
-                        def _run_open_entity():
-                            db = SessionLocal()
-                            try:
-                                loop = asyncio.new_event_loop()
-                                asyncio.set_event_loop(loop)
-                                user_ctx = {
-                                    "user_id": session.user_id,
-                                    "tenant_id": session.tenant_id,
-                                    "session_id": session_id,
-                                    "intent_id": intent_id,
-                                    "intent_label": intent_label,
-                                }
-                                res = loop.run_until_complete(
-                                    execute_bob_tool("search_and_open_entity", args, user_ctx, db)
-                                )
-                                loop.close()
-                                return res
-                            finally:
-                                db.close()
-
-                        with concurrent.futures.ThreadPoolExecutor() as executor:
-                            future = executor.submit(_run_open_entity)
-                            search_res = future.result(timeout=10)
-                            
-                        if search_res and search_res.get("status") == "ok":
-                            actions.append({
-                                "type": "navigate",
-                                "page": search_res.get("page")
-                            })
-                            tool_results[tc.id] = json.dumps({"status": "ok", "message": search_res.get("message")})
-                        else:
-                            tool_results[tc.id] = json.dumps({"status": "error", "message": search_res.get("message", "Not found.")})
-                            
                     elif fn == "change_training_slide":
                         action_dict = {
                             "type": "change_slide",
@@ -905,124 +956,8 @@ Personality (from user preferences):
                             if key in args:
                                 artifact[key] = args[key]
                         tool_results[tc.id] = '{"status": "ok"}'
-                    elif fn in ("search_organizations", "search_contacts"):
-                        # Execute the search + also open UI popup
-                        import concurrent.futures
-                        import asyncio
-                        from app.agents.tool_executor import execute_bob_tool
-                        from app.infrastructure.database import SessionLocal as _SLS
-
-                        def _run_search():
-                            _db = _SLS()
-                            try:
-                                _loop = asyncio.new_event_loop()
-                                asyncio.set_event_loop(_loop)
-                                _ctx = {
-                                    "user_id": session.user_id,
-                                    "tenant_id": session.tenant_id,
-                                    "session_id": session_id,
-                                    "intent_id": intent_id,
-                                    "intent_label": intent_label,
-                                }
-                                res = _loop.run_until_complete(
-                                    execute_bob_tool(fn, args, _ctx, _db)
-                                )
-                                _loop.close()
-                                return res
-                            finally:
-                                _db.close()
-
-                        with concurrent.futures.ThreadPoolExecutor() as _exec:
-                            _fut = _exec.submit(_run_search)
-                            _sresult = _fut.result(timeout=10)
-
-                        tool_results[tc.id] = json.dumps(_sresult) if isinstance(_sresult, dict) else str(_sresult or '{"status": "no results"}')
-
-                        # Also open the UI search dialog with query
-                        _etype = "organization" if fn == "search_organizations" else "contact"
-                        _pmap = {"organization": "organizations", "contact": "contacts"}
-                        _sq = args.get("query", "")
-                        actions.append({
-                            "type": "search_entity",
-                            "entity": _etype,
-                            "page": _pmap.get(_etype, "contacts"),
-                            "name": _sq,
-                        })
-                        actions.append({
-                            "type": "ui_update_input",
-                            "text": _sq,
-                            "submit": True,
-                        })
-                        logger.info("search_with_ui_popup", tool=fn, query=_sq)
-                    elif fn == "create_organization":
-                        # ── INTERCEPTOR: check if org already exists before creating ──
-                        import concurrent.futures as _cf_co
-                        import asyncio as _aio_co
-                        from app.infrastructure.database import SessionLocal as _SL_CO
-                        from app.domain.entities.organization import Organization as _Org
-
-                        _org_name = args.get("name", "")
-                        _co_db = _SL_CO()
-                        try:
-                            _existing = _co_db.query(_Org).filter(
-                                _Org.tenant_id == session.tenant_id,
-                                _Org.name.ilike(f"%{_org_name}%")
-                            ).limit(5).all()
-                        finally:
-                            _co_db.close()
-
-                        if _existing:
-                            # Org(s) found — emit search popup + return org data to LLM
-                            _results = [
-                                {"id": str(o.id), "name": o.name, "industry": o.industry, "phone": o.phone}
-                                for o in _existing
-                            ]
-                            actions.append({
-                                "type": "search_entity",
-                                "entity": "organization",
-                                "page": "organizations",
-                                "name": _org_name,
-                            })
-                            actions.append({
-                                "type": "ui_update_input",
-                                "text": _org_name,
-                                "submit": True,
-                            })
-                            tool_results[tc.id] = json.dumps({
-                                "status": "already_exists",
-                                "message": f"Organization(s) matching '{_org_name}' already exist in the CRM. Use the existing org_id instead of creating a duplicate.",
-                                "existing_organizations": _results,
-                            })
-                            logger.info("create_org_intercepted_existing", name=_org_name, count=len(_existing))
-                        else:
-                            # No match — proceed with normal creation
-                            from app.agents.tool_executor import execute_bob_tool as _exec_co
-
-                            def _run_create_org():
-                                _db2 = _SL_CO()
-                                try:
-                                    _loop2 = _aio_co.new_event_loop()
-                                    _aio_co.set_event_loop(_loop2)
-                                    _ctx2 = {
-                                        "user_id": session.user_id,
-                                        "tenant_id": session.tenant_id,
-                                        "session_id": session_id,
-                                        "intent_id": intent_id,
-                                        "intent_label": intent_label,
-                                    }
-                                    _r = _loop2.run_until_complete(_exec_co(fn, args, _ctx2, _db2))
-                                    _loop2.close()
-                                    return json.dumps(_r)
-                                finally:
-                                    _db2.close()
-
-                            with _cf_co.ThreadPoolExecutor() as _ex_co:
-                                _fut_co = _ex_co.submit(_run_create_org)
-                                tool_results[tc.id] = _fut_co.result(timeout=30)
                     else:
-                        # Execute BCC / CRM tools via tool_executor
-                        # Must run in a separate thread since we're inside
-                        # FastAPI's async event loop
+                        # ── UNIFIED EXECUTOR: all CRM/data tools go through tool_executor ──
                         import concurrent.futures
                         import asyncio
                         from app.agents.tool_executor import execute_bob_tool
@@ -1044,13 +979,57 @@ Personality (from user preferences):
                                     execute_bob_tool(fn, args, user_context, db)
                                 )
                                 loop.close()
-                                return json.dumps(result)
+                                return result
                             finally:
                                 db.close()
 
                         with concurrent.futures.ThreadPoolExecutor() as executor:
                             future = executor.submit(_run_tool)
-                            tool_results[tc.id] = future.result(timeout=30)
+                            _result = future.result(timeout=30)
+
+                        tool_results[tc.id] = json.dumps(_result) if isinstance(_result, dict) else str(_result)
+
+                        # ── Post-execution UI actions based on tool + result ──
+                        if isinstance(_result, dict):
+                            # search_and_open_entity → navigate to found entity
+                            if fn == "search_and_open_entity" and _result.get("status") == "ok":
+                                actions.append({
+                                    "type": "navigate",
+                                    "page": _result.get("page"),
+                                })
+
+                            # search_organizations / search_contacts → open UI search popup
+                            elif fn in ("search_organizations", "search_contacts"):
+                                _etype = "organization" if fn == "search_organizations" else "contact"
+                                _pmap = {"organization": "organizations", "contact": "contacts"}
+                                _sq = args.get("query", "")
+                                actions.append({
+                                    "type": "search_entity",
+                                    "entity": _etype,
+                                    "page": _pmap.get(_etype, "contacts"),
+                                    "name": _sq,
+                                })
+                                actions.append({
+                                    "type": "ui_update_input",
+                                    "text": _sq,
+                                    "submit": True,
+                                })
+                                logger.info("search_with_ui_popup", tool=fn, query=_sq)
+
+                            # create_organization → if already_exists, show search popup
+                            elif fn == "create_organization" and _result.get("status") == "already_exists":
+                                _org_name = args.get("name", "")
+                                actions.append({
+                                    "type": "search_entity",
+                                    "entity": "organization",
+                                    "page": "organizations",
+                                    "name": _org_name,
+                                })
+                                actions.append({
+                                    "type": "ui_update_input",
+                                    "text": _org_name,
+                                    "submit": True,
+                                })
 
                     tool_steps.append({"tool": fn, "status": "ok"})
 
@@ -1227,8 +1206,9 @@ Personality (from user preferences):
                 None,
             )
 
-        # Step 2: Load BCC organizational context
+        # Step 2: Load BCC organizational context + CRM data
         from app.infrastructure.database import SessionLocal as _StratSessionLocal
+        from app.agents.crm_context_loader import load_crm_context
         _strat_db = _StratSessionLocal()
         try:
             org_context = load_advisor_context(
@@ -1236,6 +1216,12 @@ Personality (from user preferences):
                 tenant_id=session.tenant_id,
                 user_id=session.user_id,
             )
+            crm_context = load_crm_context(
+                db=_strat_db,
+                tenant_id=session.tenant_id,
+                user_id=session.user_id,
+            )
+            org_context = org_context + "\n" + crm_context
         finally:
             _strat_db.close()
 
@@ -1414,6 +1400,106 @@ Personality (from user preferences):
 
         return content, [], tool_steps, None
 
+    # ── INTENT BREAKOUT DETECTOR ──────────────────────────────
+    # Maps resume_key prefixes to the workflow intent they belong to.
+    _RESUME_TO_INTENT = {
+        "prospect_": "create_prospect",
+        "create_contact_": "create_contact",
+        "search_": "search_entity",
+        "update_": "update_entity",
+    }
+
+    # Keywords that always abort the current workflow
+    _CANCEL_KEYWORDS = [
+        "annuler", "cancel", "annule", "oublie", "oublie ça",
+        "c'est pas ça", "c'est pas ca", "c est pas ca",
+        "laisse tomber", "non merci", "stop", "arrête", "arrete",
+        "pas ça", "pas ca", "forget it", "never mind", "nevermind",
+    ]
+
+    # Short-answer patterns that should go to the resume handler
+    _WORKFLOW_ANSWER_KEYWORDS = [
+        "oui", "non", "yes", "no", "skip", "passer",
+        "nouveau", "nouvelle", "new", "créer", "create",
+    ]
+
+    def _detect_workflow_breakout(
+        self,
+        user_message: str,
+        resume_key: str,
+        session: "ChatSession",
+        tenant_id: str,
+    ) -> Optional[str]:
+        """Detect if the user changed their intention while a workflow is paused.
+
+        Returns:
+            None → message is a workflow response (let resume handler proceed)
+            str  → breakout reason (clear workflow state, reclassify)
+        """
+        import re
+
+        msg = user_message.strip()
+        msg_lower = msg.lower()
+
+        # ── Tier 1: Cancel keywords → instant breakout ──
+        for kw in self._CANCEL_KEYWORDS:
+            if kw in msg_lower:
+                return f"cancel_keyword:{kw}"
+
+        # ── Tier 2: Short workflow answers → pass through ──
+        # Numbers (1, 2, #3, etc.)
+        if re.match(r"^#?\d+$", msg):
+            return None
+
+        # Single-word workflow answers
+        for kw in self._WORKFLOW_ANSWER_KEYWORDS:
+            if msg_lower == kw:
+                return None
+
+        # Short messages (≤25 chars) that look like names/answers
+        if len(msg) <= 25:
+            return None
+
+        # ── Tier 3: Longer messages → classify and compare ──
+        try:
+            from app.agents.intent_classifier import classify_message
+            from app.infrastructure.database import SessionLocal
+
+            db = SessionLocal()
+            try:
+                result = classify_message(msg, db=db, tenant_id=tenant_id)
+                new_intent = result.intent
+            finally:
+                db.close()
+
+            # Determine current workflow intent from resume_key
+            current_intent = None
+            for prefix, intent in self._RESUME_TO_INTENT.items():
+                if resume_key.startswith(prefix):
+                    current_intent = intent
+                    break
+
+            # If we can't determine the current intent, let it pass
+            if not current_intent:
+                return None
+
+            # Same intent family → workflow response
+            if new_intent == current_intent:
+                return None
+
+            # Different intent → breakout!
+            logger.info(
+                "breakout_reclassified",
+                current_workflow=current_intent,
+                new_intent=new_intent,
+                resume_key=resume_key,
+            )
+            return f"intent_change:{current_intent}->{new_intent}"
+
+        except Exception as e:
+            logger.warning("breakout_detection_error", error=str(e))
+            return None  # On error, let resume handler proceed
+
     def _try_intent_workflow(
         self,
         session: "ChatSession",
@@ -1421,6 +1507,7 @@ Personality (from user preferences):
         session_id: str,
         intent_id: str,
         intent_label: str,
+        channel: str = "compact",
     ) -> Optional[tuple[str, list[dict], list[dict], dict | None]]:
         """Try to handle the message via Intent Router workflows.
 
@@ -1436,53 +1523,75 @@ Personality (from user preferences):
 
         # ── 1. Check for paused workflow (resume) ──
         if session.workflow_resume_key and session.workflow_state is not None:
-            handler = get_resume_handler(session.workflow_resume_key)
-            if handler:
-                db = SessionLocal()
-                try:
-                    # Create a lightweight entities obj from saved state
-                    from app.agents.intent_classifier import ExtractedEntities
-                    saved = session.workflow_state.get("original_entities", {})
-                    entities = ExtractedEntities(
-                        contact_first=saved.get("contact_first"),
-                        contact_last=saved.get("contact_last"),
-                        email=saved.get("email"),
-                        phone=saved.get("phone"),
-                        product_name=saved.get("product_name"),
-                        quantity=saved.get("quantity"),
-                        amount=saved.get("amount"),
-                    )
+            # ── BREAKOUT DETECTOR ──
+            # Before dispatching to the resume handler, check if the user
+            # changed their intention (e.g. "c'est pas ça, je veux...")
+            breakout = self._detect_workflow_breakout(
+                user_message=user_message,
+                resume_key=session.workflow_resume_key,
+                session=session,
+                tenant_id=session.tenant_id,
+            )
+            if breakout:
+                logger.info(
+                    "workflow_breakout_detected",
+                    resume_key=session.workflow_resume_key,
+                    reason=breakout,
+                    message_preview=user_message[:60],
+                )
+                session.workflow_state = None
+                session.workflow_resume_key = None
+                # Fall through to normal classification (step 2+)
+            else:
+                # Continue with resume handler (existing behavior)
+                handler = get_resume_handler(session.workflow_resume_key)
+                if handler:
+                    db = SessionLocal()
+                    try:
+                        # Create a lightweight entities obj from saved state
+                        from app.agents.intent_classifier import ExtractedEntities
+                        saved = session.workflow_state.get("original_entities", {})
+                        entities = ExtractedEntities(
+                            contact_first=saved.get("contact_first"),
+                            contact_last=saved.get("contact_last"),
+                            email=saved.get("email"),
+                            phone=saved.get("phone"),
+                            product_name=saved.get("product_name"),
+                            quantity=saved.get("quantity"),
+                            amount=saved.get("amount"),
+                        )
 
-                    ctx = WorkflowContext(
-                        db=db,
-                        tenant_id=session.tenant_id,
-                        user_id=session.user_id,
-                        user_email=session.user_email,
-                        entities=entities,
-                        user_message=user_message,
-                        state=dict(session.workflow_state),
-                        session_messages=list(session.messages) if session.messages else [],
-                    )
+                        ctx = WorkflowContext(
+                            db=db,
+                            tenant_id=session.tenant_id,
+                            user_id=session.user_id,
+                            user_email=session.user_email,
+                            entities=entities,
+                            user_message=user_message,
+                            state=dict(session.workflow_state),
+                            session_messages=list(session.messages) if session.messages else [],
+                            channel=channel,
+                        )
 
-                    result = handler(ctx)
+                        result = handler(ctx)
 
-                    # Update session state
-                    if result.paused:
-                        session.workflow_state = result.state
-                        session.workflow_resume_key = result.resume_key
-                    else:
-                        session.workflow_state = None
-                        session.workflow_resume_key = None
+                        # Update session state
+                        if result.paused:
+                            session.workflow_state = result.state
+                            session.workflow_resume_key = result.resume_key
+                        else:
+                            session.workflow_state = None
+                            session.workflow_resume_key = None
 
-                    logger.info(
-                        "workflow_resumed",
-                        resume_key=session.workflow_resume_key,
-                        paused=result.paused,
-                        actions=len(result.actions),
-                    )
-                    return result.message, result.actions, result.tool_steps, result.artifact
-                finally:
-                    db.close()
+                        logger.info(
+                            "workflow_resumed",
+                            resume_key=session.workflow_resume_key,
+                            paused=result.paused,
+                            actions=len(result.actions),
+                        )
+                        return result.message, result.actions, result.tool_steps, result.artifact
+                    finally:
+                        db.close()
 
         # ── 2. LAYER 0 — Context Router (micro-classifier) ──
         from app.agents.context_router import route_message, RoutingDecision
@@ -1580,8 +1689,9 @@ Personality (from user preferences):
                         None,
                     )
 
-                # Step 2: Load BCC context
+                # Step 2: Load BCC context + CRM data
                 from app.infrastructure.database import SessionLocal as _AdvisorSessionLocal
+                from app.agents.crm_context_loader import load_crm_context
                 _adv_db = _AdvisorSessionLocal()
                 try:
                     org_context = load_advisor_context(
@@ -1589,6 +1699,12 @@ Personality (from user preferences):
                         tenant_id=session.tenant_id,
                         user_id=session.user_id,
                     )
+                    crm_context = load_crm_context(
+                        db=_adv_db,
+                        tenant_id=session.tenant_id,
+                        user_id=session.user_id,
+                    )
+                    org_context = org_context + "\n" + crm_context
                 finally:
                     _adv_db.close()
 
@@ -1631,6 +1747,28 @@ Personality (from user preferences):
 
         wf = get_workflow(classification.intent)
         if not wf:
+            # ── Fallback: check BCC workflow_key ──────────────
+            try:
+                from app.domain.entities.bcc_entities import BccIntent as _BccIntentWF
+                _wk_db = SessionLocal()
+                try:
+                    bcc_intent = _wk_db.query(_BccIntentWF).filter_by(
+                        name=classification.intent,
+                        tenant_id=session.tenant_id,
+                    ).first()
+                    if bcc_intent and bcc_intent.workflow_key:
+                        wf = get_workflow(bcc_intent.workflow_key)
+                        if wf:
+                            logger.info(
+                                "workflow_key_fallback",
+                                intent=classification.intent,
+                                workflow_key=bcc_intent.workflow_key,
+                            )
+                finally:
+                    _wk_db.close()
+            except Exception as wk_err:
+                logger.warning("workflow_key_lookup_failed", error=str(wk_err))
+        if not wf:
             return None  # Unknown intent — legacy flow
 
         db = SessionLocal()
@@ -1643,6 +1781,7 @@ Personality (from user preferences):
                 entities=classification.entities,
                 user_message=user_message,
                 session_messages=list(session.messages) if session.messages else [],
+                channel=channel,
             )
 
             result = wf(ctx)
@@ -1741,7 +1880,7 @@ Retourne SEULEMENT ce JSON, rien d'autre:
             # Save each non-null insight using ThreadPoolExecutor
             # (we're inside FastAPI's async loop)
             from app.infrastructure.database import SessionLocal
-            from app.agents.bob_tools import execute_tool
+            from app.agents.tool_executor import execute_bob_tool
             import asyncio
             import concurrent.futures
 
@@ -1750,8 +1889,15 @@ Retourne SEULEMENT ce JSON, rien d'autre:
                 try:
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
+                    _user_ctx = {
+                        "user_id": session.user_id,
+                        "tenant_id": session.tenant_id,
+                        "session_id": "",
+                        "intent_id": "",
+                        "intent_label": "insight_extraction",
+                    }
                     result = loop.run_until_complete(
-                        execute_tool(
+                        execute_bob_tool(
                             "bcc_update_profile",
                             {
                                 "entity_type": "organization",
@@ -1760,8 +1906,8 @@ Retourne SEULEMENT ce JSON, rien d'autre:
                                 "content": section_content,
                                 "perspective": "ceo",
                             },
+                            _user_ctx,
                             db,
-                            session.user_id,
                         )
                     )
                     loop.close()

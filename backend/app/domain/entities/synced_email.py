@@ -4,6 +4,7 @@ from sqlalchemy import Column, String, Text, DateTime, Boolean, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 
 from app.domain.entities.base import Base, TenantMixin, AuditMixin, generate_uuid
+from app.domain.entities.email_contact import email_contacts
 
 
 class SyncedEmail(Base, TenantMixin, AuditMixin):
@@ -48,6 +49,9 @@ class SyncedEmail(Base, TenantMixin, AuditMixin):
     has_attachments = Column(Boolean, default=False, nullable=False)
     attachments_meta = Column(JSON, nullable=True, comment="List of {name, size, contentType} dicts")
     folder = Column(String(100), nullable=True, default="inbox", index=True)
+    smart_label = Column(String(50), nullable=True, index=True, comment="AI-assigned category")
+    ai_summary = Column(Text, nullable=True, comment="Short AI-generated summary of email content")
+    ai_action_items = Column(JSON, nullable=True, comment="List of action items extracted by AI")
     conversation_id = Column(String(255), nullable=True, index=True, comment="MS Graph conversation ID for threading")
 
     # CRM auto-linking
@@ -56,3 +60,11 @@ class SyncedEmail(Base, TenantMixin, AuditMixin):
 
     # Relationships
     connection = relationship("MS365Connection", back_populates="synced_emails")
+
+    # M:N with Contacts (from, to, cc)
+    linked_contacts = relationship(
+        "Contact",
+        secondary=email_contacts,
+        backref="linked_emails",
+        lazy="selectin",
+    )

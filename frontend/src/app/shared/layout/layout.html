@@ -40,6 +40,7 @@
 
             <div class="sidebar__nav-main">
                 <a routerLink="/dashboard" routerLinkActive="sidebar__link--active" class="sidebar__link">Dashboard</a>
+                <a routerLink="/inbox" routerLinkActive="sidebar__link--active" class="sidebar__link" id="sidebar-inbox-link">Inbox</a>
                 <a routerLink="/organizations" routerLinkActive="sidebar__link--active"
                     class="sidebar__link">Organizations</a>
                 <a routerLink="/contacts" routerLinkActive="sidebar__link--active" class="sidebar__link">Contacts</a>
@@ -100,16 +101,18 @@
 
     <!-- Main Content -->
     <div class="app-main">
-        <router-outlet />
+        <div class="app-content">
+            <router-outlet />
 
-        <footer class="app-footer">
-            <p class="app-footer__copyright">© 2026 Croo Digital Experience. All rights reserved.</p>
-            <div class="app-footer__links">
-                <a routerLink="/knowledge-base">Knowledge Base</a>
-                <a href="#">API Docs</a>
-                <a href="#">Privacy</a>
-            </div>
-        </footer>
+            <footer class="app-footer">
+                <p class="app-footer__copyright">© 2026 Croo Digital Experience. All rights reserved.</p>
+                <div class="app-footer__links">
+                    <a routerLink="/knowledge-base">Knowledge Base</a>
+                    <a href="#">API Docs</a>
+                    <a href="#">Privacy</a>
+                </div>
+            </footer>
+        </div>
     </div>
 
     <!-- Bob Chat FAB (global) -->

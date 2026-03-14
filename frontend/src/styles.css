@@ -84,6 +84,8 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
@@ -92,6 +94,8 @@ body {
   color: var(--color-black);
   background-color: var(--color-white);
   line-height: 1.5;
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Hide scrollbar globally */

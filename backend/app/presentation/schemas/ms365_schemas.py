@@ -3,7 +3,7 @@
 from typing import Optional, List
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 # ── Connection ───────────────────────────────────────────────────
@@ -68,11 +68,31 @@ class SyncedEmailResponse(BaseModel):
     has_attachments: bool = False
     attachments_meta: Optional[List[dict]] = None
     folder: Optional[str] = "inbox"
+    smart_label: Optional[str] = None
+    ai_summary: Optional[str] = None
+    ai_action_items: Optional[List[str]] = None
     conversation_id: Optional[str] = None
     linked_contact_id: Optional[str] = None
     linked_organization_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("ai_action_items", mode="before")
+    @classmethod
+    def normalize_action_items(cls, v: object) -> object:
+        if v is None:
+            return v
+        if isinstance(v, list):
+            result = []
+            for item in v:
+                if isinstance(item, str):
+                    result.append(item)
+                elif isinstance(item, dict):
+                    result.append(item.get("action", str(item)))
+                else:
+                    result.append(str(item))
+            return result
+        return v
 
 
 class SyncedEmailListResponse(BaseModel):
@@ -133,3 +153,36 @@ class SyncStatusResponse(BaseModel):
     emails_synced: int = 0
     events_synced: int = 0
     status: str = "completed"
+
+
+# ── AI Insights ──────────────────────────────────────────────────
+
+class EmailAiInsightResponse(BaseModel):
+    """AI-generated insights for an email."""
+    summary: Optional[str] = None
+    smart_label: Optional[str] = None
+    action_items: Optional[List[str]] = None
+    sentiment: Optional[str] = None
+    priority_score: Optional[int] = None
+
+
+# ── Actions (Send/Reply/Forward) ─────────────────────────────────
+
+class SendEmailRequest(BaseModel):
+    """Request body for sending a new email."""
+    subject: str
+    body_content: str
+    to_recipients: List[str]
+    cc_recipients: Optional[List[str]] = None
+    bcc_recipients: Optional[List[str]] = None
+    body_type: Optional[str] = "html"
+
+class ReplyEmailRequest(BaseModel):
+    """Request body for replying to an email."""
+    comment: str
+    reply_all: Optional[bool] = False
+
+class ForwardEmailRequest(BaseModel):
+    """Request body for forwarding an email."""
+    to_recipients: List[str]
+    comment: Optional[str] = ""

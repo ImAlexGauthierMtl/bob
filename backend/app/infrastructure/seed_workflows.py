@@ -165,22 +165,26 @@ TEMPLATE_WORKFLOWS = [
         ],
     },
     {
-        "name": "Smart Email Prioritization",
-        "description": "Automatically categorizes incoming emails and flags urgent messages requiring immediate attention",
-        "level": "user",
+        "name": "Inbox AI Triaging",
+        "description": "Automatically categorizes incoming emails using custom Smart Labels and flags urgent messages",
+        "level": "company",
         "trigger_type": "event",
         "trigger_config": {"event": "email.received"},
         "execution_mode": "auto",
-        "module": None,
-        "category": "notification",
-        "is_template": True,
+        "module": "inbox",
+        "category": "automation",
+        "is_template": False,
+        "is_active": True,
         "steps": [
             {"name": "Trigger: New Email Received", "step_order": 0, "step_type": "trigger", "is_entry_point": True},
-            {"name": "Bob: Content & Sender Priority", "step_order": 1, "step_type": "ai_analysis",
+            {"name": "Bob: Smart Categorization & Insights", "step_order": 1, "step_type": "ai_analysis",
              "agent_node": "ai_analyze",
-             "config": {"prompt": "Analyze this email for urgency, sender importance, and action required. Classify as: urgent, important, normal, or low."}},
-            {"name": "Action: Apply Label & Notify", "step_order": 2, "step_type": "action",
-             "agent_node": "notify", "config": {"target": "self"}},
+             "config": {
+                 "prompt": "Analyze this email. Review the user's available Smart Labels from the database. Assign the MOST APPROPRIATE Smart Label. If the label has sub-categories, prefer picking the most specific sub-category string format (e.g. 'Parent > Child'). You MUST strictly use ONLY the fully qualified labels provided in the context; do not invent new ones. Furthermore, return a short 'ai_summary' of the email and a list of 'ai_action_items' as a JSON array of specific tasks found in the email.",
+                 "model": "llama-3.3-70b-versatile"
+             }},
+            {"name": "Action: Apply Smart Label & Insights", "step_order": 2, "step_type": "action",
+             "agent_node": "update_record", "config": {"target": "synced_email", "fields": ["smart_label", "ai_summary", "ai_action_items"]}},
         ],
     },
     {
@@ -227,11 +231,12 @@ def _seed_workflow_list(db: Session, workflow_defs: list, tenant_id: str) -> Non
             continue
 
         steps_data = wf_data.pop("steps", [])
+        wf_is_active = wf_data.pop("is_active", True)
 
         wf = Workflow(
             tenant_id=tenant_id,
             created_by="system-seed",
-            is_active=True,
+            is_active=wf_is_active,
             **wf_data,
         )
         db.add(wf)

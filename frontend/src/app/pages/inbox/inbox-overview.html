@@ -1,0 +1,63 @@
+<div class="inbox-layout">
+    <!-- Header -->
+    <header class="inbox-header">
+        <div class="inbox-header__top">
+            <div class="inbox-header__title-area">
+                <h2 class="inbox-header__title">Inbox</h2>
+                <p class="inbox-header__subtitle">Manage your communications with intelligent prioritization</p>
+            </div>
+            
+            <div class="inbox-header__actions">
+                <button (click)="openCompose()" class="btn btn-accent">
+                    <i class="fa-solid fa-pen"></i> Compose
+                </button>
+            </div>
+        </div>
+
+        <!-- Search and filters -->
+        <div class="inbox-toolbar">
+            <div class="inbox-search">
+                <i class="fa-solid fa-search inbox-search__icon"></i>
+                <input type="text" placeholder="Search emails, contacts, subjects..." class="inbox-search__input">
+            </div>
+            <div class="inbox-filters">
+                <button class="btn btn-outline">
+                    <i class="fa-solid fa-filter"></i> Filter
+                </button>
+                <button class="btn btn-outline">
+                    <i class="fa-solid fa-arrow-down-wide-short"></i> Sort
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="inbox-main">
+        <div class="inbox-grid">
+            
+            <!-- Sidebar / Folders -->
+            <div class="inbox-sidebar-col">
+                <app-inbox-sidebar (filterChanged)="onFilterChanged($event)"></app-inbox-sidebar>
+            </div>
+
+            <!-- Email List -->
+            <div class="inbox-list-col">
+                <app-email-list [filter]="currentFilter" (emailSelected)="onEmailSelected($event)"></app-email-list>
+            </div>
+
+            <!-- Reading Pane -->
+            <div class="inbox-reading-col">
+                <app-email-reading-pane [email]="selectedEmail"></app-email-reading-pane>
+            </div>
+
+
+        </div>
+    </main>
+
+    <!-- Compose Modal -->
+    <app-email-compose 
+        *ngIf="isComposeOpen" 
+        (close)="closeCompose()" 
+        (emailSent)="onEmailSent()">
+    </app-email-compose>
+</div>

@@ -67,6 +67,8 @@
         <button class="tab" [class.tab--active]="activeTab === 'notes'" (click)="setActiveTab('notes')">Notes</button>
         <button class="tab" [class.tab--active]="activeTab === 'followers'"
             (click)="setActiveTab('followers')">Followers</button>
+        <button class="tab" [class.tab--active]="activeTab === 'client-map'"
+            (click)="setActiveTab('client-map')"><i class="fa-solid fa-map"></i> Client Map</button>
     </div>
 </header>
 
@@ -177,50 +179,19 @@
         <section>
             <div class="tab-header">
                 <h3 class="section-title-lg">Communication History</h3>
-                <div class="tab-header__filters">
-                    <select class="input input--sm">
-                        <option>All Types</option>
-                        <option>Email</option>
-                        <option>Phone</option>
-                        <option>Meeting</option>
-                    </select>
-                    <select class="input input--sm">
-                        <option>Last 30 Days</option>
-                        <option>Last 90 Days</option>
-                        <option>Last Year</option>
-                        <option>All Time</option>
-                    </select>
-                </div>
+                <span class="badge" style="background:var(--color-accent);color:white;padding:4px 12px;border-radius:20px;font-size:0.8rem;">
+                    {{ contactEmails.length }} email{{ contactEmails.length !== 1 ? 's' : '' }}
+                </span>
             </div>
 
+            @if (contactEmails.length === 0) {
+            <div class="empty-state">
+                <i class="fa-solid fa-envelope" style="font-size:2rem;color:var(--color-gray-400)"></i>
+                <p>No emails linked to this contact yet.</p>
+            </div>
+            } @else {
             <div class="interaction-list">
-                <!-- Phone Call -->
-                <div class="interaction-item">
-                    <div class="interaction-item__icon interaction-item__icon--blue">
-                        <i class="fa-solid fa-phone"></i>
-                    </div>
-                    <div class="interaction-item__body">
-                        <div class="interaction-item__top">
-                            <div>
-                                <p class="interaction-item__title">Phone Call: Q4 Expansion Discussion</p>
-                                <p class="interaction-item__desc">45-minute call discussing enterprise platform
-                                    expansion, budget allocation, and implementation timeline. Strong interest in
-                                    analytics module and requested technical documentation.</p>
-                            </div>
-                            <span class="interaction-item__time">2 hours ago</span>
-                        </div>
-                        <div class="interaction-item__meta">
-                            <span>Sarah Johnson</span>
-                            <span class="interaction-item__sep">·</span>
-                            <span>Duration: 45 min</span>
-                            <span class="interaction-item__sep">·</span>
-                            <span class="interaction-item__sentiment interaction-item__sentiment--positive"><span
-                                    class="dot dot--green"></span> Positive Sentiment</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Email -->
+                @for (email of contactEmails; track email.id) {
                 <div class="interaction-item">
                     <div class="interaction-item__icon interaction-item__icon--green">
                         <i class="fa-solid fa-envelope"></i>
@@ -228,102 +199,33 @@
                     <div class="interaction-item__body">
                         <div class="interaction-item__top">
                             <div>
-                                <p class="interaction-item__title">Email: Re: Enterprise Proposal Review</p>
-                                <p class="interaction-item__desc">Responded to enterprise proposal with detailed
-                                    feedback. Highlighted key requirements for integration with existing systems and
-                                    requested clarification on data migration.</p>
+                                <p class="interaction-item__title">{{ email.subject || '(No subject)' }}</p>
+                                @if (email.ai_summary) {
+                                <p class="interaction-item__desc">{{ email.ai_summary }}</p>
+                                } @else {
+                                <p class="interaction-item__desc">{{ email.body_preview }}</p>
+                                }
                             </div>
-                            <span class="interaction-item__time">1 day ago</span>
+                            <span class="interaction-item__time">{{ email.received_at | date:'mediumDate' }}</span>
                         </div>
                         <div class="interaction-item__meta">
-                            <span>{{ contact.first_name }} {{ contact.last_name }}</span>
+                            <span>{{ email.from_name || email.from_address }}</span>
+                            @if (email.smart_label) {
                             <span class="interaction-item__sep">·</span>
-                            <span>Response time: 3.2 hours</span>
+                            <span class="stage-badge">{{ email.smart_label }}</span>
+                            }
+                            @if (email.ai_action_items && email.ai_action_items.length > 0) {
                             <span class="interaction-item__sep">·</span>
-                            <span class="interaction-item__sentiment interaction-item__sentiment--positive"><span
-                                    class="dot dot--green"></span> Engaged</span>
+                            <span class="interaction-item__sentiment interaction-item__sentiment--positive">
+                                <span class="dot dot--green"></span> {{ email.ai_action_items.length }} action item{{ email.ai_action_items.length > 1 ? 's' : '' }}
+                            </span>
+                            }
                         </div>
                     </div>
                 </div>
-
-                <!-- Meeting -->
-                <div class="interaction-item">
-                    <div class="interaction-item__icon interaction-item__icon--purple">
-                        <i class="fa-solid fa-users"></i>
-                    </div>
-                    <div class="interaction-item__body">
-                        <div class="interaction-item__top">
-                            <div>
-                                <p class="interaction-item__title">Meeting: Quarterly Business Review</p>
-                                <p class="interaction-item__desc">Comprehensive QBR with executive team. Reviewed
-                                    platform performance metrics, discussed ROI, and explored expansion opportunities.
-                                    Praised system reliability and user adoption rates.</p>
-                            </div>
-                            <span class="interaction-item__time">3 days ago</span>
-                        </div>
-                        <div class="interaction-item__meta">
-                            <span>Sarah Johnson</span>
-                            <span class="interaction-item__sep">·</span>
-                            <span>Attendees: 5</span>
-                            <span class="interaction-item__sep">·</span>
-                            <span class="interaction-item__sentiment interaction-item__sentiment--positive"><span
-                                    class="dot dot--green"></span> Highly Positive</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Email 2 -->
-                <div class="interaction-item">
-                    <div class="interaction-item__icon interaction-item__icon--green">
-                        <i class="fa-solid fa-envelope"></i>
-                    </div>
-                    <div class="interaction-item__body">
-                        <div class="interaction-item__top">
-                            <div>
-                                <p class="interaction-item__title">Email: Technical Integration Questions</p>
-                                <p class="interaction-item__desc">Sent detailed technical questions about API
-                                    capabilities and integration architecture. Demonstrates deep technical understanding
-                                    and active evaluation of platform capabilities.</p>
-                            </div>
-                            <span class="interaction-item__time">5 days ago</span>
-                        </div>
-                        <div class="interaction-item__meta">
-                            <span>{{ contact.first_name }} {{ contact.last_name }}</span>
-                            <span class="interaction-item__sep">·</span>
-                            <span>Response time: 2.8 hours</span>
-                            <span class="interaction-item__sep">·</span>
-                            <span class="interaction-item__sentiment interaction-item__sentiment--neutral"><span
-                                    class="dot dot--yellow"></span> Neutral</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Phone Call 2 -->
-                <div class="interaction-item">
-                    <div class="interaction-item__icon interaction-item__icon--blue">
-                        <i class="fa-solid fa-phone"></i>
-                    </div>
-                    <div class="interaction-item__body">
-                        <div class="interaction-item__top">
-                            <div>
-                                <p class="interaction-item__title">Phone Call: Initial Discovery</p>
-                                <p class="interaction-item__desc">Introduction call to understand technology needs and
-                                    current pain points. Outlined key challenges with legacy systems and expressed
-                                    interest in modern cloud solutions.</p>
-                            </div>
-                            <span class="interaction-item__time">1 week ago</span>
-                        </div>
-                        <div class="interaction-item__meta">
-                            <span>Sarah Johnson</span>
-                            <span class="interaction-item__sep">·</span>
-                            <span>Duration: 30 min</span>
-                            <span class="interaction-item__sep">·</span>
-                            <span class="interaction-item__sentiment interaction-item__sentiment--positive"><span
-                                    class="dot dot--green"></span> Positive</span>
-                        </div>
-                    </div>
-                </div>
+                }
             </div>
+            }
         </section>
         }
 
@@ -548,6 +450,269 @@
             }
         </section>
         }
+
+        <!-- CLIENT MAP 360° TAB -->
+        @if (activeTab === 'client-map') {
+        <div class="client-map-tab">
+
+            @if (isLoadingClientMap) {
+            <div class="loading-state"><i class="fa-solid fa-spinner fa-spin"></i> Chargement Client Map...</div>
+            } @else if (!clientMap) {
+            <div class="empty-state">
+                <i class="fa-solid fa-map fa-3x"></i>
+                <h3>Aucun Client Map pour ce contact</h3>
+                <p>Commencez à cartographier ce contact pour guider vos interactions et Bob.</p>
+                <button class="btn btn-accent" (click)="initClientMap()" [disabled]="isSavingClientMap">
+                    <i class="fa-solid fa-plus"></i> Initialiser le Client Map
+                </button>
+            </div>
+            } @else {
+
+            <!-- MEDDPICC Score -->
+            <div class="meddpicc-bar">
+                <div class="meddpicc-bar__label">
+                    <span class="meddpicc-bar__title">MEDDPICC Score</span>
+                    <span class="meddpicc-bar__value">{{ clientMap.meddpicc_score }}%</span>
+                </div>
+                <div class="meddpicc-bar__track">
+                    <div class="meddpicc-bar__fill" [style.width.%]="clientMap.meddpicc_score"></div>
+                </div>
+            </div>
+
+            <!-- Quadrant 2×2 Grid -->
+            <div class="quadrant-grid">
+
+                <!-- Q1: Contexte & Pouvoir -->
+                <div class="quadrant-card quadrant-card--context">
+                    <div class="quadrant-card__header">
+                        <h4><i class="fa-solid fa-user-tie"></i> Contexte & Pouvoir</h4>
+                        <button class="btn-icon" (click)="editingQuadrant = editingQuadrant === 'q1' ? null : 'q1'">
+                            <i class="fa-solid" [class.fa-pen]="editingQuadrant !== 'q1'" [class.fa-check]="editingQuadrant === 'q1'"></i>
+                        </button>
+                    </div>
+                    <div class="quadrant-card__body">
+                        @if (editingQuadrant === 'q1') {
+                        <div class="qfield"><label>Rôle réel</label><select class="input" [(ngModel)]="clientMap.role_type"><option [ngValue]="null">—</option><option value="DECISION_MAKER">Décideur</option><option value="INFLUENCER">Influenceur</option><option value="USER">Utilisateur</option><option value="CHAMPION">Champion</option><option value="BLOCKER">Bloqueur</option><option value="GATEKEEPER">Gardien</option></select></div>
+                        <div class="qfield"><label>Rôle affiché vs réel</label><input class="input" [(ngModel)]="clientMap.real_role" placeholder="Ex: Il se dit IT mais décide du budget..."></div>
+                        <div class="qfield"><label>DISC</label><select class="input" [(ngModel)]="clientMap.disc_profile"><option value="UNKNOWN">Non évalué</option><option value="D">D — Dominant</option><option value="I">I — Influent</option><option value="S">S — Stable</option><option value="C">C — Conforme</option></select></div>
+                        <div class="qfield"><label>Culture</label><select class="input" [(ngModel)]="clientMap.company_culture"><option [ngValue]="null">—</option><option value="CONSERVATIVE">Conservateur</option><option value="INNOVATIVE">Innovant</option><option value="COST_OBSESSED">Obsédé par le coût</option><option value="AGILE">Agile</option><option value="BUREAUCRATIC">Bureaucratique</option></select></div>
+                        <button class="btn btn-accent btn-sm" (click)="saveQuadrant()" [disabled]="isSavingClientMap">Sauvegarder</button>
+                        } @else {
+                        <div class="qfield-display">
+                            @if (clientMap.role_type) {<span class="qtag">{{ clientMap.role_type }}</span>}
+                            @if (clientMap.real_role) {<p>{{ clientMap.real_role }}</p>}
+                            @if (clientMap.disc_profile && clientMap.disc_profile !== 'UNKNOWN') {<span class="qtag qtag--disc">DISC: {{ discLabels[clientMap.disc_profile] }}</span>}
+                            @if (clientMap.company_culture) {<span class="qtag">{{ clientMap.company_culture }}</span>}
+                            @if (!clientMap.role_type && !clientMap.real_role) {<p class="qempty">Cliquez ✏️ pour remplir</p>}
+                        </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Q2: Douleurs & Déclencheurs -->
+                <div class="quadrant-card quadrant-card--pain">
+                    <div class="quadrant-card__header">
+                        <h4><i class="fa-solid fa-fire"></i> Douleurs & Déclencheurs</h4>
+                        <button class="btn-icon" (click)="editingQuadrant = editingQuadrant === 'q2' ? null : 'q2'">
+                            <i class="fa-solid" [class.fa-pen]="editingQuadrant !== 'q2'" [class.fa-check]="editingQuadrant === 'q2'"></i>
+                        </button>
+                    </div>
+                    <div class="quadrant-card__body">
+                        @if (editingQuadrant === 'q2') {
+                        <div class="qfield"><label>Le "Mal de dent"</label><textarea class="input" [(ngModel)]="clientMap.pain_point" rows="2" placeholder="Quel problème lui coûte argent/temps?"></textarea></div>
+                        <div class="qfield"><label>Impact business</label><textarea class="input" [(ngModel)]="clientMap.pain_business_impact" rows="2" placeholder="Conséquence sur le business"></textarea></div>
+                        <div class="qfield"><label>Impact personnel</label><textarea class="input" [(ngModel)]="clientMap.pain_personal_impact" rows="2" placeholder="Impact émotionnel/personnel"></textarea></div>
+                        <div class="qfield"><label>Coût de l'inaction</label><textarea class="input" [(ngModel)]="clientMap.inaction_cost" rows="2" placeholder="Que se passe-t-il dans 6 mois?"></textarea></div>
+                        <div class="qfield"><label>Déclencheur</label><input class="input" [(ngModel)]="clientMap.trigger_event" placeholder="Pourquoi maintenant?"></div>
+                        <button class="btn btn-accent btn-sm" (click)="saveQuadrant()" [disabled]="isSavingClientMap">Sauvegarder</button>
+                        } @else {
+                        <div class="qfield-display">
+                            @if (clientMap.pain_point) {<p><strong>Douleur:</strong> {{ clientMap.pain_point }}</p>}
+                            @if (clientMap.pain_business_impact) {<p><strong>Impact:</strong> {{ clientMap.pain_business_impact }}</p>}
+                            @if (clientMap.inaction_cost) {<p><strong>Inaction:</strong> {{ clientMap.inaction_cost }}</p>}
+                            @if (clientMap.trigger_event) {<p><strong>Déclencheur:</strong> {{ clientMap.trigger_event }}</p>}
+                            @if (!clientMap.pain_point && !clientMap.trigger_event) {<p class="qempty">Cliquez ✏️ pour remplir</p>}
+                        </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Q3: WIIFM & Aspirations -->
+                <div class="quadrant-card quadrant-card--wiifm">
+                    <div class="quadrant-card__header">
+                        <h4><i class="fa-solid fa-trophy"></i> WIIFM & Aspirations</h4>
+                        <button class="btn-icon" (click)="editingQuadrant = editingQuadrant === 'q3' ? null : 'q3'">
+                            <i class="fa-solid" [class.fa-pen]="editingQuadrant !== 'q3'" [class.fa-check]="editingQuadrant === 'q3'"></i>
+                        </button>
+                    </div>
+                    <div class="quadrant-card__body">
+                        @if (editingQuadrant === 'q3') {
+                        <div class="qfield"><label>Metrics (M)</label><textarea class="input" [(ngModel)]="clientMap.metrics_target" rows="2" placeholder="ROI chiffré visé"></textarea></div>
+                        <div class="qfield"><label>WIIFM Business</label><textarea class="input" [(ngModel)]="clientMap.wiifm_business" rows="2" placeholder="Gain business"></textarea></div>
+                        <div class="qfield"><label>WIIFM Personnel</label><textarea class="input" [(ngModel)]="clientMap.wiifm_personal" rows="2" placeholder="Promotion, stress, work-life..."></textarea></div>
+                        <div class="qfield"><label>Vision du succès</label><textarea class="input" [(ngModel)]="clientMap.success_vision" rows="2" placeholder="Dans 1 an, le win parfait..."></textarea></div>
+                        <div class="qfield"><label>Ego Driver</label><select class="input" [(ngModel)]="clientMap.ego_driver"><option [ngValue]="null">—</option><option value="RECOGNITION">Reconnaissance</option><option value="SECURITY">Sécurité</option><option value="TIME">Temps</option><option value="POWER">Pouvoir</option><option value="LEGACY">Héritage</option></select></div>
+                        <button class="btn btn-accent btn-sm" (click)="saveQuadrant()" [disabled]="isSavingClientMap">Sauvegarder</button>
+                        } @else {
+                        <div class="qfield-display">
+                            @if (clientMap.metrics_target) {<p><strong>Metrics:</strong> {{ clientMap.metrics_target }}</p>}
+                            @if (clientMap.wiifm_business) {<p><strong>Business:</strong> {{ clientMap.wiifm_business }}</p>}
+                            @if (clientMap.wiifm_personal) {<p><strong>Personnel:</strong> {{ clientMap.wiifm_personal }}</p>}
+                            @if (clientMap.ego_driver) {<span class="qtag">Ego: {{ clientMap.ego_driver }}</span>}
+                            @if (!clientMap.metrics_target && !clientMap.wiifm_business) {<p class="qempty">Cliquez ✏️ pour remplir</p>}
+                        </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Q4: Mécanique & Obstacles -->
+                <div class="quadrant-card quadrant-card--mechanics">
+                    <div class="quadrant-card__header">
+                        <h4><i class="fa-solid fa-gears"></i> Mécanique & Obstacles</h4>
+                        <button class="btn-icon" (click)="editingQuadrant = editingQuadrant === 'q4' ? null : 'q4'">
+                            <i class="fa-solid" [class.fa-pen]="editingQuadrant !== 'q4'" [class.fa-check]="editingQuadrant === 'q4'"></i>
+                        </button>
+                    </div>
+                    <div class="quadrant-card__body">
+                        @if (editingQuadrant === 'q4') {
+                        <div class="qfield"><label>Economic Buyer (E)</label><input class="input" [(ngModel)]="clientMap.economic_buyer" placeholder="Qui signe le chèque?"></div>
+                        <div class="qfield"><label>Decision Criteria (D)</label><textarea class="input" [(ngModel)]="clientMap.decision_criteria" rows="2" placeholder="Critères techniques/financiers"></textarea></div>
+                        <div class="qfield"><label>Decision Process (D)</label><textarea class="input" [(ngModel)]="clientMap.decision_process" rows="2" placeholder="Étapes de validation"></textarea></div>
+                        <div class="qfield"><label>Champion (C)</label><input class="input" [(ngModel)]="clientMap.champion_name" placeholder="Allié interne"></div>
+                        <div class="qfield"><label>Compétition (C)</label><input class="input" [(ngModel)]="clientMap.competition" placeholder="Concurrents évalués"></div>
+                        <div class="qfield"><label>Blockers</label><textarea class="input" [(ngModel)]="clientMap.blockers" rows="2" placeholder="Peurs, budget, politique..."></textarea></div>
+                        <button class="btn btn-accent btn-sm" (click)="saveQuadrant()" [disabled]="isSavingClientMap">Sauvegarder</button>
+                        } @else {
+                        <div class="qfield-display">
+                            @if (clientMap.economic_buyer) {<p><strong>Buyer:</strong> {{ clientMap.economic_buyer }}</p>}
+                            @if (clientMap.champion_name) {<p><strong>Champion:</strong> {{ clientMap.champion_name }}</p>}
+                            @if (clientMap.competition) {<p><strong>Compétition:</strong> {{ clientMap.competition }}</p>}
+                            @if (clientMap.blockers) {<p><strong>Blockers:</strong> {{ clientMap.blockers }}</p>}
+                            @if (!clientMap.economic_buyer && !clientMap.champion_name) {<p class="qempty">Cliquez ✏️ pour remplir</p>}
+                        </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Golden Notes Timeline -->
+            <div class="golden-notes-section">
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-star"></i> Notes d'Or</h3>
+                    <button class="btn btn-outline btn-sm" (click)="showGoldenNoteForm = !showGoldenNoteForm">
+                        <i class="fa-solid fa-plus"></i> Ajouter
+                    </button>
+                </div>
+
+                @if (showGoldenNoteForm) {
+                <div class="golden-note-form">
+                    <div class="form-row-2">
+                        <div class="form-group"><label class="form-label">Date</label><input class="input" type="datetime-local" [(ngModel)]="newNote.interaction_date"></div>
+                        <div class="form-group"><label class="form-label">Type</label><select class="input" [(ngModel)]="newNote.interaction_type"><option value="CALL">Call</option><option value="MEETING">Meeting</option><option value="EMAIL">Email</option><option value="DEMO">Démo</option><option value="QBR">QBR</option><option value="SOCIAL">Social</option></select></div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Verbatim (citation exacte)</label><textarea class="input" [(ngModel)]="newNote.verbatim" rows="3" placeholder='Ex: "On perd 15% de productivité chaque semaine..."'></textarea></div>
+                    <div class="form-group"><label class="form-label">Le non-dit (silence observé)</label><textarea class="input" [(ngModel)]="newNote.silence_observed" rows="2" placeholder="Ce qui n'a PAS été dit mais ressenti"></textarea></div>
+                    <div class="form-row-2">
+                        <div class="form-group"><label class="form-label">Climat émotionnel</label><select class="input" [(ngModel)]="newNote.emotional_climate"><option [ngValue]="undefined">—</option><option value="ENTHUSIASTIC">🟢 Enthousiaste</option><option value="CURIOUS">🔍 Curieux</option><option value="CONFIDENT">💪 Confiant</option><option value="NEUTRAL">😐 Neutre</option><option value="HESITANT">🟡 Hésitant</option><option value="RUSHED">⚡ Pressé</option><option value="TIRED">😴 Fatigué</option><option value="FRUSTRATED">🔴 Frustré</option><option value="DEFENSIVE">🛡️ Défensif</option></select></div>
+                        <div class="form-group"><label class="form-label">Prochaine étape</label><input class="input" [(ngModel)]="newNote.next_step" placeholder="Action concrète"></div>
+                    </div>
+                    <div class="form-row-2">
+                        <div class="form-group"><label class="form-label">Responsable</label><select class="input" [(ngModel)]="newNote.next_step_owner"><option [ngValue]="undefined">—</option><option value="US">Nous</option><option value="CLIENT">Client</option><option value="BOTH">Les deux</option></select></div>
+                        <div class="form-group"><label class="form-label">Deadline</label><input class="input" type="date" [(ngModel)]="newNote.next_step_deadline"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn btn-outline btn-sm" (click)="showGoldenNoteForm = false">Annuler</button>
+                        <button class="btn btn-accent btn-sm" (click)="addGoldenNote()"><i class="fa-solid fa-plus"></i> Sauvegarder</button>
+                    </div>
+                </div>
+                }
+
+                @for (note of clientMap.golden_notes; track note.id) {
+                <div class="golden-note-card">
+                    <div class="golden-note-card__header">
+                        <span class="golden-note-card__type">{{ note.interaction_type }}</span>
+                        <span class="golden-note-card__date">{{ note.interaction_date | date: 'dd MMM yyyy HH:mm' }}</span>
+                        @if (note.emotional_climate) {<span class="golden-note-card__emotion">{{ emotionalIcons[note.emotional_climate] || '😐' }}</span>}
+                        <button class="btn-icon btn-icon--sm" (click)="deleteGoldenNote(note.id)"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    @if (note.verbatim) {
+                    <blockquote class="golden-note-card__verbatim">"{{ note.verbatim }}"</blockquote>
+                    }
+                    @if (note.silence_observed) {
+                    <p class="golden-note-card__silence"><i class="fa-solid fa-volume-xmark"></i> {{ note.silence_observed }}</p>
+                    }
+                    @if (note.next_step) {
+                    <p class="golden-note-card__next-step">
+                        <i class="fa-solid fa-arrow-right"></i>
+                        <strong>{{ note.next_step_owner || 'TBD' }}:</strong> {{ note.next_step }}
+                        @if (note.next_step_deadline) { <span class="deadline">⏰ {{ note.next_step_deadline }}</span> }
+                    </p>
+                    }
+                </div>
+                } @empty {
+                <p class="qempty">Aucune note d'or. Ajoutez votre première note après un call.</p>
+                }
+            </div>
+
+            <!-- Behavioral Analysis -->
+            <div class="behavioral-section">
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-brain"></i> Analyse Comportementale</h3>
+                    <button class="btn btn-outline btn-sm" (click)="triggerBehaviorAnalysis()" [disabled]="isAnalyzingBehavior">
+                        @if (isAnalyzingBehavior) {<i class="fa-solid fa-spinner fa-spin"></i> Analyse...} @else {<i class="fa-solid fa-sync"></i> Refresh}
+                    </button>
+                </div>
+
+                @if (clientMap.behavioral_profile) {
+                <div class="behavioral-grid">
+                    <div class="behavioral-card">
+                        <span class="behavioral-card__label">DISC</span>
+                        <span class="behavioral-card__value behavioral-card__value--large">{{ clientMap.behavioral_profile.disc_primary }}</span>
+                        <span class="behavioral-card__sub">{{ discLabels[clientMap.behavioral_profile.disc_primary] || 'N/A' }} · {{ (clientMap.behavioral_profile.disc_confidence * 100) | number:'1.0-0' }}%</span>
+                    </div>
+                    <div class="behavioral-card">
+                        <span class="behavioral-card__label">Vitesse décision</span>
+                        <span class="behavioral-card__value">{{ clientMap.behavioral_profile.decision_speed }}</span>
+                    </div>
+                    <div class="behavioral-card">
+                        <span class="behavioral-card__label">Canal préféré</span>
+                        <span class="behavioral-card__value">{{ clientMap.behavioral_profile.preferred_channel }}</span>
+                    </div>
+                    <div class="behavioral-card">
+                        <span class="behavioral-card__label">Tolérance risque</span>
+                        <span class="behavioral-card__value">{{ clientMap.behavioral_profile.risk_tolerance }}</span>
+                    </div>
+                    <div class="behavioral-card">
+                        <span class="behavioral-card__label">Tendance émotionnelle</span>
+                        <span class="behavioral-card__value">{{ clientMap.behavioral_profile.emotional_trend }}</span>
+                    </div>
+                    <div class="behavioral-card">
+                        <span class="behavioral-card__label">Formalité</span>
+                        <span class="behavioral-card__value">{{ clientMap.behavioral_profile.formality_level }}</span>
+                    </div>
+                </div>
+                @if (clientMap.behavioral_profile.communication_tips) {
+                <div class="behavioral-tips">
+                    <h4>💡 Comment communiquer</h4>
+                    <ul>
+                        @for (tip of clientMap.behavioral_profile.communication_tips; track $index) {
+                        <li>{{ tip }}</li>
+                        }
+                    </ul>
+                </div>
+                }
+                @if (clientMap.behavioral_profile.disc_reasoning) {
+                <p class="behavioral-reasoning"><em>{{ clientMap.behavioral_profile.disc_reasoning }}</em></p>
+                }
+                } @else {
+                <p class="qempty">Cliquez "Refresh" pour générer l'analyse à partir des interactions.</p>
+                }
+            </div>
+
+            }
+        </div>
+        }
+
     </div>
 
     <!-- Info Panel (Right Sidebar) -->

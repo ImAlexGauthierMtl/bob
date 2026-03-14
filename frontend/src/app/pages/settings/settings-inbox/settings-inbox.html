@@ -1,0 +1,247 @@
+<div class="settings-panel">
+    <div class="settings-panel__header">
+        <h3 class="settings-panel__title">Inbox & AI Settings</h3>
+        <p class="settings-panel__subtitle">Manage how Bob automatically organizes and tags your incoming emails</p>
+    </div>
+
+    <!-- Success / Error Message -->
+    @if (saveMessage) {
+    <div class="save-toast save-toast--{{ saveType }}">
+        {{ saveMessage }}
+    </div>
+    }
+
+    <!-- Smart Labels Section -->
+    <div class="settings-section">
+        <div class="settings-section__header">
+            <div>
+                <h4 class="settings-section__title">Smart Labels & Categories</h4>
+                <p class="settings-section__desc">Define the categories you want Bob to use when triaging your inbox. Add descriptions and keywords to help the AI understand what each label means.</p>
+            </div>
+            <button class="btn btn-accent" (click)="toggleAddForm()" *ngIf="!showAddForm">
+                <i class="fa-solid fa-plus"></i> Add Category
+            </button>
+        </div>
+
+        <!-- Add Category Form -->
+        <div class="add-category-form" *ngIf="showAddForm">
+            <h5 class="add-category-form__title">Create New Category</h5>
+            <div class="add-category-form__row">
+                <div class="form-group">
+                    <label class="form-label">Category Name</label>
+                    <input type="text" [(ngModel)]="newLabelName" class="form-input" placeholder="e.g. Vendors" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Color Marker</label>
+                    <select [(ngModel)]="newLabelColor" class="form-input">
+                        <option *ngFor="let color of availableColors" [value]="color.value">
+                            {{ color.label }}
+                        </option>
+                    </select>
+                </div>
+                <div class="add-category-form__actions">
+                    <button class="btn btn-accent" (click)="addLabel()" [disabled]="!newLabelName.trim()">Save</button>
+                    <button class="btn btn-outline" (click)="toggleAddForm()">Cancel</button>
+                </div>
+            </div>
+            <div class="add-category-form__preview">
+                <span class="add-category-form__preview-label">Preview:</span>
+                <div class="preview-badge">
+                    <div class="preview-dot preview-dot--{{newLabelColor}}"></div>
+                    <span>{{ newLabelName || 'Category Name' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- List of Labels -->
+        <div class="labels-list">
+            <div *ngFor="let label of smartLabels" class="label-item-wrapper">
+                <!-- Label Row (clickable) -->
+                <div class="label-item" (click)="toggleEdit(label.id)">
+                    <div class="label-item__left">
+                        <div class="inbox-nav__dot inbox-nav__dot--{{ label.color }}"></div>
+                        <span class="label-item__name">{{ label.name }}</span>
+                        @if (label.description) {
+                        <span class="label-item__desc-preview">— {{ label.description | slice:0:60 }}{{ label.description && label.description.length > 60 ? '...' : '' }}</span>
+                        }
+                    </div>
+                    <div class="label-item__right">
+                        @if (label.keywords && label.keywords.length > 0) {
+                        <span class="label-item__meta">{{ label.keywords.length }} keyword{{ label.keywords.length > 1 ? 's' : '' }}</span>
+                        }
+                        <span class="label-item__meta">{{ label.count || 0 }} emails mapped</span>
+                        <i class="fa-solid fa-chevron-down label-item__chevron"
+                           [style.transform]="editingLabelId === label.id ? 'rotate(180deg)' : 'rotate(0deg)'"></i>
+                    </div>
+                </div>
+
+                <!-- Expanded Detail Edit Panel -->
+                <div class="label-detail-panel" *ngIf="editingLabelId === label.id">
+                    <div class="edit-grid">
+                        <div class="form-group">
+                            <label class="form-label">Label Name</label>
+                            <input type="text" [(ngModel)]="editName" class="form-input" placeholder="Category name" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Color</label>
+                            <select [(ngModel)]="editColor" class="form-input">
+                                <option *ngFor="let color of availableColors" [value]="color.value">
+                                    {{ color.label }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fa-solid fa-circle-info" style="color: #3b82f6;"></i>
+                            Description <span class="form-hint" style="display: inline;">(tells the AI what this category represents)</span>
+                        </label>
+                        <textarea [(ngModel)]="editDescription" class="form-input" rows="2"
+                            placeholder="e.g. Emails from existing paying clients about their active projects or support requests"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fa-solid fa-tags" style="color: #22c55e;"></i>
+                            Keywords <span class="form-hint" style="display: inline;">(comma-separated — the AI will look for these)</span>
+                        </label>
+                        <input type="text" [(ngModel)]="editKeywordsRaw" class="form-input"
+                            placeholder="e.g. invoice, contract, proposal, RFP, budget" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fa-solid fa-robot" style="color: #a855f7;"></i>
+                            AI Prompt Hint <span class="form-hint" style="display: inline;">(custom instruction for the LLM)</span>
+                        </label>
+                        <textarea [(ngModel)]="editPromptHint" class="form-input" rows="2"
+                            placeholder="e.g. Classify as this label if the email is from a known vendor or contains a purchase order number"></textarea>
+                    </div>
+
+                    <!-- Sub-Categories Listing -->
+                    <div class="sub-labels-section" *ngIf="label.sub_labels && label.sub_labels.length > 0">
+                        <p class="form-label" style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Sub-Categories</p>
+                        <div class="labels-list labels-list--nested">
+                            <div *ngFor="let subLabel of label.sub_labels" class="label-item-wrapper label-item-wrapper--nested">
+                                <div class="label-item" (click)="toggleSubLabelEdit(subLabel.id); $event.stopPropagation()" style="padding-left: 1.5rem; border-left: 2px solid var(--color-gray-200); margin-left: 0.5rem; border-radius: 0; cursor: pointer;">
+                                    <div class="label-item__left">
+                                        <div class="inbox-nav__dot inbox-nav__dot--{{ subLabel.color }}"></div>
+                                        <span class="label-item__name">{{ subLabel.name }}</span>
+                                        <span *ngIf="subLabel.description" class="label-item__desc-preview">— {{ subLabel.description | slice:0:60 }}{{ subLabel.description && subLabel.description.length > 60 ? '...' : '' }}</span>
+                                    </div>
+                                    <div class="label-item__right">
+                                        <span *ngIf="subLabel.keywords && subLabel.keywords.length > 0" class="label-item__meta">{{ subLabel.keywords.length }} keyword{{ subLabel.keywords.length > 1 ? 's' : '' }}</span>
+                                        <span class="label-item__meta">{{ subLabel.count || 0 }} emails mapped</span>
+                                        <i class="fa-solid fa-chevron-down label-item__chevron"
+                                           [style.transform]="editingSubLabelId === subLabel.id ? 'rotate(180deg)' : 'rotate(0deg)'"></i>
+                                    </div>
+                                </div>
+                                
+                                <!-- Expanded Detail Edit Panel for Sub-Label -->
+                                <div class="label-detail-panel" *ngIf="editingSubLabelId === subLabel.id" style="margin-left: 0.5rem; border-left: 2px solid var(--color-gray-200); border-radius: 0 0.5rem 0.5rem 0; border-top: none;">
+                                    <div class="edit-grid">
+                                        <div class="form-group">
+                                            <label class="form-label">Sub-Category Name</label>
+                                            <input type="text" [(ngModel)]="subEditName" class="form-input" placeholder="Sub-category name" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Color</label>
+                                            <select [(ngModel)]="subEditColor" class="form-input">
+                                                <option *ngFor="let color of availableColors" [value]="color.value">{{ color.label }}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="fa-solid fa-circle-info" style="color: #3b82f6;"></i>
+                                            Description <span class="form-hint" style="display: inline;">(tells the AI what this sub-category represents)</span>
+                                        </label>
+                                        <textarea [(ngModel)]="subEditDescription" class="form-input" rows="2"
+                                            placeholder="e.g. Specific details for this sub-category"></textarea>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="fa-solid fa-tags" style="color: #22c55e;"></i>
+                                            Keywords <span class="form-hint" style="display: inline;">(comma-separated — the AI will look for these)</span>
+                                        </label>
+                                        <input type="text" [(ngModel)]="subEditKeywordsRaw" class="form-input"
+                                            placeholder="e.g. sub-keyword1, sub-keyword2" />
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="fa-solid fa-robot" style="color: #a855f7;"></i>
+                                            AI Prompt Hint <span class="form-hint" style="display: inline;">(custom instruction for the LLM)</span>
+                                        </label>
+                                        <textarea [(ngModel)]="subEditPromptHint" class="form-input" rows="2"
+                                            placeholder="e.g. Classify as this sub-label if..."></textarea>
+                                    </div>
+
+                                    <div class="label-detail-panel__footer">
+                                        <button class="link-danger" (click)="removeSubLabel(label.id, subLabel.id); $event.stopPropagation()">
+                                            <i class="fa-solid fa-trash"></i> Delete
+                                        </button>
+                                        <div class="label-detail-panel__footer-actions">
+                                            <button class="btn btn-outline" (click)="cancelSubLabelEdit(); $event.stopPropagation()">Cancel</button>
+                                            <button class="btn btn-accent" (click)="saveSubLabelEdit(subLabel.id); $event.stopPropagation()" [disabled]="isSaving">
+                                                <i class="fa-solid fa-check" *ngIf="!isSaving"></i>
+                                                <i class="fa-solid fa-spinner fa-spin" *ngIf="isSaving"></i>
+                                                {{ isSaving ? 'Saving...' : 'Save Changes' }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add Sub Category Form -->
+                    <div class="add-category-form add-category-form--nested" *ngIf="addingSubLabelToId === label.id" style="margin-top: 1.5rem; background: var(--color-gray-50); border: 1px dashed var(--color-gray-300);">
+                        <h5 class="add-category-form__title">Create New Sub-Category</h5>
+                        <div class="add-category-form__row">
+                            <div class="form-group">
+                                <label class="form-label">Sub-Category Name</label>
+                                <input type="text" [(ngModel)]="newSubLabelName" class="form-input" placeholder="e.g. Invoices" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Color Marker</label>
+                                <select [(ngModel)]="newSubLabelColor" class="form-input">
+                                    <option *ngFor="let color of availableColors" [value]="color.value">{{ color.label }}</option>
+                                </select>
+                            </div>
+                            <div class="add-category-form__actions">
+                                <button class="btn btn-accent" (click)="addSubLabel(label.id)" [disabled]="!newSubLabelName.trim()">Save</button>
+                                <button class="btn btn-outline" (click)="cancelAddSubLabel()">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="label-detail-panel__footer">
+                        <button class="link-danger" (click)="removeLabel(label.id); $event.stopPropagation()">
+                            <i class="fa-solid fa-trash"></i> Delete
+                        </button>
+                        <div class="label-detail-panel__footer-actions">
+                            <button class="btn btn-outline" (click)="toggleAddSubLabel(label.id)">
+                                <i class="fa-solid fa-plus"></i> Sub-Category
+                            </button>
+                            <button class="btn btn-outline" (click)="cancelEdit()">Cancel</button>
+                            <button class="btn btn-accent" (click)="saveEdit(label.id)" [disabled]="isSaving">
+                                <i class="fa-solid fa-check" *ngIf="!isSaving"></i>
+                                <i class="fa-solid fa-spinner fa-spin" *ngIf="isSaving"></i>
+                                {{ isSaving ? 'Saving...' : 'Save Changes' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div *ngIf="smartLabels.length === 0" class="empty-state">
+                <p class="empty-state__text">No smart labels configured yet.</p>
+                <button class="btn btn-outline" (click)="toggleAddForm()">Create your first category</button>
+            </div>
+        </div>
+    </div>
+</div>

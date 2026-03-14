@@ -19,3 +19,4 @@ pgvector>=0.3
 msgraph-sdk>=1.0
 azure-identity>=1.0
 msal>=1.28
+tldextract>=3.1

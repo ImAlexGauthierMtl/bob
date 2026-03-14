@@ -1,7 +1,7 @@
 """Seed BCC cognitive structure — Domains, Intents, Tasks aligned to Bob's runtime.
 
 Creates the full Domain -> Intent -> TaskTemplate -> BccIntentTask chain
-that mirrors the hardcoded SUPPORTED_INTENTS and @workflow() decorators.
+that serves as the single source of truth for Bob's intent classification.
 
 Every task context is deeply enriched so a weak LLM can follow the procedure
 like a recipe — no guessing, explicit inputs/outputs/response format.

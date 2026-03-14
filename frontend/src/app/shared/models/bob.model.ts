@@ -1,10 +1,13 @@
 // Bob model — mirrors backend Bob Pydantic schemas
 
+export type BobChannel = 'compact' | 'workspace' | 'voice_app' | 'voice_phone';
+
 export interface BobChatRequest {
     message: string;
     session_id?: string;
     mission_prompt?: string;
     mission_context?: Record<string, unknown>;
+    channel?: BobChannel;
 }
 
 export interface BobChatAction {

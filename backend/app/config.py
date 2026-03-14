@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # JWT
     secret_key: str = ""  # MUST be set via .env — use: openssl rand -hex 64
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    access_token_expire_minutes: int = 1440  # 24 hours (was 30)
     refresh_token_expire_days: int = 7
 
     # CORS
@@ -77,6 +77,11 @@ class Settings(BaseSettings):
     advisor_max_tokens: int = 8192
     advisor_temperature: float = 0.4
 
+    # Workspace Agent (Kimi K2 via Groq — agentic CRM chat)
+    workspace_model: str = "moonshotai/kimi-k2-instruct-0905"
+    workspace_max_tokens: int = 8192
+    workspace_temperature: float = 0.4
+
     # Redis (session store)
     redis_url: str = ""
 
@@ -95,10 +100,10 @@ class Settings(BaseSettings):
     # Microsoft 365 (MS Graph API)
     ms365_client_id: str = ""  # Azure AD App Client ID
     ms365_client_secret: str = ""  # Azure AD App Client Secret
-    ms365_tenant_id: str = "common"  # Azure AD Tenant ID — "common" for multi-tenant
-    ms365_redirect_uri: str = "http://localhost:4500/api/v1/ms365/callback"
+    ms365_tenant_id: str = "5157d604-6049-4daa-a4fc-bd06136ec04e"  # Azure AD Tenant ID — Croo Services Professionnels
+    ms365_redirect_uri: str = "https://macbookpro-de-alexandre.tail1f8da4.ts.net/api/v1/ms365/callback"
     ms365_sync_interval_seconds: int = 120  # Polling fallback interval
-    ms365_webhook_host: str = ""  # Public HTTPS host for webhook notifications
+    ms365_webhook_host: str = "https://macbookpro-de-alexandre.tail1f8da4.ts.net"  # Public HTTPS host for webhook notifications
 
     # Webhooks
     webhook_api_key: str = ""  # MUST be set via .env

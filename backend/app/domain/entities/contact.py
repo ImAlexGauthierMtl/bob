@@ -67,3 +67,6 @@ class Contact(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
         back_populates="contacts",
         lazy="selectin"
     )
+
+    # Client Map 360° (1:1)
+    client_map = relationship("ClientMap", uselist=False, back_populates="contact", passive_deletes=True)

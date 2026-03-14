@@ -36,10 +36,12 @@ const WS_URL = environment.wsUrl;
 const VOICE_CONSENT_KEY = 'croo_voice_consent';
 const MAX_RECONNECT_ATTEMPTS = 3;
 
+import { MarkdownPipe } from '../pipes/markdown.pipe';
+
 @Component({
     selector: 'croo-bob-chat',
     standalone: true,
-    imports: [FormsModule],
+    imports: [FormsModule, MarkdownPipe],
     templateUrl: './bob-chat.html',
     styleUrl: './bob-chat.css',
 })
@@ -278,7 +280,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         };
         this.messages.push(loadingMsg);
 
-        this.bobService.chat(userMsg, this.sessionId, this.activeMissionPrompt, this.activeMissionContext).subscribe({
+        this.bobService.chat(userMsg, this.sessionId, this.activeMissionPrompt, this.activeMissionContext, this.isExpanded ? 'workspace' : 'compact').subscribe({
             next: (response) => {
                 const idx = this.messages.indexOf(loadingMsg);
                 if (idx > -1) this.messages.splice(idx, 1);

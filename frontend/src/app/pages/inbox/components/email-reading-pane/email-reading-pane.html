@@ -1,0 +1,207 @@
+<div class="reading-pane">
+
+    <ng-container *ngIf="!hasSelection">
+        <div class="reading-pane-empty">
+            <div class="reading-pane-empty__content">
+                <div class="reading-pane-empty__icon-wrapper">
+                    <i class="fa-solid fa-envelope-open reading-pane-empty__icon"></i>
+                </div>
+                <p class="reading-pane-empty__title">Select an email to read</p>
+                <p class="reading-pane-empty__desc">Choose a message from your inbox to view its contents</p>
+            </div>
+        </div>
+    </ng-container>
+
+    <ng-container *ngIf="hasSelection && email">
+        <!-- Top Action Bar -->
+        <div class="reading-pane__header-bar">
+            <div class="reading-pane__actions-row">
+                <div class="reading-pane__actions-group">
+                    <button class="reading-pane__btn">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <button class="reading-pane__btn">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                    <button class="reading-pane__btn">
+                        <i class="fa-solid fa-folder"></i>
+                    </button>
+                </div>
+                <div class="reading-pane__actions-group">
+<!-- Button removed to favor automatic parsing via backend AI script -->
+                    <button class="reading-pane__btn">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scrollable Content -->
+        <div class="reading-pane__body-wrap">
+            
+            <!-- AI Insights Panel -->
+            <div *ngIf="email.ai_summary || email.ai_action_items?.length" class="ai-insights-panel">
+                <div class="ai-insights-panel__header">
+                    <div class="ai-insights-panel__icon-wrap">
+                        <i class="fa-solid fa-robot ai-insights-panel__icon"></i>
+                    </div>
+                    <h3 class="ai-insights-panel__title">Bob's Summary</h3>
+                    <ng-container *ngIf="email.smart_label">
+                        <span *ngFor="let part of parseSmartLabel(email.smart_label); let last = last" 
+                              class="ai-insights-panel__badge" 
+                              [style.marginRight.px]="last ? 0 : 4">
+                            <i *ngIf="last" class="fa-solid fa-sparkles text-xs mr-1"></i> {{ part }}
+                        </span>
+                    </ng-container>
+                </div>
+                <p class="ai-insights-panel__summary" *ngIf="email.ai_summary">
+                    {{ email.ai_summary }}
+                </p>
+                <div *ngIf="email.ai_action_items && email.ai_action_items.length > 0">
+                    <h4 class="ai-actions__title">Action Items</h4>
+                    <ul class="ai-actions__list">
+                        <li *ngFor="let item of email.ai_action_items" class="ai-actions__item">
+                            <i class="fa-regular fa-square ai-actions__check"></i>
+                            <span class="ai-actions__text">{{ item }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+
+
+            <!-- Email Header -->
+            <div class="email-header">
+                <div class="email-header__title-row">
+                    <h1 class="email-header__subject">{{ email.subject || '(No Subject)' }}</h1>
+                    <span *ngIf="email.importance === 'high'" class="email-header__urgent">URGENT</span>
+                </div>
+                
+                <div class="email-sender">
+                    <div class="email-sender__info-wrap">
+                        <div class="email-sender__avatar">
+                            {{ email.from_name ? email.from_name.charAt(0).toUpperCase() : (email.from_address ? email.from_address.charAt(0).toUpperCase() : '?') }}
+                        </div>
+                        <div class="email-sender__details">
+                            <div class="email-sender__name-row">
+                                <p class="email-sender__name">{{ email.from_name || email.from_address }}</p>
+                                <span class="email-sender__email" *ngIf="email.from_name">&lt;{{ email.from_address }}&gt;</span>
+                            </div>
+                            <p class="email-sender__to">to me</p>
+                        </div>
+                    </div>
+                    <div class="email-meta">
+                        <p class="email-meta__time">{{ email.received_at | date:'medium' }}</p>
+                        <div class="email-meta__actions">
+                            <button class="email-meta__btn">
+                                <i class="fa-regular fa-star text-sm"></i>
+                            </button>
+                            <button class="email-meta__btn email-meta__btn--reply">
+                                <i class="fa-solid fa-reply text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email Body -->
+            <div class="email-body" *ngIf="sanitizedBodyHtml" [innerHTML]="sanitizedBodyHtml">
+            </div>
+            <div class="email-body email-body--plaintext" *ngIf="!sanitizedBodyHtml && email.body_preview">
+                {{ email.body_preview }}
+            </div>
+
+            <!-- Attachments -->
+            <div class="email-attachments" *ngIf="email.has_attachments && email.attachments_meta?.length">
+                <p class="email-attachments__title">{{ email.attachments_meta?.length }} Attachment(s)</p>
+                <div class="email-attachments__grid">
+                    <div *ngFor="let att of email.attachments_meta" class="email-attachment-card">
+                        <div class="email-attachment-card__info">
+                            <i class="fa-solid fa-file email-attachment-card__icon"></i>
+                            <span class="email-attachment-card__name">{{ att.name }}</span>
+                        </div>
+                        <i class="fa-solid fa-download email-attachment-card__download"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Box (Reply / Forward) -->
+            <div class="email-action-box">
+                <!-- Tabs -->
+                <div class="email-action-tabs">
+                    <button type="button" 
+                            (click)="setActiveTab('reply')"
+                            [class.email-action-tab]="true"
+                            [class.email-action-tab--active]="activeTab === 'reply'">
+                        <i class="fa-solid fa-reply"></i> Reply
+                    </button>
+                    <button type="button" 
+                            (click)="setActiveTab('forward')"
+                            [class.email-action-tab]="true"
+                            [class.email-action-tab--active]="activeTab === 'forward'">
+                        <i class="fa-solid fa-share"></i> Forward
+                    </button>
+                </div>
+
+                <!-- Reply Form -->
+                <form *ngIf="activeTab === 'reply'" [formGroup]="replyForm" (ngSubmit)="sendReply()" class="email-reply-form">
+                    <div *ngIf="replyError" class="email-form-error">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        {{ replyError }}
+                    </div>
+
+                    <textarea formControlName="comment" class="email-form-textarea" rows="4" placeholder="Reply to {{ email.from_name || email.from_address }}..."></textarea>
+                    
+                    <div class="email-form-toolbar">
+                        <div class="email-form-tools">
+                            <button type="button" class="email-form-tool-btn">
+                                <i class="fa-solid fa-text-height"></i>
+                            </button>
+                            <button type="button" class="email-form-tool-btn">
+                                <i class="fa-solid fa-paperclip"></i>
+                            </button>
+                        </div>
+                        <button type="submit" [disabled]="replyForm.invalid || isReplying" class="btn-primary-action">
+                            <i class="fa-solid fa-circle-notch fa-spin" *ngIf="isReplying"></i>
+                            <i class="fa-solid fa-paper-plane" *ngIf="!isReplying"></i>
+                            Send Reply
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Forward Form -->
+                <form *ngIf="activeTab === 'forward'" [formGroup]="forwardForm" (ngSubmit)="sendForward()" class="email-forward-form">
+                    <div *ngIf="forwardError" class="email-form-error">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        {{ forwardError }}
+                    </div>
+                    
+                    <div class="email-form-group">
+                        <label class="email-form-label">To</label>
+                        <input type="text" formControlName="to_recipients" placeholder="email@example.com, another@example.com" class="email-form-input" />
+                    </div>
+
+                    <textarea formControlName="comment" class="email-form-textarea" rows="4" placeholder="Add a message to your forwarded email..."></textarea>
+                    
+                    <div class="email-form-toolbar">
+                        <div class="email-form-tools">
+                            <button type="button" class="email-form-tool-btn">
+                                <i class="fa-solid fa-text-height"></i>
+                            </button>
+                            <button type="button" class="email-form-tool-btn">
+                                <i class="fa-solid fa-paperclip"></i>
+                            </button>
+                        </div>
+                        <button type="submit" [disabled]="forwardForm.invalid || isForwarding" class="btn-primary-action">
+                            <i class="fa-solid fa-circle-notch fa-spin" *ngIf="isForwarding"></i>
+                            <i class="fa-solid fa-paper-plane" *ngIf="!isForwarding"></i>
+                            Forward
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </ng-container>
+
+</div>

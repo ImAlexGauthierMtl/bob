@@ -1,0 +1,83 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - generic [ref=e8]:
+    - generic [ref=e9]:
+      - img "Croo" [ref=e10]
+      - generic [ref=e12]:
+        - generic [ref=e13]: Digital
+        - generic [ref=e14]: Experience
+    - generic [ref=e15]:
+      - paragraph [ref=e16]:
+        - text: Where Bob enhances
+        - text: human productivity
+      - paragraph [ref=e17]: Experience the perfect balance of aesthetics and functionality in a universal business tool designed for the modern era.
+    - generic [ref=e18]:
+      - generic [ref=e21]:
+        - paragraph [ref=e22]: Intelligent Automation
+        - paragraph [ref=e23]: AI-powered workflows that adapt to your business needs
+      - generic [ref=e26]:
+        - paragraph [ref=e27]: Unified Platform
+        - paragraph [ref=e28]: CRM, ERP, and analytics in one seamless interface
+      - generic [ref=e31]:
+        - paragraph [ref=e32]: Real-time Insights
+        - paragraph [ref=e33]: Data-driven decisions powered by advanced analytics
+  - generic [ref=e35]:
+    - generic [ref=e36]:
+      - heading "Welcome back" [level=2] [ref=e37]
+      - paragraph [ref=e38]: Enter your credentials to access your account
+    - generic [ref=e39]:
+      - generic [ref=e40]:
+        - generic [ref=e41]: Email Address
+        - generic [ref=e42]:
+          - generic: 
+          - textbox "Email Address" [ref=e43]:
+            - /placeholder: your.email@company.com
+      - generic [ref=e44]:
+        - generic [ref=e45]: Password
+        - generic [ref=e46]:
+          - generic: 
+          - textbox "Password" [ref=e47]:
+            - /placeholder: Enter your password
+          - button "Show password" [ref=e48] [cursor=pointer]:
+            - generic [ref=e49]: 
+      - generic [ref=e50]:
+        - generic [ref=e51] [cursor=pointer]:
+          - checkbox "Remember me" [ref=e52]
+          - generic [ref=e53]: Remember me
+        - link "Forgot password?" [ref=e54] [cursor=pointer]:
+          - /url: "#"
+      - button "Sign In" [ref=e55] [cursor=pointer]
+      - generic [ref=e58]: Or continue with
+      - generic [ref=e59]:
+        - button " Sign in with Google" [ref=e60] [cursor=pointer]:
+          - generic [ref=e61]: 
+          - generic [ref=e62]: Sign in with Google
+        - button " Sign in with Microsoft" [ref=e63] [cursor=pointer]:
+          - generic [ref=e64]: 
+          - generic [ref=e65]: Sign in with Microsoft
+        - button " Sign in with Biometric" [ref=e66] [cursor=pointer]:
+          - generic [ref=e67]: 
+          - generic [ref=e68]: Sign in with Biometric
+      - generic [ref=e69]:
+        - generic [ref=e71]: 
+        - generic [ref=e72]:
+          - paragraph [ref=e73]: AI-Powered Experience
+          - paragraph [ref=e74]: Once logged in, Bob will help you navigate, automate tasks, and provide intelligent insights tailored to your workflow.
+    - paragraph [ref=e76]:
+      - text: Don't have an account?
+      - link "Create one now" [ref=e77] [cursor=pointer]:
+        - /url: "#"
+    - generic [ref=e78]:
+      - generic [ref=e79]:
+        - link "Privacy Policy" [ref=e80] [cursor=pointer]:
+          - /url: "#"
+        - link "Terms of Service" [ref=e81] [cursor=pointer]:
+          - /url: "#"
+        - link "Help Center" [ref=e82] [cursor=pointer]:
+          - /url: "#"
+        - link "Contact Support" [ref=e83] [cursor=pointer]:
+          - /url: "#"
+      - paragraph [ref=e84]: © 2026 The Smart Crew. All rights reserved.
+```

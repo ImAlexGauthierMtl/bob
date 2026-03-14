@@ -9,6 +9,7 @@ from sqlalchemy import desc
 from app.domain.entities.ms365_connection import MS365Connection
 from app.domain.entities.synced_email import SyncedEmail
 from app.domain.entities.synced_event import SyncedEvent
+from app.domain.entities.email_contact import email_contacts
 
 
 class MS365Repository:
@@ -101,6 +102,8 @@ class MS365Repository:
         limit: int = 50,
         folder: Optional[str] = None,
         search: Optional[str] = None,
+        linked_contact_id: Optional[str] = None,
+        smart_label: Optional[str] = None,
     ) -> List[SyncedEmail]:
         """List synced emails for a user with optional filters."""
         query = self.db.query(SyncedEmail).filter(
@@ -109,8 +112,15 @@ class MS365Repository:
         )
         if folder:
             query = query.filter(SyncedEmail.folder == folder)
+        if linked_contact_id:
+            query = query.join(
+                email_contacts,
+                email_contacts.c.synced_email_id == SyncedEmail.id,
+            ).filter(email_contacts.c.contact_id == linked_contact_id)
         if search:
             query = query.filter(SyncedEmail.subject.ilike(f"%{search}%"))
+        if smart_label:
+            query = query.filter(SyncedEmail.smart_label == smart_label)
         return query.order_by(desc(SyncedEmail.received_at)).offset(skip).limit(limit).all()
 
     def count_emails(
@@ -119,6 +129,8 @@ class MS365Repository:
         tenant_id: str,
         folder: Optional[str] = None,
         search: Optional[str] = None,
+        linked_contact_id: Optional[str] = None,
+        smart_label: Optional[str] = None,
     ) -> int:
         """Count synced emails for a user."""
         query = self.db.query(SyncedEmail).filter(
@@ -127,8 +139,15 @@ class MS365Repository:
         )
         if folder:
             query = query.filter(SyncedEmail.folder == folder)
+        if linked_contact_id:
+            query = query.join(
+                email_contacts,
+                email_contacts.c.synced_email_id == SyncedEmail.id,
+            ).filter(email_contacts.c.contact_id == linked_contact_id)
         if search:
             query = query.filter(SyncedEmail.subject.ilike(f"%{search}%"))
+        if smart_label:
+            query = query.filter(SyncedEmail.smart_label == smart_label)
         return query.count()
 
     # ── Event CRUD ───────────────────────────────────────────────────

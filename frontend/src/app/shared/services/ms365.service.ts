@@ -10,6 +10,10 @@ import {
     SyncedEmail,
     SyncedEvent,
     SyncStatus,
+    EmailAiInsightResponse,
+    SendEmailRequest,
+    ReplyEmailRequest,
+    ForwardEmailRequest
 } from '../models/ms365.model';
 
 const API_URL = `${environment.apiUrl}`;
@@ -39,16 +43,38 @@ export class MS365Service {
     }
 
     /** List synced emails with pagination and optional filters */
-    getEmails(skip = 0, limit = 50, folder?: string, search?: string): Observable<SyncedEmailListResponse> {
+    getEmails(skip = 0, limit = 50, folder?: string, search?: string, smartLabel?: string, linkedContactId?: string): Observable<SyncedEmailListResponse> {
         let url = `${API_URL}/ms365/emails?skip=${skip}&limit=${limit}`;
         if (folder) url += `&folder=${folder}`;
         if (search) url += `&search=${encodeURIComponent(search)}`;
+        if (smartLabel) url += `&smart_label=${encodeURIComponent(smartLabel)}`;
+        if (linkedContactId) url += `&linked_contact_id=${linkedContactId}`;
         return this.http.get<SyncedEmailListResponse>(url);
     }
 
     /** Get a specific synced email */
     getEmail(id: string): Observable<SyncedEmail> {
         return this.http.get<SyncedEmail>(`${API_URL}/ms365/emails/${id}`);
+    }
+
+    /** Generate AI Insights for an email */
+    generateEmailAiInsights(id: string): Observable<EmailAiInsightResponse> {
+        return this.http.post<EmailAiInsightResponse>(`${API_URL}/ms365/emails/${id}/ai-insights`, {});
+    }
+
+    /** Send a new email */
+    sendEmail(request: SendEmailRequest): Observable<{ status: string }> {
+        return this.http.post<{ status: string }>(`${API_URL}/ms365/emails/send`, request);
+    }
+
+    /** Reply to an email */
+    replyEmail(id: string, request: ReplyEmailRequest): Observable<{ status: string }> {
+        return this.http.post<{ status: string }>(`${API_URL}/ms365/emails/${id}/reply`, request);
+    }
+
+    /** Forward an email */
+    forwardEmail(id: string, request: ForwardEmailRequest): Observable<{ status: string }> {
+        return this.http.post<{ status: string }>(`${API_URL}/ms365/emails/${id}/forward`, request);
     }
 
     /** List synced calendar events with pagination and optional date range */

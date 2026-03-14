@@ -22,7 +22,14 @@ from app.presentation.schemas.ms365_schemas import (
     SyncedEventResponse,
     SyncedEventListResponse,
     SyncStatusResponse,
+    EmailAiInsightResponse,
+    SendEmailRequest,
+    ReplyEmailRequest,
+    ForwardEmailRequest,
 )
+
+from app.agents.llm_client import llm_client
+import json
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1/ms365")
@@ -56,11 +63,13 @@ async def oauth_callback(
     Redirects back to the frontend integrations page.
     """
     try:
+        logger.info("ms365_callback_received", state=state, has_code=bool(code))
         # Exchange code for tokens
         token_data = await graph_service.exchange_code_for_tokens(code)
 
         # Get user profile from MS Graph
         profile = await graph_service.get_user_profile(token_data["access_token"])
+        logger.info("ms365_profile_fetched", profile_id=profile.get("id"), email=profile.get("mail"))
 
         # state contains user_id from auth_url
         user_id = state
@@ -107,14 +116,14 @@ async def oauth_callback(
         logger.info("ms365_connected", user_id=user_id, ms_email=profile.get("mail"))
 
         # Redirect to frontend integrations page
-        frontend_url = settings.cors_origins[0] if settings.cors_origins else "http://localhost:4200"
+        frontend_url = getattr(settings, "frontend_url", "http://localhost:4700")
         return RedirectResponse(url=f"{frontend_url}/settings/integrations?ms365=connected")
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error("ms365_callback_error", error=str(e))
-        frontend_url = settings.cors_origins[0] if settings.cors_origins else "http://localhost:4200"
+        frontend_url = getattr(settings, "frontend_url", "http://localhost:4700")
         return RedirectResponse(url=f"{frontend_url}/settings/integrations?ms365=error")
 
 
@@ -182,13 +191,15 @@ async def list_emails(
     limit: int = Query(50, ge=1, le=100),
     folder: Optional[str] = None,
     search: Optional[str] = None,
+    smart_label: Optional[str] = None,
+    linked_contact_id: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """List synced emails for the current user."""
     repo = MS365Repository(db)
-    items = repo.list_emails(current_user["user_id"], current_user["tenant_id"], skip, limit, folder, search)
-    total = repo.count_emails(current_user["user_id"], current_user["tenant_id"], folder, search)
+    items = repo.list_emails(current_user["user_id"], current_user["tenant_id"], skip, limit, folder, search, linked_contact_id, smart_label)
+    total = repo.count_emails(current_user["user_id"], current_user["tenant_id"], folder, search, linked_contact_id, smart_label)
     return SyncedEmailListResponse(
         items=[SyncedEmailResponse.model_validate(e) for e in items],
         total=total, skip=skip, limit=limit,
@@ -208,6 +219,159 @@ async def get_email(
         raise HTTPException(status_code=404, detail="Email not found")
     return SyncedEmailResponse.model_validate(email)
 
+
+@router.post("/emails/{email_id}/ai-insights", response_model=EmailAiInsightResponse)
+async def generate_email_ai_insights(
+    email_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate an AI summary, smart label, and action items for an email using Groq."""
+    repo = MS365Repository(db)
+    email = repo.get_email_by_id(email_id, current_user["user_id"], current_user["tenant_id"])
+    if not email:
+        raise HTTPException(status_code=404, detail="Email not found")
+
+    content = email.body_html or email.body_preview or email.subject
+
+    if not content or not str(content).strip():
+        return EmailAiInsightResponse(
+            summary="This email has no readable content.",
+            smart_label="Empty",
+            action_items=[]
+        )
+
+    system_prompt = """You are an intelligent email assistant.
+Your job is to read the provided email content and extract three things:
+1. `summary`: A concise 1-2 sentence summary of what the email is about.
+2. `smart_label`: A single category tag such as "Urgent", "Client", "Opportunity", "Internal", "Spam", or "General".
+3. `action_items`: An array of string action items that need to be done. If none, return an empty array.
+
+Respond ONLY with valid JSON.
+"""
+
+    user_prompt = f"Subject: {email.subject}\nSender: {email.from_name} ({email.from_address})\nContent:\n{content}"
+
+    try:
+        response = llm_client.chat(
+            prompt=user_prompt,
+            system_prompt=system_prompt,
+            json_mode=True,
+            temperature=0.0,
+            max_tokens=500,
+        )
+        extracted = json.loads(response)
+        return EmailAiInsightResponse(
+            summary=extracted.get("summary", "Summary could not be generated."),
+            smart_label=extracted.get("smart_label", "General"),
+            action_items=extracted.get("action_items", [])
+        )
+    except Exception as e:
+        logger.error("ms365_email_ai_error", email_id=email_id, error=str(e))
+        raise HTTPException(status_code=500, detail="Failed to generate AI insights.")
+
+
+@router.post("/emails/send")
+async def send_email(
+    request: SendEmailRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Compose and send a new email."""
+    repo = MS365Repository(db)
+    conn = repo.get_connection_by_user(current_user["user_id"], current_user["tenant_id"])
+    if not conn or not conn.is_active:
+        raise HTTPException(status_code=400, detail="No active MS365 connection.")
+
+    try:
+        access_token, new_data = await graph_service.ensure_valid_token(
+            conn.access_token, conn.refresh_token, conn.expires_at
+        )
+        if new_data:
+            repo.update_connection_tokens(conn, new_data)
+        
+        return await graph_service.send_mail(
+            access_token=access_token,
+            subject=request.subject,
+            body_content=request.body_content,
+            to_recipients=request.to_recipients,
+            cc_recipients=request.cc_recipients,
+            bcc_recipients=request.bcc_recipients,
+            body_type=request.body_type
+        )
+    except Exception as e:
+        logger.error("ms365_send_email_error", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/emails/{email_id}/reply")
+async def reply_email(
+    email_id: str,
+    request: ReplyEmailRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Reply to an existing email."""
+    repo = MS365Repository(db)
+    conn = repo.get_connection_by_user(current_user["user_id"], current_user["tenant_id"])
+    if not conn or not conn.is_active:
+        raise HTTPException(status_code=400, detail="No active MS365 connection.")
+    
+    email = repo.get_email_by_id(email_id, current_user["user_id"], current_user["tenant_id"])
+    if not email:
+        raise HTTPException(status_code=404, detail="Email not found.")
+
+    try:
+        access_token, new_data = await graph_service.ensure_valid_token(
+            conn.access_token, conn.refresh_token, conn.expires_at
+        )
+        if new_data:
+            repo.update_connection_tokens(conn, new_data)
+
+        return await graph_service.reply_mail(
+            access_token=access_token,
+            message_id=email.ms_message_id,
+            comment=request.comment,
+            reply_all=request.reply_all
+        )
+    except Exception as e:
+        logger.error("ms365_reply_email_error", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/emails/{email_id}/forward")
+async def forward_email(
+    email_id: str,
+    request: ForwardEmailRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Forward an existing email."""
+    repo = MS365Repository(db)
+    conn = repo.get_connection_by_user(current_user["user_id"], current_user["tenant_id"])
+    if not conn or not conn.is_active:
+        raise HTTPException(status_code=400, detail="No active MS365 connection.")
+    
+    email = repo.get_email_by_id(email_id, current_user["user_id"], current_user["tenant_id"])
+    if not email:
+        raise HTTPException(status_code=404, detail="Email not found.")
+
+    try:
+        access_token, new_data = await graph_service.ensure_valid_token(
+            conn.access_token, conn.refresh_token, conn.expires_at
+        )
+        if new_data:
+            repo.update_connection_tokens(conn, new_data)
+
+        return await graph_service.forward_mail(
+            access_token=access_token,
+            message_id=email.ms_message_id,
+            to_recipients=request.to_recipients,
+            comment=request.comment
+        )
+    except Exception as e:
+        logger.error("ms365_forward_email_error", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ── Calendar Events ──────────────────────────────────────────────
 

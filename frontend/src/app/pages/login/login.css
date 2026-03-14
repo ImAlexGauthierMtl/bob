@@ -520,9 +520,9 @@
     margin-top: 1.5rem;
 }
 
-/* ── Desktop breakpoint (1024px+) ─────────────────────────── */
+/* ── Desktop breakpoint (768px+) — hero visible pour même rendu sur tous les écrans ─────────────────────────── */
 
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
     .login-hero {
         display: flex;
     }

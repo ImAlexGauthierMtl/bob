@@ -253,9 +253,11 @@ class TestKBGenerationMission:
 class TestIntentClassifierKBArticle:
     """Test that create_kb_article intent is properly configured."""
 
-    def test_create_kb_article_in_supported_intents(self):
-        from app.agents.intent_classifier import SUPPORTED_INTENTS
-        assert "create_kb_article" in SUPPORTED_INTENTS
+    def test_create_kb_article_in_bcc_intents(self, db):
+        """Verify create_kb_article exists as a BCC intent."""
+        from app.agents.intent_classifier import load_supported_intents_from_bcc
+        names, _ = load_supported_intents_from_bcc(db, "default")
+        assert "create_kb_article" in names
 
     def test_kb_topic_entity_field_exists(self):
         from app.agents.intent_classifier import ExtractedEntities

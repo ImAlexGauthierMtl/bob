@@ -47,6 +47,13 @@ export const routes: Routes = [
                     ),
             },
             {
+                path: 'inbox',
+                loadComponent: () =>
+                    import('./pages/inbox/inbox-overview').then(
+                        (m) => m.InboxOverviewComponent
+                    ),
+            },
+            {
                 path: 'contacts/:id',
                 loadComponent: () =>
                     import('./pages/contact-profile/contact-profile').then(
@@ -233,6 +240,13 @@ export const routes: Routes = [
                         loadComponent: () =>
                             import('./pages/settings/bcc-control-center/bcc-child-profile/bcc-child-profile').then(
                                 (m) => m.BccChildProfileComponent
+                            ),
+                    },
+                    {
+                        path: 'inbox',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-inbox/settings-inbox').then(
+                                (m) => m.SettingsInboxComponent
                             ),
                     },
                     {

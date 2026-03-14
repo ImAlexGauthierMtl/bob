@@ -1,0 +1,189 @@
+/* =============================================================
+   Settings Inbox — Smart Labels & Categories
+   ============================================================= */
+
+/* ── Add Category Form ────────────────────────────────────── */
+.add-category-form {
+    background-color: var(--color-gray-50);
+    border: 1px solid var(--color-gray-200);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.add-category-form__title {
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-black);
+    margin-bottom: 0.75rem;
+}
+
+.add-category-form__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.add-category-form__actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.add-category-form__preview {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.add-category-form__preview-label {
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+}
+
+/* ── Preview Badge ────────────────────────────────────────── */
+.preview-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+}
+
+/* ── Color Dots ───────────────────────────────────────────── */
+.preview-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+}
+
+.preview-dot--blue   { background-color: #3b82f6; }
+.preview-dot--green  { background-color: #22c55e; }
+.preview-dot--purple { background-color: #a855f7; }
+.preview-dot--orange { background-color: #f97316; }
+.preview-dot--red    { background-color: #ef4444; }
+
+.inbox-nav__dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.inbox-nav__dot--blue   { background-color: #3b82f6; }
+.inbox-nav__dot--green  { background-color: #22c55e; }
+.inbox-nav__dot--purple { background-color: #a855f7; }
+.inbox-nav__dot--orange { background-color: #f97316; }
+.inbox-nav__dot--red    { background-color: #ef4444; }
+
+/* ── Labels List ──────────────────────────────────────────── */
+.labels-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+/* ── Label Item Wrapper ───────────────────────────────────── */
+.label-item-wrapper {
+    border: 1px solid var(--color-gray-100);
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.label-item-wrapper:hover {
+    border-color: var(--color-gray-300);
+}
+
+/* ── Label Row (clickable) ────────────────────────────────── */
+.label-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background-color: var(--color-white);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.label-item:hover {
+    background-color: var(--color-gray-50);
+}
+
+.label-item__left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.label-item__name {
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-800);
+}
+
+.label-item__desc-preview {
+    font-size: 0.75rem;
+    color: var(--color-gray-400);
+    margin-left: 0.25rem;
+}
+
+.label-item__right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.label-item__meta {
+    font-size: 0.75rem;
+    color: var(--color-gray-400);
+}
+
+.label-item__chevron {
+    font-size: 0.75rem;
+    color: var(--color-gray-400);
+    transition: transform 0.2s ease;
+}
+
+/* ── Detail Edit Panel ────────────────────────────────────── */
+.label-detail-panel {
+    background-color: var(--color-gray-50);
+    border-top: 1px solid var(--color-gray-200);
+    padding: 1.25rem 1.25rem 1rem;
+}
+
+.edit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.label-detail-panel__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.75rem;
+}
+
+.label-detail-panel__footer-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* ── Empty State ──────────────────────────────────────────── */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--color-gray-500);
+    border: 2px dashed var(--color-gray-200);
+}
+
+.empty-state__text {
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+}

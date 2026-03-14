@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { BobChatRequest, BobChatResponse, BobSessionInfo } from '../models/bob.model';
+import { BobChannel, BobChatRequest, BobChatResponse, BobSessionInfo } from '../models/bob.model';
 
 const API_URL = `${environment.apiUrl}`;
 
@@ -10,11 +10,12 @@ const API_URL = `${environment.apiUrl}`;
 export class BobService {
     private http = inject(HttpClient);
 
-    chat(message: string, sessionId?: string, missionPrompt?: string, missionContext?: Record<string, unknown>): Observable<BobChatResponse> {
+    chat(message: string, sessionId?: string, missionPrompt?: string, missionContext?: Record<string, unknown>, channel?: BobChannel): Observable<BobChatResponse> {
         const body: BobChatRequest = { message };
         if (sessionId) body.session_id = sessionId;
         if (missionPrompt) body.mission_prompt = missionPrompt;
         if (missionContext) body.mission_context = missionContext;
+        if (channel) body.channel = channel;
         return this.http.post<BobChatResponse>(`${API_URL}/bob/chat`, body);
     }
 

@@ -15,7 +15,7 @@
             </div>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
-            @if (connection?.isActive) {
+            @if (connection?.is_active) {
             <span class="status-badge status-badge--green">Connected</span>
             } @else {
             <span class="status-badge status-badge--amber">Disconnected</span>
@@ -41,15 +41,15 @@
         <div class="integration-grid">
             <div class="integration-card">
                 <p class="integration-card__name">Connected Account</p>
-                <p class="integration-card__sub">{{ connection.msEmail }}</p>
+                <p class="integration-card__sub">{{ connection.ms_email }}</p>
             </div>
             <div class="integration-card">
                 <p class="integration-card__name">Last Email Sync</p>
-                <p class="integration-card__sub">{{ formatDate(connection.lastEmailSync) }}</p>
+                <p class="integration-card__sub">{{ formatDate(connection.last_email_sync) }}</p>
             </div>
             <div class="integration-card">
                 <p class="integration-card__name">Last Calendar Sync</p>
-                <p class="integration-card__sub">{{ formatDate(connection.lastCalendarSync) }}</p>
+                <p class="integration-card__sub">{{ formatDate(connection.last_calendar_sync) }}</p>
             </div>
         </div>
     </div>
@@ -98,21 +98,21 @@
             style="display: flex; gap: 12px; padding: 12px; border-bottom: 1px solid var(--color-border); align-items: flex-start;">
             <div style="flex: 1; min-width: 0;">
                 <p style="margin: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    @if (!email.isRead) {
+                    @if (!email.is_read) {
                     <span
                         style="width: 8px; height: 8px; background: var(--color-accent); border-radius: 50%; display: inline-block; margin-right: 6px;"></span>
                     }
                     {{ email.subject || '(No subject)' }}
                 </p>
                 <p style="margin: 4px 0 0; font-size: 12px; color: var(--color-text-muted);">
-                    {{ email.fromName || email.fromAddress }} — {{ formatDate(email.receivedAt) }}
+                    {{ email.from_name || email.from_address }} — {{ formatDate(email.received_at) }}
                 </p>
                 <p
                     style="margin: 4px 0 0; font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    {{ email.bodyPreview }}
+                    {{ email.body_preview }}
                 </p>
             </div>
-            @if (email.hasAttachments) {
+            @if (email.has_attachments) {
             <i class="fa-solid fa-paperclip" style="color: var(--color-text-muted); font-size: 12px;"></i>
             }
         </div>
@@ -136,15 +136,15 @@
             <div style="flex: 1; min-width: 0;">
                 <p style="margin: 0; font-weight: 500;">
                     {{ event.subject || '(No title)' }}
-                    @if (event.isCancelled) {
+                    @if (event.is_cancelled) {
                     <span style="color: var(--color-danger); font-size: 11px; margin-left: 6px;">Cancelled</span>
                     }
                 </p>
                 <p style="margin: 4px 0 0; font-size: 12px; color: var(--color-text-muted);">
                     <i class="fa-solid fa-clock"></i>
-                    {{ formatDate(event.startTime) }}
-                    @if (event.endTime) {
-                    — {{ formatDate(event.endTime) }}
+                    {{ formatDate(event.start_time) }}
+                    @if (event.end_time) {
+                    — {{ formatDate(event.end_time) }}
                     }
                 </p>
                 @if (event.location) {
@@ -152,8 +152,8 @@
                     <i class="fa-solid fa-location-dot"></i> {{ event.location }}
                 </p>
                 }
-                @if (event.onlineMeetingUrl) {
-                <a [href]="event.onlineMeetingUrl" target="_blank" style="font-size: 12px; color: var(--color-accent);">
+                @if (event.online_meeting_url) {
+                <a [href]="event.online_meeting_url" target="_blank" style="font-size: 12px; color: var(--color-accent);">
                     <i class="fa-solid fa-video"></i> Join meeting
                 </a>
                 }

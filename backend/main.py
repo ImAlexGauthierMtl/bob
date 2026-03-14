@@ -22,6 +22,8 @@ async def lifespan(app: FastAPI):
     from app.domain.entities import workflow, workflow_execution  # noqa: F401
     from app.domain.entities import bcc_entities  # noqa: F401
     from app.domain.entities import ms365_connection, synced_email, synced_event  # noqa: F401
+    from app.domain.entities import email_contact, smart_label  # noqa: F401
+    from app.domain.entities import client_map as client_map_entity  # noqa: F401
     from app.domain.entities import training_models  # noqa: F401
     from app.domain.entities import role as role_entities  # noqa: F401
     from app.domain.entities import product as product_entity  # noqa: F401
@@ -131,7 +133,9 @@ from app.presentation.routes.tenant_routes import router as tenant_router
 from app.presentation.routes.product_routes import router as product_router
 from app.presentation.routes.usage_routes import router as usage_router
 from app.presentation.routes.ms365_routes import router as ms365_router
+from app.presentation.routes.smart_label_routes import router as smart_label_router
 from app.middleware.metrics import router as metrics_router
+from app.presentation.routes.client_map_routes import router as client_map_router
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(search_router, tags=["search"])
@@ -158,7 +162,9 @@ app.include_router(tenant_router, tags=["tenants"])
 app.include_router(product_router, tags=["products"])
 app.include_router(usage_router, tags=["usage"])
 app.include_router(ms365_router, tags=["ms365"])
+app.include_router(smart_label_router, tags=["inbox-labels"])
 app.include_router(metrics_router, tags=["metrics"])
+app.include_router(client_map_router, tags=["client-map"])
 
 
 @app.get("/health", tags=["monitoring"])

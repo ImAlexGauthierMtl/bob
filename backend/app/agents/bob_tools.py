@@ -248,7 +248,7 @@ BOB_TOOLS = [
         "type": "function",
         "function": {
             "name": "create_organization",
-            "description": "Create a new organization in the CRM.",
+            "description": "Create a new organization in the CRM. Accepts all organization fields. Automatically checks for duplicates before creating.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -258,11 +258,65 @@ BOB_TOOLS = [
                     },
                     "website": {
                         "type": "string",
-                        "description": "Organization website URL (optional)",
+                        "description": "Organization website URL",
                     },
                     "industry": {
                         "type": "string",
-                        "description": "Industry sector (optional)",
+                        "description": "Industry sector",
+                    },
+                    "phone": {
+                        "type": "string",
+                        "description": "Phone number",
+                    },
+                    "email": {
+                        "type": "string",
+                        "description": "Email address",
+                    },
+                    "address_street": {
+                        "type": "string",
+                        "description": "Street address",
+                    },
+                    "address_city": {
+                        "type": "string",
+                        "description": "City",
+                    },
+                    "address_state": {
+                        "type": "string",
+                        "description": "State/Province",
+                    },
+                    "address_country": {
+                        "type": "string",
+                        "description": "Country",
+                    },
+                    "address_postal_code": {
+                        "type": "string",
+                        "description": "Postal/ZIP code",
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Organization status",
+                        "enum": ["ACTIVE", "INACTIVE", "PROSPECT", "CUSTOMER", "CHURNED"],
+                    },
+                    "org_type": {
+                        "type": "string",
+                        "description": "Organization type",
+                        "enum": ["CORPORATION", "SMB", "STARTUP", "GOVERNMENT", "NONPROFIT", "OTHER"],
+                    },
+                    "employee_count": {
+                        "type": "integer",
+                        "description": "Number of employees",
+                    },
+                    "annual_revenue": {
+                        "type": "number",
+                        "description": "Annual revenue in dollars",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Description of the organization",
+                    },
+                    "linkedin_url": {
+                        "type": "string",
+                        "description": "LinkedIn company page URL",
                     },
                 },
                 "required": ["name"],
@@ -349,7 +403,13 @@ BOB_TOOLS = [
                 "- checklist: action items with checkboxes → use items[]\n"
                 "- action_plan: phased timeline with tasks → use sections[]\n"
                 "- info_list: bullet points with icons → use items[] with icon\n"
-                "- pipeline: progress bars by stage → use items[] with percent"
+                "- pipeline: progress bars by stage → use items[] with percent\n"
+                "- activity_card: single activity detail (call/email/meeting/task/note) → fields[0]=type, rest=detail fields\n"
+                "- entity_timeline: chronological activity list → use items[] with icon+time\n"
+                "- comparison_table: 360° entity summary with grouped sections → use sections[]\n"
+                "- alert_banner: confirmation/error/warning banner → fields[0]=severity(success/error/warning), fields[1]=description\n"
+                "- metric_trend: advisor projection metrics with trends → use items[] with change+percent\n"
+                "- enrichment_profile: enrichment results with sectioned data → use sections[]"
             ),
             "parameters": {
                 "type": "object",
@@ -360,6 +420,8 @@ BOB_TOOLS = [
                             "opportunity", "contact", "organization", "search_results",
                             "data_table", "kpi_summary", "progress_card", "checklist",
                             "action_plan", "info_list", "pipeline",
+                            "activity_card", "entity_timeline", "comparison_table",
+                            "alert_banner", "metric_trend", "enrichment_profile",
                         ],
                         "description": "Display type — pick based on data shape.",
                     },
@@ -702,6 +764,528 @@ BOB_TOOLS = [
             },
         },
     },
+    # ── Organization management tools ─────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "get_organization",
+            "description": "Get full details of an organization by ID. Returns all fields including contacts count, opportunities count, and BCC profile.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "organization_id": {
+                        "type": "string",
+                        "description": "UUID of the organization",
+                    },
+                },
+                "required": ["organization_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_organization",
+            "description": "Update one or more fields of an existing organization. Only provide the fields you want to change.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "organization_id": {
+                        "type": "string",
+                        "description": "UUID of the organization to update",
+                    },
+                    "name": {"type": "string", "description": "New organization name"},
+                    "website": {"type": "string", "description": "Website URL"},
+                    "industry": {"type": "string", "description": "Industry sector"},
+                    "phone": {"type": "string", "description": "Phone number"},
+                    "email": {"type": "string", "description": "Email address"},
+                    "address_street": {"type": "string", "description": "Street address"},
+                    "address_city": {"type": "string", "description": "City"},
+                    "address_state": {"type": "string", "description": "State/Province"},
+                    "address_country": {"type": "string", "description": "Country"},
+                    "address_postal_code": {"type": "string", "description": "Postal/ZIP code"},
+                    "status": {
+                        "type": "string",
+                        "description": "Organization status",
+                        "enum": ["ACTIVE", "INACTIVE", "PROSPECT", "CUSTOMER", "CHURNED"],
+                    },
+                    "org_type": {
+                        "type": "string",
+                        "description": "Organization type",
+                        "enum": ["CORPORATION", "SMB", "STARTUP", "GOVERNMENT", "NONPROFIT", "OTHER"],
+                    },
+                    "employee_count": {"type": "integer", "description": "Number of employees"},
+                    "annual_revenue": {"type": "number", "description": "Annual revenue in dollars"},
+                    "description": {"type": "string", "description": "Description of the organization"},
+                    "linkedin_url": {"type": "string", "description": "LinkedIn company page URL"},
+                },
+                "required": ["organization_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_organization",
+            "description": "Soft-delete an organization. Will fail if there are linked contacts or opportunities — they must be removed first.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "organization_id": {
+                        "type": "string",
+                        "description": "UUID of the organization to delete",
+                    },
+                },
+                "required": ["organization_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_organization_contacts",
+            "description": "List all contacts linked to an organization.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "organization_id": {
+                        "type": "string",
+                        "description": "UUID of the organization",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max contacts to return (default 20)",
+                    },
+                },
+                "required": ["organization_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_organization_opportunities",
+            "description": "List all sales opportunities linked to an organization.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "organization_id": {
+                        "type": "string",
+                        "description": "UUID of the organization",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max opportunities to return (default 20)",
+                    },
+                },
+                "required": ["organization_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "assign_organization_owner",
+            "description": "Assign or change the owner of an organization. The owner is the sales rep responsible for this account.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "organization_id": {
+                        "type": "string",
+                        "description": "UUID of the organization",
+                    },
+                    "owner_email": {
+                        "type": "string",
+                        "description": "Email of the new owner (must be a user in the system)",
+                    },
+                },
+                "required": ["organization_id", "owner_email"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_organization_summary",
+            "description": (
+                "Get a comprehensive summary of the relationship with an organization. "
+                "Includes organization details, contacts, open opportunities, recent activities, "
+                "and BCC intelligence profile. Use this when the user asks for an overview or summary."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "organization_id": {
+                        "type": "string",
+                        "description": "UUID of the organization",
+                    },
+                },
+                "required": ["organization_id"],
+            },
+        },
+    },
+    # ── Contact management tools ──────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "get_contact",
+            "description": "Get full details of a contact by ID. Returns all fields including linked organization, opportunities count, and activities count.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {
+                        "type": "string",
+                        "description": "UUID of the contact",
+                    },
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_contact",
+            "description": "Update one or more fields of an existing contact. Only provide the fields you want to change.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {
+                        "type": "string",
+                        "description": "UUID of the contact to update",
+                    },
+                    "first_name": {"type": "string", "description": "First name"},
+                    "last_name": {"type": "string", "description": "Last name"},
+                    "email": {"type": "string", "description": "Email address"},
+                    "phone": {"type": "string", "description": "Phone number"},
+                    "mobile": {"type": "string", "description": "Mobile number"},
+                    "job_title": {"type": "string", "description": "Job title"},
+                    "department": {"type": "string", "description": "Department"},
+                    "seniority": {"type": "string", "description": "Seniority level"},
+                    "linkedin_url": {"type": "string", "description": "LinkedIn profile URL"},
+                    "notes": {"type": "string", "description": "Notes about the contact"},
+                    "status": {
+                        "type": "string",
+                        "description": "Contact status",
+                        "enum": ["ACTIVE", "INACTIVE", "LEAD"],
+                    },
+                    "organization_id": {"type": "string", "description": "UUID of the organization to link"},
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_contact",
+            "description": "Soft-delete a contact. Will fail if there are linked opportunities — they must be reassigned first.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {
+                        "type": "string",
+                        "description": "UUID of the contact to delete",
+                    },
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_contact_activities",
+            "description": "List all activities linked to a contact.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {
+                        "type": "string",
+                        "description": "UUID of the contact",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max activities to return (default 20)",
+                    },
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_contact_opportunities",
+            "description": "List all sales opportunities linked to a contact.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {
+                        "type": "string",
+                        "description": "UUID of the contact",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max opportunities to return (default 20)",
+                    },
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_contact_summary",
+            "description": (
+                "Get a comprehensive 360° view of a contact. "
+                "Includes contact details, linked organization, opportunities, "
+                "recent activities, and engagement score."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {
+                        "type": "string",
+                        "description": "UUID of the contact",
+                    },
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    # ── Opportunity management tools ──────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "get_opportunity",
+            "description": "Get full details of an opportunity by ID. Returns all fields including linked organization, contact, products, and activities count.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "opportunity_id": {
+                        "type": "string",
+                        "description": "UUID of the opportunity",
+                    },
+                },
+                "required": ["opportunity_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_opportunity",
+            "description": "Update one or more fields of an existing opportunity. Only provide the fields you want to change. Use this to advance stages, update amounts, etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "opportunity_id": {
+                        "type": "string",
+                        "description": "UUID of the opportunity to update",
+                    },
+                    "name": {"type": "string", "description": "Opportunity name"},
+                    "description": {"type": "string", "description": "Description"},
+                    "stage": {
+                        "type": "string",
+                        "description": "Pipeline stage",
+                        "enum": ["PROSPECTING", "QUALIFICATION", "PROPOSAL", "NEGOTIATION", "CLOSED_WON", "CLOSED_LOST"],
+                    },
+                    "priority": {
+                        "type": "string",
+                        "description": "Priority level",
+                        "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+                    },
+                    "amount": {"type": "number", "description": "Deal value"},
+                    "probability": {"type": "number", "description": "Win probability 0-100"},
+                    "close_date": {"type": "string", "description": "Expected close date (YYYY-MM-DD)"},
+                    "source": {"type": "string", "description": "Lead source"},
+                    "organization_id": {"type": "string", "description": "UUID of the organization"},
+                    "contact_id": {"type": "string", "description": "UUID of the primary contact"},
+                },
+                "required": ["opportunity_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_opportunity",
+            "description": "Soft-delete an opportunity. Will fail if there are linked quotes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "opportunity_id": {
+                        "type": "string",
+                        "description": "UUID of the opportunity to delete",
+                    },
+                },
+                "required": ["opportunity_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_opportunity_activities",
+            "description": "List all activities linked to an opportunity.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "opportunity_id": {
+                        "type": "string",
+                        "description": "UUID of the opportunity",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max activities to return (default 20)",
+                    },
+                },
+                "required": ["opportunity_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_opportunity_summary",
+            "description": (
+                "Get a comprehensive view of an opportunity. "
+                "Includes deal details, organization, contact, products, "
+                "recent activities, and pipeline position."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "opportunity_id": {
+                        "type": "string",
+                        "description": "UUID of the opportunity",
+                    },
+                },
+                "required": ["opportunity_id"],
+            },
+        },
+    },
+    # ── Activity management tools ─────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "create_activity",
+            "description": "Create a new activity (call, email, meeting, task, or note) in the CRM. Can be linked to organizations, contacts, and opportunities.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "subject": {
+                        "type": "string",
+                        "description": "Activity subject/title",
+                    },
+                    "activity_type": {
+                        "type": "string",
+                        "description": "Type of activity",
+                        "enum": ["CALL", "EMAIL", "MEETING", "TASK", "NOTE"],
+                    },
+                    "description": {"type": "string", "description": "Activity description/notes"},
+                    "priority": {
+                        "type": "string",
+                        "description": "Priority level",
+                        "enum": ["LOW", "MEDIUM", "HIGH", "URGENT"],
+                        "default": "MEDIUM",
+                    },
+                    "due_date": {"type": "string", "description": "Due date (ISO format YYYY-MM-DDTHH:MM:SS)"},
+                    "assigned_to": {"type": "string", "description": "Email of the person assigned"},
+                    "organization_id": {"type": "string", "description": "UUID of linked organization"},
+                    "contact_id": {"type": "string", "description": "UUID of linked contact"},
+                    "opportunity_id": {"type": "string", "description": "UUID of linked opportunity"},
+                },
+                "required": ["subject", "activity_type"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_activity",
+            "description": "Get full details of an activity by ID.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "activity_id": {
+                        "type": "string",
+                        "description": "UUID of the activity",
+                    },
+                },
+                "required": ["activity_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_activity",
+            "description": "Update one or more fields of an existing activity. Only provide the fields you want to change.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "activity_id": {
+                        "type": "string",
+                        "description": "UUID of the activity to update",
+                    },
+                    "subject": {"type": "string", "description": "Subject/title"},
+                    "description": {"type": "string", "description": "Description/notes"},
+                    "activity_type": {
+                        "type": "string",
+                        "enum": ["CALL", "EMAIL", "MEETING", "TASK", "NOTE"],
+                    },
+                    "priority": {
+                        "type": "string",
+                        "enum": ["LOW", "MEDIUM", "HIGH", "URGENT"],
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"],
+                    },
+                    "due_date": {"type": "string", "description": "Due date (ISO format)"},
+                    "assigned_to": {"type": "string", "description": "Assigned to (email)"},
+                },
+                "required": ["activity_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_activity",
+            "description": "Soft-delete an activity.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "activity_id": {
+                        "type": "string",
+                        "description": "UUID of the activity to delete",
+                    },
+                },
+                "required": ["activity_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "complete_activity",
+            "description": "Mark an activity as completed. Shortcut for update_activity with status=COMPLETED.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "activity_id": {
+                        "type": "string",
+                        "description": "UUID of the activity to complete",
+                    },
+                },
+                "required": ["activity_id"],
+            },
+        },
+    },
 ]
 
 
@@ -723,767 +1307,11 @@ def load_tools_from_bcc(db, tenant_id: str) -> list[dict]:
     return BOB_TOOLS
 
 
-# ── Tool executors ───────────────────────────────────────────
 
-async def execute_tool(
-    tool_name: str,
-    arguments: dict,
-    db_session,
-    user_id: str,
-) -> str:
-    """Execute a tool call and return the result as a string.
-
-    Args:
-        tool_name: Name of the tool to execute
-        arguments: Tool arguments from the LLM
-        db_session: SQLAlchemy database session
-        user_id: Current user's ID
-
-    Returns:
-        String result to feed back to the LLM
-    """
-    logger.info(
-        "tool_call",
-        tool=tool_name,
-        args=arguments,
-        user_id=user_id,
-    )
-
-    try:
-        if tool_name == "search_contacts":
-            return await _search_contacts(db_session, **arguments)
-        elif tool_name == "search_organizations":
-            return await _search_organizations(db_session, **arguments)
-        elif tool_name == "get_pipeline_stats":
-            return await _get_pipeline_stats(db_session)
-        elif tool_name == "create_contact":
-            return await _create_contact(db_session, user_id=user_id, **arguments)
-        elif tool_name == "create_organization":
-            return await _create_organization(db_session, user_id=user_id, **arguments)
-        elif tool_name == "get_recent_activities":
-            return await _get_recent_activities(db_session, **arguments)
-        elif tool_name == "bcc_update_profile":
-            return await _bcc_update_profile(db_session, user_id=user_id, **arguments)
-        elif tool_name == "bcc_get_profile":
-            return await _bcc_get_profile(db_session, **arguments)
-        elif tool_name == "save_training_note":
-            return await _save_training_note(db_session, user_id=user_id, **arguments)
-        elif tool_name == "save_missing_element":
-            return await _save_missing_element(db_session, user_id=user_id, **arguments)
-        elif tool_name == "change_training_slide":
-            return await _change_training_slide(**arguments)
-        elif tool_name == "invoke_deep_agent":
-            return await _invoke_deep_agent(db_session, user_id=user_id, **arguments)
-        elif tool_name == "enrich_account":
-            return await _enrich_account(db_session, user_id=user_id, **arguments)
-        elif tool_name == "search_rolodex":
-            return await _search_rolodex(db_session, user_id=user_id, **arguments)
-        else:
-            dynamic_result = await _execute_dynamic_tool(db_session, user_id, tool_name, arguments)
-            if dynamic_result is not None:
-                return dynamic_result
-            return f"Unknown tool: {tool_name}"
-    except Exception as e:
-        logger.error("tool_execution_error", tool=tool_name, error=str(e))
-        return f"Error executing {tool_name}: {str(e)}"
-
-
-# ── Tool implementations ─────────────────────────────────────
-
-async def _search_contacts(db_session, query: str, limit: int = 5) -> str:
-    """Search contacts in the database."""
-    from app.domain.entities.contact import Contact
-    from sqlalchemy import or_
-
-    results = db_session.query(Contact).filter(
-        or_(
-            Contact.first_name.ilike(f"%{query}%"),
-            Contact.last_name.ilike(f"%{query}%"),
-            Contact.email.ilike(f"%{query}%"),
-        )
-    ).limit(limit).all()
-
-    if not results:
-        return f"No contacts found matching '{query}'."
-
-    lines = [f"Found {len(results)} contact(s):"]
-    for c in results:
-        lines.append(f"- {c.first_name} {c.last_name} ({c.email})")
-    return "\n".join(lines)
-
-
-async def _search_organizations(db_session, query: str, limit: int = 5) -> str:
-    """Search organizations in the database."""
-    from app.domain.entities.organization import Organization
-
-    results = db_session.query(Organization).filter(
-        Organization.name.ilike(f"%{query}%")
-    ).limit(limit).all()
-
-    if not results:
-        return f"No organizations found matching '{query}'."
-
-    lines = [f"Found {len(results)} organization(s):"]
-    for o in results:
-        website = getattr(o, "website", "") or ""
-        lines.append(f"- {o.name} ({website})")
-    return "\n".join(lines)
-
-
-async def _get_pipeline_stats(db_session) -> str:
-    """Get pipeline statistics."""
-    from app.domain.entities.opportunity import Opportunity
-    from sqlalchemy import func
-
-    total = db_session.query(func.count(Opportunity.id)).scalar() or 0
-    total_value = db_session.query(func.sum(Opportunity.value)).scalar() or 0
-
-    return (
-        f"Pipeline stats:\n"
-        f"- Total opportunities: {total}\n"
-        f"- Total pipeline value: ${total_value:,.0f}"
-    )
-
-
-async def _create_contact(
-    db_session,
-    user_id: str,
-    first_name: str,
-    email: str = "",
-    last_name: str = "",
-    phone: str = "",
-    company: str = "",
-) -> str:
-    """Create a new contact, optionally linked to an organization."""
-    from app.domain.entities.contact import Contact
-    from app.domain.entities.organization import Organization
-
-    # Find organization by name if company is provided
-    org_id = None
-    org_name = ""
-    if company:
-        org = db_session.query(Organization).filter(
-            Organization.name.ilike(f"%{company}%")
-        ).first()
-        if org:
-            org_id = org.id
-            org_name = org.name
-
-    contact = Contact(
-        first_name=first_name,
-        last_name=last_name,
-        email=email,
-        phone=phone,
-        organization_id=org_id,
-    )
-    db_session.add(contact)
-    db_session.commit()
-
-    logger.info(
-        "tool_contact_created",
-        contact_id=str(contact.id),
-        email=email,
-        organization=org_name or None,
-        user_id=user_id,
-    )
-
-    result = f"Contact created: {first_name} {last_name}"
-    if email:
-        result += f" ({email})"
-    if org_name:
-        result += f" — linked to organization '{org_name}'"
-    elif company:
-        result += f" — organization '{company}' not found, contact created without org link"
-    return result
-
-
-async def _create_organization(
-    db_session,
-    user_id: str,
-    name: str,
-    website: str = "",
-    industry: str = "",
-) -> str:
-    """Create a new organization."""
-    from app.domain.entities.organization import Organization
-
-    org = Organization(name=name)
-    if website:
-        org.website = website
-    db_session.add(org)
-    db_session.commit()
-
-    logger.info(
-        "tool_organization_created",
-        org_id=str(org.id),
-        name=name,
-        user_id=user_id,
-    )
-
-    return f"Organization created: {name}"
-
-
-async def _get_recent_activities(db_session, limit: int = 10) -> str:
-    """Get recent activities."""
-    from app.domain.entities.activity import Activity
-
-    results = db_session.query(Activity).order_by(
-        Activity.created_at.desc()
-    ).limit(limit).all()
-
-    if not results:
-        return "No recent activities found."
-
-    lines = [f"Last {len(results)} activities:"]
-    for a in results:
-        lines.append(f"- [{a.activity_type}] {a.subject}")
-    return "\n".join(lines)
-
-
-async def _bcc_update_profile(
-    db_session,
-    user_id: str,
-    entity_type: str,
-    entity_id: str,
-    section: str,
-    content: str,
-    perspective: str = "general",
-    conversation_id: Optional[str] = None,
-) -> str:
-    """Add a versioned profile entry to a BCC entity."""
-    from app.domain.entities.bcc_entities import BccProfileEntry
-    from app.domain.entities.base import generate_uuid
-    from sqlalchemy import and_
-
-    # Get user name + tenant_id for contributor display
-    from app.domain.entities.user import User
-    user = db_session.query(User).filter(User.id == user_id).first()
-    contributor_name = "Bob" if not user else f"{user.first_name} {user.last_name} (via Bob)"
-    tenant_id = user.tenant_id if user else "default"
-
-    # Find latest version for this entity+section+perspective
-    latest = (
-        db_session.query(BccProfileEntry)
-        .filter(
-            and_(
-                BccProfileEntry.tenant_id == tenant_id,
-                BccProfileEntry.entity_type == entity_type,
-                BccProfileEntry.entity_id == entity_id,
-                BccProfileEntry.section == section,
-                BccProfileEntry.perspective == perspective,
-            )
-        )
-        .order_by(BccProfileEntry.version.desc())
-        .first()
-    )
-
-    new_version = (latest.version + 1) if latest else 1
-
-    # Deactivate previous active version
-    if latest and latest.is_active:
-        latest.is_active = False
-
-    # Create new entry
-    entry = BccProfileEntry(
-        id=generate_uuid(),
-        tenant_id=tenant_id,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        section=section,
-        content=content,
-        perspective=perspective,
-        version=new_version,
-        is_active=True,
-        contributed_by=user_id,
-        contributor_name=contributor_name,
-        contribution_method="conversation",
-        conversation_id=conversation_id,
-    )
-    db_session.add(entry)
-    db_session.commit()
-
-    # Index in RAG for semantic retrieval
-    if content:
-        try:
-            from app.rag.indexer import index_bcc_profile_entry as _rag_index
-            _rag_index(
-                db=db_session,
-                entity_type=entity_type,
-                entity_id=entity_id,
-                section=section,
-                content=content,
-                tenant_id=entry.tenant_id,
-            )
-        except Exception as rag_err:
-            logger.warning("rag_index_profile_failed", error=str(rag_err))
-
-    logger.info(
-        "bcc_profile_updated",
-        entity_type=entity_type,
-        entity_id=entity_id,
-        section=section,
-        perspective=perspective,
-        version=new_version,
-        user_id=user_id,
-    )
-
-    return (
-        f"Profile updated: {entity_type}/{entity_id} → "
-        f"section='{section}', perspective='{perspective}', "
-        f"version={new_version}. The knowledge base has been enriched."
-    )
-
-
-async def _bcc_get_profile(
-    db_session,
-    entity_type: str,
-    entity_id: str,
-) -> str:
-    """Get all active profile entries for a BCC entity."""
-    from app.domain.entities.bcc_entities import BccProfileEntry
-    from sqlalchemy import and_
-
-    entries = (
-        db_session.query(BccProfileEntry)
-        .filter(
-            and_(
-                BccProfileEntry.entity_type == entity_type,
-                BccProfileEntry.entity_id == entity_id,
-                BccProfileEntry.is_active == True,
-            )
-        )
-        .order_by(BccProfileEntry.section)
-        .all()
-    )
-
-    if not entries:
-        return f"No profile data found for {entity_type}/{entity_id}. The profile is empty."
-
-    lines = [f"Profile for {entity_type}/{entity_id} ({len(entries)} entries):"]
-    current_section = None
-    for e in entries:
-        if e.section != current_section:
-            current_section = e.section
-            lines.append(f"\n## {current_section.replace('_', ' ').title()}")
-        perspective_label = f"[{e.perspective.upper()}]" if e.perspective != "general" else ""
-        content_preview = (e.content[:200] + "...") if e.content and len(e.content) > 200 else (e.content or "(structured data)")
-        lines.append(f"  {perspective_label} v{e.version}: {content_preview}")
-
-    return "\n".join(lines)
-
-
-# ── Training tool implementations ────────────────────────────
-
-async def _save_training_note(
-    db_session,
-    user_id: str,
-    session_id: str,
-    content: str,
-    slide_id: int = 0,
-    note_type: str = "insight",
-) -> str:
-    """Save a training note to the database."""
-    import uuid
-    from app.domain.entities.training_models import TrainingNote
-
-    note = TrainingNote(
-        id=str(uuid.uuid4()),
-        session_id=session_id,
-        user_id=user_id,
-        slide_id=slide_id,
-        content=content,
-        note_type=note_type,
-    )
-    db_session.add(note)
-    db_session.commit()
-
-    logger.info(
-        "training_note_saved",
-        note_id=note.id,
-        session_id=session_id,
-        note_type=note_type,
-    )
-
-    return f"Note saved: '{content[:60]}...' (type: {note_type})"
-
-
-async def _save_missing_element(
-    db_session,
-    user_id: str,
-    session_id: str,
-    label: str,
-    category: str = "integration",
-    description: str = "",
-) -> str:
-    """Save a missing element to the database."""
-    import uuid
-    from app.domain.entities.training_models import TrainingMissingElement
-
-    item = TrainingMissingElement(
-        id=str(uuid.uuid4()),
-        session_id=session_id,
-        user_id=user_id,
-        label=label,
-        category=category,
-        description=description,
-    )
-    db_session.add(item)
-    db_session.commit()
-
-    logger.info(
-        "training_missing_saved",
-        item_id=item.id,
-        session_id=session_id,
-        label=label,
-        category=category,
-    )
-
-    return f"Missing element logged: '{label}' (category: {category})"
-
-
-async def _change_training_slide(
-    direction: str,
-    slide_number: int = 0,
-) -> str:
-    """Return a slide navigation action for the frontend.
-
-    The actual navigation happens on the frontend — this just returns
-    a JSON-serializable result that the chat agent sends as an action.
-    """
-    import json
-
-    result = {"action": "change_slide", "direction": direction}
-    if direction == "goto" and slide_number:
-        result["slide_number"] = slide_number
-
-    return json.dumps(result)
-
-
-async def _invoke_deep_agent(
-    db_session,
-    user_id: str,
-    instruction: str,
-) -> str:
-    """Invoke the Deep Agent to build/enrich BCC structure.
-
-    This is the tool-call path (legacy flow fallback).
-    The primary path is via the workflow engine (build_bcc intent).
-    """
-    from app.agents.deep_agent_graph import run_deep_agent
-    from app.domain.entities.user import User
-
-    user = db_session.query(User).filter(User.id == user_id).first()
-    if not user:
-        return "Error: user not found."
-
-    try:
-        result = await run_deep_agent(
-            instruction=instruction,
-            tenant_id=user.tenant_id,
-            user_id=user_id,
-            user_email=user.email or "unknown",
-        )
-    except Exception as e:
-        logger.error("invoke_deep_agent_failed", error=str(e))
-        return f"Deep Agent failed: {str(e)}"
-
-    if result.get("error"):
-        return f"Deep Agent error: {result['error']}"
-
-    return (
-        f"Deep Agent completed: {result.get('domains_created', 0)} domains, "
-        f"{result.get('intents_created', 0)} intents, "
-        f"{result.get('tasks_created', 0)} tasks created. "
-        f"Review: {result.get('review', {}).get('summary', 'N/A')}"
-    )
-
-
-TABLE_MODEL_MAP = {
-    "organizations": "app.domain.entities.organization.Organization",
-    "contacts": "app.domain.entities.contact.Contact",
-    "opportunities": "app.domain.entities.opportunity.Opportunity",
-    "activities": "app.domain.entities.activity.Activity",
-    "products": "app.domain.entities.product.Product",
-}
-
-
-async def _execute_dynamic_tool(
-    db_session,
-    user_id: str,
-    tool_name: str,
-    arguments: dict,
-) -> Optional[str]:
-    """Execute a BCC-defined dynamic tool via generic ORM query.
-
-    Looks up the tool in BccTaskTemplate.context["tool_schemas"],
-    then uses db_table/db_operation from context to run a safe SELECT query.
-    Returns None if the tool is not found in BCC (caller falls back to "Unknown tool").
-    """
-    from app.domain.entities.bcc_entities import BccTaskTemplate
-    from app.domain.entities.user import User
-    import importlib
-
-    user = db_session.query(User).filter(User.id == user_id).first()
-    if not user:
-        return None
-
-    tenant_id = user.tenant_id
-
-    templates = db_session.query(BccTaskTemplate).filter(
-        BccTaskTemplate.tenant_id == tenant_id,
-    ).all()
-
-    target_tpl = None
-    for tpl in templates:
-        ctx = tpl.context or {}
-        tool_prio = ctx.get("tool_priority", [])
-        if isinstance(tool_prio, list) and tool_name in tool_prio:
-            target_tpl = tpl
-            break
-        schemas = ctx.get("tool_schemas", [])
-        for s in schemas:
-            if s.get("function", {}).get("name") == tool_name:
-                target_tpl = tpl
-                break
-        if target_tpl:
-            break
-
-    if not target_tpl:
-        return None
-
-    ctx = target_tpl.context or {}
-    db_table = ctx.get("db_table")
-    db_operation = (ctx.get("db_operation") or "SELECT").upper()
-
-    if not db_table or "SELECT" not in db_operation:
-        return f"Dynamic tool {tool_name}: read-only operations only."
-
-    table_key = db_table.lower().strip()
-    model_path = TABLE_MODEL_MAP.get(table_key)
-    if not model_path:
-        return f"Dynamic tool {tool_name}: unknown table '{db_table}'."
-
-    module_path, class_name = model_path.rsplit(".", 1)
-    mod = importlib.import_module(module_path)
-    Model = getattr(mod, class_name)
-
-    try:
-        query = db_session.query(Model).filter(Model.tenant_id == tenant_id)
-
-        search_query = arguments.get("query") or arguments.get("search") or arguments.get("name")
-        if search_query and hasattr(Model, "name"):
-            query = query.filter(Model.name.ilike(f"%{search_query}%"))
-
-        limit = int(arguments.get("limit", 10))
-        limit = min(limit, 50)
-
-        if hasattr(Model, "created_at"):
-            query = query.order_by(Model.created_at.desc())
-
-        results = query.limit(limit).all()
-
-        if not results:
-            return f"No results found for {tool_name}."
-
-        lines = [f"Found {len(results)} result(s):"]
-        for i, row in enumerate(results, 1):
-            name = getattr(row, "name", None) or getattr(row, "subject", None) or str(row.id)[:8]
-            detail_parts = []
-            for attr in ("industry", "stage", "email", "category", "status", "amount"):
-                val = getattr(row, attr, None)
-                if val:
-                    detail_parts.append(f"{attr}={val}")
-            detail = f" ({', '.join(detail_parts)})" if detail_parts else ""
-            lines.append(f"  {i}. {name}{detail}")
-
-        logger.info("dynamic_tool_executed", tool=tool_name, table=db_table, results=len(results))
-        return "\n".join(lines)
-
-    except Exception as e:
-        logger.error("dynamic_tool_error", tool=tool_name, error=str(e))
-        return f"Dynamic tool {tool_name} error: {str(e)}"
-
-
-async def _enrich_account(
-    db_session,
-    user_id: str,
-    organization_id: str,
-) -> dict:
-    """Run Bob's Rolodex deep enrichment on an existing account.
-
-    Calls the full pipeline (Hunter.io + scrape + extraction + Compound)
-    and returns a structured result with an artifact for inline display.
-    """
-    from app.domain.entities.organization import Organization
-    from app.application.use_cases.enrich_organization import EnrichOrganizationUseCase
-    from app.domain.entities.user import User
-
-    # Resolve tenant + email from user_id
-    user = db_session.query(User).filter(User.id == user_id).first()
-    if not user:
-        return {"status": "error", "message": "User not found"}
-
-    tenant_id = user.tenant_id
-    user_email = user.email
-
-    # Verify org exists
-    org = db_session.query(Organization).filter(
-        Organization.id == organization_id,
-        Organization.tenant_id == tenant_id,
-    ).first()
-
-    if not org:
-        return {"status": "error", "message": f"Organization {organization_id} not found"}
-
-    logger.info(
-        "enrich_account_tool_start",
-        org_id=organization_id,
-        org_name=org.name,
-        user_id=user_id,
-    )
-
-    # Run the enrichment pipeline
-    use_case = EnrichOrganizationUseCase(db_session)
-    result = await use_case.execute(
-        org_id=organization_id,
-        tenant_id=tenant_id,
-        user_email=user_email,
-    )
-
-    # Build artifact fields from enrichment results
-    artifact_fields = []
-    fields = result.get("fields", {})
-    profile = result.get("organization_profile", {})
-
-    # Company overview
-    if fields.get("industry"):
-        artifact_fields.append({"label": "Industry", "value": fields["industry"]})
-    if fields.get("employee_count"):
-        artifact_fields.append({"label": "Employees", "value": str(fields["employee_count"])})
-    if fields.get("annual_revenue"):
-        artifact_fields.append({"label": "Revenue", "value": str(fields["annual_revenue"])})
-    if fields.get("description"):
-        desc = fields["description"]
-        artifact_fields.append({"label": "Description", "value": desc[:200] + "..." if len(desc) > 200 else desc})
-    if fields.get("linkedin_url"):
-        artifact_fields.append({"label": "LinkedIn", "value": fields["linkedin_url"]})
-    if fields.get("website"):
-        artifact_fields.append({"label": "Website", "value": fields["website"]})
-
-    # Hunter contacts summary
-    hunter_contacts = result.get("hunter_contacts", [])
-    if hunter_contacts:
-        contact_lines = []
-        for hc in hunter_contacts[:5]:
-            name = f"{hc.get('first_name', '')} {hc.get('last_name', '')}".strip()
-            pos = hc.get("position", "")
-            email = hc.get("email", "")
-            contact_lines.append(f"{name} — {pos} ({email})" if pos else f"{name} ({email})")
-        artifact_fields.append({
-            "label": f"Contacts ({len(hunter_contacts)})",
-            "value": "\n".join(contact_lines),
-        })
-
-    # Intelligence sections
-    intelligence = result.get("intelligence_sections")
-    if intelligence and isinstance(intelligence, int) and intelligence > 0:
-        artifact_fields.append({"label": "Intelligence", "value": f"{intelligence} sections generated"})
-
-    artifact = {
-        "type": "enrichment",
-        "title": f"🔍 Enrichment — {org.name}",
-        "status": "complete" if result.get("status") == "done" else result.get("status", "partial"),
-        "fields": artifact_fields,
-        "links": [
-            {"label": "View Account", "url": f"/organizations/{organization_id}", "icon": "fa-building"},
-        ],
-    }
-
-    logger.info(
-        "enrich_account_tool_done",
-        org_id=organization_id,
-        status=result.get("status"),
-        fields_updated=result.get("fields_updated"),
-        contacts_created=result.get("contacts_created"),
-    )
-
-    return {
-        "status": result.get("status", "done"),
-        "message": f"Enrichment complete for {org.name}. {result.get('fields_updated', 0)} fields updated, {result.get('contacts_created', 0)} contacts created.",
-        "artifact": artifact,
-    }
-
-
-async def _search_rolodex(
-    db_session,
-    user_id: str,
-    query: str,
-) -> str:
-    """Search Bob's Rolodex (Serper Maps API) and return formatted results.
-
-    Same logic as search_routes.py but called directly from Bob's tool,
-    so results appear inline in the chat conversation.
-    """
-    import httpx
-    from app.config import settings
-
-    SERPER_URL = "https://google.serper.dev/maps"
-
-    if not query.strip():
-        return "Please provide a name or query to search Bob's Rolodex."
-
-    logger.info("search_rolodex_start", query=query, user_id=user_id)
-
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.post(
-                SERPER_URL,
-                json={"q": query, "num": 10},
-                headers={
-                    "X-API-KEY": settings.serper_api_key,
-                    "Content-Type": "application/json",
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
-
-        places = data.get("places", [])
-
-        if not places:
-            logger.info("search_rolodex_empty", query=query)
-            return f"No results found in Bob's Rolodex for \"{query}\". You can create the organization manually."
-
-        # Format results as a numbered list for the LLM
-        lines = [f"Bob's Rolodex found {len(places)} result(s) for \"{query}\":\n"]
-        for i, place in enumerate(places, 1):
-            title = place.get("title", "Unknown")
-            address = place.get("address", "N/A")
-            phone = place.get("phoneNumber", "")
-            website = place.get("website", "")
-            industry = place.get("type", "")
-            rating = place.get("rating")
-
-            line = f"{i}. **{title}**"
-            if industry:
-                line += f" ({industry})"
-            line += f"\n   📍 {address}"
-            if phone:
-                line += f"\n   📞 {phone}"
-            if website:
-                line += f"\n   🌐 {website}"
-            if rating:
-                line += f"\n   ⭐ {rating}"
-            lines.append(line)
-
-        lines.append("\nAsk the user which one to select, then call open_create_dialog with the selected name.")
-
-        logger.info("search_rolodex_done", query=query, results=len(places))
-        return "\n".join(lines)
-
-    except httpx.HTTPStatusError as e:
-        logger.error("search_rolodex_http_error", query=query, status=e.response.status_code)
-        return "Bob's Rolodex search encountered an error. You can create the organization manually."
-    except Exception as e:
-        logger.error("search_rolodex_error", query=query, error=str(e))
-        return f"Bob's Rolodex search failed: {str(e)}. You can create the organization manually."
+# ── IMPORTANT ──────────────────────────────────────────────────
+# Tool EXECUTION has been consolidated into tool_executor.py.
+# This file only provides tool DEFINITIONS (BOB_TOOLS) and
+# dynamic tool loading (load_tools_from_bcc).
+# Do NOT add execution logic here.
+# ──────────────────────────────────────────────────────────────
 

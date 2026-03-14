@@ -26,7 +26,7 @@
                         </div>
                         <div>
                             <p class="integration-card__name">Microsoft 365</p>
-                            <p class="integration-card__sub">{{ ms365Connection?.msEmail || 'Outlook, Calendar' }}</p>
+                            <p class="integration-card__sub">{{ ms365Connection?.ms_email || 'Outlook, Calendar' }}</p>
                         </div>
                     </div>
                     <span class="status-badge status-badge--green">
@@ -37,18 +37,30 @@
                         }
                     </span>
                 </div>
-                <p class="integration-card__desc">
-                    @if (ms365Connection?.lastEmailSync) {
-                    Last sync: {{ ms365Connection!.lastEmailSync | date:'short' }}
-                    } @else {
-                    Connected — waiting for first sync
-                    }
-                </p>
+                <div class="integration-card__expanded">
+                    <p style="font-size: 13px; color: var(--color-text-muted); margin: 0 0 12px;">
+                        Your Microsoft 365 account is currently connected successfully.
+                    </p>
+                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px; font-size: 12px;">
+                        <button class="integration-card__btn" (click)="forceSync(); $event.stopPropagation()"
+                            [disabled]="ms365Syncing" style="padding: 4px 8px;">
+                            @if (ms365Syncing) {
+                            <i class="fa-solid fa-spinner fa-spin"></i> Syncing
+                            } @else {
+                            <i class="fa-solid fa-rotate"></i> Sync now
+                            }
+                        </button>
+                        <span style="color: var(--color-text-muted);">
+                            @if (ms365Connection?.last_email_sync) {
+                            Last sync: {{ ms365Connection!.last_email_sync | date:'short' }}
+                            } @else {
+                            No sync yet
+                            }
+                        </span>
+                    </div>
+                </div>
                 <div class="integration-card__actions">
                     <button class="integration-card__btn" routerLink="/settings/ms365">Configure</button>
-                    <button class="integration-card__btn" (click)="forceSync()" [disabled]="ms365Syncing">
-                        <i class="fa-solid fa-rotate"></i> Sync Now
-                    </button>
                     <button class="integration-card__btn integration-card__btn--disconnect"
                         (click)="disconnectMs365()">Disconnect</button>
                 </div>
@@ -109,13 +121,13 @@
                         <div class="integration-card__icon integration-card__icon--ms">
                             <i class="fa-brands fa-microsoft"></i>
                         </div>
-                        <div>
+                        <div class="integration-card__info">
                             <p class="integration-card__name">Microsoft 365</p>
-                            <p class="integration-card__sub">Outlook, Calendar</p>
+                            <p class="integration-card__sub">Outlook, Calendar Exchange</p>
                         </div>
                     </div>
                 </div>
-                <p class="integration-card__desc">Sync your emails and calendar events from Microsoft 365</p>
+                <p class="integration-card__desc">Emails, contacts & calendar on two-way sync.</p>
                 <button class="integration-card__btn integration-card__btn--connect" style="width:100%"
                     (click)="connectMs365()" [disabled]="ms365Loading">
                     @if (ms365Loading) {

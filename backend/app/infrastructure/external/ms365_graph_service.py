@@ -1,6 +1,6 @@
 """MS Graph API client — OAuth2 + mail/calendar data access."""
 
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Any, Dict
 from datetime import datetime, timezone
 
 import httpx
@@ -13,7 +13,13 @@ logger = structlog.get_logger(__name__)
 # MS Graph API endpoints
 AUTHORITY = f"https://login.microsoftonline.com/{settings.ms365_tenant_id}"
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
-SCOPES = ["Mail.Read", "Calendars.Read", "User.Read", "offline_access"]
+SCOPES = [
+    "Mail.Read",
+    "Mail.Send",
+    "Calendars.ReadWrite",
+    "User.Read",
+    "offline_access",
+]
 
 
 class MS365GraphService:
@@ -44,12 +50,13 @@ class MS365GraphService:
         query = "&".join(f"{k}={v}" for k, v in params.items())
         return f"{AUTHORITY}/oauth2/v2.0/authorize?{query}"
 
-    async def exchange_code_for_tokens(self, code: str) -> dict:
+    async def exchange_code_for_tokens(self, code: str) -> Dict[str, Any]:
         """Exchange authorization code for access + refresh tokens.
 
         Returns dict with: access_token, refresh_token,
         expires_in, scope, token_type.
         """
+        logger.info("ms365_exchanging_code", client_id=self._client_id, redirect_uri=self._redirect_uri)
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{AUTHORITY}/oauth2/v2.0/token",
@@ -66,8 +73,9 @@ class MS365GraphService:
             data = resp.json()
             logger.info("ms365_token_exchanged", scopes=data.get("scope"))
             return data
+        return {}
 
-    async def refresh_access_token(self, refresh_token: str) -> dict:
+    async def refresh_access_token(self, refresh_token: str) -> Dict[str, Any]:
         """Refresh an expired access token.
 
         Returns dict with: access_token, refresh_token,
@@ -88,10 +96,11 @@ class MS365GraphService:
             data = resp.json()
             logger.info("ms365_token_refreshed")
             return data
+        return {}
 
     # ── User Profile ─────────────────────────────────────────────────
 
-    async def get_user_profile(self, access_token: str) -> dict:
+    async def get_user_profile(self, access_token: str) -> Dict[str, Any]:
         """Get the authenticated user's profile from MS Graph.
 
         Returns dict with: id, mail, displayName, userPrincipalName.
@@ -103,6 +112,7 @@ class MS365GraphService:
             )
             resp.raise_for_status()
             return resp.json()
+        return {}
 
     # ── Emails ───────────────────────────────────────────────────────
 
@@ -111,17 +121,22 @@ class MS365GraphService:
         access_token: str,
         delta_token: Optional[str] = None,
         top: int = 50,
-    ) -> Tuple[List[dict], Optional[str]]:
+    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
         """Fetch emails using delta query for incremental sync.
 
         Returns (emails, new_delta_token).
         If delta_token is provided, fetches only changes since last sync.
+        For initial sync (no delta_token), uses standard messages endpoint
+        to pull full history, then saves a delta token for future syncs.
         """
+        use_delta = bool(delta_token)
+
         if delta_token:
             url = delta_token
         else:
+            # Initial full sync: use /me/messages to pull ALL folders (inbox, archive, sent, etc.)
             url = (
-                f"{GRAPH_BASE}/me/mailFolders/inbox/messages/delta"
+                f"{GRAPH_BASE}/me/messages"
                 f"?$select=subject,bodyPreview,body,from,toRecipients,ccRecipients,"
                 f"receivedDateTime,isRead,importance,hasAttachments,conversationId,"
                 f"parentFolderId"
@@ -129,10 +144,11 @@ class MS365GraphService:
                 f"&$orderby=receivedDateTime desc"
             )
 
-        all_messages: List[dict] = []
+        all_messages: List[Dict[str, Any]] = []
         new_delta: Optional[str] = None
+        page = 0
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
             while url:
                 resp = await client.get(
                     url,
@@ -143,15 +159,45 @@ class MS365GraphService:
 
                 messages = data.get("value", [])
                 all_messages.extend(messages)
+                page += 1
+
+                logger.info("ms365_emails_page", page=page, items=len(messages), total_so_far=len(all_messages))
 
                 # Follow @odata.nextLink for pagination
                 url = data.get("@odata.nextLink")
 
-                # Capture deltaLink when pagination is done
+                # Capture deltaLink when pagination is done (delta mode only)
                 if "@odata.deltaLink" in data:
                     new_delta = data["@odata.deltaLink"]
 
-        logger.info("ms365_emails_fetched", count=len(all_messages), has_delta=bool(new_delta))
+        # For initial full sync, request a delta token for future incremental syncs
+        if not use_delta and not new_delta:
+            try:
+                delta_url = (
+                    f"{GRAPH_BASE}/me/mailFolders/inbox/messages/delta"
+                    f"?$select=subject,bodyPreview,body,from,toRecipients,ccRecipients,"
+                    f"receivedDateTime,isRead,importance,hasAttachments,conversationId,"
+                    f"parentFolderId"
+                    f"&$top=1"
+                )
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    # Page through delta quickly to get token
+                    while delta_url:
+                        resp = await client.get(
+                            delta_url,
+                            headers={"Authorization": f"Bearer {access_token}"},
+                        )
+                        resp.raise_for_status()
+                        ddata = resp.json()
+                        delta_url = ddata.get("@odata.nextLink")
+                        if "@odata.deltaLink" in ddata:
+                            new_delta = ddata["@odata.deltaLink"]
+                            delta_url = None
+                logger.info("ms365_delta_token_acquired", has_delta=bool(new_delta))
+            except Exception as e:
+                logger.warning("ms365_delta_token_failed", error=str(e))
+
+        logger.info("ms365_emails_fetched", count=len(all_messages), pages=page, has_delta=bool(new_delta))
         return all_messages, new_delta
 
     async def get_calendar_events(
@@ -159,7 +205,7 @@ class MS365GraphService:
         access_token: str,
         delta_token: Optional[str] = None,
         top: int = 50,
-    ) -> Tuple[List[dict], Optional[str]]:
+    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
         """Fetch calendar events using delta query for incremental sync.
 
         Returns (events, new_delta_token).
@@ -167,14 +213,19 @@ class MS365GraphService:
         if delta_token:
             url = delta_token
         else:
+            from datetime import timedelta
+            now = datetime.now(timezone.utc)
+            start_dt = (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            end_dt = (now + timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ")
             url = (
                 f"{GRAPH_BASE}/me/calendarView/delta"
-                f"?$select=subject,body,location,start,end,isAllDay,organizer,"
+                f"?startDateTime={start_dt}&endDateTime={end_dt}"
+                f"&$select=subject,body,location,start,end,isAllDay,organizer,"
                 f"attendees,showAs,isCancelled,recurrence,onlineMeeting"
                 f"&$top={top}"
             )
 
-        all_events: List[dict] = []
+        all_events: List[Dict[str, Any]] = []
         new_delta: Optional[str] = None
 
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -197,6 +248,98 @@ class MS365GraphService:
         logger.info("ms365_events_fetched", count=len(all_events), has_delta=bool(new_delta))
         return all_events, new_delta
 
+    # ── Sending Emails ───────────────────────────────────────────────
+
+    async def send_mail(
+        self,
+        access_token: str,
+        subject: str,
+        body_content: str,
+        to_recipients: List[str],
+        cc_recipients: Optional[List[str]] = None,
+        bcc_recipients: Optional[List[str]] = None,
+        body_type: str = "html",
+    ) -> Dict[str, str]:
+        """Compose and send a new email via MS Graph."""
+        message: Dict[str, Any] = {
+            "subject": subject,
+            "body": {
+                "contentType": body_type,
+                "content": body_content
+            },
+            "toRecipients": [{"emailAddress": {"address": email}} for email in to_recipients]
+        }
+        
+        if cc_recipients:
+            message["ccRecipients"] = [{"emailAddress": {"address": email}} for email in cc_recipients]
+        if bcc_recipients:
+            message["bccRecipients"] = [{"emailAddress": {"address": email}} for email in bcc_recipients]
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{GRAPH_BASE}/me/sendMail",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                },
+                json={"message": message, "saveToSentItems": "true"}
+            )
+            resp.raise_for_status()
+            logger.info("ms365_mail_sent", subject=subject)
+            return {"status": "sent"}
+        return {"status": "error"}
+
+    async def reply_mail(
+        self,
+        access_token: str,
+        message_id: str,
+        comment: str,
+        reply_all: bool = False
+    ) -> Dict[str, str]:
+        """Reply to an existing email (or reply all)."""
+        action = "replyAll" if reply_all else "reply"
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{GRAPH_BASE}/me/messages/{message_id}/{action}",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                },
+                json={"message": {"body": {"contentType": "html", "content": comment}}}
+            )
+            resp.raise_for_status()
+            logger.info(f"ms365_mail_{action}", original_id=message_id)
+            return {"status": "sent"}
+        return {"status": "error"}
+
+    async def forward_mail(
+        self,
+        access_token: str,
+        message_id: str,
+        to_recipients: List[str],
+        comment: str = ""
+    ) -> Dict[str, str]:
+        """Forward an existing email."""
+        payload: Dict[str, Any] = {
+            "toRecipients": [{"emailAddress": {"address": email}} for email in to_recipients]
+        }
+        if comment:
+            payload["comment"] = comment
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{GRAPH_BASE}/me/messages/{message_id}/forward",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                },
+                json=payload
+            )
+            resp.raise_for_status()
+            logger.info("ms365_mail_forwarded", original_id=message_id)
+            return {"status": "sent"}
+        return {"status": "error"}
+
     # ── Webhook Subscriptions ────────────────────────────────────────
 
     async def create_webhook_subscription(
@@ -205,7 +348,7 @@ class MS365GraphService:
         resource: str,
         callback_url: str,
         expiration_minutes: int = 4230,  # ~3 days max for mail
-    ) -> dict:
+    ) -> Dict[str, Any]:
         """Create a MS Graph change notification subscription.
 
         Args:
@@ -237,13 +380,14 @@ class MS365GraphService:
             data = resp.json()
             logger.info("ms365_webhook_created", resource=resource, subscription_id=data.get("id"))
             return data
+        return {}
 
     async def renew_webhook_subscription(
         self,
         access_token: str,
         subscription_id: str,
         expiration_minutes: int = 4230,
-    ) -> dict:
+    ) -> Dict[str, Any]:
         """Renew a MS Graph webhook subscription."""
         from datetime import timedelta
         expiration = datetime.now(timezone.utc) + timedelta(minutes=expiration_minutes)
@@ -263,10 +407,11 @@ class MS365GraphService:
             data = resp.json()
             logger.info("ms365_webhook_renewed", subscription_id=subscription_id)
             return data
+        return {}
 
     # ── Token Management Helpers ─────────────────────────────────────
 
-    async def ensure_valid_token(self, access_token: str, refresh_token: str, expires_at: datetime) -> Tuple[str, Optional[dict]]:
+    async def ensure_valid_token(self, access_token: str, refresh_token: str, expires_at: datetime) -> Tuple[str, Optional[Dict[str, Any]]]:
         """Check if token is valid. If expired, refresh it.
 
         Returns (valid_access_token, new_token_data_or_None).

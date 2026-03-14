@@ -20,6 +20,7 @@
     "@angular/router": "^21.2.0",
     "@pipecat-ai/client-js": "^1.6.0",
     "@pipecat-ai/websocket-transport": "^1.6.0",
+    "marked": "^17.0.4",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "^0.16.1"
@@ -28,6 +29,7 @@
     "@angular/build": "^21.2.1",
     "@angular/cli": "^21.2.1",
     "@angular/compiler-cli": "^21.2.0",
+    "@playwright/test": "^1.58.2",
     "jsdom": "^28.0.0",
     "playwright": "^1.58.2",
     "prettier": "^3.8.1",

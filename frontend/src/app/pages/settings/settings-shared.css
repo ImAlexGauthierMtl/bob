@@ -203,17 +203,24 @@
     margin-top: 2rem;
 }
 
+.settings-section__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
 .settings-section__title {
     font-size: 1.125rem;
     font-weight: var(--font-weight-medium);
     color: var(--color-black);
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.5rem;
 }
 
 .settings-section__desc {
     font-size: 0.875rem;
     color: var(--color-gray-500);
-    margin-bottom: 1.5rem;
 }
 
 /* ── Toggle Row ───────────────────────────────────────────── */
@@ -2042,4 +2049,24 @@
     font-size: 0.75rem;
     color: var(--color-gray-500);
     margin-left: 0.5rem;
+}
+
+/* ── Save Toast ───────────────────────────────────────────── */
+.save-toast {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    margin-bottom: 1.5rem;
+}
+
+.save-toast--success {
+    background-color: #ecfdf5;
+    color: #059669;
+    border: 1px solid #bbf7d0;
+}
+
+.save-toast--error {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
 }

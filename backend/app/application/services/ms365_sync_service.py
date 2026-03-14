@@ -118,21 +118,140 @@ class MS365SyncService:
         }
 
     def _auto_link_email(self, email, tenant_id: str) -> None:
-        """Try to match sender email to a CRM contact/organization."""
-        if not email.from_address or email.linked_contact_id:
-            return
+        """Link email to ALL involved contacts (from + to + cc).
+        
+        For each address: find or create a Contact (+ Organization from domain).
+        Inserts rows into email_contacts junction table with role.
+        Keeps backward-compat linked_contact_id pointed at the sender.
+        """
+        import tldextract
+        from app.domain.entities.organization import Organization
+        from app.domain.entities.email_contact import email_contacts
 
-        contact = self.db.query(Contact).filter(
-            Contact.email == email.from_address,
-            Contact.tenant_id == tenant_id,
-            Contact.is_deleted == False,
-        ).first()
+        PUBLIC_DOMAINS = {
+            "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "live.com",
+            "icloud.com", "me.com", "msn.com", "googlemail.com", "aol.com",
+            "protonmail.com", "zoho.com", "ymail.com",
+        }
 
-        if contact:
-            email.linked_contact_id = contact.id
-            if contact.organization_id:
-                email.linked_organization_id = contact.organization_id
+        # Collect all addresses with roles
+        addresses: list[dict] = []
+        if email.from_address:
+            addresses.append({"address": email.from_address.lower().strip(), "name": email.from_name or "", "role": "from"})
+
+        for recipient_list, role in [(email.to_addresses, "to"), (email.cc_addresses, "cc")]:
+            if not recipient_list:
+                continue
+            for r in recipient_list:
+                addr = (r.get("address") or "").lower().strip()
+                if addr:
+                    addresses.append({"address": addr, "name": r.get("name", ""), "role": role})
+
+        # De-duplicate by address (keep first role encountered)
+        seen = set()
+        unique_addresses = []
+        for a in addresses:
+            if a["address"] not in seen:
+                seen.add(a["address"])
+                unique_addresses.append(a)
+
+        sender_contact = None
+
+        for entry in unique_addresses:
+            addr = entry["address"]
+            name = entry["name"]
+            role = entry["role"]
+
+            # 1. Find existing contact
+            contact = self.db.query(Contact).filter(
+                Contact.email == addr,
+                Contact.tenant_id == tenant_id,
+                Contact.is_deleted == False,
+            ).first()
+
+            # 2. Create if missing
+            if not contact:
+                # Extract root domain
+                domain_raw = addr.split("@")[-1] if "@" in addr else None
+                ext = tldextract.extract(domain_raw) if domain_raw else None
+
+                organization_id = None
+                if ext and ext.domain and ext.suffix:
+                    root_domain = f"{ext.domain}.{ext.suffix}"
+
+                    if root_domain not in PUBLIC_DOMAINS:
+                        org = self.db.query(Organization).filter(
+                            Organization.tenant_id == tenant_id,
+                            Organization.is_deleted == False,
+                            Organization.website.ilike(f"%{root_domain}%"),
+                        ).first()
+
+                        if not org:
+                            pretty_name = ext.domain.replace("-", " ").title()
+                            org = Organization(name=pretty_name, website=root_domain, tenant_id=tenant_id)
+                            try:
+                                self.db.add(org)
+                                self.db.flush()
+                                logger.info("organization_auto_created", domain=root_domain, org_id=org.id)
+                            except Exception:
+                                self.db.rollback()
+                                org = None
+
+                        if org:
+                            organization_id = org.id
+
+                # Parse name
+                first_name, last_name = "Unknown", ""
+                if name:
+                    parts = name.strip().split(" ", 1)
+                    first_name = parts[0]
+                    if len(parts) > 1:
+                        last_name = parts[1]
+
+                contact = Contact(
+                    first_name=first_name, last_name=last_name,
+                    email=addr, organization_id=organization_id,
+                    tenant_id=tenant_id,
+                )
+                try:
+                    self.db.add(contact)
+                    self.db.flush()
+                    logger.info("contact_auto_created", email=addr, contact_id=contact.id)
+                except Exception as e:
+                    self.db.rollback()
+                    logger.error("contact_auto_create_error", email=addr, error=str(e))
+                    continue
+
+            # 3. Insert junction row (idempotent check)
+            exists = self.db.execute(
+                email_contacts.select().where(
+                    email_contacts.c.synced_email_id == email.id,
+                    email_contacts.c.contact_id == contact.id,
+                )
+            ).first()
+
+            if not exists:
+                self.db.execute(email_contacts.insert().values(
+                    synced_email_id=email.id,
+                    contact_id=contact.id,
+                    role=role,
+                ))
+
+            # 4. Backward compat: sender → linked_contact_id
+            if role == "from" and not sender_contact:
+                sender_contact = contact
+
+        # Set backward-compat FK columns
+        if sender_contact:
+            email.linked_contact_id = sender_contact.id
+            if sender_contact.organization_id:
+                email.linked_organization_id = sender_contact.organization_id
+
+        try:
             self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            logger.error("email_link_commit_error", email_id=email.id, error=str(e))
 
     # ── Calendar Sync ────────────────────────────────────────────────
 
@@ -213,7 +332,7 @@ class MS365SyncService:
         }
 
     def _auto_link_event(self, event, tenant_id: str) -> None:
-        """Try to match attendee emails to CRM contacts/organizations."""
+        """Try to match attendee emails to CRM contacts/organizations, creating if missing."""
         if event.linked_contact_id or not event.attendees:
             return
 
@@ -228,12 +347,38 @@ class MS365SyncService:
                 Contact.is_deleted == False,
             ).first()
 
+            if not contact:
+                # Auto-create basic contact
+                first_name = "Unknown"
+                last_name = ""
+                name_str = attendee.get("name")
+                if name_str:
+                    parts = name_str.strip().split(" ", 1)
+                    first_name = parts[0]
+                    if len(parts) > 1:
+                        last_name = parts[1]
+
+                contact = Contact(
+                    first_name=first_name,
+                    last_name=last_name or "(Auto-created)",
+                    email=email_addr,
+                    tenant_id=tenant_id
+                )
+                try:
+                    self.db.add(contact)
+                    self.db.flush()
+                    logger.info("contact_auto_created_from_event", email=email_addr, contact_id=contact.id)
+                except Exception as e:
+                    self.db.rollback()
+                    logger.error("error_auto_creating_contact_from_event", email=email_addr, error=str(e))
+                    continue
+
             if contact:
                 event.linked_contact_id = contact.id
                 if contact.organization_id:
                     event.linked_organization_id = contact.organization_id
                 self.db.commit()
-                break  # Link to first matched contact
+                break  # Link event to the first matched/created contact
 
     # ── Bulk Sync ────────────────────────────────────────────────────
 

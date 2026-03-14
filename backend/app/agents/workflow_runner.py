@@ -42,6 +42,30 @@ def node_ai_analyze(state: dict) -> dict:
     config = state.get("step_config", {})
     prompt = config.get("prompt", "Analyze the following data and provide insights.")
     input_data = state.get("input_data", {})
+    tenant_id = state.get("tenant_id")
+
+    # If parsing an email, inject available Smart Labels dynamically into context
+    if "synced_email" in input_data and tenant_id:
+        from app.infrastructure.database import SessionLocal
+        from app.domain.entities.smart_label import SmartLabel
+        
+        db = SessionLocal()
+        try:
+            from sqlalchemy.orm import selectinload
+            labels = db.query(SmartLabel).filter(
+                SmartLabel.tenant_id == tenant_id,
+                SmartLabel.parent_id.is_(None)
+            ).options(selectinload(SmartLabel.sub_labels)).all()
+            
+            available_labels = []
+            for lbl in labels:
+                available_labels.append(lbl.name)
+                for sub in lbl.sub_labels:
+                    available_labels.append(f"{lbl.name} > {sub.name}")
+                    
+            input_data["_system_context"] = {"available_smart_labels": available_labels}
+        finally:
+            db.close()
 
     try:
         response = llm_client.chat(
@@ -56,10 +80,71 @@ def node_ai_analyze(state: dict) -> dict:
             correlation_id=state.get("execution_id", ""),
         )
         result = json.loads(response)
-        return {**state, "output_data": result, "confidence": 0.8}
+        
+        # Merge AI output securely into the existing context payload so we don't lose the record ID
+        merged_data = {**input_data, "ai_result": result}
+        
+        return {**state, "output_data": merged_data, "confidence": 0.8}
     except Exception as e:
         logger.error("workflow_ai_analyze_error", error=str(e))
-        return {**state, "output_data": {"error": str(e)}, "confidence": 0.0}
+        return {**state, "output_data": {**input_data, "error": str(e)}, "confidence": 0.0}
+
+
+def node_update_record(state: dict) -> dict:
+    """Update a generic DB record dynamically based on AI mapping.
+    
+    Supports both `field` (string) and `fields` (list) to update multiple attributes at once from `ai_result`.
+    """
+    from app.infrastructure.database import SessionLocal
+    from app.domain.entities.synced_email import SyncedEmail
+    
+    config = state.get("step_config", {})
+    target = config.get("target")
+    field = config.get("field")
+    fields = config.get("fields", [field] if field else [])
+    
+    input_data = state.get("input_data", {})
+    ai_result = input_data.get("ai_result", {})
+    
+    if target == "synced_email":
+        email_data = input_data.get("synced_email", {})
+        email_id = email_data.get("id")
+        
+        updates_applied = {}
+        if email_id and ai_result:
+            db = SessionLocal()
+            try:
+                email = db.query(SyncedEmail).filter(SyncedEmail.id == email_id).first()
+                if email:
+                    for f in fields:
+                        if not f: continue
+                        
+                        # Find the corresponding field in the AI payload
+                        val = ai_result.get(f)
+                        if val is None:
+                            # Fuzzy matching fallback if Groq replies {"label": ""} instead of {"smart_label": ""}
+                            for key, v in ai_result.items():
+                                if (f in key or key in f) and v not in [None, "None", "null", ""]:
+                                    val = v
+                                    break
+                                    
+                        if val is not None and val != "None" and val != "null" and val != "":
+                            if isinstance(val, str):
+                                val = val.strip()
+                            setattr(email, f, val)
+                            updates_applied[f] = val
+                            
+                    if updates_applied:
+                        db.commit()
+                        logger.info("workflow_record_updated", target=target, id=email_id, updates=updates_applied)
+                        return {**state, "output_data": {**input_data, "updated": True, "value": updates_applied}}
+            except Exception as e:
+                logger.error("workflow_update_error", error=str(e))
+                db.rollback()
+            finally:
+                db.close()
+                
+    return {**state, "output_data": {**input_data, "updated": False}}
 
 
 def node_condition(state: dict) -> dict:
@@ -98,7 +183,7 @@ def node_human_approval(state: dict) -> dict:
 def node_trigger(state: dict) -> dict:
     """Trigger passthrough — marks the workflow entry point."""
     logger.info("workflow_node_trigger", step=state.get("current_step_name"))
-    return {**state, "output_data": {"triggered": True}}
+    return {**state, "output_data": {**state.get("input_data", {}), "triggered": True}}
 
 
 # Registry of built-in nodes
@@ -110,6 +195,7 @@ AGENT_NODE_REGISTRY: dict[str, Any] = {
     "condition": node_condition,
     "human_approval": node_human_approval,
     "trigger": node_trigger,
+    "update_record": node_update_record,
     "action": node_log_action,  # default action → log
 }
 
@@ -173,7 +259,7 @@ class WorkflowRunner:
 
         # Walk the graph
         current_step = entry
-        state = {"input_data": input_data or {}, "execution_id": execution.id}
+        state = {"input_data": input_data or {}, "execution_id": execution.id, "tenant_id": tenant_id, "user_id": user.id if user else None}
 
         while current_step:
             step_exe = await self._execute_step(

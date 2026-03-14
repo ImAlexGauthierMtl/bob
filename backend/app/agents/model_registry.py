@@ -83,6 +83,17 @@ CLAUDE_SONNET = ModelProfile(
     temperature=0.2,
 )
 
+KIMI_K2 = ModelProfile(
+    id="kimi-k2",
+    provider="groq",
+    model_name="moonshotai/kimi-k2-instruct-0905",
+    capabilities=("chat", "tools", "strategy", "long_context", "crm"),
+    cost_tier=CostTier.FREE,
+    context_window=262144,
+    max_tokens=8192,
+    temperature=0.4,
+)
+
 # ── Category → Model mapping ─────────────────────────────────
 
 _CATEGORY_MODEL_MAP: dict[RoutingCategory, ModelProfile] = {
@@ -110,5 +121,6 @@ def get_all_profiles() -> dict[str, ModelProfile]:
     return {
         QWEN3_32B.id: QWEN3_32B,
         KIMI_K25.id: KIMI_K25,
+        KIMI_K2.id: KIMI_K2,
         CLAUDE_SONNET.id: CLAUDE_SONNET,
     }

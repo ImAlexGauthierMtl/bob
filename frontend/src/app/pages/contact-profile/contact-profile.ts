@@ -1,17 +1,21 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { SlicePipe } from '@angular/common';
+import { SlicePipe, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ContactService } from '../../shared/services/contact.service';
 import { OrganizationService } from '../../shared/services/organization.service';
 import { ActivityService } from '../../shared/services/activity.service';
+import { MS365Service } from '../../shared/services/ms365.service';
+import { ClientMapService } from '../../shared/services/client-map.service';
 import { Contact } from '../../shared/models/contact.model';
 import { Activity, CreateActivityDto } from '../../shared/models/activity.model';
+import { SyncedEmail } from '../../shared/models/ms365.model';
+import { ClientMap, GoldenNote, CreateGoldenNote, EMOTIONAL_CLIMATE_ICONS, DISC_LABELS } from '../../shared/models/client-map.model';
 
 @Component({
     selector: 'croo-contact-profile',
     standalone: true,
-    imports: [RouterLink, SlicePipe, FormsModule],
+    imports: [RouterLink, SlicePipe, DatePipe, DecimalPipe, FormsModule],
     templateUrl: './contact-profile.html',
     styleUrl: './contact-profile.css',
 })
@@ -21,6 +25,21 @@ export class ContactProfileComponent implements OnInit {
     activeTab = 'overview';
     orgName = '';
     activities: Activity[] = [];
+    contactEmails: SyncedEmail[] = [];
+
+    // Client Map 360°
+    clientMap: ClientMap | null = null;
+    isLoadingClientMap = false;
+    isSavingClientMap = false;
+    editingQuadrant: string | null = null;
+    showGoldenNoteForm = false;
+    isAnalyzingBehavior = false;
+    newNote: CreateGoldenNote = {
+        interaction_date: new Date().toISOString().slice(0, 16),
+        interaction_type: 'CALL',
+    };
+    emotionalIcons = EMOTIONAL_CLIMATE_ICONS;
+    discLabels = DISC_LABELS;
 
     // Add Activity dialog
     showAddActivityDialog = false;
@@ -38,6 +57,8 @@ export class ContactProfileComponent implements OnInit {
     private contactService = inject(ContactService);
     private orgService = inject(OrganizationService);
     private actService = inject(ActivityService);
+    private ms365Service = inject(MS365Service);
+    private clientMapService = inject(ClientMapService);
 
     ngOnInit(): void {
         const id = this.route.snapshot.paramMap.get('id');
@@ -61,6 +82,10 @@ export class ContactProfileComponent implements OnInit {
                 this.actService.getAll(0, 50, undefined, id).subscribe({
                     next: (res) => this.activities = res.items,
                 });
+                // Load real emails linked to this contact (from/to/cc via junction)
+                this.ms365Service.getEmails(0, 50, undefined, undefined, undefined, id).subscribe({
+                    next: (res) => this.contactEmails = res.items,
+                });
             },
             error: () => {
                 this.isLoading = false;
@@ -70,6 +95,84 @@ export class ContactProfileComponent implements OnInit {
 
     setActiveTab(tab: string): void {
         this.activeTab = tab;
+        if (tab === 'client-map' && !this.clientMap && this.contact) {
+            this.loadClientMap(this.contact.id);
+        }
+    }
+
+    // ── Client Map 360° ──────────────────────────────
+
+    loadClientMap(contactId: string): void {
+        this.isLoadingClientMap = true;
+        this.clientMapService.getByContactId(contactId).subscribe({
+            next: (cm) => {
+                this.clientMap = cm;
+                this.isLoadingClientMap = false;
+            },
+            error: () => {
+                this.clientMap = null;
+                this.isLoadingClientMap = false;
+            },
+        });
+    }
+
+    saveQuadrant(): void {
+        if (!this.contact || !this.clientMap) return;
+        this.isSavingClientMap = true;
+        this.clientMapService.upsert(this.contact.id, this.clientMap).subscribe({
+            next: (cm) => {
+                this.clientMap = cm;
+                this.isSavingClientMap = false;
+                this.editingQuadrant = null;
+            },
+            error: () => this.isSavingClientMap = false,
+        });
+    }
+
+    initClientMap(): void {
+        if (!this.contact) return;
+        this.isSavingClientMap = true;
+        this.clientMapService.upsert(this.contact.id, {}).subscribe({
+            next: (cm) => {
+                this.clientMap = cm;
+                this.isSavingClientMap = false;
+            },
+            error: () => this.isSavingClientMap = false,
+        });
+    }
+
+    addGoldenNote(): void {
+        if (!this.contact) return;
+        this.clientMapService.addGoldenNote(this.contact.id, this.newNote).subscribe({
+            next: (note) => {
+                if (this.clientMap) this.clientMap.golden_notes.unshift(note);
+                this.showGoldenNoteForm = false;
+                this.newNote = { interaction_date: new Date().toISOString().slice(0, 16), interaction_type: 'CALL' };
+            },
+        });
+    }
+
+    deleteGoldenNote(noteId: string): void {
+        if (!this.contact || !this.clientMap) return;
+        this.clientMapService.deleteGoldenNote(this.contact.id, noteId).subscribe({
+            next: () => {
+                if (this.clientMap) {
+                    this.clientMap.golden_notes = this.clientMap.golden_notes.filter(n => n.id !== noteId);
+                }
+            },
+        });
+    }
+
+    triggerBehaviorAnalysis(): void {
+        if (!this.contact) return;
+        this.isAnalyzingBehavior = true;
+        this.clientMapService.analyzeBehavior(this.contact.id).subscribe({
+            next: (res) => {
+                if (this.clientMap) this.clientMap.behavioral_profile = res.behavioral_profile;
+                this.isAnalyzingBehavior = false;
+            },
+            error: () => this.isAnalyzingBehavior = false,
+        });
     }
 
     getInitials(): string {

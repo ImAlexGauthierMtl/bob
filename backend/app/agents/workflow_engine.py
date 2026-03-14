@@ -42,6 +42,7 @@ class WorkflowContext:
     user_message: str
     state: dict = field(default_factory=dict)
     session_messages: list[dict] = field(default_factory=list)  # full chat history for LLM extraction
+    channel: str = "compact"  # compact | workspace | voice_app | voice_phone
 
     # Internal accumulators
     _actions: list[dict] = field(default_factory=list, repr=False)
@@ -273,10 +274,63 @@ def resume_prospect_ask_org_name(ctx: WorkflowContext) -> WorkflowResult:
 
 
 def _search_rolodex_and_show(ctx: WorkflowContext, query: str) -> WorkflowResult:
-    """Search Serper Maps API and present results to user."""
+    """Search local DB first (duplicate check), then Serper Maps API."""
     import httpx
     from app.config import settings
+    from app.domain.entities.organization import Organization
 
+    # ── Step 1: Local DB duplicate check ─────────────────────
+    existing_orgs = ctx.db.query(Organization).filter(
+        Organization.tenant_id == ctx.tenant_id,
+        Organization.name.ilike(f"%{query}%"),
+    ).limit(5).all()
+
+    ctx.add_tool_step("search organizations")
+
+    if existing_orgs:
+        # Duplicates found — warn user
+        ctx.state["existing_org_ids"] = [str(o.id) for o in existing_orgs]
+        ctx.state["existing_org_names"] = [o.name for o in existing_orgs]
+
+        # Build warning artifact
+        org_fields = [{"label": "Recherche", "value": query}]
+        for i, o in enumerate(existing_orgs, 1):
+            info = o.name
+            if o.industry:
+                info += f" ({o.industry})"
+            if o.status:
+                info += f" — {o.status}"
+            org_fields.append({"label": f"#{i}", "value": info})
+
+        ctx.emit_artifact(
+            artifact_type="alert_banner",
+            title=f"⚠️ {len(existing_orgs)} organisation(s) existante(s)",
+            fields=[
+                {"label": "type", "value": "warning"},
+                {"label": "detail", "value": f"{len(existing_orgs)} correspondance(s) trouvée(s) dans votre CRM pour « {query} »"},
+            ],
+            status="complete",
+        )
+
+        # Build text list
+        lines = [f"⚠️ **Attention** — {len(existing_orgs)} organisation(s) déjà existante(s) pour « **{query}** » :\n"]
+        for i, o in enumerate(existing_orgs, 1):
+            line = f"**{i}.** {o.name}"
+            if o.industry:
+                line += f" ({o.industry})"
+            if o.status:
+                line += f" — {o.status}"
+            lines.append(line)
+
+        lines.append(f"\nPour utiliser une existante, tapez le **numéro**.")
+        lines.append(f"Pour créer une **nouvelle** organisation, tapez `nouveau`.")
+
+        return ctx.pause(
+            message="\n".join(lines),
+            resume_key="prospect_duplicate_check",
+        )
+
+    # ── Step 2: No local duplicates → Serper Rolodex search ──
     SERPER_URL = "https://google.serper.dev/maps"
 
     ctx.emit_artifact(
@@ -374,6 +428,181 @@ def _search_rolodex_and_show(ctx: WorkflowContext, query: str) -> WorkflowResult
         lines.append(f"\nWhich one? (Enter a number, or type a name to create a new one)")
 
         logger.info("rolodex_search_done", query=query, results=len(rolodex_results))
+
+        return ctx.pause(
+            message="\n".join(lines),
+            resume_key="prospect_rolodex_pick",
+        )
+
+    except Exception as e:
+        logger.error("rolodex_search_error", query=query, error=str(e))
+        ctx.state["org_name"] = query
+        return ctx.pause(
+            message=(
+                f"Bob's Rolodex is temporarily unavailable.\n"
+                f"I'll create **{query}** as a new organization.\n"
+                f"Who is the primary contact? (Name, email if you have it)"
+            ),
+            resume_key="prospect_ask_contact",
+        )
+
+@resume_handler("prospect_duplicate_check")
+def resume_prospect_duplicate_check(ctx: WorkflowContext) -> WorkflowResult:
+    """User responded to duplicate warning — pick existing org or create new."""
+    import re
+    from app.domain.entities.organization import Organization
+
+    user_msg = ctx.user_message.strip().lower()
+    existing_ids = ctx.state.get("existing_org_ids", [])
+    existing_names = ctx.state.get("existing_org_names", [])
+
+    # Check if user typed a number to pick existing org
+    num_match = re.search(r"^#?(\d+)$", user_msg)
+    if num_match and existing_ids:
+        idx = int(num_match.group(1)) - 1
+        if 0 <= idx < len(existing_ids):
+            # Use existing org — skip creation
+            org = ctx.db.query(Organization).filter(
+                Organization.id == existing_ids[idx],
+                Organization.tenant_id == ctx.tenant_id,
+            ).first()
+
+            if org:
+                ctx.state["org_name"] = org.name
+                ctx.state["org_id"] = str(org.id)
+                ctx.state["org_industry"] = org.industry or ""
+                ctx.state["use_existing_org"] = True
+
+                ctx.add_tool_step("select organization")
+                ctx.emit_artifact(
+                    artifact_type="organization",
+                    title=org.name,
+                    fields=[
+                        {"label": "Industrie", "value": org.industry or "N/A"},
+                        {"label": "Status", "value": org.status or "N/A"},
+                        {"label": "ID", "value": str(org.id)},
+                    ],
+                    status="complete",
+                )
+
+                return ctx.pause(
+                    message=(
+                        f"✅ Organisation existante sélectionnée : **{org.name}**\n\n"
+                        f"Souhaitez-vous créer une opportunité pour ce compte ?\n"
+                        f"Si oui, qui est le contact principal ? (Nom, email si disponible)"
+                    ),
+                    resume_key="prospect_ask_contact",
+                )
+
+    # User types "nouveau" / "new" / "créer" → skip to Rolodex
+    if any(kw in user_msg for kw in ["nouveau", "new", "créer", "create", "nouvelle"]):
+        org_name = ctx.state.get("org_name") or ctx.state.get("org_query", "")
+        ctx.state.pop("existing_org_ids", None)
+        ctx.state.pop("existing_org_names", None)
+        # Continue to external Rolodex search (bypass local check by going directly to Serper)
+        return _search_rolodex_external(ctx, org_name)
+
+    # Couldn't parse — re-ask
+    return ctx.pause(
+        message="Tapez le **numéro** pour sélectionner une organisation existante, ou `nouveau` pour en créer une.",
+        resume_key="prospect_duplicate_check",
+    )
+
+
+def _search_rolodex_external(ctx: WorkflowContext, query: str) -> WorkflowResult:
+    """Search ONLY Serper Maps (skips local DB check — used after duplicate check)."""
+    import httpx
+    from app.config import settings
+
+    SERPER_URL = "https://google.serper.dev/maps"
+
+    ctx.emit_artifact(
+        artifact_type="search_results",
+        title="Bob's Rolodex Search",
+        fields=[{"label": "Query", "value": query}],
+        status="building",
+    )
+
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            response = client.post(
+                SERPER_URL,
+                json={"q": query, "num": 8},
+                headers={
+                    "X-API-KEY": settings.serper_api_key,
+                    "Content-Type": "application/json",
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        places = data.get("places", [])
+        ctx.add_tool_step("search rolodex")
+
+        if not places:
+            ctx.emit_artifact(
+                artifact_type="search_results",
+                title="Bob's Rolodex",
+                fields=[{"label": "Query", "value": query}, {"label": "Results", "value": "0"}],
+                status="complete",
+            )
+            ctx.state["org_name"] = query
+            return ctx.pause(
+                message=(
+                    f"No results in Bob's Rolodex for **{query}**.\n\n"
+                    f"I'll create a new organization called **{query}**.\n"
+                    f"Who is the primary contact? (Name, email if you have it)"
+                ),
+                resume_key="prospect_ask_contact",
+            )
+
+        # Store and show results (same as _search_rolodex_and_show)
+        rolodex_results = []
+        for place in places:
+            rolodex_results.append({
+                "title": place.get("title", "Unknown"),
+                "address": place.get("address", "N/A"),
+                "phone": place.get("phoneNumber", ""),
+                "website": place.get("website", ""),
+                "industry": place.get("type", ""),
+                "rating": place.get("rating"),
+            })
+        ctx.state["rolodex_results"] = rolodex_results
+
+        result_fields = [{"label": "Query", "value": query}]
+        for i, r in enumerate(rolodex_results, 1):
+            parts = [r["title"]]
+            if r.get("industry"):
+                parts[0] += f" ({r['industry']})"
+            parts.append(f"📍 {r['address']}")
+            if r.get("phone"):
+                parts.append(f"📞 {r['phone']}")
+            if r.get("website"):
+                parts.append(f"🌐 {r['website']}")
+            if r.get("rating"):
+                parts.append(f"⭐ {r['rating']}/5")
+            result_fields.append({"label": f"#{i}", "value": " — ".join(parts)})
+
+        ctx.emit_artifact(
+            artifact_type="search_results",
+            title="Bob's Rolodex",
+            fields=result_fields,
+            status="complete",
+        )
+
+        lines = [f"📇 **Bob's Rolodex** found **{len(rolodex_results)}** result(s) for **{query}**:\n"]
+        for i, r in enumerate(rolodex_results, 1):
+            line = f"**{i}.** {r['title']}"
+            if r.get("industry"):
+                line += f" ({r['industry']})"
+            line += f"\n   📍 {r['address']}"
+            if r.get("phone"):
+                line += f"\n   📞 {r['phone']}"
+            if r.get("website"):
+                line += f"\n   🌐 {r['website']}"
+            lines.append(line)
+
+        lines.append(f"\nWhich one? (Enter a number, or type a name to create a new one)")
 
         return ctx.pause(
             message="\n".join(lines),
@@ -769,12 +998,294 @@ def search_entity_flow(ctx: WorkflowContext) -> WorkflowResult:
 
 
 # ═══════════════════════════════════════════════════════════════
+#  WORKFLOW: update_entity
+#  Triggered by: "change status of ASQ to client", "mettre à jour le statut de Bell"
+#  Fuzzy name resolve + disambiguation when >1 match
+# ═══════════════════════════════════════════════════════════════
+
+# Field aliases — map user-friendly names to actual model fields
+_UPDATE_FIELD_ALIASES = {
+    "statut": "status",
+    "état": "status",
+    "state": "status",
+    "industrie": "industry",
+    "secteur": "industry",
+    "téléphone": "phone",
+    "tel": "phone",
+    "courriel": "email",
+    "mail": "email",
+    "site": "website",
+    "site web": "website",
+    "type": "org_type",
+    "nom": "name",
+    "description": "description",
+}
+
+# Value aliases — map user-friendly values to enum values
+_UPDATE_VALUE_ALIASES = {
+    # status
+    "client": "CUSTOMER",
+    "actif": "ACTIVE",
+    "active": "ACTIVE",
+    "inactif": "INACTIVE",
+    "inactive": "INACTIVE",
+    "prospect": "PROSPECT",
+    "perdu": "CHURNED",
+    "churned": "CHURNED",
+    "customer": "CUSTOMER",
+    # org_type
+    "pme": "SMB",
+    "startup": "STARTUP",
+    "corporation": "CORPORATION",
+    "gouvernement": "GOVERNMENT",
+    "government": "GOVERNMENT",
+    "obnl": "NONPROFIT",
+    "nonprofit": "NONPROFIT",
+    "autre": "OTHER",
+    "other": "OTHER",
+    # opportunity stages
+    "prospection": "PROSPECTING",
+    "qualification": "QUALIFICATION",
+    "proposition": "PROPOSAL",
+    "proposal": "PROPOSAL",
+    "négociation": "NEGOTIATION",
+    "negotiation": "NEGOTIATION",
+    "gagné": "CLOSED_WON",
+    "won": "CLOSED_WON",
+    "closed_won": "CLOSED_WON",
+    "perdu": "CLOSED_LOST",
+    "lost": "CLOSED_LOST",
+    "closed_lost": "CLOSED_LOST",
+}
+
+# Fields that require enum normalization
+_ENUM_FIELDS = {"status", "org_type", "stage"}
+
+
+def _normalize_field(raw_field: str) -> str:
+    """Normalize a user-provided field name to the actual model attribute."""
+    key = raw_field.strip().lower()
+    return _UPDATE_FIELD_ALIASES.get(key, key)
+
+
+def _normalize_value(field: str, raw_value: str) -> str:
+    """Normalize a user-provided value, especially for enum fields."""
+    key = raw_value.strip().lower()
+    if field in _ENUM_FIELDS:
+        return _UPDATE_VALUE_ALIASES.get(key, raw_value.upper())
+    return _UPDATE_VALUE_ALIASES.get(key, raw_value)
+
+
+@workflow("update_entity")
+def update_entity_flow(ctx: WorkflowContext) -> WorkflowResult:
+    """Resolve entity by fuzzy name → update field. Disambiguate if >1 match."""
+    entity_type = ctx.entities.entity_type or "organization"
+    query = ctx.entities.org_name or ctx.entities.search_query or ""
+    update_field = _normalize_field(ctx.entities.update_field or "")
+    update_value = ctx.entities.update_value or ""
+
+    if not query:
+        return ctx.complete(
+            message="Je n'ai pas compris quel enregistrement modifier. Peux-tu préciser le nom ?"
+        )
+    if not update_field:
+        return ctx.complete(
+            message=f"Que veux-tu modifier sur **{query}** ? (ex: status, industry, phone)"
+        )
+
+    # Store in state for resume
+    ctx.state["entity_type"] = entity_type
+    ctx.state["query"] = query
+    ctx.state["update_field"] = update_field
+    ctx.state["update_value"] = update_value
+
+    # ── Fuzzy search ──
+    if entity_type == "organization":
+        from app.domain.entities.organization import Organization
+        results = ctx.db.query(Organization).filter(
+            Organization.tenant_id == ctx.tenant_id,
+            Organization.name.ilike(f"%{query}%"),
+        ).limit(10).all()
+        result_list = [
+            {"id": str(o.id), "name": o.name, "industry": o.industry, "status": o.status.value if o.status else "—"}
+            for o in results
+        ]
+    elif entity_type == "contact":
+        from app.domain.entities.contact import Contact
+        from sqlalchemy import or_
+        results = ctx.db.query(Contact).filter(
+            Contact.tenant_id == ctx.tenant_id,
+            or_(
+                Contact.first_name.ilike(f"%{query}%"),
+                Contact.last_name.ilike(f"%{query}%"),
+            ),
+        ).limit(10).all()
+        result_list = [
+            {"id": str(c.id), "name": f"{c.first_name} {c.last_name}".strip(), "email": c.email or "—"}
+            for c in results
+        ]
+    elif entity_type == "opportunity":
+        from app.domain.entities.opportunity import Opportunity
+        results = ctx.db.query(Opportunity).filter(
+            Opportunity.tenant_id == ctx.tenant_id,
+            Opportunity.name.ilike(f"%{query}%"),
+        ).limit(10).all()
+        result_list = [
+            {"id": str(o.id), "name": o.name, "stage": o.stage.value if o.stage else "—"}
+            for o in results
+        ]
+    else:
+        return ctx.complete(message=f"Type d'entité non supporté : {entity_type}")
+
+    ctx.add_tool_step("search " + entity_type)
+
+    # ── 0 results ──
+    if not result_list:
+        return ctx.complete(
+            message=f"Aucun(e) {entity_type} trouvé(e) pour « {query} ». Vérifie le nom et réessaie."
+        )
+
+    # ── 1 result → auto-select and update ──
+    if len(result_list) == 1:
+        return _apply_update(ctx, result_list[0]["id"], result_list[0]["name"])
+
+    # ── >1 results → disambiguation ──
+    ctx.state["match_results"] = result_list
+
+    fields = []
+    for i, r in enumerate(result_list, 1):
+        details = r.get("industry") or r.get("email") or r.get("stage") or ""
+        status_or_extra = r.get("status", "")
+        label_parts = [r["name"]]
+        if details:
+            label_parts.append(details)
+        if status_or_extra and status_or_extra != "—":
+            label_parts.append(status_or_extra)
+        fields.append({"label": f"#{i}", "value": " — ".join(label_parts)})
+
+    ctx.emit_artifact(
+        artifact_type="search_results",
+        title=f"Plusieurs {entity_type}s trouvé(e)s pour « {query} »",
+        fields=fields,
+        status="complete",
+    )
+
+    lines = [f"J'ai trouvé **{len(result_list)}** résultat(s) pour « {query} » :\n"]
+    for i, r in enumerate(result_list, 1):
+        lines.append(f"**{i}.** {r['name']}")
+    lines.append(f"\nLequel veux-tu modifier ? (entre le numéro)")
+
+    return ctx.pause(
+        message="\n".join(lines),
+        resume_key="update_entity_pick",
+    )
+
+
+@resume_handler("update_entity_pick")
+def resume_update_entity_pick(ctx: WorkflowContext) -> WorkflowResult:
+    """User picked a number from the disambiguation list."""
+    import re
+    user_msg = ctx.user_message.strip()
+    match_results = ctx.state.get("match_results", [])
+
+    num_match = re.search(r"^#?(\d+)$", user_msg)
+    if num_match and match_results:
+        idx = int(num_match.group(1)) - 1
+        if 0 <= idx < len(match_results):
+            selected = match_results[idx]
+            return _apply_update(ctx, selected["id"], selected["name"])
+
+    return ctx.pause(
+        message=f"Je n'ai pas compris. Entre un numéro entre 1 et {len(match_results)}.",
+        resume_key="update_entity_pick",
+    )
+
+
+def _apply_update(ctx: WorkflowContext, entity_id: str, entity_name: str) -> WorkflowResult:
+    """Apply the field update on the resolved entity."""
+    entity_type = ctx.state.get("entity_type", "organization")
+    update_field = ctx.state.get("update_field", "")
+    raw_value = ctx.state.get("update_value", "")
+    update_value = _normalize_value(update_field, raw_value)
+
+    if entity_type == "organization":
+        from app.domain.entities.organization import Organization
+        entity = ctx.db.query(Organization).filter(
+            Organization.id == entity_id,
+            Organization.tenant_id == ctx.tenant_id,
+        ).first()
+    elif entity_type == "contact":
+        from app.domain.entities.contact import Contact
+        entity = ctx.db.query(Contact).filter(
+            Contact.id == entity_id,
+            Contact.tenant_id == ctx.tenant_id,
+        ).first()
+    elif entity_type == "opportunity":
+        from app.domain.entities.opportunity import Opportunity
+        entity = ctx.db.query(Opportunity).filter(
+            Opportunity.id == entity_id,
+            Opportunity.tenant_id == ctx.tenant_id,
+        ).first()
+    else:
+        return ctx.complete(message=f"Type non supporté : {entity_type}")
+
+    if not entity:
+        return ctx.complete(message=f"Impossible de trouver l'enregistrement (ID: {entity_id}).")
+
+    # Verify the field exists on the model
+    if not hasattr(entity, update_field):
+        return ctx.complete(
+            message=f"Le champ « {update_field} » n'existe pas sur {entity_type}. Champs possibles : name, status, industry, phone, email, website, org_type, description."
+        )
+
+    old_value = getattr(entity, update_field)
+    old_display = old_value.value if hasattr(old_value, 'value') else str(old_value) if old_value else "—"
+
+    try:
+        setattr(entity, update_field, update_value)
+        entity.updated_by = ctx.user_email
+        ctx.db.commit()
+        ctx.db.refresh(entity)
+    except Exception as e:
+        ctx.db.rollback()
+        logger.error("update_entity_failed", entity_id=entity_id, field=update_field, error=str(e))
+        return ctx.complete(
+            message=f"❌ Erreur lors de la mise à jour : {str(e)[:200]}"
+        )
+
+    ctx.add_tool_step(f"update_{entity_type}")
+
+    # Show confirmation artifact
+    ctx.emit_artifact(
+        artifact_type="alert_banner",
+        title=f"✅ {entity_name} — mis à jour",
+        fields=[
+            {"label": "success", "value": f"{update_field} : {old_display} → {update_value}"},
+        ],
+        status="complete",
+    )
+
+    logger.info(
+        "update_entity_workflow_done",
+        entity_type=entity_type,
+        entity_id=entity_id,
+        field=update_field,
+        old_value=old_display,
+        new_value=update_value,
+    )
+
+    return ctx.complete(
+        message=f"✅ **{entity_name}** mis à jour : `{update_field}` = **{update_value}** (était : {old_display})"
+    )
+
+
+# ═══════════════════════════════════════════════════════════════
 #  WORKFLOW: navigate
 # ═══════════════════════════════════════════════════════════════
 
 @workflow("navigate")
 def navigate_flow(ctx: WorkflowContext) -> WorkflowResult:
-    """Navigate to a CRM page."""
+    """Navigate to a CRM page, or list records inline in workspace mode."""
     page = ctx.entities.page or "dashboard"
     page_map = {
         "dashboard": "dashboard",
@@ -787,8 +1298,95 @@ def navigate_flow(ctx: WorkflowContext) -> WorkflowResult:
         "training": "template/crm-mastery",
     }
     target = page_map.get(page.lower(), page)
+
+    # ── Workspace mode: show data inline instead of navigating ──
+    if ctx.channel == "workspace" and target in ("organizations", "contacts", "opportunities"):
+        return _navigate_workspace_list(ctx, target)
+
     ctx.emit_action("navigate", page=target)
     return ctx.complete(message=f"Navigation vers {target}.")
+
+
+def _navigate_workspace_list(ctx: WorkflowContext, entity_type: str) -> WorkflowResult:
+    """List top records inline as a data_table artifact for workspace mode."""
+    from sqlalchemy import desc
+    LIMIT = 15
+
+    if entity_type == "organizations":
+        from app.domain.entities.organization import Organization
+        items = ctx.db.query(Organization).filter(
+            Organization.tenant_id == ctx.tenant_id,
+        ).order_by(desc(Organization.created_at)).limit(LIMIT).all()
+        ctx.emit_artifact(
+            artifact_type="data_table",
+            title=f"Organisations ({len(items)})",
+            columns=["Nom", "Industrie", "Statut", "Créé le"],
+            rows=[
+                [
+                    o.name or "—",
+                    o.industry or "—",
+                    o.status or "—",
+                    o.created_at.strftime("%Y-%m-%d") if o.created_at else "—",
+                ]
+                for o in items
+            ],
+        )
+        ctx.add_tool_step("list_organizations", "ok")
+        return ctx.complete(
+            message=f"Voici vos {len(items)} dernières organisations."
+        )
+
+    elif entity_type == "contacts":
+        from app.domain.entities.contact import Contact
+        items = ctx.db.query(Contact).filter(
+            Contact.tenant_id == ctx.tenant_id,
+        ).order_by(desc(Contact.created_at)).limit(LIMIT).all()
+        ctx.emit_artifact(
+            artifact_type="data_table",
+            title=f"Contacts ({len(items)})",
+            columns=["Nom", "Email", "Téléphone", "Entreprise"],
+            rows=[
+                [
+                    f"{c.first_name or ''} {c.last_name or ''}".strip() or "—",
+                    c.email or "—",
+                    c.phone or "—",
+                    c.company or "—",
+                ]
+                for c in items
+            ],
+        )
+        ctx.add_tool_step("list_contacts", "ok")
+        return ctx.complete(
+            message=f"Voici vos {len(items)} derniers contacts."
+        )
+
+    elif entity_type == "opportunities":
+        from app.domain.entities.opportunity import Opportunity
+        items = ctx.db.query(Opportunity).filter(
+            Opportunity.tenant_id == ctx.tenant_id,
+        ).order_by(desc(Opportunity.created_at)).limit(LIMIT).all()
+        ctx.emit_artifact(
+            artifact_type="data_table",
+            title=f"Opportunités ({len(items)})",
+            columns=["Nom", "Stage", "Montant", "Source"],
+            rows=[
+                [
+                    o.name or "—",
+                    o.stage or "—",
+                    f"${o.amount:,.0f}" if o.amount else "—",
+                    o.source or "—",
+                ]
+                for o in items
+            ],
+        )
+        ctx.add_tool_step("list_opportunities", "ok")
+        return ctx.complete(
+            message=f"Voici vos {len(items)} dernières opportunités."
+        )
+
+    # Fallback: navigate anyway
+    ctx.emit_action("navigate", page=entity_type)
+    return ctx.complete(message=f"Navigation vers {entity_type}.")
 
 
 # ═══════════════════════════════════════════════════════════════

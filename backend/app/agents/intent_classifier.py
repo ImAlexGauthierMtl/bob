@@ -16,51 +16,33 @@ from app.config import settings
 logger = structlog.get_logger(__name__)
 
 
-def load_supported_intents_from_bcc(db, tenant_id: str) -> list[str]:
-    """Load intent names from BCC, falling back to hardcoded list."""
+def load_supported_intents_from_bcc(db, tenant_id: str) -> tuple[list[str], dict[str, list[str]]]:
+    """Load intent names and trigger_phrases from BCC.
+
+    BCC is the single source of truth for intents.
+    Raises RuntimeError if BCC is unavailable.
+
+    Returns:
+        Tuple of (intent_names, {intent_name: [trigger_phrases]})
+    """
     try:
         from app.domain.entities.bcc_entities import BccIntent
-        names = [
-            r[0] for r in
-            db.query(BccIntent.name).filter_by(tenant_id=tenant_id).all()
-        ]
-        if names:
+        intents = db.query(BccIntent).filter_by(tenant_id=tenant_id).all()
+        if intents:
+            names = [i.name for i in intents]
+            phrases_map = {
+                i.name: (i.trigger_phrases or [])
+                for i in intents
+                if i.trigger_phrases
+            }
             if "general_chat" not in names:
                 names.append("general_chat")
-            logger.info("intents_loaded_from_bcc", count=len(names))
-            return names
+            logger.info("intents_loaded_from_bcc", count=len(names), with_phrases=len(phrases_map))
+            return names, phrases_map
     except Exception as e:
-        logger.warning("bcc_intent_load_failed", error=str(e))
-    return SUPPORTED_INTENTS
+        logger.error("bcc_intent_load_failed", error=str(e))
 
-
-# ── Supported intents (hardcoded fallback) ────────────────────
-SUPPORTED_INTENTS = [
-    "create_prospect",      # new prospect/opportunity with org + contact + product
-    "search_entity",        # find/search an org, contact, or opportunity
-    "navigate",             # go to a page in the CRM
-    "get_pipeline",         # pipeline stats / sales overview
-    "create_contact",       # add a contact (standalone, no opportunity)
-    "top_opportunities",    # best deals by amount
-    "closing_this_month",   # opps to close this month
-    "stale_deals",          # deals inactive 30+ days
-    "pipeline_value",       # pipeline value breakdown
-    "dormant_contacts",     # contacts not contacted in 5+ months
-    "recent_contacts",      # recently added contacts
-    "contacts_no_email",    # contacts missing email
-    "accounts_no_opp",      # accounts without opportunities
-    "most_active_accounts", # top accounts by opp count
-    "accounts_by_industry", # accounts grouped by industry
-    "list_products",        # show product catalog
-    "daily_summary",        # daily overview stats
-    "create_activity",      # log a call, email, meeting, task, note
-    "today_activities",     # activities due today
-    "overdue_activities",   # overdue/past due activities
-    "build_bcc",            # configure Bob, set up BCC, deep agent invocation
-    "create_kb_article",    # create a KB article, procedure, documentation
-    "business_advisor",     # business advice, strategy, market analysis, advisor mode
-    "general_chat",         # everything else — free conversation
-]
+    raise RuntimeError("Service non disponible — impossible de charger les intents depuis le BCC.")
 
 
 # ── Classify tool schema (the ONLY tool the classifier LLM uses) ──
@@ -77,7 +59,7 @@ CLASSIFY_TOOL = {
             "properties": {
                 "intent": {
                     "type": "string",
-                    "enum": SUPPORTED_INTENTS,
+                    "enum": ["general_chat"],  # placeholder — replaced at runtime by _build_classify_tool
                     "description": (
                         "The user's primary intent. Use 'create_prospect' for any request to "
                         "create an opportunity, prospect, deal, or add a new client account with "
@@ -134,7 +116,15 @@ CLASSIFY_TOOL = {
                         "entity_type": {
                             "type": "string",
                             "enum": ["organization", "contact", "opportunity"],
-                            "description": "Type of entity being searched for",
+                            "description": "Type of entity being searched for or updated",
+                        },
+                        "update_field": {
+                            "type": "string",
+                            "description": "Field name to update (e.g. 'status', 'industry', 'stage', 'phone')",
+                        },
+                        "update_value": {
+                            "type": "string",
+                            "description": "New value for the field (e.g. 'CUSTOMER', 'Technology', 'NEGOTIATION')",
                         },
                         "kb_topic": {
                             "type": "string",
@@ -177,8 +167,20 @@ Rule: If the user is asking a BROAD question, exploring a topic, or seeking advi
 
 ## Intent guidelines:
 - "create_prospect" = user wants to add a new business opportunity, prospect, deal, or client
-- "search_entity" = user wants to find, search, or look up an existing record
-- "navigate" = user wants to go to a specific page in the CRM
+- "search_entity" = user wants to find a SPECIFIC record BY NAME (e.g. "cherche ASQ", "trouve Bell Canada", "search for John"). Must have a search_query or org_name.
+- "update_entity" = user wants to modify, update, or change a field on an existing entity (e.g. change status, rename, update industry). Extract org_name, entity_type, update_field, and update_value.
+- "navigate" = user wants to see a LIST of entities or go to a CRM page. Examples: "liste mes comptes", "montre mes contacts", "affiche les opportunités", "mes organisations", "show my accounts". This is for BROWSING, not searching a specific name.
+
+IMPORTANT — navigate vs search_entity disambiguation:
+- "liste mes comptes" → navigate (page=organizations) — user wants to SEE ALL accounts
+- "liste mes contacts" → navigate (page=contacts) — user wants to SEE ALL contacts
+- "montre mes contacts" → navigate (page=contacts) — user wants to BROWSE contacts
+- "affiche les contacts" → navigate (page=contacts) — listing, NOT searching
+- "mes contacts" → navigate (page=contacts) — browsing
+- "cherche ASQ" → search_entity — user is looking for a SPECIFIC record by name
+- "trouve Bell Canada" → search_entity — user is looking for a SPECIFIC record by name
+- "cherche le contact Marie" → search_entity — searching a SPECIFIC contact by name
+Rule: If there is NO specific person/company name to search for, ALWAYS use "navigate". Only use "search_entity" when a SPECIFIC name is provided.
 - "get_pipeline" = user asks about pipeline, sales stats, deal overview
 - "create_contact" = user wants to add a contact WITHOUT creating an opportunity
 - "top_opportunities" = user EXPLICITLY asks for their best deals, top opportunities, biggest deals
@@ -220,6 +222,8 @@ class ExtractedEntities:
     page: Optional[str] = None
     search_query: Optional[str] = None
     entity_type: Optional[str] = None
+    update_field: Optional[str] = None
+    update_value: Optional[str] = None
     kb_topic: Optional[str] = None
 
 
@@ -246,11 +250,13 @@ def _parse_entities(raw: dict) -> ExtractedEntities:
         page=raw.get("page") or None,
         search_query=raw.get("search_query") or None,
         entity_type=raw.get("entity_type") or None,
+        update_field=raw.get("update_field") or None,
+        update_value=raw.get("update_value") or None,
         kb_topic=raw.get("kb_topic") or None,
     )
 
 
-def _try_parse_failed_generation(error_str: str) -> Optional[ClassifiedIntent]:
+def _try_parse_failed_generation(error_str: str, active_intents: list[str]) -> Optional[ClassifiedIntent]:
     """Extract classification from Groq's tool_use_failed error response.
 
     When the LLM outputs null for typed fields, Groq rejects the tool call
@@ -266,7 +272,7 @@ def _try_parse_failed_generation(error_str: str) -> Optional[ClassifiedIntent]:
     try:
         raw_args = json.loads(fg_match.group(1))
         intent = raw_args.get("intent", "general_chat")
-        if intent not in SUPPORTED_INTENTS:
+        if intent not in active_intents:
             intent = "general_chat"
 
         raw_entities = raw_args.get("entities", {})
@@ -318,12 +324,25 @@ def classify_message(
     Returns:
         ClassifiedIntent with intent name and extracted entities.
     """
-    active_intents = SUPPORTED_INTENTS
+    active_intents: list[str] = []
+    trigger_phrases_map: dict[str, list[str]] = {}
     if db and tenant_id:
-        active_intents = load_supported_intents_from_bcc(db, tenant_id)
+        active_intents, trigger_phrases_map = load_supported_intents_from_bcc(db, tenant_id)
+    else:
+        raise RuntimeError("Service non disponible — db et tenant_id requis pour charger les intents.")
 
     classify_tool = _build_classify_tool(active_intents)
-    messages = [{"role": "system", "content": CLASSIFIER_PROMPT}]
+
+    # Build prompt — inject BCC trigger phrase examples if available
+    prompt = CLASSIFIER_PROMPT
+    if trigger_phrases_map:
+        examples = ["\n## BCC Intent Examples (use these to improve classification):"]
+        for intent_name, phrases in trigger_phrases_map.items():
+            preview = ', '.join(f'"{p}"' for p in phrases[:4])
+            examples.append(f"- \"{intent_name}\": {preview}")
+        prompt += "\n" + "\n".join(examples)
+
+    messages = [{"role": "system", "content": prompt}]
 
     # Add limited conversation context if available (last 4 messages max)
     if conversation_context:
@@ -378,7 +397,7 @@ def classify_message(
         error_str = str(e)
         # Try to salvage classification from Groq's failed_generation
         if "tool_use_failed" in error_str or "failed_generation" in error_str:
-            result = _try_parse_failed_generation(error_str)
+            result = _try_parse_failed_generation(error_str, active_intents)
             if result:
                 return result
         logger.error("classifier_error", error=error_str)

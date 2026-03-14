@@ -2,6 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, tap, catchError, throwError, map } from 'rxjs';
+import { isPlatformBrowser } from '@angular/common';
+import { PLATFORM_ID } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { LoginRequest, RegisterRequest, TokenResponse, AuthUser } from '../models/auth.model';
 
@@ -13,6 +15,7 @@ const REFRESH_KEY = 'croo_refresh_token';
 export class AuthService {
     private http = inject(HttpClient);
     private router = inject(Router);
+    private platformId = inject(PLATFORM_ID);
 
     private currentUser$ = new BehaviorSubject<AuthUser | null>(null);
     private isAuthenticated$ = new BehaviorSubject<boolean>(this.hasToken());
@@ -46,8 +49,10 @@ export class AuthService {
     }
 
     logout(): void {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(REFRESH_KEY);
+        if (isPlatformBrowser(this.platformId)) {
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(REFRESH_KEY);
+        }
         this.currentUser$.next(null);
         this.isAuthenticated$.next(false);
         this.router.navigate(['/login']);
@@ -65,7 +70,10 @@ export class AuthService {
     }
 
     refreshToken(): Observable<TokenResponse> {
-        const refreshToken = localStorage.getItem(REFRESH_KEY);
+        let refreshToken = null;
+        if (isPlatformBrowser(this.platformId)) {
+            refreshToken = localStorage.getItem(REFRESH_KEY);
+        }
         return this.http
             .post<TokenResponse>(`${API_URL}/refresh`, {
                 refresh_token: refreshToken,
@@ -82,16 +90,24 @@ export class AuthService {
     }
 
     getToken(): string | null {
-        return localStorage.getItem(TOKEN_KEY);
+        if (isPlatformBrowser(this.platformId)) {
+            return localStorage.getItem(TOKEN_KEY);
+        }
+        return null;
     }
 
     hasToken(): boolean {
-        return !!localStorage.getItem(TOKEN_KEY);
+        if (isPlatformBrowser(this.platformId)) {
+            return !!localStorage.getItem(TOKEN_KEY);
+        }
+        return false;
     }
 
     private storeTokens(response: TokenResponse): void {
-        localStorage.setItem(TOKEN_KEY, response.access_token);
-        localStorage.setItem(REFRESH_KEY, response.refresh_token);
+        if (isPlatformBrowser(this.platformId)) {
+            localStorage.setItem(TOKEN_KEY, response.access_token);
+            localStorage.setItem(REFRESH_KEY, response.refresh_token);
+        }
     }
 
     private loadCurrentUser(isLogin = false): void {
@@ -102,7 +118,13 @@ export class AuthService {
                     this.router.navigate(['/select-organization']);
                 }
             },
-            error: () => this.logout(),
+            error: (err) => {
+                console.error('[AuthService] /me request failed during loadCurrentUser:', err);
+                if (err && err.status === 401) {
+                    console.error('[AuthService] Forcing logout due to 401 from /me');
+                    this.logout();
+                }
+            },
         });
     }
 }

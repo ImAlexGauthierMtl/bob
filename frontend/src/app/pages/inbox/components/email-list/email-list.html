@@ -1,0 +1,95 @@
+<div class="email-list-layout">
+    <!-- Toolbar -->
+    <div class="email-list-toolbar">
+        <div class="email-list-toolbar__actions">
+            <input type="checkbox" class="email-list-toolbar__checkbox">
+            <button (click)="loadEmails(true)" class="email-list-toolbar__btn" [class.animate-spin]="isLoading">
+                <i class="fa-solid fa-rotate-right text-sm"></i>
+            </button>
+            <button class="email-list-toolbar__btn">
+                <i class="fa-solid fa-trash text-sm"></i>
+            </button>
+            <button class="email-list-toolbar__btn">
+                <i class="fa-solid fa-folder text-sm"></i>
+            </button>
+        </div>
+        <p class="email-list-toolbar__stats">{{ emails.length > 0 ? skip + 1 : 0 }}-{{ skip + emails.length }} of {{ total }}</p>
+    </div>
+
+    <!-- Scrollable List -->
+    <div class="email-list-scroll" (scroll)="onScroll($event)">
+        <div class="email-list-items">
+            
+            <div *ngIf="isLoading && emails.length === 0" class="email-list-state">
+                <i class="fa-solid fa-circle-notch fa-spin email-list-state__spinner"></i>
+            </div>
+            
+            <div *ngIf="!isLoading && emails.length === 0" class="email-list-state">
+                <i class="fa-solid fa-inbox email-list-state__icon"></i>
+                <p>No emails found.</p>
+            </div>
+
+            <!-- Dynamic Emails -->
+            <div *ngFor="let email of emails" 
+                 (click)="selectEmail(email)"
+                 [class.email-item]="true"
+                 [class.email-item--selected]="selectedEmailId === email.id"
+                 [class.email-item--unread]="!email.is_read"
+                 [class.email-item--read]="email.is_read">
+                <div class="email-item__inner">
+                    <!-- Actions -->
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <input type="checkbox" class="email-item__check" (click)="$event.stopPropagation()">
+                        <button class="email-item__star" [class.email-item__star--active]="email.importance === 'high'" (click)="$event.stopPropagation()">
+                            <i class="fa-solid fa-star" *ngIf="email.importance === 'high'"></i>
+                            <i class="fa-regular fa-star" *ngIf="email.importance !== 'high'"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Avatar -->
+                    <div class="email-item__avatar">
+                        {{ email.from_name ? email.from_name.charAt(0).toUpperCase() : (email.from_address ? email.from_address.charAt(0).toUpperCase() : '?') }}
+                    </div>
+
+                    <!-- Content -->
+                    <div class="email-item__content">
+                        <div class="email-item__header">
+                            <div class="email-item__sender-area">
+                                <p class="email-item__sender">{{ email.from_name || email.from_address }}</p>
+                                <span *ngIf="email.importance === 'high'" class="email-item__urgent">URGENT</span>
+                                <ng-container *ngIf="email.smart_label">
+                                    <span *ngFor="let part of parseSmartLabel(email.smart_label); let last = last" 
+                                          class="email-item__badge email-item__badge--ai" 
+                                          [style.backgroundColor]="'var(--color-accent-light)'" 
+                                          [style.color]="'var(--color-accent)'"
+                                          [style.marginRight.px]="last ? 0 : 4">
+                                        <i *ngIf="last" class="fa-solid fa-sparkles text-xs mr-1"></i> {{ part }}
+                                    </span>
+                                </ng-container>
+                            </div>
+                            <p class="email-item__time">{{ email.received_at | date:'shortTime' }}</p>
+                        </div>
+                        <p class="email-item__subject">{{ email.subject || '(No Subject)' }}</p>
+                        <p class="email-item__preview">{{ email.body_preview }}</p>
+                        
+                        <!-- Indicators -->
+                        <div class="email-item__indicators" *ngIf="email.has_attachments || email.linked_contact_id">
+                            <span *ngIf="email.has_attachments" class="email-item__attachment">
+                                <i class="fa-solid fa-paperclip"></i>
+                                {{ email.attachments_meta?.length }}
+                            </span>
+                            <span *ngIf="email.linked_contact_id" class="email-item__badge email-item__badge--crm">
+                                <i class="fa-solid fa-user-circle"></i> CRM Linked
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Indicator for Infinite Scroll -->
+            <div class="email-list-more" *ngIf="isLoading && emails.length > 0">
+                <i class="fa-solid fa-circle-notch fa-spin text-gray-400 text-lg"></i>
+            </div>
+        </div>
+    </div>
+</div>

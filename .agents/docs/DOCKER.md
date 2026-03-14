@@ -58,3 +58,13 @@ Les valeurs par défaut sont dans `docker-compose.yml`. Pour les surcharger, cr�
 - **Frontend build en Docker** : le build Angular produit dans `dist/frontend/browser`. Si votre version d’Angular utilise un autre chemin, adaptez la ligne `COPY` dans `frontend/Dockerfile`.
 - **API ne démarre pas** : vérifier que PostgreSQL est bien healthy : `docker compose ps` puis `docker compose logs db`.
 - **CORS** : les origines autorisées incluent `http://localhost:4200` et `http://localhost`. Pour un autre domaine, modifier `CORS_ORIGINS` dans `docker-compose.yml`.
+
+### Rendu UI différent entre machines (éléments manquants)
+
+Si la page d'accueil (login) ou le dashboard n'affiche pas le même visuel sur un autre poste :
+
+1. **Largeur d'écran** : le panneau hero (gauche) de la page login s'affiche à partir de **768px** de largeur. En dessous, seul le formulaire est visible. Vérifier que la fenêtre du navigateur est assez large ou zoom à 100 %.
+
+2. **Ressources CDN** : l'UI charge des polices et icônes depuis internet (Font Awesome, Google Fonts, Plotly). Si le réseau bloque ces domaines (proxy, firewall, VPN), les icônes et graphiques peuvent manquer. F12 → Network pour voir les requêtes en erreur.
+
+3. **Logo** : `croo-logo.png` et `favicon.ico` sont dans `frontend/public/`. Si le logo ne s'affiche pas, reconstruire : `docker compose up -d --build frontend`.
