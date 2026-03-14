@@ -1,22 +1,28 @@
 services:
+  # ═══════════════════════════════════════
+  # DATABASE
+  # ═══════════════════════════════════════
   db:
     image: postgres:16-alpine
     container_name: croo-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: croo
-      POSTGRES_PASSWORD: croo
-      POSTGRES_DB: croo_digital_experience
+      POSTGRES_USER: ${DB_USER:-croo}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-croo}
+      POSTGRES_DB: ${DB_NAME:-croo_digital_experience}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U croo -d croo_digital_experience"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-croo} -d ${DB_NAME:-croo_digital_experience}"]
       interval: 5s
       timeout: 3s
       retries: 5
 
+  # ═══════════════════════════════════════
+  # BACKEND API (monolithe — Phase 0)
+  # ═══════════════════════════════════════
   api:
     build:
       context: ./backend
@@ -24,40 +30,43 @@ services:
     container_name: croo-api
     restart: unless-stopped
     environment:
-      ENVIRONMENT: development
-      DEBUG: "true"
-      API_PORT: "4500"
-      DATABASE_URL: postgresql://croo:croo@db:5432/croo_digital_experience
-      SECRET_KEY: a4f8c3e1b9d7f2a0e6c5d4b3a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0
-      JWT_ALGORITHM: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
-      REFRESH_TOKEN_EXPIRE_DAYS: "7"
-      CORS_ORIGINS: '["http://localhost:4200","http://localhost:4511","http://localhost:4700"]'
-      RATE_LIMIT_MAX_ATTEMPTS: "5"
-      RATE_LIMIT_WINDOW_MINUTES: "15"
-      ADMIN_EMAIL: admin@croo.digital
-      ADMIN_PASSWORD: Cr00-Adm1n-S3cure!2026
-      ADMIN_FIRST_NAME: Admin
-      ADMIN_LAST_NAME: Croo
-      GROQ_API_KEY: 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
-      HUNTER_API_KEY: "1326894581db8916decde29ac315fa317f495860"
-      SERPER_API_KEY: 31d2bde1ac96c477f5a03e459a62e7ef23c56f2d
-      WEBHOOK_API_KEY: croo-wh-349f47dd877cbf24961ea68415e37b0d
-      DASHSCOPE_API_KEY: sk-60e8397a0aaf4344a5a6324fe6b59829
-      OPENROUTER_API_KEY: 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
-      RICK_REF_AUDIO_PATH: /app/app/voice/rick_ref.wav
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+      API_PORT: ${API_PORT:-4500}
+      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@db:5432/${DB_NAME:-croo_digital_experience}
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
+      RATE_LIMIT_MAX_ATTEMPTS: ${RATE_LIMIT_MAX_ATTEMPTS:-5}
+      RATE_LIMIT_WINDOW_MINUTES: ${RATE_LIMIT_WINDOW_MINUTES:-15}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@croo.digital}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_FIRST_NAME: ${ADMIN_FIRST_NAME:-Admin}
+      ADMIN_LAST_NAME: ${ADMIN_LAST_NAME:-Croo}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      HUNTER_API_KEY: ${HUNTER_API_KEY}
+      SERPER_API_KEY: ${SERPER_API_KEY}
+      WEBHOOK_API_KEY: ${WEBHOOK_API_KEY}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      RICK_REF_AUDIO_PATH: ${RICK_REF_AUDIO_PATH:-/app/app/voice/rick_ref.wav}
       # Microsoft 365 (MS Graph API)
-      MS365_CLIENT_ID: 0ffd9a22-0b40-495a-98a7-40e2c1b2c2b9
-      MS365_CLIENT_SECRET: "Nwd8Q~4scyYrZKlD1B08ZQvTllBHO.DLmFGZ0c0e"
-      MS365_TENANT_ID: 5157d604-6049-4daa-a4fc-bd06136ec04e
-      MS365_REDIRECT_URI: https://macbookpro-de-alexandre.tail1f8da4.ts.net/api/v1/ms365/callback
-      MS365_WEBHOOK_HOST: https://macbookpro-de-alexandre.tail1f8da4.ts.net
+      MS365_CLIENT_ID: ${MS365_CLIENT_ID}
+      MS365_CLIENT_SECRET: ${MS365_CLIENT_SECRET}
+      MS365_TENANT_ID: ${MS365_TENANT_ID}
+      MS365_REDIRECT_URI: ${MS365_REDIRECT_URI}
+      MS365_WEBHOOK_HOST: ${MS365_WEBHOOK_HOST}
     ports:
-      - "4500:4500"
+      - "${API_PORT:-4500}:${API_PORT:-4500}"
     depends_on:
       db:
         condition: service_healthy
 
+  # ═══════════════════════════════════════
+  # FRONTEND
+  # ═══════════════════════════════════════
   frontend:
     build:
       context: ./frontend
@@ -68,6 +77,171 @@ services:
       - "4700:4700"
     depends_on:
       - api
+
+  # ═══════════════════════════════════════
+  # AUTH API (microservice — Phase 1)
+  # ═══════════════════════════════════════
+  auth-api:
+    build:
+      context: ./apis/auth-api
+      dockerfile: Dockerfile
+    container_name: croo-auth-api
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+      PORT: ${AUTH_API_PORT:-8001}
+      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@db:5432/${DB_NAME:-croo_digital_experience}
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET_KEY: ${SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
+      RATE_LIMIT_MAX_ATTEMPTS: ${RATE_LIMIT_MAX_ATTEMPTS:-5}
+      RATE_LIMIT_WINDOW_MINUTES: ${RATE_LIMIT_WINDOW_MINUTES:-15}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@croo.digital}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_FIRST_NAME: ${ADMIN_FIRST_NAME:-Admin}
+      ADMIN_LAST_NAME: ${ADMIN_LAST_NAME:-Croo}
+    ports:
+      - "${AUTH_API_PORT:-8001}:${AUTH_API_PORT:-8001}"
+    volumes:
+      - ./apis/shared:/app/shared:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ═══════════════════════════════════════
+  # CRM BACKEND API (microservice — Phase 2)
+  # ═══════════════════════════════════════
+  crm-backend-api:
+    build:
+      context: ./apis/crm-backend-api
+      dockerfile: Dockerfile
+    container_name: croo-crm-backend-api
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+      PORT: ${CRM_API_PORT:-8002}
+      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@db:5432/${DB_NAME:-croo_digital_experience}
+      JWT_SECRET_KEY: ${SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
+    ports:
+      - "${CRM_API_PORT:-8002}:${CRM_API_PORT:-8002}"
+    volumes:
+      - ./apis/shared:/app/shared:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ═══════════════════════════════════════
+  # AI AGENT API (microservice — Phase 3)
+  # ═══════════════════════════════════════
+  ai-agent-api:
+    build:
+      context: ./apis/ai-agent-api
+      dockerfile: Dockerfile
+    container_name: croo-ai-agent-api
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+      PORT: ${AI_AGENT_API_PORT:-8003}
+      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@db:5432/${DB_NAME:-croo_digital_experience}
+      JWT_SECRET_KEY: ${SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
+    ports:
+      - "${AI_AGENT_API_PORT:-8003}:${AI_AGENT_API_PORT:-8003}"
+    volumes:
+      - ./apis/shared:/app/shared:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ═══════════════════════════════════════
+  # COMMUNICATION API (microservice — Phase 4)
+  # ═══════════════════════════════════════
+  communication-api:
+    build:
+      context: ./apis/communication-api
+      dockerfile: Dockerfile
+    container_name: croo-communication-api
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+      PORT: ${COMMUNICATION_API_PORT:-8004}
+      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@db:5432/${DB_NAME:-croo_digital_experience}
+      JWT_SECRET_KEY: ${SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
+      MS365_CLIENT_ID: ${MS365_CLIENT_ID}
+      MS365_CLIENT_SECRET: ${MS365_CLIENT_SECRET}
+      MS365_TENANT_ID: ${MS365_TENANT_ID}
+      MS365_REDIRECT_URI: ${MS365_REDIRECT_URI}
+    ports:
+      - "${COMMUNICATION_API_PORT:-8004}:${COMMUNICATION_API_PORT:-8004}"
+    volumes:
+      - ./apis/shared:/app/shared:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ═══════════════════════════════════════
+  # PLATFORM SERVICES API (microservice — Phase 5)
+  # ═══════════════════════════════════════
+  platform-services-api:
+    build:
+      context: ./apis/platform-services-api
+      dockerfile: Dockerfile
+    container_name: croo-platform-services-api
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+      PORT: ${PLATFORM_SERVICES_API_PORT:-8005}
+      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@db:5432/${DB_NAME:-croo_digital_experience}
+      JWT_SECRET_KEY: ${SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
+    ports:
+      - "${PLATFORM_SERVICES_API_PORT:-8005}:${PLATFORM_SERVICES_API_PORT:-8005}"
+    volumes:
+      - ./apis/shared:/app/shared:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ═══════════════════════════════════════
+  # KNOWLEDGE BASE API (microservice — Phase 6)
+  # ═══════════════════════════════════════
+  kb-api:
+    build:
+      context: ./apis/kb-api
+      dockerfile: Dockerfile
+    container_name: croo-kb-api
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+      PORT: ${KB_API_PORT:-8006}
+      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@db:5432/${DB_NAME:-croo_digital_experience}
+      JWT_SECRET_KEY: ${SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
+    ports:
+      - "${KB_API_PORT:-8006}:${KB_API_PORT:-8006}"
+    volumes:
+      - ./apis/shared:/app/shared:ro
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:
