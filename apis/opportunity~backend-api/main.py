@@ -1,16 +1,10 @@
-"""Opportunity Backend API — CRUD + persistence for opportunity entities.
-
-Pure storage layer — NO business logic.
-Port: 9004
-"""
-
+"""Opportunity Backend API — CRUD for opportunities, products, and quotes. Port: 9004."""
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from shared.config import get_settings
 from shared.infrastructure import configure_logging, get_logger, setup_cors, RequestLoggingMiddleware, monitoring_router
 from shared.database import Base
-from app.infrastructure.database import init as db_init, get_engine
+from shared.event_bus import event_bus
 
 settings = get_settings("opportunity-backend")
 configure_logging(settings.log_level, settings.log_format)
@@ -19,26 +13,24 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan — startup and shutdown."""
+    from app.domain.entities import opportunity, opportunity_product, quote  # noqa: F401
+    from app.infrastructure.database import init as db_init, get_engine
     db_init("opportunity-backend")
-    engine = get_engine()
-    # Tables are created by the existing migrations / other APIs sharing the DB
-    logger.info("opportunity_backend_api_started", port=settings.api_port)
+    Base.metadata.create_all(bind=get_engine())
+    if hasattr(event_bus, 'start_listening'):
+        await event_bus.start_listening()
+    logger.info("opportunity_backend_started", port=9004)
     yield
-    logger.info("opportunity_backend_api_shutdown")
+    if hasattr(event_bus, 'close'):
+        await event_bus.close()
 
 
-app = FastAPI(
-    title="Opportunity Backend API",
-    description="Opportunity — CRUD + Persistence — Croo Digital Experience",
-    version="1.0.0",
-    lifespan=lifespan,
-)
-
+app = FastAPI(title="Opportunity Backend API", version="1.0.0", lifespan=lifespan)
 setup_cors(app, "opportunity-backend")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])
 
-# Routes will be imported here as they are created
-# from app.presentation.routes.xxx_routes import router as xxx_router
-# app.include_router(xxx_router, tags=["xxx"])
+from app.presentation.routes.opportunity_routes import router as opp_router
+from app.presentation.routes.quote_routes import router as quote_router
+app.include_router(opp_router, tags=["opportunities"])
+app.include_router(quote_router, tags=["quotes"])

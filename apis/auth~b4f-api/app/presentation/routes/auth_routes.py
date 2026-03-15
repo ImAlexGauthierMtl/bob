@@ -1,17 +1,14 @@
-"""Authentication routes — register, login, refresh, me."""
-
+"""Authentication routes — JWT logic stays here, CRUD goes to user~backend-api."""
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
 from jose import JWTError, jwt
+import bcrypt
 
 from app.config import settings
-from app.infrastructure.database import get_db
-from app.application.use_cases.auth_use_cases import RegisterUserUseCase, AuthenticateUserUseCase
-from app.infrastructure.persistence.user_repository import UserRepository
+from app.infrastructure.clients.user_client import user_client
 from app.presentation.schemas.auth_schemas import (
     UserRegisterRequest, UserLoginRequest, TokenResponse,
     RefreshTokenRequest, UserResponse, SetActiveOrgRequest,
@@ -19,15 +16,12 @@ from app.presentation.schemas.auth_schemas import (
 
 router = APIRouter(prefix="/api/v1/auth")
 security = HTTPBearer()
-
 rate_limit_storage: dict[str, list[datetime]] = {}
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (
-        expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
-    )
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.access_token_expire_minutes))
     to_encode.update({"exp": expire, "type": "access"})
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.jwt_algorithm)
 
@@ -56,111 +50,100 @@ def is_rate_limited(identifier: str) -> bool:
 
 
 def add_failed_attempt(identifier: str) -> None:
-    if identifier not in rate_limit_storage:
-        rate_limit_storage[identifier] = []
-    rate_limit_storage[identifier].append(datetime.now(timezone.utc))
+    rate_limit_storage.setdefault(identifier, []).append(datetime.now(timezone.utc))
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
-) -> dict:
-    """Dependency — extract current user from JWT token."""
+async def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     payload = verify_token(credentials.credentials)
     if payload is None or payload.get("type") != "access":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    user = UserRepository(db).get_by_id(user_id)
-    if not user:
+    user_data = await user_client.get_by_id(user_id, forward_headers=request.headers)
+    if not user_data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-    from app.infrastructure.persistence.role_repository import RoleRepository
-    role_repo = RoleRepository(db)
-    user_roles = role_repo.get_user_roles(user_id)
-    role_names = [r.name for r in user_roles]
-    permission_keys = role_repo.get_user_permissions(user_id)
+    roles = await user_client.get_user_roles(user_id, forward_headers=request.headers)
+    permissions = await user_client.get_user_permissions(user_id, forward_headers=request.headers)
 
     return {
         "user_id": user_id,
         "email": payload.get("email"),
-        "tenant_id": user.tenant_id,
-        "active_organization_id": user.active_organization_id,
-        "roles": role_names,
-        "permissions": permission_keys,
+        "tenant_id": user_data.get("tenant_id", "default"),
+        "active_organization_id": user_data.get("active_organization_id"),
+        "roles": [r.get("name") for r in roles],
+        "permissions": permissions,
     }
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserRegisterRequest, db: Session = Depends(get_db)):
-    use_case = RegisterUserUseCase(db)
-    try:
-        user = use_case.execute(
-            email=user_data.email, password=user_data.password,
-            first_name=user_data.first_name, last_name=user_data.last_name,
-        )
-        return UserResponse.model_validate(user)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+async def register(user_data: UserRegisterRequest, request: Request):
+    existing = await user_client.get_by_email(user_data.email.lower())
+    if existing:
+        raise HTTPException(status_code=400, detail="A user with this email already exists")
+    created = await user_client.create({
+        "email": user_data.email,
+        "password": user_data.password,
+        "first_name": user_data.first_name,
+        "last_name": user_data.last_name,
+    })
+    return created
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(credentials: UserLoginRequest, request: Request, db: Session = Depends(get_db)):
+async def login(credentials: UserLoginRequest, request: Request):
     client_ip = request.client.host if request.client else "unknown"
     if is_rate_limited(client_ip):
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many login attempts")
-    use_case = AuthenticateUserUseCase(db)
-    user = use_case.execute(credentials.email, credentials.password)
-    if not user:
+        raise HTTPException(status_code=429, detail="Too many login attempts")
+
+    user_data = await user_client.get_by_email(credentials.email.lower())
+    if not user_data:
         add_failed_attempt(client_ip)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token = create_access_token(data={"sub": user.id, "email": user.email})
-    refresh_token = create_refresh_token(data={"sub": user.id})
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    from shared.services import create_service_client
+    client = create_service_client("user~backend-api")
+    verify_resp = await client.post("/api/v1/users/verify-password", json={
+        "email": credentials.email.lower(),
+        "password": credentials.password,
+    })
+    if verify_resp.status_code != 200 or not verify_resp.json().get("valid"):
+        add_failed_attempt(client_ip)
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    access_token = create_access_token(data={"sub": user_data["id"], "email": user_data["email"], "tenant_id": user_data.get("tenant_id")})
+    refresh_token = create_refresh_token(data={"sub": user_data["id"]})
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(token_data: RefreshTokenRequest, db: Session = Depends(get_db)):
+async def refresh(token_data: RefreshTokenRequest, request: Request):
     payload = verify_token(token_data.refresh_token)
     if payload is None or payload.get("type") != "refresh":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
-    user_id = payload.get("sub")
-    user = UserRepository(db).get_by_id(user_id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    access_token = create_access_token(data={"sub": user.id, "email": user.email})
-    refresh_token = create_refresh_token(data={"sub": user.id})
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+    user_data = await user_client.get_by_id(payload.get("sub"), forward_headers=request.headers)
+    if not user_data:
+        raise HTTPException(status_code=401, detail="User not found")
+    access_token = create_access_token(data={"sub": user_data["id"], "email": user_data["email"], "tenant_id": user_data.get("tenant_id")})
+    refresh_token = create_refresh_token(data={"sub": user_data["id"]})
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    user = UserRepository(db).get_by_id(current_user["user_id"])
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return UserResponse.model_validate(user)
+async def get_me(request: Request, current_user: dict = Depends(get_current_user)):
+    user_data = await user_client.get_by_id(current_user["user_id"], forward_headers=request.headers)
+    if not user_data:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user_data
 
 
 @router.put("/me/active-organization", response_model=UserResponse)
-async def set_active_organization(
-    body: SetActiveOrgRequest,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    user = UserRepository(db).get_by_id(current_user["user_id"])
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    user.active_organization_id = body.organization_id
-    db.commit()
-    db.refresh(user)
-    return UserResponse.model_validate(user)
+async def set_active_organization(body: SetActiveOrgRequest, request: Request, current_user: dict = Depends(get_current_user)):
+    updated = await user_client.update(
+        current_user["user_id"],
+        {"active_organization_id": body.organization_id},
+        forward_headers=request.headers,
+    )
+    return updated

@@ -1,6 +1,40 @@
+x-common-env: &common-env
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+  DEBUG: ${DEBUG:-true}
+  JWT_SECRET_KEY: ${SECRET_KEY}
+  JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+  CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
+  REDIS_URL: redis://redis:6379/0
+  EVENT_BUS_BACKEND: ${EVENT_BUS_BACKEND:-memory}
+
+x-db-env: &db-env
+  DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@database:5432/${DB_NAME:-croo_digital_experience}
+
+x-backend-urls: &backend-urls
+  USER_BACKEND_API_URL: http://user-backend-api:9001
+  CONTACT_BACKEND_API_URL: http://contact-backend-api:9002
+  ORG_BACKEND_API_URL: http://org-backend-api:9003
+  OPPORTUNITY_BACKEND_API_URL: http://opportunity-backend-api:9004
+  ACTIVITY_BACKEND_API_URL: http://activity-backend-api:9005
+  PRODUCT_BACKEND_API_URL: http://product-backend-api:9006
+  EMAIL_BACKEND_API_URL: http://email-backend-api:9007
+  AGENT_BACKEND_API_URL: http://agent-backend-api:9008
+  WORKFLOW_BACKEND_API_URL: http://workflow-backend-api:9009
+  KB_BACKEND_API_URL: http://kb-backend-api:9010
+  USAGE_BACKEND_API_URL: http://usage-backend-api:9011
+
+x-shared-volume: &shared-volume
+  - ./apis/shared:/app/shared:ro
+
+x-healthcheck: &healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 15s
+
 services:
   # ═══════════════════════════════════════
-  # DATABASE
+  # INFRASTRUCTURE
   # ═══════════════════════════════════════
   database:
     image: postgres:16-alpine
@@ -20,25 +54,34 @@ services:
       timeout: 3s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: croo-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   # ═══════════════════════════════════════
-  # BACKEND API (monolithe — legacy)
+  # LEGACY (à déprécier — Phase 8)
   # ═══════════════════════════════════════
-  api:
+  legacy-api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: croo-api
+    container_name: croo-legacy-api
     restart: unless-stopped
     environment:
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      DEBUG: ${DEBUG:-true}
+      <<: *common-env
       API_PORT: ${API_PORT:-4500}
       DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@database:5432/${DB_NAME:-croo_digital_experience}
       SECRET_KEY: ${SECRET_KEY}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
-      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
       RATE_LIMIT_MAX_ATTEMPTS: ${RATE_LIMIT_MAX_ATTEMPTS:-5}
       RATE_LIMIT_WINDOW_MINUTES: ${RATE_LIMIT_WINDOW_MINUTES:-15}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@croo.digital}
@@ -61,51 +104,380 @@ services:
       - "${API_PORT:-4500}:${API_PORT:-4500}"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:${API_PORT:-4500}/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      <<: *healthcheck
       start_period: 30s
     depends_on:
       database:
         condition: service_healthy
 
   # ═══════════════════════════════════════
-  # B4F API (Backend-for-Frontend — gateway)
+  # B4F LAYER — Logique métier (exposé)
   # ═══════════════════════════════════════
-  b4f-api:
+  auth-b4f-api:
     build:
-      context: ./apis/b4f-api
-      dockerfile: Dockerfile
-    container_name: croo-b4f-api
+      context: ./apis
+      dockerfile: auth~b4f-api/Dockerfile
+    container_name: croo-auth-b4f-api
     restart: unless-stopped
     environment:
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      DEBUG: ${DEBUG:-true}
-      PORT: ${B4F_API_PORT:-8000}
-      JWT_SECRET_KEY: ${SECRET_KEY}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
-      AUTH_API_URL: http://auth-api:${AUTH_API_PORT:-8001}
-      CRM_API_URL: http://crm-backend-api:${CRM_API_PORT:-8002}
-      AI_AGENT_API_URL: http://ai-agent-api:${AI_AGENT_API_PORT:-8003}
-      COMMUNICATION_API_URL: http://communication-api:${COMMUNICATION_API_PORT:-8004}
-      PLATFORM_SERVICES_API_URL: http://platform-services-api:${PLATFORM_SERVICES_API_PORT:-8005}
-      KB_API_URL: http://kb-api:${KB_API_PORT:-8006}
-      LEGACY_API_URL: http://api:${API_PORT:-4500}
+      <<: [*common-env, *backend-urls]
+      PORT: 8001
+      SECRET_KEY: ${SECRET_KEY}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      RATE_LIMIT_MAX_ATTEMPTS: ${RATE_LIMIT_MAX_ATTEMPTS:-5}
+      RATE_LIMIT_WINDOW_MINUTES: ${RATE_LIMIT_WINDOW_MINUTES:-15}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@croo.digital}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     ports:
-      - "${B4F_API_PORT:-8000}:${B4F_API_PORT:-8000}"
+      - "8001:8001"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:${B4F_API_PORT:-8000}/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    volumes:
-      - ./apis/shared:/app/shared:ro
+      test: ["CMD-SHELL", "curl -sf http://localhost:8001/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
     depends_on:
-      auth-api:
+      user-backend-api:
         condition: service_healthy
-      crm-backend-api:
+
+  crm-b4f-api:
+    build:
+      context: ./apis
+      dockerfile: crm~b4f-api/Dockerfile
+    container_name: croo-crm-b4f-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *backend-urls]
+      PORT: 8002
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8002/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      contact-backend-api:
+        condition: service_healthy
+      org-backend-api:
+        condition: service_healthy
+
+  ai-agent-b4f-api:
+    build:
+      context: ./apis
+      dockerfile: ai-agent~b4f-api/Dockerfile
+    container_name: croo-ai-agent-b4f-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *backend-urls]
+      PORT: 8003
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
+    ports:
+      - "8003:8003"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8003/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      agent-backend-api:
+        condition: service_healthy
+
+  communication-b4f-api:
+    build:
+      context: ./apis
+      dockerfile: communication~b4f-api/Dockerfile
+    container_name: croo-communication-b4f-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *backend-urls]
+      PORT: 8004
+      MS365_CLIENT_ID: ${MS365_CLIENT_ID}
+      MS365_CLIENT_SECRET: ${MS365_CLIENT_SECRET}
+      MS365_TENANT_ID: ${MS365_TENANT_ID}
+      MS365_REDIRECT_URI: ${MS365_REDIRECT_URI}
+      MS365_WEBHOOK_HOST: ${MS365_WEBHOOK_HOST}
+      WEBHOOK_API_KEY: ${WEBHOOK_API_KEY}
+    ports:
+      - "8004:8004"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8004/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      email-backend-api:
+        condition: service_healthy
+
+  platform-b4f-api:
+    build:
+      context: ./apis
+      dockerfile: platform~b4f-api/Dockerfile
+    container_name: croo-platform-b4f-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *backend-urls]
+      PORT: 8005
+    ports:
+      - "8005:8005"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8005/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      workflow-backend-api:
+        condition: service_healthy
+      usage-backend-api:
+        condition: service_healthy
+
+  kb-b4f-api:
+    build:
+      context: ./apis
+      dockerfile: kb~b4f-api/Dockerfile
+    container_name: croo-kb-b4f-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *backend-urls]
+      PORT: 8006
+    ports:
+      - "8006:8006"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8006/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      kb-backend-api:
+        condition: service_healthy
+
+  # ═══════════════════════════════════════
+  # BACKEND LAYER — CRUD + Events (interne)
+  # ═══════════════════════════════════════
+  user-backend-api:
+    build:
+      context: ./apis
+      dockerfile: user~backend-api/Dockerfile
+    container_name: croo-user-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9001
+    ports:
+      - "${USER_BACKEND_PORT:-9101}:9001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9001/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  contact-backend-api:
+    build:
+      context: ./apis
+      dockerfile: contact~backend-api/Dockerfile
+    container_name: croo-contact-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9002
+    ports:
+      - "9002:9002"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9002/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  org-backend-api:
+    build:
+      context: ./apis
+      dockerfile: org~backend-api/Dockerfile
+    container_name: croo-org-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9003
+    ports:
+      - "9003:9003"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9003/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  opportunity-backend-api:
+    build:
+      context: ./apis
+      dockerfile: opportunity~backend-api/Dockerfile
+    container_name: croo-opportunity-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9004
+    ports:
+      - "9004:9004"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9004/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  activity-backend-api:
+    build:
+      context: ./apis
+      dockerfile: activity~backend-api/Dockerfile
+    container_name: croo-activity-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9005
+    ports:
+      - "9005:9005"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9005/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  product-backend-api:
+    build:
+      context: ./apis
+      dockerfile: product~backend-api/Dockerfile
+    container_name: croo-product-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9006
+    ports:
+      - "9006:9006"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9006/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  email-backend-api:
+    build:
+      context: ./apis
+      dockerfile: email~backend-api/Dockerfile
+    container_name: croo-email-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9007
+    ports:
+      - "9007:9007"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9007/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  agent-backend-api:
+    build:
+      context: ./apis
+      dockerfile: agent~backend-api/Dockerfile
+    container_name: croo-agent-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9008
+    ports:
+      - "9008:9008"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9008/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  workflow-backend-api:
+    build:
+      context: ./apis
+      dockerfile: workflow~backend-api/Dockerfile
+    container_name: croo-workflow-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9009
+    ports:
+      - "9009:9009"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9009/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  kb-backend-api:
+    build:
+      context: ./apis
+      dockerfile: kb~backend-api/Dockerfile
+    container_name: croo-kb-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9010
+    ports:
+      - "9010:9010"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9010/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  usage-backend-api:
+    build:
+      context: ./apis
+      dockerfile: usage~backend-api/Dockerfile
+    container_name: croo-usage-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9011
+    ports:
+      - "9011:9011"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9011/health || exit 1"]
+      <<: *healthcheck
+    volumes: *shared-volume
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   # ═══════════════════════════════════════
@@ -120,208 +492,7 @@ services:
     ports:
       - "4700:4700"
     depends_on:
-      b4f-api:
-        condition: service_healthy
-
-  # ═══════════════════════════════════════
-  # AUTH API (microservice — Phase 1)
-  # ═══════════════════════════════════════
-  auth-api:
-    build:
-      context: ./apis/auth-api
-      dockerfile: Dockerfile
-    container_name: croo-auth-api
-    restart: unless-stopped
-    environment:
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      DEBUG: ${DEBUG:-true}
-      PORT: ${AUTH_API_PORT:-8001}
-      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@database:5432/${DB_NAME:-croo_digital_experience}
-      SECRET_KEY: ${SECRET_KEY}
-      JWT_SECRET_KEY: ${SECRET_KEY}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
-      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
-      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
-      RATE_LIMIT_MAX_ATTEMPTS: ${RATE_LIMIT_MAX_ATTEMPTS:-5}
-      RATE_LIMIT_WINDOW_MINUTES: ${RATE_LIMIT_WINDOW_MINUTES:-15}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@croo.digital}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      ADMIN_FIRST_NAME: ${ADMIN_FIRST_NAME:-Admin}
-      ADMIN_LAST_NAME: ${ADMIN_LAST_NAME:-Croo}
-    ports:
-      - "${AUTH_API_PORT:-8001}:${AUTH_API_PORT:-8001}"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:${AUTH_API_PORT:-8001}/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    volumes:
-      - ./apis/shared:/app/shared:ro
-    depends_on:
-      database:
-        condition: service_healthy
-
-  # ═══════════════════════════════════════
-  # CRM BACKEND API (microservice — Phase 2)
-  # ═══════════════════════════════════════
-  crm-backend-api:
-    build:
-      context: ./apis/crm-backend-api
-      dockerfile: Dockerfile
-    container_name: croo-crm-backend-api
-    restart: unless-stopped
-    environment:
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      DEBUG: ${DEBUG:-true}
-      PORT: ${CRM_API_PORT:-8002}
-      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@database:5432/${DB_NAME:-croo_digital_experience}
-      JWT_SECRET_KEY: ${SECRET_KEY}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
-    ports:
-      - "${CRM_API_PORT:-8002}:${CRM_API_PORT:-8002}"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:${CRM_API_PORT:-8002}/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    volumes:
-      - ./apis/shared:/app/shared:ro
-    depends_on:
-      database:
-        condition: service_healthy
-
-  # ═══════════════════════════════════════
-  # AI AGENT API (microservice — Phase 3)
-  # ═══════════════════════════════════════
-  ai-agent-api:
-    build:
-      context: ./apis/ai-agent-api
-      dockerfile: Dockerfile
-    container_name: croo-ai-agent-api
-    restart: unless-stopped
-    environment:
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      DEBUG: ${DEBUG:-true}
-      PORT: ${AI_AGENT_API_PORT:-8003}
-      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@database:5432/${DB_NAME:-croo_digital_experience}
-      JWT_SECRET_KEY: ${SECRET_KEY}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
-      GROQ_API_KEY: ${GROQ_API_KEY}
-      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
-    ports:
-      - "${AI_AGENT_API_PORT:-8003}:${AI_AGENT_API_PORT:-8003}"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:${AI_AGENT_API_PORT:-8003}/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    volumes:
-      - ./apis/shared:/app/shared:ro
-    depends_on:
-      database:
-        condition: service_healthy
-
-  # ═══════════════════════════════════════
-  # COMMUNICATION API (microservice — Phase 4)
-  # ═══════════════════════════════════════
-  communication-api:
-    build:
-      context: ./apis/communication-api
-      dockerfile: Dockerfile
-    container_name: croo-communication-api
-    restart: unless-stopped
-    environment:
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      DEBUG: ${DEBUG:-true}
-      PORT: ${COMMUNICATION_API_PORT:-8004}
-      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@database:5432/${DB_NAME:-croo_digital_experience}
-      JWT_SECRET_KEY: ${SECRET_KEY}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
-      MS365_CLIENT_ID: ${MS365_CLIENT_ID}
-      MS365_CLIENT_SECRET: ${MS365_CLIENT_SECRET}
-      MS365_TENANT_ID: ${MS365_TENANT_ID}
-      MS365_REDIRECT_URI: ${MS365_REDIRECT_URI}
-    ports:
-      - "${COMMUNICATION_API_PORT:-8004}:${COMMUNICATION_API_PORT:-8004}"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:${COMMUNICATION_API_PORT:-8004}/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    volumes:
-      - ./apis/shared:/app/shared:ro
-    depends_on:
-      database:
-        condition: service_healthy
-
-  # ═══════════════════════════════════════
-  # PLATFORM SERVICES API (microservice — Phase 5)
-  # ═══════════════════════════════════════
-  platform-services-api:
-    build:
-      context: ./apis/platform-services-api
-      dockerfile: Dockerfile
-    container_name: croo-platform-services-api
-    restart: unless-stopped
-    environment:
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      DEBUG: ${DEBUG:-true}
-      PORT: ${PLATFORM_SERVICES_API_PORT:-8005}
-      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@database:5432/${DB_NAME:-croo_digital_experience}
-      JWT_SECRET_KEY: ${SECRET_KEY}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
-    ports:
-      - "${PLATFORM_SERVICES_API_PORT:-8005}:${PLATFORM_SERVICES_API_PORT:-8005}"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:${PLATFORM_SERVICES_API_PORT:-8005}/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    volumes:
-      - ./apis/shared:/app/shared:ro
-    depends_on:
-      database:
-        condition: service_healthy
-
-  # ═══════════════════════════════════════
-  # KNOWLEDGE BASE API (microservice — Phase 6)
-  # ═══════════════════════════════════════
-  kb-api:
-    build:
-      context: ./apis/kb-api
-      dockerfile: Dockerfile
-    container_name: croo-kb-api
-    restart: unless-stopped
-    environment:
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      DEBUG: ${DEBUG:-true}
-      PORT: ${KB_API_PORT:-8006}
-      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@database:5432/${DB_NAME:-croo_digital_experience}
-      JWT_SECRET_KEY: ${SECRET_KEY}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
-    ports:
-      - "${KB_API_PORT:-8006}:${KB_API_PORT:-8006}"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:${KB_API_PORT:-8006}/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    volumes:
-      - ./apis/shared:/app/shared:ro
-    depends_on:
-      database:
+      auth-b4f-api:
         condition: service_healthy
 
 volumes:

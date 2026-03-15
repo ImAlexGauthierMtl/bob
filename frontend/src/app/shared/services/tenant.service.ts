@@ -7,7 +7,7 @@ import {
     ProvisionRequest, ProvisionResponse,
 } from '../models/tenant.model';
 
-const API_URL = `${environment.apiUrl}/admin/tenants`;
+const API_URL = `${environment.platformApiUrl}/admin/tenants`;
 
 @Injectable({ providedIn: 'root' })
 export class TenantService {

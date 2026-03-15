@@ -1,31 +1,13 @@
-"""Platform Services API — Workflows, Usage Billing, Enrichment.
-
-Microservice extracted from the monolith — Phase 5.
-Port: 8005
-"""
-
-from contextlib import asynccontextmanager
+"""Platform B4F API — business logic + aggregation, delegates CRUD to backends. Port: 8005."""
 from fastapi import FastAPI
 from shared.config import get_settings
 from shared.infrastructure import configure_logging, get_logger, setup_cors, RequestLoggingMiddleware, monitoring_router
-from shared.database import Base
-from app.infrastructure.database import init as db_init, get_engine
 
 settings = get_settings("platform-services")
 configure_logging(settings.log_level, settings.log_format)
 logger = get_logger(__name__)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    from app.domain.entities import workflow, workflow_execution, usage_transaction, enrichment_run  # noqa: F401
-    db_init("platform-services")
-    engine = get_engine()
-    Base.metadata.create_all(bind=engine)
-    logger.info("platform_services_api_started", port=settings.api_port)
-    yield
-    logger.info("platform_services_api_shutdown")
-
-app = FastAPI(title="Platform Services API", description="Workflows, Usage, Enrichment — Croo", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Platform B4F API", version="1.0.0")
 setup_cors(app, "platform-services")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])

@@ -1,27 +1,18 @@
-"""Event Bus publishers for product~backend-api."""
+"""Event publishers for product domain."""
+from shared.event_bus import event_bus
+from shared.event_bus.schemas import product_created, product_updated
+from shared.infrastructure import get_logger
 
-from shared.event_bus import event_bus, Event
-
-
-def publish_product_created(payload: dict):
-    event_bus.publish(Event(
-        event_type="product.created",
-        payload=payload,
-        source="product~backend-api",
-    ))
+logger = get_logger(__name__)
 
 
-def publish_product_updated(payload: dict):
-    event_bus.publish(Event(
-        event_type="product.updated",
-        payload=payload,
-        source="product~backend-api",
-    ))
+async def publish_product_created(product_id: str, data: dict) -> None:
+    event = product_created(product_id, data)
+    await event_bus.publish(event)
+    logger.info("published_product_created", product_id=product_id)
 
 
-def publish_product_deleted(payload: dict):
-    event_bus.publish(Event(
-        event_type="product.deleted",
-        payload=payload,
-        source="product~backend-api",
-    ))
+async def publish_product_updated(product_id: str, data: dict) -> None:
+    event = product_updated(product_id, data)
+    await event_bus.publish(event)
+    logger.info("published_product_updated", product_id=product_id)

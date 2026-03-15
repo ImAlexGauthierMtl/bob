@@ -77,17 +77,12 @@ variables:
       if [ ! -d "apis/${DIR_NAME}" ]; then
         DIR_NAME=$(echo "${API_NAME}" | sed -E 's/-(b4f-api|backend-api)/~\1/')
       fi
-      # Copy shared library into the API directory so it's included in Docker context
-      if [ -d "apis/shared" ]; then
-        cp -r apis/shared apis/${DIR_NAME}/shared
-      fi
       docker pull ${CI_REGISTRY_IMAGE}/${API_NAME}:latest || true
       docker build \
         --cache-from ${CI_REGISTRY_IMAGE}/${API_NAME}:latest \
         -f apis/${DIR_NAME}/Dockerfile \
         -t ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA} \
-        apis/${DIR_NAME}
-      rm -rf apis/${DIR_NAME}/shared
+        apis
       docker tag ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA} ${CI_REGISTRY_IMAGE}/${API_NAME}:latest
       docker push ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA}
       docker push ${CI_REGISTRY_IMAGE}/${API_NAME}:latest
@@ -579,28 +574,12 @@ generate:api-build-jobs:
             if [ ! -d "apis/${DIR_NAME}" ]; then
               DIR_NAME=$(echo "${API_NAME}" | sed -E 's/-(b4f-api|backend-api)/~\1/')
             fi
-            # Copy shared library into the API directory so it's included in Docker context
-            echo "DEBUG: Checking for shared directory..."
-            ls -la apis/ | head -5
-            if [ -d "apis/shared" ]; then
-              echo "DEBUG: Found apis/shared, copying to apis/${DIR_NAME}/shared"
-              cp -r apis/shared apis/${DIR_NAME}/shared
-              echo "DEBUG: shared dir contents:"
-              ls -la apis/${DIR_NAME}/shared/ | head -10
-            else
-              echo "DEBUG: apis/shared NOT FOUND"
-              echo "DEBUG: Current directory: $(pwd)"
-              ls -la apis/ || echo "DEBUG: apis/ does not exist"
-            fi
             docker pull ${CI_REGISTRY_IMAGE}/${API_NAME}:latest || true
             docker build \
               --cache-from ${CI_REGISTRY_IMAGE}/${API_NAME}:latest \
-              --no-cache \
               -f apis/${DIR_NAME}/Dockerfile \
               -t ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA} \
-              apis/${DIR_NAME}
-            # Clean up copied shared directory
-            rm -rf apis/${DIR_NAME}/shared
+              apis
             docker tag ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA} ${CI_REGISTRY_IMAGE}/${API_NAME}:latest
             docker push ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA}
             docker push ${CI_REGISTRY_IMAGE}/${API_NAME}:latest

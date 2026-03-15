@@ -1,13 +1,10 @@
-# Auth API dependencies
+# Auth B4F API dependencies — no database drivers needed
 fastapi>=0.115
 uvicorn[standard]>=0.30
 pydantic>=2.0
 pydantic-settings>=2.0
-sqlalchemy>=2.0
-psycopg2-binary>=2.9
 python-jose[cryptography]>=3.3
 bcrypt>=4.0
-passlib>=1.7
 structlog>=23.0
 httpx>=0.24
 email-validator>=2.0

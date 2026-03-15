@@ -1,27 +1,18 @@
-"""Event Bus publishers for activity~backend-api."""
+"""Event publishers for activity domain."""
+from shared.event_bus import event_bus
+from shared.event_bus.schemas import activity_created, activity_updated
+from shared.infrastructure import get_logger
 
-from shared.event_bus import event_bus, Event
-
-
-def publish_activity_created(payload: dict):
-    event_bus.publish(Event(
-        event_type="activity.created",
-        payload=payload,
-        source="activity~backend-api",
-    ))
+logger = get_logger(__name__)
 
 
-def publish_activity_updated(payload: dict):
-    event_bus.publish(Event(
-        event_type="activity.updated",
-        payload=payload,
-        source="activity~backend-api",
-    ))
+async def publish_activity_created(activity_id: str, data: dict) -> None:
+    event = activity_created(activity_id, data)
+    await event_bus.publish(event)
+    logger.info("published_activity_created", activity_id=activity_id)
 
 
-def publish_activity_deleted(payload: dict):
-    event_bus.publish(Event(
-        event_type="activity.deleted",
-        payload=payload,
-        source="activity~backend-api",
-    ))
+async def publish_activity_updated(activity_id: str, data: dict) -> None:
+    event = activity_updated(activity_id, data)
+    await event_bus.publish(event)
+    logger.info("published_activity_updated", activity_id=activity_id)

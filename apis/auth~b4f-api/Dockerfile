@@ -6,16 +6,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libpq-dev curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install service dependencies
-COPY requirements.txt .
+COPY auth~b4f-api/requirements.txt .
 ENV PIP_DEFAULT_TIMEOUT=300
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
-
-# Shared library is mounted at runtime via docker-compose volume
+COPY shared/ ./shared/
+COPY auth~b4f-api/ ./
 ENV PYTHONPATH="/app"
 
 EXPOSE ${PORT:-8000}

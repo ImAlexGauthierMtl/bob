@@ -1,246 +1,55 @@
-"""Training routes — REST API for training sessions, notes, and missing elements.
+"""Training routes — B4F proxy to agent~backend-api."""
 
-CRUD endpoints for managing training data captured during Bob's
-voice-driven CRM Mastery training.
-"""
-
-import uuid
-
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
-
-import structlog
-
+from fastapi import APIRouter, Depends, Request
 from app.middleware.auth import get_current_user
-from app.infrastructure.database import get_session_factory
-from app.domain.entities.training_models import (
-    TrainingSession,
-    TrainingNote,
-    TrainingMissingElement,
-)
-
-logger = structlog.get_logger(__name__)
+from app.infrastructure.clients.agent_client import training_client
 
 router = APIRouter(prefix="/api/v1/training")
 
 
-# ── Schemas ──────────────────────────────────────
-
-class CreateSessionRequest(BaseModel):
-    training_slug: str
+def _fh(request: Request) -> dict:
+    return {"Authorization": request.headers.get("Authorization", "")}
 
 
-class SessionResponse(BaseModel):
-    id: str
-    user_id: str
-    training_slug: str
-    current_slide: int
-    started_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class UpdateSlideRequest(BaseModel):
-    current_slide: int
-
-
-class CreateNoteRequest(BaseModel):
-    slide_id: Optional[int] = None
-    content: str
-    note_type: str = "insight"
-
-
-class NoteResponse(BaseModel):
-    id: str
-    session_id: str
-    slide_id: Optional[int]
-    content: str
-    note_type: str
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class CreateMissingRequest(BaseModel):
-    label: str
-    category: str = "integration"
-    description: Optional[str] = None
-
-
-class MissingResponse(BaseModel):
-    id: str
-    session_id: str
-    label: str
-    category: str
-    description: Optional[str]
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-# ── Helper ───────────────────────────────────────
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# ── Session Routes ───────────────────────────────
-
-@router.post("/sessions", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
-async def create_session(
-    request: CreateSessionRequest,
-    current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    """Start a new training session."""
-    session = TrainingSession(
-        id=str(uuid.uuid4()),
-        user_id=current_user["user_id"],
-        tenant_id=current_user["tenant_id"],
-        training_slug=request.training_slug,
-    )
-    db.add(session)
-    db.commit()
-    db.refresh(session)
-    logger.info("training_session_created", session_id=session.id, slug=request.training_slug)
-    return session
+@router.post("/sessions", status_code=201)
+async def create_session(request: Request, current_user: dict = Depends(get_current_user)):
+    data = await request.json()
+    return await training_client.create_session(data, forward_headers=_fh(request))
 
 
 @router.patch("/sessions/{session_id}/slide")
-async def update_slide(
-    session_id: str,
-    request: UpdateSlideRequest,
-    current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    """Update the current slide for a training session."""
-    session = db.query(TrainingSession).filter(
-        TrainingSession.id == session_id,
-        TrainingSession.user_id == current_user["user_id"],
-    ).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    session.current_slide = request.current_slide
-    db.commit()
-    return {"status": "ok", "current_slide": request.current_slide}
+async def update_slide(session_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    data = await request.json()
+    return await training_client.update_slide(session_id, data, forward_headers=_fh(request))
 
 
-# ── Note Routes ──────────────────────────────────
-
-@router.get("/sessions/{session_id}/notes", response_model=list[NoteResponse])
-async def get_notes(
-    session_id: str,
-    current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    """Get all notes for a training session."""
-    notes = db.query(TrainingNote).filter(
-        TrainingNote.session_id == session_id,
-        TrainingNote.user_id == current_user["user_id"],
-    ).order_by(TrainingNote.created_at.asc()).all()
-    return notes
+@router.get("/sessions/{session_id}/notes")
+async def get_notes(session_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    return await training_client.get_notes(session_id, forward_headers=_fh(request))
 
 
-@router.post("/sessions/{session_id}/notes", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
-async def create_note(
-    session_id: str,
-    request: CreateNoteRequest,
-    current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    """Add a note to a training session."""
-    note = TrainingNote(
-        id=str(uuid.uuid4()),
-        session_id=session_id,
-        user_id=current_user["user_id"],
-        slide_id=request.slide_id,
-        content=request.content,
-        note_type=request.note_type,
-    )
-    db.add(note)
-    db.commit()
-    db.refresh(note)
-    logger.info("training_note_created", note_id=note.id, session_id=session_id)
-    return note
+@router.post("/sessions/{session_id}/notes", status_code=201)
+async def create_note(session_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    data = await request.json()
+    return await training_client.create_note(session_id, data, forward_headers=_fh(request))
 
 
-@router.delete("/notes/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_note(
-    note_id: str,
-    current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    """Delete a training note."""
-    note = db.query(TrainingNote).filter(
-        TrainingNote.id == note_id,
-        TrainingNote.user_id == current_user["user_id"],
-    ).first()
-    if not note:
-        raise HTTPException(status_code=404, detail="Note not found")
-    db.delete(note)
-    db.commit()
+@router.delete("/notes/{note_id}", status_code=204)
+async def delete_note(note_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    await training_client.delete_note(note_id, forward_headers=_fh(request))
 
 
-# ── Missing Element Routes ───────────────────────
-
-@router.get("/sessions/{session_id}/missing", response_model=list[MissingResponse])
-async def get_missing(
-    session_id: str,
-    current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    """Get all missing elements for a training session."""
-    items = db.query(TrainingMissingElement).filter(
-        TrainingMissingElement.session_id == session_id,
-        TrainingMissingElement.user_id == current_user["user_id"],
-    ).order_by(TrainingMissingElement.created_at.asc()).all()
-    return items
+@router.get("/sessions/{session_id}/missing")
+async def get_missing(session_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    return await training_client.get_missing(session_id, forward_headers=_fh(request))
 
 
-@router.post("/sessions/{session_id}/missing", response_model=MissingResponse, status_code=status.HTTP_201_CREATED)
-async def create_missing(
-    session_id: str,
-    request: CreateMissingRequest,
-    current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    """Add a missing element to a training session."""
-    item = TrainingMissingElement(
-        id=str(uuid.uuid4()),
-        session_id=session_id,
-        user_id=current_user["user_id"],
-        label=request.label,
-        category=request.category,
-        description=request.description,
-    )
-    db.add(item)
-    db.commit()
-    db.refresh(item)
-    logger.info("training_missing_created", item_id=item.id, label=request.label)
-    return item
+@router.post("/sessions/{session_id}/missing", status_code=201)
+async def create_missing(session_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    data = await request.json()
+    return await training_client.create_missing(session_id, data, forward_headers=_fh(request))
 
 
-@router.delete("/missing/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_missing(
-    item_id: str,
-    current_user: dict = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    """Delete a missing element."""
-    item = db.query(TrainingMissingElement).filter(
-        TrainingMissingElement.id == item_id,
-        TrainingMissingElement.user_id == current_user["user_id"],
-    ).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="Missing element not found")
-    db.delete(item)
-    db.commit()
+@router.delete("/missing/{item_id}", status_code=204)
+async def delete_missing(item_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    await training_client.delete_missing(item_id, forward_headers=_fh(request))

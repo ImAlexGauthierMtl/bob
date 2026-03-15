@@ -1,30 +1,29 @@
-"""User schemas — Pydantic models for user API."""
-
-from typing import Optional
+"""User schemas."""
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 
-
-class UserUpdateRequest(BaseModel):
-    first_name: Optional[str] = Field(None, min_length=1, max_length=100)
-    last_name: Optional[str] = Field(None, min_length=1, max_length=100)
-    job_title: Optional[str] = Field(None, max_length=150)
-    phone: Optional[str] = Field(None, max_length=30)
-    bio: Optional[str] = None
-    location: Optional[str] = Field(None, max_length=150)
-    timezone: Optional[str] = Field(None, max_length=50)
-    role: Optional[str] = Field(None)
-
-
-class UserCreateByAdminRequest(BaseModel):
+class UserCreateRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8)
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field(..., min_length=1, max_length=100)
-    role: str = Field("member")
-    job_title: Optional[str] = Field(None, max_length=150)
-    phone: Optional[str] = Field(None, max_length=30)
+    tenant_id: Optional[str] = None
+    role: Optional[str] = "member"
+    job_title: Optional[str] = None
+    phone: Optional[str] = None
+    created_by: Optional[str] = None
 
+class UserUpdateRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    job_title: Optional[str] = None
+    phone: Optional[str] = None
+    bio: Optional[str] = None
+    location: Optional[str] = None
+    timezone: Optional[str] = None
+    role: Optional[str] = None
+    active_organization_id: Optional[str] = None
 
 class UserResponse(BaseModel):
     id: str
@@ -37,15 +36,16 @@ class UserResponse(BaseModel):
     location: Optional[str] = None
     timezone: Optional[str] = None
     role: str = "member"
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
+    is_super_admin: bool = False
+    active_organization_id: Optional[str] = None
+    trust_score: float = 0.1
+    tenant_id: str = "default"
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = {"from_attributes": True}
 
 class UserListResponse(BaseModel):
-    items: list[UserResponse]
+    items: List[UserResponse]
     total: int
-    skip: int
-    limit: int
+    skip: int = 0
+    limit: int = 50

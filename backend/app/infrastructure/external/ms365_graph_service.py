@@ -116,25 +116,25 @@ class MS365GraphService:
 
     # ── Emails ───────────────────────────────────────────────────────
 
-    async def get_emails(
+    async def get_emails_batched(
         self,
         access_token: str,
         delta_token: Optional[str] = None,
         top: int = 50,
-    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
-        """Fetch emails using delta query for incremental sync.
+    ):
+        """Async generator that yields (page_messages, page_number, total_so_far)
+        one page at a time, keeping memory usage constant regardless of mailbox size.
 
-        Returns (emails, new_delta_token).
-        If delta_token is provided, fetches only changes since last sync.
-        For initial sync (no delta_token), uses standard messages endpoint
-        to pull full history, then saves a delta token for future syncs.
+        After exhausting the generator, call get_emails_delta_token() to obtain
+        the delta token for future incremental syncs.
         """
         use_delta = bool(delta_token)
+        self._last_delta_token: Optional[str] = None
+        self._last_sync_was_delta = use_delta
 
         if delta_token:
             url = delta_token
         else:
-            # Initial full sync: use /me/messages to pull ALL folders (inbox, archive, sent, etc.)
             url = (
                 f"{GRAPH_BASE}/me/messages"
                 f"?$select=subject,bodyPreview,body,from,toRecipients,ccRecipients,"
@@ -144,9 +144,8 @@ class MS365GraphService:
                 f"&$orderby=receivedDateTime desc"
             )
 
-        all_messages: List[Dict[str, Any]] = []
-        new_delta: Optional[str] = None
         page = 0
+        total = 0
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             while url:
@@ -158,46 +157,67 @@ class MS365GraphService:
                 data = resp.json()
 
                 messages = data.get("value", [])
-                all_messages.extend(messages)
                 page += 1
+                total += len(messages)
 
-                logger.info("ms365_emails_page", page=page, items=len(messages), total_so_far=len(all_messages))
+                logger.info("ms365_emails_page", page=page, items=len(messages), total_so_far=total)
 
-                # Follow @odata.nextLink for pagination
+                yield messages, page, total
+
                 url = data.get("@odata.nextLink")
 
-                # Capture deltaLink when pagination is done (delta mode only)
                 if "@odata.deltaLink" in data:
-                    new_delta = data["@odata.deltaLink"]
+                    self._last_delta_token = data["@odata.deltaLink"]
 
-        # For initial full sync, request a delta token for future incremental syncs
-        if not use_delta and not new_delta:
-            try:
-                delta_url = (
-                    f"{GRAPH_BASE}/me/mailFolders/inbox/messages/delta"
-                    f"?$select=subject,bodyPreview,body,from,toRecipients,ccRecipients,"
-                    f"receivedDateTime,isRead,importance,hasAttachments,conversationId,"
-                    f"parentFolderId"
-                    f"&$top=1"
-                )
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    # Page through delta quickly to get token
-                    while delta_url:
-                        resp = await client.get(
-                            delta_url,
-                            headers={"Authorization": f"Bearer {access_token}"},
-                        )
-                        resp.raise_for_status()
-                        ddata = resp.json()
-                        delta_url = ddata.get("@odata.nextLink")
-                        if "@odata.deltaLink" in ddata:
-                            new_delta = ddata["@odata.deltaLink"]
-                            delta_url = None
-                logger.info("ms365_delta_token_acquired", has_delta=bool(new_delta))
-            except Exception as e:
-                logger.warning("ms365_delta_token_failed", error=str(e))
+    async def acquire_delta_token(self, access_token: str) -> Optional[str]:
+        """After an initial full sync, page through a delta query to obtain a
+        delta token for future incremental syncs. Lightweight — fetches $top=1."""
+        if self._last_delta_token:
+            return self._last_delta_token
+        if getattr(self, "_last_sync_was_delta", False):
+            return None
+        try:
+            delta_url: Optional[str] = (
+                f"{GRAPH_BASE}/me/mailFolders/inbox/messages/delta"
+                f"?$select=subject,bodyPreview,body,from,toRecipients,ccRecipients,"
+                f"receivedDateTime,isRead,importance,hasAttachments,conversationId,"
+                f"parentFolderId"
+                f"&$top=1"
+            )
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                while delta_url:
+                    resp = await client.get(
+                        delta_url,
+                        headers={"Authorization": f"Bearer {access_token}"},
+                    )
+                    resp.raise_for_status()
+                    ddata = resp.json()
+                    delta_url = ddata.get("@odata.nextLink")
+                    if "@odata.deltaLink" in ddata:
+                        self._last_delta_token = ddata["@odata.deltaLink"]
+                        delta_url = None
+            logger.info("ms365_delta_token_acquired", has_delta=bool(self._last_delta_token))
+        except Exception as e:
+            logger.warning("ms365_delta_token_failed", error=str(e))
+        return self._last_delta_token
 
-        logger.info("ms365_emails_fetched", count=len(all_messages), pages=page, has_delta=bool(new_delta))
+    async def get_emails(
+        self,
+        access_token: str,
+        delta_token: Optional[str] = None,
+        top: int = 50,
+    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+        """Legacy wrapper — accumulates all pages in memory.
+        Prefer get_emails_batched() for large mailboxes.
+        """
+        all_messages: List[Dict[str, Any]] = []
+        last_page = 0
+        async for page_msgs, _page, _total in self.get_emails_batched(access_token, delta_token, top):
+            all_messages.extend(page_msgs)
+            last_page = _page
+        new_delta = await self.acquire_delta_token(access_token)
+
+        logger.info("ms365_emails_fetched", count=len(all_messages), pages=last_page, has_delta=bool(new_delta))
         return all_messages, new_delta
 
     async def get_calendar_events(

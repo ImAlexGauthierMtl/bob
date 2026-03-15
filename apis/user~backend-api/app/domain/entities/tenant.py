@@ -1,11 +1,7 @@
-"""Tenant entity — platform subscriber management."""
-
+"""Tenant entity."""
 import enum
-
 from sqlalchemy import Column, String, Text, Integer, DateTime, JSON, Enum as SAEnum
-
 from app.domain.entities.base import Base, AuditMixin, SoftDeleteMixin, generate_uuid
-
 
 class TenantStatus(str, enum.Enum):
     TRIAL = "TRIAL"
@@ -13,18 +9,13 @@ class TenantStatus(str, enum.Enum):
     SUSPENDED = "SUSPENDED"
     CANCELLED = "CANCELLED"
 
-
 class TenantPlan(str, enum.Enum):
     STARTER = "STARTER"
     PRO = "PRO"
     ENTERPRISE = "ENTERPRISE"
 
-
 class Tenant(Base, AuditMixin, SoftDeleteMixin):
-    """Tenant entity — platform subscribers (no TenantMixin, IS the tenant)."""
-
     __tablename__ = "tenants"
-
     id = Column(String(36), primary_key=True, default=generate_uuid)
     name = Column(String(255), nullable=False, index=True)
     slug = Column(String(100), nullable=False, unique=True, index=True)
@@ -35,5 +26,5 @@ class Tenant(Base, AuditMixin, SoftDeleteMixin):
     max_users = Column(Integer, default=5, nullable=False)
     subscription_start = Column(DateTime(timezone=True), nullable=True)
     subscription_end = Column(DateTime(timezone=True), nullable=True)
-    settings = Column(JSON, nullable=True, comment="Tenant-specific configuration")
-    notes = Column(Text, nullable=True, comment="Internal admin notes")
+    settings = Column(JSON, nullable=True)
+    notes = Column(Text, nullable=True)

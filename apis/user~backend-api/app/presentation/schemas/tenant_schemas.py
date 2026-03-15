@@ -1,43 +1,35 @@
-"""Pydantic schemas for Tenant CRUD operations."""
-
-from datetime import datetime
+"""Tenant schemas."""
 from typing import Optional, List
 from pydantic import BaseModel, Field, ConfigDict
+from datetime import datetime
 
-
-class CamelModel(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-
-class TenantCreate(CamelModel):
+class TenantCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    slug: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-z0-9\-]+$")
-    status: str = Field(default="TRIAL")
-    plan: str = Field(default="STARTER")
+    slug: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-z0-9\\-]+$")
+    status: str = "TRIAL"
+    plan: str = "STARTER"
     owner_email: str = Field(..., max_length=255)
     owner_name: str = Field(..., max_length=255)
-    max_users: int = Field(default=5, ge=1)
+    max_users: int = 5
     subscription_start: Optional[datetime] = None
     subscription_end: Optional[datetime] = None
     settings: Optional[dict] = None
     notes: Optional[str] = None
 
-
-class TenantUpdate(CamelModel):
-    name: Optional[str] = Field(None, max_length=255)
-    slug: Optional[str] = Field(None, max_length=100, pattern=r"^[a-z0-9\-]+$")
+class TenantUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    slug: Optional[str] = None
     status: Optional[str] = None
     plan: Optional[str] = None
-    owner_email: Optional[str] = Field(None, max_length=255)
-    owner_name: Optional[str] = Field(None, max_length=255)
-    max_users: Optional[int] = Field(None, ge=1)
+    owner_email: Optional[str] = None
+    owner_name: Optional[str] = None
+    max_users: Optional[int] = None
     subscription_start: Optional[datetime] = None
     subscription_end: Optional[datetime] = None
     settings: Optional[dict] = None
     notes: Optional[str] = None
 
-
-class TenantResponse(CamelModel):
+class TenantResponse(BaseModel):
     id: str
     name: str
     slug: str
@@ -54,14 +46,6 @@ class TenantResponse(CamelModel):
     updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
-
-class TenantListResponse(CamelModel):
+class TenantListResponse(BaseModel):
     items: List[TenantResponse]
     total: int
-
-
-class TenantProvisionRequest(CamelModel):
-    admin_email: str = Field(..., max_length=255)
-    admin_password: str = Field(..., min_length=8)
-    admin_first_name: str = Field(..., max_length=100)
-    admin_last_name: str = Field(..., max_length=100)

@@ -6,11 +6,9 @@ Supports API key authentication and event routing through EventBus.
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Header, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
 
-from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
 from app.agents.event_bus import event_bus
 from shared.config import get_settings
@@ -26,7 +24,6 @@ router = APIRouter(prefix="/api/v1/webhooks", tags=["Webhooks"])
 # ── Schemas ──────────────────────────
 
 class WebhookPayload(BaseModel):
-    """Incoming webhook payload."""
     event: str = Field(..., description="Event name, e.g. 'contact.created'")
     data: dict = Field(default_factory=dict, description="Event payload data")
     source: str = Field(default="external", description="Source system name")
@@ -42,7 +39,6 @@ class WebhookPayload(BaseModel):
 
 
 class WebhookResponse(BaseModel):
-    """Webhook response."""
     status: str
     event: str
     executions_triggered: int
@@ -55,14 +51,10 @@ class WebhookResponse(BaseModel):
 @router.post("/trigger", response_model=WebhookResponse)
 async def trigger_webhook(
     payload: WebhookPayload,
+    request: Request,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ):
-    """Trigger workflows via authenticated webhook.
-
-    Requires JWT authentication. The event will be routed through
-    the EventBus to find and execute matching workflows.
-    """
+    """Trigger workflows via authenticated webhook."""
     logger.info(
         "webhook_received",
         event=payload.event,
@@ -74,7 +66,6 @@ async def trigger_webhook(
         execution_ids = await event_bus.publish(
             event_name=payload.event,
             payload=payload.data,
-            db=db,
             tenant_id=current_user["tenant_id"],
             triggered_by=f"webhook:{payload.source}:{current_user['email']}",
         )
@@ -82,8 +73,8 @@ async def trigger_webhook(
         return WebhookResponse(
             status="accepted",
             event=payload.event,
-            executions_triggered=len(execution_ids),
-            execution_ids=execution_ids,
+            executions_triggered=len(execution_ids) if execution_ids else 0,
+            execution_ids=execution_ids or [],
             received_at=datetime.now(timezone.utc).isoformat(),
         )
 
@@ -98,33 +89,15 @@ async def trigger_webhook(
 @router.post("/trigger/public", response_model=WebhookResponse)
 async def trigger_webhook_public(
     payload: WebhookPayload,
+    request: Request,
     x_api_key: str = Header(..., alias="X-API-Key"),
-    db: Session = Depends(get_db),
 ):
-    """Trigger workflows via API key (no JWT required).
-
-    For external integrations (Zapier, n8n, etc.) that can't
-    authenticate with JWT. Requires X-API-Key header.
-    """
-    # Validate API key — for now use a simple env-based key
+    """Trigger workflows via API key (no JWT required)."""
     expected_key = getattr(settings, "webhook_api_key", None)
     if not expected_key or x_api_key != expected_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid API key",
-        )
-
-    # Use the admin user's tenant for public webhooks
-    from app.domain.entities.user import User
-    admin = db.query(User).filter(
-        User.email == settings.admin_email,
-        User.is_deleted == False,
-    ).first()
-
-    if not admin:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="No admin user configured",
         )
 
     logger.info(
@@ -137,16 +110,15 @@ async def trigger_webhook_public(
         execution_ids = await event_bus.publish(
             event_name=payload.event,
             payload=payload.data,
-            db=db,
-            tenant_id=admin.tenant_id,
+            tenant_id="default",
             triggered_by=f"webhook:{payload.source}:api-key",
         )
 
         return WebhookResponse(
             status="accepted",
             event=payload.event,
-            executions_triggered=len(execution_ids),
-            execution_ids=execution_ids,
+            executions_triggered=len(execution_ids) if execution_ids else 0,
+            execution_ids=execution_ids or [],
             received_at=datetime.now(timezone.utc).isoformat(),
         )
 
