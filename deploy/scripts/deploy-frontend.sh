@@ -53,6 +53,16 @@ if [ -n "${REGISTRY_SECRET_ARG}" ]; then
     fi
 fi
 
+# Clean up stuck Helm release (pending-install/pending-upgrade from a previous failed run)
+RELEASE_STATUS=$(helm status frontend --namespace "${NAMESPACE}" -o json 2>/dev/null | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4 || echo "not-found")
+if [[ "${RELEASE_STATUS}" == "pending-install" || "${RELEASE_STATUS}" == "pending-upgrade" || "${RELEASE_STATUS}" == "pending-rollback" ]]; then
+    echo "  Helm release stuck in '${RELEASE_STATUS}', cleaning up..."
+    helm uninstall frontend --namespace "${NAMESPACE}" --no-hooks 2>/dev/null || true
+    sleep 2
+elif [[ "${RELEASE_STATUS}" == "failed" ]]; then
+    echo "  Helm release in 'failed' state, will attempt upgrade..."
+fi
+
 HELM_CMD="helm upgrade --install frontend ${HELM_CHART} \
     --namespace ${NAMESPACE} \
     --create-namespace \
