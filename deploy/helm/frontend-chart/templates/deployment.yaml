@@ -25,7 +25,7 @@ spec:
       labels:
         {{- include "frontend-chart.selectorLabels" . | nindent 8 }}
     spec:
-      {{- if .Values.imagePullSecrets.enabled }}
+      {{- if and .Values.imagePullSecrets.enabled .Values.imagePullSecrets.dockerconfigjson }}
       imagePullSecrets:
       - name: {{ include "frontend-chart.imagePullSecretName" . }}
       {{- end }}
@@ -42,7 +42,7 @@ spec:
         - name: {{ $key }}
           value: {{ $value | quote }}
         {{- end }}
-        {{- if .Values.healthCheck.enabled }}
+        {{- if .Values.readinessCheck.enabled }}
         readinessProbe:
           httpGet:
             path: {{ .Values.readinessCheck.path }}

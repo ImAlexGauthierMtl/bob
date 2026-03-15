@@ -59,11 +59,11 @@ HELM_CMD="helm upgrade --install frontend ${HELM_CHART} \
     --set frontend.image.repository=${IMAGE_REPO} \
     --set frontend.image.tag=${CI_COMMIT_SHA}"
 
-if [ -n "${REGISTRY_SECRET_ARG}" ]; then
-    HELM_CMD="${HELM_CMD} ${REGISTRY_SECRET_ARG}"
-fi
 if [ -n "${VALUES_ARG}" ]; then
     HELM_CMD="${HELM_CMD} ${VALUES_ARG}"
+fi
+if [ -n "${REGISTRY_SECRET_ARG}" ]; then
+    HELM_CMD="${HELM_CMD} ${REGISTRY_SECRET_ARG}"
 fi
 
 HELM_CMD="${HELM_CMD} --wait --timeout 10m --debug"

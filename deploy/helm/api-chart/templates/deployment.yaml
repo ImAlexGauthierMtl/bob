@@ -28,7 +28,7 @@ spec:
       labels:
         {{- include "api-chart.selectorLabels" . | nindent 8 }}
     spec:
-      {{- if .Values.imagePullSecrets.enabled }}
+      {{- if and .Values.imagePullSecrets.enabled .Values.imagePullSecrets.dockerconfigjson }}
       imagePullSecrets:
       - name: {{ include "api-chart.imagePullSecretName" . }}
       {{- end }}
@@ -54,7 +54,7 @@ spec:
         - secretRef:
             name: {{ include "api-chart.secretName" . }}
         {{- end }}
-        {{- if .Values.healthCheck.enabled }}
+        {{- if .Values.readinessCheck.enabled }}
         readinessProbe:
           httpGet:
             path: {{ .Values.readinessCheck.path }}
