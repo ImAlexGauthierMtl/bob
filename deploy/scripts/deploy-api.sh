@@ -191,23 +191,32 @@ if [ -n "${REGISTRY_SECRET_ARG}" ]; then
     HELM_CMD="${HELM_CMD} ${REGISTRY_SECRET_ARG}"
 fi
 
-HELM_CMD="${HELM_CMD} --wait --timeout 10m --debug"
+HELM_CMD="${HELM_CMD} --wait --timeout 3m --debug"
+
+LABEL_SELECTOR="app.kubernetes.io/component=${API_NAME}"
 
 if eval "${HELM_CMD}"; then
     echo "Helm deployment completed"
+    echo ""
+    kubectl get pods -n "${NAMESPACE}" -l "${LABEL_SELECTOR}" -o wide 2>&1 || true
+    echo ""
+    echo "${API_NAME} deployed successfully"
 else
     HELM_EXIT_CODE=$?
     echo "Helm deployment failed with exit code: ${HELM_EXIT_CODE}"
     echo ""
-    helm status "${API_NAME}" --namespace "${NAMESPACE}" 2>&1 || true
-    kubectl get pods -n "${NAMESPACE}" -l app="${API_NAME}" 2>&1 || true
+    echo "=== Pod Status ==="
+    kubectl get pods -n "${NAMESPACE}" -l "${LABEL_SELECTOR}" -o wide 2>&1 || true
+    echo ""
+    echo "=== Pod Describe (last 60 lines) ==="
+    kubectl describe pods -n "${NAMESPACE}" -l "${LABEL_SELECTOR}" 2>&1 | tail -60 || true
+    echo ""
+    echo "=== Pod Logs ==="
+    POD_NAME=$(kubectl get pods -n "${NAMESPACE}" -l "${LABEL_SELECTOR}" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+    if [ -n "${POD_NAME}" ]; then
+        kubectl logs "${POD_NAME}" -n "${NAMESPACE}" --tail=40 2>&1 || true
+    else
+        echo "No pod found with label ${LABEL_SELECTOR}"
+    fi
     exit ${HELM_EXIT_CODE}
 fi
-
-echo ""
-echo "Waiting 10 seconds for pods to stabilize..."
-sleep 10
-
-kubectl get pods -n "${NAMESPACE}" -l app="${API_NAME}" 2>&1 || true
-echo ""
-echo "${API_NAME} deployed successfully"
