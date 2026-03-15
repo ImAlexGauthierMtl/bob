@@ -1,31 +1,31 @@
-"""Communication API — MS365, Email Sync, Calendar, Smart Labels, Webhooks.
+"""Communication B4F API — MS365 OAuth, Sync Orchestration, AI, Webhooks.
 
-Microservice extracted from the monolith — Phase 4.
-Port: 8004
+Business-for-Frontend layer — no direct DB access. Port: 8004.
+Delegates CRUD to email~backend-api via HTTP.
 """
-
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from shared.config import get_settings
 from shared.infrastructure import configure_logging, get_logger, setup_cors, RequestLoggingMiddleware, monitoring_router
-from shared.database import Base
-from app.infrastructure.database import init as db_init, get_engine
 
 settings = get_settings("communication")
 configure_logging(settings.log_level, settings.log_format)
 logger = get_logger(__name__)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.domain.entities import ms365_connection, synced_email, synced_event, email_contact, smart_label  # noqa: F401
-    db_init("communication")
-    engine = get_engine()
-    Base.metadata.create_all(bind=engine)
-    logger.info("communication_api_started", port=settings.api_port)
+    logger.info("communication_b4f_started", port=settings.api_port)
     yield
-    logger.info("communication_api_shutdown")
+    logger.info("communication_b4f_shutdown")
 
-app = FastAPI(title="Communication API", description="MS365, Emails, Calendar, Smart Labels — Croo", version="1.0.0", lifespan=lifespan)
+
+app = FastAPI(
+    title="Communication B4F API",
+    description="MS365 OAuth, Sync, AI Smart Labels, Webhooks — Croo",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 setup_cors(app, "communication")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])

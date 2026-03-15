@@ -16,7 +16,7 @@ import {
     ForwardEmailRequest
 } from '../models/ms365.model';
 
-const API_URL = `${environment.apiUrl}`;
+const API_URL = `${environment.communicationApiUrl}`;
 
 @Injectable({ providedIn: 'root' })
 export class MS365Service {

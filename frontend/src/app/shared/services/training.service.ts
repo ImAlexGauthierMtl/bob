@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { TrainingSession, TrainingNote, TrainingMissing } from '../models/training.model';
 
-const API_URL = `${environment.apiUrl}/training`;
+const API_URL = `${environment.aiAgentApiUrl}/training`;
 
 @Injectable({ providedIn: 'root' })
 export class TrainingService {

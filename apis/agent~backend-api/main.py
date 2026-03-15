@@ -1,16 +1,14 @@
-"""Agent Backend API — CRUD + persistence for agent entities.
+"""Agent Backend API — pure CRUD for BCC, Bob Settings, Client Map, Capabilities, Training.
 
-Pure storage layer — NO business logic.
-Port: 9008
+Storage layer for the AI Agent domain. Port: 9008.
 """
-
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from shared.config import get_settings
 from shared.infrastructure import configure_logging, get_logger, setup_cors, RequestLoggingMiddleware, monitoring_router
 from shared.database import Base
-from app.infrastructure.database import init as db_init, get_engine
+from shared.event_bus import event_bus
 
 settings = get_settings("agent-backend")
 configure_logging(settings.log_level, settings.log_format)
@@ -19,18 +17,28 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan — startup and shutdown."""
+    from app.domain.entities import (  # noqa: F401
+        bcc_entities, bob_settings, capability, client_map,
+        training_models, department,
+    )
+    from app.infrastructure.database import init as db_init, get_engine
     db_init("agent-backend")
     engine = get_engine()
-    # Tables are created by the existing migrations / other APIs sharing the DB
+    Base.metadata.create_all(bind=engine)
+    logger.info("agent_backend_database_tables_created")
+
+    if hasattr(event_bus, "start_listening"):
+        await event_bus.start_listening()
     logger.info("agent_backend_api_started", port=settings.api_port)
     yield
+    if hasattr(event_bus, "close"):
+        await event_bus.close()
     logger.info("agent_backend_api_shutdown")
 
 
 app = FastAPI(
     title="Agent Backend API",
-    description="Agent — CRUD + Persistence — Croo Digital Experience",
+    description="Pure CRUD for BCC, Bob Settings, Client Map 360°, Capabilities, Training — Croo Digital Experience",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -39,6 +47,14 @@ setup_cors(app, "agent-backend")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])
 
-# Routes will be imported here as they are created
-# from app.presentation.routes.xxx_routes import router as xxx_router
-# app.include_router(xxx_router, tags=["xxx"])
+from app.presentation.routes.bcc_routes import router as bcc_router
+from app.presentation.routes.bob_settings_routes import router as bob_settings_router
+from app.presentation.routes.client_map_routes import router as client_map_router
+from app.presentation.routes.capability_routes import router as capability_router
+from app.presentation.routes.training_routes import router as training_router
+
+app.include_router(bcc_router, tags=["bcc"])
+app.include_router(bob_settings_router, tags=["bob-settings"])
+app.include_router(client_map_router, tags=["client-map"])
+app.include_router(capability_router, tags=["capabilities"])
+app.include_router(training_router, tags=["training"])

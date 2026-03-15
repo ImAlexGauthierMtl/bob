@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { SmartLabel, SmartLabelListResponse } from '../models/smart-label.model';
 
-const API_URL = `${environment.apiUrl}/inbox/labels`;
+const API_URL = `${environment.communicationApiUrl}/inbox/labels`;
 
 @Injectable({ providedIn: 'root' })
 export class SmartLabelService {

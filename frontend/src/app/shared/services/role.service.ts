@@ -7,7 +7,7 @@ import { Role, CreateRoleDto, UpdateRoleDto, RoleListResponse, Permission } from
 @Injectable({ providedIn: 'root' })
 export class RoleService {
     private http = inject(HttpClient);
-    private readonly API = `${environment.apiUrl}/roles`;
+    private readonly API = `${environment.authApiUrl}/roles`;
 
     getAll(): Observable<RoleListResponse> {
         return this.http.get<RoleListResponse>(this.API);

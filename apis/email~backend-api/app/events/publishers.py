@@ -1,27 +1,18 @@
-"""Event Bus publishers for email~backend-api."""
+"""Event publishers for email domain."""
+from shared.event_bus import event_bus
+from shared.event_bus.schemas import email_received, email_synced
+from shared.infrastructure import get_logger
 
-from shared.event_bus import event_bus, Event
-
-
-def publish_email_created(payload: dict):
-    event_bus.publish(Event(
-        event_type="email.created",
-        payload=payload,
-        source="email~backend-api",
-    ))
+logger = get_logger(__name__)
 
 
-def publish_email_updated(payload: dict):
-    event_bus.publish(Event(
-        event_type="email.updated",
-        payload=payload,
-        source="email~backend-api",
-    ))
+async def publish_email_received(email_id: str, data: dict) -> None:
+    event = email_received(email_id, data)
+    await event_bus.publish(event)
+    logger.info("published_email_received", email_id=email_id)
 
 
-def publish_email_deleted(payload: dict):
-    event_bus.publish(Event(
-        event_type="email.deleted",
-        payload=payload,
-        source="email~backend-api",
-    ))
+async def publish_email_synced(email_id: str, data: dict) -> None:
+    event = email_synced(email_id, data)
+    await event_bus.publish(event)
+    logger.info("published_email_synced", email_id=email_id)

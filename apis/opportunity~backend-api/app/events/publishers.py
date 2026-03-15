@@ -1,27 +1,18 @@
-"""Event Bus publishers for opportunity~backend-api."""
+"""Event publishers for opportunity domain."""
+from shared.event_bus import event_bus
+from shared.event_bus.schemas import opportunity_created, opportunity_updated
+from shared.infrastructure import get_logger
 
-from shared.event_bus import event_bus, Event
-
-
-def publish_opportunity_created(payload: dict):
-    event_bus.publish(Event(
-        event_type="opportunity.created",
-        payload=payload,
-        source="opportunity~backend-api",
-    ))
+logger = get_logger(__name__)
 
 
-def publish_opportunity_updated(payload: dict):
-    event_bus.publish(Event(
-        event_type="opportunity.updated",
-        payload=payload,
-        source="opportunity~backend-api",
-    ))
+async def publish_opportunity_created(opp_id: str, data: dict) -> None:
+    event = opportunity_created(opp_id, data)
+    await event_bus.publish(event)
+    logger.info("published_opportunity_created", opportunity_id=opp_id)
 
 
-def publish_opportunity_deleted(payload: dict):
-    event_bus.publish(Event(
-        event_type="opportunity.deleted",
-        payload=payload,
-        source="opportunity~backend-api",
-    ))
+async def publish_opportunity_updated(opp_id: str, data: dict) -> None:
+    event = opportunity_updated(opp_id, data)
+    await event_bus.publish(event)
+    logger.info("published_opportunity_updated", opportunity_id=opp_id)

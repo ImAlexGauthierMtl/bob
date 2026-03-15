@@ -1,16 +1,10 @@
-"""Workflow Backend API — CRUD + persistence for workflow entities.
-
-Pure storage layer — NO business logic.
-Port: 9009
-"""
-
+"""Workflow Backend API — CRUD for workflows, steps, executions. Port: 9009."""
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from shared.config import get_settings
 from shared.infrastructure import configure_logging, get_logger, setup_cors, RequestLoggingMiddleware, monitoring_router
 from shared.database import Base
-from app.infrastructure.database import init as db_init, get_engine
+from shared.event_bus import event_bus
 
 settings = get_settings("workflow-backend")
 configure_logging(settings.log_level, settings.log_format)
@@ -19,26 +13,22 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan — startup and shutdown."""
+    from app.domain.entities import workflow, workflow_execution  # noqa: F401
+    from app.infrastructure.database import init as db_init, get_engine
     db_init("workflow-backend")
-    engine = get_engine()
-    # Tables are created by the existing migrations / other APIs sharing the DB
-    logger.info("workflow_backend_api_started", port=settings.api_port)
+    Base.metadata.create_all(bind=get_engine())
+    if hasattr(event_bus, 'start_listening'):
+        await event_bus.start_listening()
+    logger.info("workflow_backend_started", port=9009)
     yield
-    logger.info("workflow_backend_api_shutdown")
+    if hasattr(event_bus, 'close'):
+        await event_bus.close()
 
 
-app = FastAPI(
-    title="Workflow Backend API",
-    description="Workflow — CRUD + Persistence — Croo Digital Experience",
-    version="1.0.0",
-    lifespan=lifespan,
-)
-
+app = FastAPI(title="Workflow Backend API", version="1.0.0", lifespan=lifespan)
 setup_cors(app, "workflow-backend")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])
 
-# Routes will be imported here as they are created
-# from app.presentation.routes.xxx_routes import router as xxx_router
-# app.include_router(xxx_router, tags=["xxx"])
+from app.presentation.routes.workflow_routes import router as workflow_router
+app.include_router(workflow_router, tags=["workflows"])

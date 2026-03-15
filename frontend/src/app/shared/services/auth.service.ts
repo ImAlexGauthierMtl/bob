@@ -7,7 +7,7 @@ import { PLATFORM_ID } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { LoginRequest, RegisterRequest, TokenResponse, AuthUser } from '../models/auth.model';
 
-const API_URL = `${environment.apiUrl}/auth`;
+const API_URL = `${environment.authApiUrl}/auth`;
 const TOKEN_KEY = 'croo_access_token';
 const REFRESH_KEY = 'croo_refresh_token';
 

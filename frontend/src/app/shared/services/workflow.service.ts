@@ -7,7 +7,7 @@ import {
     WorkflowExecution, ExecutionDetail, UserCapabilities,
 } from '../models/workflow.model';
 
-const API_URL = `${environment.apiUrl}`;
+const API_URL = `${environment.platformApiUrl}`;
 
 @Injectable({ providedIn: 'root' })
 export class WorkflowService {

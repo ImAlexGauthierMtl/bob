@@ -1,27 +1,25 @@
-"""Event Bus publishers for workflow~backend-api."""
+"""Event publishers for workflow domain."""
+from shared.event_bus import event_bus
+from shared.infrastructure import get_logger
 
-from shared.event_bus import event_bus, Event
-
-
-def publish_workflow_created(payload: dict):
-    event_bus.publish(Event(
-        event_type="workflow.created",
-        payload=payload,
-        source="workflow~backend-api",
-    ))
+logger = get_logger(__name__)
 
 
-def publish_workflow_updated(payload: dict):
-    event_bus.publish(Event(
-        event_type="workflow.updated",
-        payload=payload,
-        source="workflow~backend-api",
-    ))
+async def publish_workflow_created(workflow_id: str, data: dict) -> None:
+    await event_bus.publish({"type": "workflow.created", "workflow_id": workflow_id, "data": data})
+    logger.info("published_workflow_created", workflow_id=workflow_id)
 
 
-def publish_workflow_deleted(payload: dict):
-    event_bus.publish(Event(
-        event_type="workflow.deleted",
-        payload=payload,
-        source="workflow~backend-api",
-    ))
+async def publish_workflow_updated(workflow_id: str, data: dict) -> None:
+    await event_bus.publish({"type": "workflow.updated", "workflow_id": workflow_id, "data": data})
+    logger.info("published_workflow_updated", workflow_id=workflow_id)
+
+
+async def publish_workflow_deleted(workflow_id: str) -> None:
+    await event_bus.publish({"type": "workflow.deleted", "workflow_id": workflow_id})
+    logger.info("published_workflow_deleted", workflow_id=workflow_id)
+
+
+async def publish_workflow_executed(workflow_id: str, execution_id: str, data: dict) -> None:
+    await event_bus.publish({"type": "workflow.executed", "workflow_id": workflow_id, "execution_id": execution_id, "data": data})
+    logger.info("published_workflow_executed", workflow_id=workflow_id, execution_id=execution_id)

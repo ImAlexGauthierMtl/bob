@@ -1,8 +1,6 @@
-"""Pydantic schemas for RBAC routes."""
-
+"""Role schemas."""
 from typing import Optional, List
 from pydantic import BaseModel
-
 
 class PermissionResponse(BaseModel):
     id: str
@@ -11,16 +9,13 @@ class PermissionResponse(BaseModel):
     description: Optional[str] = None
     model_config = {"from_attributes": True}
 
-
-class RoleCreate(BaseModel):
+class RoleCreateRequest(BaseModel):
     name: str
     description: Optional[str] = None
 
-
-class RoleUpdate(BaseModel):
+class RoleUpdateRequest(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
-
 
 class RoleResponse(BaseModel):
     id: str
@@ -30,19 +25,15 @@ class RoleResponse(BaseModel):
     permissions: List[PermissionResponse] = []
     model_config = {"from_attributes": True}
 
-
 class RoleListResponse(BaseModel):
     items: List[RoleResponse]
     total: int
 
-
 class AssignPermissionsRequest(BaseModel):
     permission_ids: List[str]
 
-
 class AssignRoleRequest(BaseModel):
     role_id: str
-
 
 class UserRoleResponse(BaseModel):
     user_id: str

@@ -1,27 +1,10 @@
-"""Event Bus publishers for usage~backend-api."""
+"""Event publishers for usage domain."""
+from shared.event_bus import event_bus
+from shared.infrastructure import get_logger
 
-from shared.event_bus import event_bus, Event
-
-
-def publish_usage_created(payload: dict):
-    event_bus.publish(Event(
-        event_type="usage.created",
-        payload=payload,
-        source="usage~backend-api",
-    ))
+logger = get_logger(__name__)
 
 
-def publish_usage_updated(payload: dict):
-    event_bus.publish(Event(
-        event_type="usage.updated",
-        payload=payload,
-        source="usage~backend-api",
-    ))
-
-
-def publish_usage_deleted(payload: dict):
-    event_bus.publish(Event(
-        event_type="usage.deleted",
-        payload=payload,
-        source="usage~backend-api",
-    ))
+async def publish_usage_recorded(txn_id: str, data: dict) -> None:
+    await event_bus.publish({"type": "usage.recorded", "transaction_id": txn_id, "data": data})
+    logger.info("published_usage_recorded", transaction_id=txn_id)

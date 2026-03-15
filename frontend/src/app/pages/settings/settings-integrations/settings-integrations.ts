@@ -48,7 +48,6 @@ export class SettingsIntegrationsComponent implements OnInit {
         this.ms365Loading = true;
         this.ms365Service.getAuthUrl().subscribe({
             next: (data) => {
-                // Redirect to Microsoft login
                 window.location.href = data.auth_url;
             },
             error: () => {

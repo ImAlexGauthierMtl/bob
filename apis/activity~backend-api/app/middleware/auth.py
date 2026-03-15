@@ -1,41 +1,23 @@
-"""JWT authentication middleware — validates tokens, extracts tenant_id."""
-
+"""JWT auth for backend API — validates tokens from B4F layer."""
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
-import os
+from shared.config import get_settings
 
-from shared.infrastructure import get_logger
-
-logger = get_logger(__name__)
+settings = get_settings()
 security = HTTPBearer()
 
-JWT_SECRET = os.getenv("JWT_SECRET_KEY", "")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
-
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-) -> dict:
-    """Decode JWT and return user payload."""
-    token = credentials.credentials
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload
-    except JWTError as e:
-        logger.warning("jwt_decode_failed", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication token",
-        )
-
-
-def get_tenant_id(current_user: dict = Depends(get_current_user)) -> str:
-    """Extract tenant_id from JWT payload."""
-    tenant_id = current_user.get("tenant_id")
-    if not tenant_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tenant_id in token",
-        )
-    return tenant_id
+        payload = jwt.decode(credentials.credentials, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    return {
+        "user_id": user_id,
+        "email": payload.get("email"),
+        "tenant_id": payload.get("tenant_id", "default"),
+    }

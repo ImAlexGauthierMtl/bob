@@ -1,7 +1,7 @@
-"""AI Agent API — Bob's Control Center, Client Map 360°, Capabilities, Training.
+"""AI Agent B4F API — Business logic layer for Bob, Client Map, Capabilities, Training.
 
-Microservice extracted from the monolith — Phase 3.
-Port: 8003
+Delegates all CRUD to agent~backend-api. Keeps LLM/agent logic, capability resolution,
+behavioral analysis, and Bob orchestration. Port: 8003
 """
 
 from contextlib import asynccontextmanager
@@ -9,8 +9,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from shared.config import get_settings
 from shared.infrastructure import configure_logging, get_logger, setup_cors, RequestLoggingMiddleware, monitoring_router
-from shared.database import Base
-from app.infrastructure.database import init as db_init, get_engine
 
 settings = get_settings("ai-agent")
 configure_logging(settings.log_level, settings.log_format)
@@ -19,20 +17,15 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.domain.entities import bcc_entities, bob_settings, capability, client_map, training_models  # noqa: F401
-    db_init("ai-agent")
-    engine = get_engine()
-    Base.metadata.create_all(bind=engine)
-    logger.info("ai_agent_database_tables_created")
-    logger.info("ai_agent_api_started", port=settings.api_port)
+    logger.info("ai_agent_b4f_api_started", port=settings.api_port)
     yield
-    logger.info("ai_agent_api_shutdown")
+    logger.info("ai_agent_b4f_api_shutdown")
 
 
 app = FastAPI(
-    title="AI Agent API",
-    description="Bob's Control Center, Client Map 360°, Capabilities, Training — Croo Digital Experience",
-    version="1.0.0",
+    title="AI Agent B4F API",
+    description="Business logic for Bob, Client Map 360°, Capabilities, Training — Croo Digital Experience",
+    version="2.0.0",
     lifespan=lifespan,
 )
 

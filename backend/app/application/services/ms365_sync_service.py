@@ -50,27 +50,47 @@ class MS365SyncService:
     # ── Email Sync ───────────────────────────────────────────────────
 
     async def sync_emails(self, conn: MS365Connection) -> int:
-        """Sync emails for a single connection. Returns count of synced items."""
+        """Sync emails for a single connection using page-by-page streaming.
+
+        Processes and commits each page of ~50 emails independently so memory
+        stays constant regardless of mailbox size.
+        """
         access_token = await self._ensure_token(conn)
 
-        messages, new_delta = await self.graph.get_emails(
-            access_token, delta_token=conn.email_delta_token,
-        )
-
         synced_count = 0
-        for msg in messages:
-            # Skip deleted items in delta response
-            if msg.get("@removed"):
-                continue
+        skipped_count = 0
+        async for page_msgs, page_num, total_so_far in self.graph.get_emails_batched(
+            access_token, delta_token=conn.email_delta_token,
+        ):
+            page_count = 0
+            for msg in page_msgs:
+                if msg.get("@removed"):
+                    continue
+                try:
+                    email_data = self._map_email(msg, conn)
+                    email_obj = self.repo.upsert_email(email_data, tenant_id=conn.tenant_id)
+                    self._auto_link_email(email_obj, conn.tenant_id)
+                    page_count += 1
+                except Exception as e:
+                    self.db.rollback()
+                    skipped_count += 1
+                    logger.warning(
+                        "ms365_email_skipped",
+                        ms_message_id=msg.get("id", "?")[:60],
+                        error=str(e)[:200],
+                    )
 
-            email_data = self._map_email(msg, conn)
-            email_obj = self.repo.upsert_email(email_data, tenant_id=conn.tenant_id)
+            self.db.commit()
+            synced_count += page_count
+            logger.info(
+                "ms365_email_batch_committed",
+                user_id=conn.user_id, page=page_num,
+                page_count=page_count, synced_so_far=synced_count,
+                skipped=skipped_count,
+            )
 
-            # Auto-link to CRM
-            self._auto_link_email(email_obj, conn.tenant_id)
-            synced_count += 1
+        new_delta = await self.graph.acquire_delta_token(access_token)
 
-        # Update sync state
         update_data = {"last_email_sync": datetime.now(timezone.utc)}
         if new_delta:
             update_data["email_delta_token"] = new_delta
@@ -78,6 +98,12 @@ class MS365SyncService:
 
         logger.info("ms365_email_sync_complete", user_id=conn.user_id, count=synced_count)
         return synced_count
+
+    @staticmethod
+    def _trunc(value: Optional[str], max_len: int) -> Optional[str]:
+        if value and len(value) > max_len:
+            return value[:max_len]
+        return value
 
     def _map_email(self, msg: dict, conn: MS365Connection) -> dict:
         """Map MS Graph message to SyncedEmail fields."""
@@ -101,12 +127,12 @@ class MS365SyncService:
         return {
             "ms365_connection_id": conn.id,
             "user_id": conn.user_id,
-            "ms_message_id": msg["id"],
-            "subject": msg.get("subject"),
+            "ms_message_id": self._trunc(msg["id"], 255),
+            "subject": self._trunc(msg.get("subject"), 500),
             "body_preview": msg.get("bodyPreview"),
             "body_html": msg.get("body", {}).get("content"),
-            "from_address": from_obj.get("address"),
-            "from_name": from_obj.get("name"),
+            "from_address": self._trunc(from_obj.get("address"), 255),
+            "from_name": self._trunc(from_obj.get("name"), 255),
             "to_addresses": to_list,
             "cc_addresses": cc_list,
             "received_at": received_at,
@@ -114,7 +140,7 @@ class MS365SyncService:
             "importance": msg.get("importance", "normal"),
             "has_attachments": msg.get("hasAttachments", False),
             "folder": "inbox",
-            "conversation_id": msg.get("conversationId"),
+            "conversation_id": self._trunc(msg.get("conversationId"), 255),
         }
 
     def _auto_link_email(self, email, tenant_id: str) -> None:

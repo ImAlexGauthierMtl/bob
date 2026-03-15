@@ -1,27 +1,24 @@
-"""Event Bus publishers for org~backend-api."""
+"""Event publishers for organization domain."""
+from shared.event_bus import event_bus
+from shared.event_bus.schemas import org_created, org_updated, org_deleted
+from shared.infrastructure import get_logger
 
-from shared.event_bus import event_bus, Event
-
-
-def publish_org_created(payload: dict):
-    event_bus.publish(Event(
-        event_type="org.created",
-        payload=payload,
-        source="org~backend-api",
-    ))
+logger = get_logger(__name__)
 
 
-def publish_org_updated(payload: dict):
-    event_bus.publish(Event(
-        event_type="org.updated",
-        payload=payload,
-        source="org~backend-api",
-    ))
+async def publish_org_created(org_id: str, data: dict) -> None:
+    event = org_created(org_id, data)
+    await event_bus.publish(event)
+    logger.info("published_org_created", org_id=org_id)
 
 
-def publish_org_deleted(payload: dict):
-    event_bus.publish(Event(
-        event_type="org.deleted",
-        payload=payload,
-        source="org~backend-api",
-    ))
+async def publish_org_updated(org_id: str, data: dict) -> None:
+    event = org_updated(org_id, data)
+    await event_bus.publish(event)
+    logger.info("published_org_updated", org_id=org_id)
+
+
+async def publish_org_deleted(org_id: str) -> None:
+    event = org_deleted(org_id)
+    await event_bus.publish(event)
+    logger.info("published_org_deleted", org_id=org_id)

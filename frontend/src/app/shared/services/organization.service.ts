@@ -7,7 +7,7 @@ import {
     EnrichmentResult, SearchResponse,
 } from '../models/organization.model';
 
-const API_URL = `${environment.apiUrl}`;
+const API_URL = `${environment.crmApiUrl}`;
 
 @Injectable({ providedIn: 'root' })
 export class OrganizationService {

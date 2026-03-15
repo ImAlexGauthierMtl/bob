@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Contact, ContactListResponse, CreateContactDto, AiParseResult } from '../models/contact.model';
 
-const API_URL = `${environment.apiUrl}`;
+const API_URL = `${environment.crmApiUrl}`;
 
 @Injectable({ providedIn: 'root' })
 export class ContactService {

@@ -149,13 +149,20 @@
     background-color: var(--color-white);
     display: flex;
     flex-direction: column;
-    min-width: 0; /* Important for text truncation inside flex child */
+    min-width: 0;
 }
 
 @media (min-width: 1024px) {
     .inbox-list-col {
         height: 100%;
         overflow-y: hidden;
+    }
+}
+
+@media (min-width: 1280px) {
+    .inbox-list-col {
+        flex: 0 0 28%;
+        max-width: 28%;
     }
 }
 
@@ -166,13 +173,12 @@
     flex-direction: column;
 }
 
-/* lg screens can show reading pane next to list if needed, but the design specifies xl for fixed 600px width */
 @media (min-width: 1280px) {
     .inbox-reading-col {
         display: flex;
-        width: 600px;
+        flex: 1;
         height: 100%;
         overflow-y: auto;
-        flex-shrink: 0;
+        min-width: 0;
     }
 }

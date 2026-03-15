@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BobChannel, BobChatRequest, BobChatResponse, BobSessionInfo } from '../models/bob.model';
 
-const API_URL = `${environment.apiUrl}`;
+const API_URL = `${environment.aiAgentApiUrl}`;
 
 @Injectable({ providedIn: 'root' })
 export class BobService {

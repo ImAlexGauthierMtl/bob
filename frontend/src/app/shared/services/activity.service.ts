@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Activity, ActivityListResponse, CreateActivityDto } from '../models/activity.model';
 
-const API_URL = `${environment.apiUrl}`;
+const API_URL = `${environment.crmApiUrl}`;
 
 @Injectable({ providedIn: 'root' })
 export class ActivityService {

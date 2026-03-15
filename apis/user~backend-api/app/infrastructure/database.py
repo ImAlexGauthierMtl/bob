@@ -1,4 +1,4 @@
-"""Database connection — delegates to shared library (lazy init)."""
+"""Database connection — delegates to shared library."""
 from shared.database import create_db_engine, create_session_factory, get_db as _get_db
 from sqlalchemy.orm import Session
 from typing import Generator

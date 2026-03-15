@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { User, UserListResponse, CreateUserDto, UpdateUserDto } from '../models/user.model';
 
-const API_URL = `${environment.apiUrl}`;
+const API_URL = `${environment.authApiUrl}`;
 
 @Injectable({ providedIn: 'root' })
 export class UserService {

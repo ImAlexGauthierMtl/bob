@@ -7,7 +7,7 @@ import {
     CategoryListResponse, ArticleListResponse, KBStats,
 } from '../models/kb.model';
 
-const API_URL = `${environment.apiUrl}`;
+const API_URL = `${environment.kbApiUrl}`;
 
 @Injectable({ providedIn: 'root' })
 export class KnowledgeBaseService {
