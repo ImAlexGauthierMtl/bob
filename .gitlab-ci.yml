@@ -580,12 +580,22 @@ generate:api-build-jobs:
               DIR_NAME=$(echo "${API_NAME}" | sed -E 's/-(b4f-api|backend-api)/~\1/')
             fi
             # Copy shared library into the API directory so it's included in Docker context
+            echo "DEBUG: Checking for shared directory..."
+            ls -la apis/ | head -5
             if [ -d "apis/shared" ]; then
+              echo "DEBUG: Found apis/shared, copying to apis/${DIR_NAME}/shared"
               cp -r apis/shared apis/${DIR_NAME}/shared
+              echo "DEBUG: shared dir contents:"
+              ls -la apis/${DIR_NAME}/shared/ | head -10
+            else
+              echo "DEBUG: apis/shared NOT FOUND"
+              echo "DEBUG: Current directory: $(pwd)"
+              ls -la apis/ || echo "DEBUG: apis/ does not exist"
             fi
             docker pull ${CI_REGISTRY_IMAGE}/${API_NAME}:latest || true
             docker build \
               --cache-from ${CI_REGISTRY_IMAGE}/${API_NAME}:latest \
+              --no-cache \
               -f apis/${DIR_NAME}/Dockerfile \
               -t ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA} \
               apis/${DIR_NAME}
