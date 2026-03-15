@@ -36,6 +36,7 @@ async def lifespan(app: FastAPI):
     from app.infrastructure.seed_bcc_cognitive import seed_bcc_cognitive
     from app.infrastructure.seed_roles import seed_roles
     from app.infrastructure.seed_rate_cards import seed_rate_cards
+    from app.infrastructure.seed_smart_labels import seed_smart_labels
 
     # Create tables (will be replaced by alembic upgrade in production)
     Base.metadata.create_all(bind=engine)
@@ -52,11 +53,13 @@ async def lifespan(app: FastAPI):
             seed_bcc(db, tenant_id=admin.tenant_id)
             seed_bcc_cognitive(db, tenant_id=admin.tenant_id)
             seed_roles(db, tenant_id=admin.tenant_id)
+            seed_smart_labels(db, tenant_id=admin.tenant_id)
         # Seed cognitive structure for all tenants
         from sqlalchemy import distinct
         all_tenants = [r[0] for r in db.query(distinct(user.User.tenant_id)).all()]
         for tid in all_tenants:
             seed_bcc_cognitive(db, tenant_id=tid)
+            seed_smart_labels(db, tenant_id=tid)
         seed_rate_cards(db)
     finally:
         db.close()
