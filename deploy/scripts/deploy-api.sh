@@ -173,12 +173,12 @@ if [[ "${IS_BACKEND_API}" == "true" ]]; then
     fi
 fi
 
-# Add optional arguments
-if [ -n "${REGISTRY_SECRET_ARG}" ]; then
-    HELM_CMD="${HELM_CMD} ${REGISTRY_SECRET_ARG}"
-fi
+# Add optional arguments (values first, then registry secret overrides last)
 if [ -n "${VALUES_ARG}" ]; then
     HELM_CMD="${HELM_CMD} ${VALUES_ARG}"
+fi
+if [ -n "${REGISTRY_SECRET_ARG}" ]; then
+    HELM_CMD="${HELM_CMD} ${REGISTRY_SECRET_ARG}"
 fi
 
 HELM_CMD="${HELM_CMD} --wait --timeout 10m --debug"
