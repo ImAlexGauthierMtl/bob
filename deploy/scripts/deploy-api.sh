@@ -175,7 +175,7 @@ if [[ "${IS_BACKEND_API}" == "true" ]]; then
         }
         ENCODED_USER=$(urlencode "${DB_USER}")
         ENCODED_PASSWORD=$(urlencode "${DB_PASSWORD}")
-        DB_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+        DB_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require"
         echo "  Configuring PostgreSQL: ${DB_HOST}:${DB_PORT}/${DB_NAME}"
         HELM_CMD="${HELM_CMD} --set env.DATABASE_URL=\"${DB_URL}\""
     else
