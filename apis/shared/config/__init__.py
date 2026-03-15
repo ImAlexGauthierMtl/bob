@@ -50,6 +50,17 @@ class Settings(BaseSettings):
     # Observability
     otel_exporter_otlp_endpoint: Optional[str] = None
 
+    # Auth-specific (used by auth-api seeding, ignored by other services)
+    admin_email: str = "admin@croo.digital"
+    admin_password: Optional[str] = None
+    admin_first_name: str = "Admin"
+    admin_last_name: str = "Croo"
+    secret_key: Optional[str] = None
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
+    rate_limit_max_attempts: int = 5
+    rate_limit_window_minutes: int = 15
+
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
         """Enforce strict security constraints in non-development environments."""

@@ -1,0 +1,15 @@
+{{- if .Values.nginx.config.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gateway-chart.fullname" . }}-nginx-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "gateway-chart.labels" . | nindent 4 }}
+data:
+  nginx.conf: |
+    # Nginx configuration for API Gateway
+    {{- if .Values.rateLimit.enabled }}
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate={{ .Values.rateLimit.requestsPerMinute }}r/m;
+    {{- end }}
+{{- end }}

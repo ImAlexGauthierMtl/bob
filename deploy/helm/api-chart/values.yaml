@@ -1,0 +1,107 @@
+# Default values for api-chart
+
+# API Configuration
+api:
+  name: ""
+  port: 8000
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: IfNotPresent
+
+# Deployment Configuration
+deployment:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+# Resource Limits
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Health Checks
+healthCheck:
+  enabled: true
+  path: /health
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessCheck:
+  enabled: true
+  path: /health
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+livenessCheck:
+  enabled: true
+  path: /health
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Environment Variables
+env:
+  ENVIRONMENT: development
+  LOG_LEVEL: INFO
+  LOG_FORMAT: json
+
+# Environment Variables from ConfigMap
+configMap:
+  enabled: true
+  name: ""
+
+# Environment Variables from Secrets
+secrets:
+  enabled: true
+  name: ""
+  jwtSecret: ""
+
+# Service Configuration
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+# Ingress Configuration (managed by gateway-chart)
+ingress:
+  enabled: false
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+# Node Selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Image Pull Secrets (for private Docker registries)
+imagePullSecrets:
+  enabled: false
+  name: ""
+  dockerconfigjson: ""

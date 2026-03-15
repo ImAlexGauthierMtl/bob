@@ -1,0 +1,57 @@
+# Development environment values for gateway (Croo Digital Experience)
+
+ingress:
+  enabled: true
+  host: app-cde-dev-01.dev.thesmartcrew.com
+  className: "nginx"
+  tls:
+    enabled: true
+    secretName: wildcard-dev-tls
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+
+cors:
+  enabled: true
+  allowOrigin: "*"
+  allowMethods: "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+  allowHeaders: "Content-Type, Authorization, X-Tenant-ID, X-Center-ID"
+  allowCredentials: "true"
+  maxAge: "3600"
+
+rateLimit:
+  enabled: false
+
+# API Routes Configuration - Croo Digital Experience
+# b4f-api is the main BFF gateway; backend APIs are internal.
+apiRoutes:
+  apis:
+    auth-api:
+      port: 8001
+      routePrefix: "auth"
+    b4f-api:
+      port: 8000
+      routePrefix: "bff"
+  bffApis:
+    auth-b4f-api:
+      port: 8011
+      routePrefix: "auth-bff"
+    crm-b4f-api:
+      port: 8012
+      routePrefix: "crm-bff"
+    ai-agent-b4f-api:
+      port: 8013
+      routePrefix: "ai-agent-bff"
+    communication-b4f-api:
+      port: 8014
+      routePrefix: "communication-bff"
+    platform-b4f-api:
+      port: 8015
+      routePrefix: "platform-bff"
+    kb-b4f-api:
+      port: 8016
+      routePrefix: "kb-bff"
