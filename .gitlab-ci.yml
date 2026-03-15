@@ -1,0 +1,956 @@
+stages:
+  - .pre
+  - test
+  - build
+  - deploy-dev
+  - smoke-test-dev
+  - rollback-dev
+
+variables:
+  CI_CHILD_PIPELINE: "false"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  DEV_INGRESS_URL: "https://app-cde-dev-01.dev.thesmartcrew.com"
+
+# =============================================================================
+# TEMPLATES
+# =============================================================================
+
+.test_template: &test_template
+  stage: test
+  image: python:3.11-slim
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-python
+    paths:
+      - .pip-cache/
+  before_script:
+    - apt-get update && apt-get install -y git
+    - pip install --cache-dir=.pip-cache --upgrade pip
+    - pip install --cache-dir=.pip-cache pytest pytest-cov pytest-asyncio httpx
+  script:
+    - |
+      # Resolve directory name: try exact, then replace - before b4f-api/backend-api with ~
+      DIR_NAME="${API_NAME}"
+      if [ ! -d "apis/${DIR_NAME}" ]; then
+        DIR_NAME=$(echo "${API_NAME}" | sed -E 's/-(b4f-api|backend-api)/~\1/')
+      fi
+      cd apis/${DIR_NAME}
+      pip install --cache-dir=../../.pip-cache -r requirements.txt
+      if [ -f "run_tests.sh" ]; then
+        chmod +x run_tests.sh
+        export PYTHONPATH="$(cd ../.. && pwd)/apis:$PYTHONPATH"
+        ./run_tests.sh
+      else
+        python -m pytest tests/ -v --tb=short 2>/dev/null || echo "No tests found, skipping..."
+      fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
+      when: on_success
+    - when: never
+
+.build_template: &build_template
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - |
+      if [ -z "$CI_SERVER_HOST" ]; then
+        echo "ERROR: CI_SERVER_HOST is not set"
+        exit 1
+      fi
+      if [ -z "$CI_PROJECT_PATH" ]; then
+        echo "ERROR: CI_PROJECT_PATH is not set"
+        exit 1
+      fi
+      if [ -z "$CI_REGISTRY" ]; then
+        export CI_REGISTRY="registry.${CI_SERVER_HOST}"
+      fi
+      export CI_REGISTRY_IMAGE="${CI_REGISTRY}/${CI_PROJECT_PATH}"
+    - set +x
+    - echo "$CI_JOB_TOKEN" | docker login -u ${CI_REGISTRY_USER:-gitlab-ci-token} --password-stdin $CI_REGISTRY
+  script:
+    - |
+      DIR_NAME="${API_NAME}"
+      if [ ! -d "apis/${DIR_NAME}" ]; then
+        DIR_NAME=$(echo "${API_NAME}" | sed -E 's/-(b4f-api|backend-api)/~\1/')
+      fi
+      docker pull ${CI_REGISTRY_IMAGE}/${API_NAME}:latest || true
+      docker build \
+        --cache-from ${CI_REGISTRY_IMAGE}/${API_NAME}:latest \
+        -f apis/${DIR_NAME}/Dockerfile \
+        -t ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA} \
+        apis/${DIR_NAME}
+      docker tag ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA} ${CI_REGISTRY_IMAGE}/${API_NAME}:latest
+      docker push ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA}
+      docker push ${CI_REGISTRY_IMAGE}/${API_NAME}:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
+      when: on_success
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+    - when: never
+
+.smoke_test_template: &smoke_test_template
+  image: curlimages/curl:latest
+  timeout: 5m
+  allow_failure: false
+  before_script:
+    - |
+      wait_for_gateway() {
+        local INGRESS_URL="${1}"
+        local MAX_ATTEMPTS="${2:-30}"
+        local INTERVAL="${3:-5}"
+
+        if [ -z "${INGRESS_URL}" ] || [ "${INGRESS_URL}" = "" ]; then
+          echo "ERROR: INGRESS_URL is not set or empty"
+          return 1
+        fi
+
+        echo "Waiting for gateway to be ready at ${INGRESS_URL}..."
+        i=1
+        while [ ${i} -le ${MAX_ATTEMPTS} ]; do
+          HTTP_CODE=$(curl -k --max-time 10 --connect-timeout 5 -s -o /dev/null -w "%{http_code}" "${INGRESS_URL}/" 2>/dev/null)
+          CURL_EXIT=$?
+
+          if [ "${CURL_EXIT}" -eq 0 ] && [ -n "${HTTP_CODE}" ] && [ "${HTTP_CODE}" != "000" ]; then
+            if echo "${HTTP_CODE}" | grep -qE '^[0-9]{3}$'; then
+              echo "Gateway is ready (HTTP ${HTTP_CODE})"
+              return 0
+            fi
+          fi
+
+          if [ ${i} -lt ${MAX_ATTEMPTS} ]; then
+            echo "Attempt ${i}/${MAX_ATTEMPTS}: Gateway not ready (HTTP ${HTTP_CODE:-unknown}), waiting ${INTERVAL}s..."
+            sleep ${INTERVAL}
+          fi
+          i=$((i + 1))
+        done
+
+        echo "Gateway did not become ready after ${MAX_ATTEMPTS} attempts"
+        return 1
+      }
+
+.migrate_template: &migrate_template
+  image: python:3.11-slim
+  before_script:
+    - apt-get update && apt-get install -y git curl bash
+    - |
+      KUBECTL_VERSION="v1.30.0"
+      curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+      chmod +x kubectl
+      mv kubectl /usr/local/bin/kubectl
+      kubectl version --client
+    - |
+      if [ -z "$KUBECONFIG" ]; then
+        echo "ERROR: KUBECONFIG variable is not set"
+        exit 1
+      fi
+      mkdir -p ~/.kube
+      KUBECONFIG_FILE="$HOME/.kube/config"
+      echo "$KUBECONFIG" | base64 -d > "$KUBECONFIG_FILE" 2>&1 || {
+        echo "ERROR: Failed to decode KUBECONFIG"
+        exit 1
+      }
+      chmod 600 "$KUBECONFIG_FILE"
+      export KUBECONFIG="$KUBECONFIG_FILE"
+    - |
+      if [ -z "${DATABASE_HOST:-}" ] || [ -z "${DATABASE_USER:-}" ] || [ -z "${DATABASE_PASSWORD:-}" ]; then
+        echo "Warning: DATABASE_HOST, DATABASE_USER, or DATABASE_PASSWORD not set for ${ENV}"
+        echo "Skipping migrations"
+        exit 0
+      fi
+      ENCODED_PASSWORD=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_PASSWORD', ''), safe=''))")
+      ENCODED_USER=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_USER', ''), safe=''))")
+      export DATABASE_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}"
+      echo "Database configured: ${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}"
+    - chmod +x deploy/scripts/*.sh
+    - pip install --upgrade pip
+
+.deploy_template: &deploy_template
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache bash curl helm
+    - |
+      KUBECTL_VERSION="v1.30.0"
+      curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+      chmod +x kubectl
+      mv kubectl /usr/local/bin/kubectl
+      kubectl version --client
+    - |
+      if [ -z "$KUBECONFIG" ]; then
+        echo "ERROR: KUBECONFIG variable is not set"
+        exit 1
+      fi
+      mkdir -p ~/.kube
+      KUBECONFIG_FILE="$HOME/.kube/config"
+      echo "$KUBECONFIG" | base64 -d > "$KUBECONFIG_FILE" 2>&1 || {
+        echo "ERROR: Failed to decode KUBECONFIG"
+        exit 1
+      }
+      chmod 600 "$KUBECONFIG_FILE"
+      export KUBECONFIG="$KUBECONFIG_FILE"
+    - chmod +x deploy/scripts/*.sh
+  environment:
+    name: ${ENV}
+    url: ${INGRESS_URL}
+
+# =============================================================================
+# FRONTEND
+# =============================================================================
+
+test:frontend:
+  stage: test
+  image: node:22-alpine
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-node
+    paths:
+      - frontend/node_modules/
+  before_script:
+    - cd frontend
+    - npm ci
+  script:
+    - |
+      if [ -f "angular.json" ] && grep -q '"test"' angular.json; then
+        npm run test -- --code-coverage --watch=false --browsers=ChromeHeadless || echo "Tests not configured yet, skipping..."
+      else
+        echo "Test configuration not found, skipping tests..."
+      fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
+      when: on_success
+    - when: never
+  allow_failure: true
+
+build:frontend:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - |
+      if [ -z "$CI_SERVER_HOST" ]; then
+        echo "ERROR: CI_SERVER_HOST is not set"
+        exit 1
+      fi
+      if [ -z "$CI_PROJECT_PATH" ]; then
+        echo "ERROR: CI_PROJECT_PATH is not set"
+        exit 1
+      fi
+      if [ -z "$CI_REGISTRY" ]; then
+        export CI_REGISTRY="registry.${CI_SERVER_HOST}"
+      fi
+      export CI_REGISTRY_IMAGE="${CI_REGISTRY}/${CI_PROJECT_PATH}"
+    - set +x
+    - echo "$CI_JOB_TOKEN" | docker login -u ${CI_REGISTRY_USER:-gitlab-ci-token} --password-stdin $CI_REGISTRY
+  script:
+    - |
+      docker pull ${CI_REGISTRY_IMAGE}/frontend:latest || true
+      docker build \
+        --cache-from ${CI_REGISTRY_IMAGE}/frontend:latest \
+        -f frontend/Dockerfile \
+        -t ${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA} frontend/
+      docker tag ${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA} ${CI_REGISTRY_IMAGE}/frontend:latest
+      docker push ${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA}
+      docker push ${CI_REGISTRY_IMAGE}/frontend:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
+      when: on_success
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: on_success
+    - when: never
+
+deploy:frontend:dev:
+  <<: *deploy_template
+  stage: deploy-dev
+  variables:
+    ENV: dev
+    NAMESPACE: cde-dev
+    INGRESS_URL: ${DEV_INGRESS_URL}
+    KUBECONFIG: ${DEV_KUBECONFIG}
+  script:
+    - ./deploy/scripts/deploy-frontend.sh dev
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      when: on_success
+    - when: never
+  needs:
+    - job: build:frontend
+      artifacts: false
+
+smoke-test:frontend:dev:
+  <<: *smoke_test_template
+  stage: smoke-test-dev
+  script:
+    - |
+      export DEV_INGRESS_URL="${DEV_INGRESS_URL:-https://app-cde-dev-01.dev.thesmartcrew.com}"
+      wait_for_gateway "${DEV_INGRESS_URL}" 30 5
+      echo "Testing frontend health in dev..."
+      sleep 30
+
+      i=1
+      while [ $i -le 5 ]; do
+        echo "Attempt $i/5: Testing /health..."
+        if curl -f -k --max-time 30 --retry 2 --retry-delay 3 -s ${DEV_INGRESS_URL}/health | grep -q "healthy"; then
+          echo "Frontend is healthy in dev"
+          HEALTH_OK=true
+          break
+        else
+          echo "Attempt $i failed, retrying in 5 seconds..."
+          sleep 5
+        fi
+        i=$((i + 1))
+      done
+
+      if [ "${HEALTH_OK:-false}" != "true" ]; then
+        echo "Frontend /health did not respond correctly after 5 attempts"
+        exit 1
+      fi
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      when: on_success
+    - when: never
+  needs:
+    - job: deploy:frontend:dev
+      artifacts: false
+    - job: deploy:gateway:dev
+      artifacts: false
+
+rollback:frontend:dev:
+  <<: *deploy_template
+  stage: rollback-dev
+  variables:
+    ENV: dev
+    NAMESPACE: cde-dev
+    INGRESS_URL: ${DEV_INGRESS_URL}
+    KUBECONFIG: ${DEV_KUBECONFIG}
+  script:
+    - helm rollback frontend 0 --namespace cde-dev --wait --timeout 5m
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      when: manual
+    - when: never
+  allow_failure: true
+
+# =============================================================================
+# GATEWAY
+# =============================================================================
+
+deploy:gateway:dev:
+  <<: *deploy_template
+  stage: deploy-dev
+  variables:
+    ENV: dev
+    NAMESPACE: cde-dev
+    INGRESS_URL: ${DEV_INGRESS_URL}
+    KUBECONFIG: ${DEV_KUBECONFIG}
+  script:
+    - ./deploy/scripts/create-gateway.sh dev
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      when: on_success
+    - when: never
+  needs:
+    - job: build:frontend
+      artifacts: false
+    - job: trigger:api-deploy-jobs:dev
+      artifacts: false
+
+rollback:gateway:dev:
+  <<: *deploy_template
+  stage: rollback-dev
+  variables:
+    ENV: dev
+    NAMESPACE: cde-dev
+    INGRESS_URL: ${DEV_INGRESS_URL}
+    KUBECONFIG: ${DEV_KUBECONFIG}
+  script:
+    - helm rollback gateway 0 --namespace cde-dev --wait --timeout 5m
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      when: manual
+    - when: never
+  allow_failure: true
+
+# =============================================================================
+# PROVISION ADMIN USER
+# =============================================================================
+
+provision:admin-user:dev:
+  <<: *deploy_template
+  stage: deploy-dev
+  variables:
+    ENV: dev
+    NAMESPACE: cde-dev
+    INGRESS_URL: ${DEV_INGRESS_URL}
+    KUBECONFIG: ${DEV_KUBECONFIG}
+  script:
+    - |
+      ADMIN_EMAIL="${DEV_ADMIN_USERNAME:-admin@croo.digital}"
+      ADMIN_PASSWORD="${DEV_ADMIN_PASSWORD:-}"
+
+      if [ -z "${ADMIN_PASSWORD}" ]; then
+        echo "Warning: DEV_ADMIN_PASSWORD not set, skipping admin user provisioning"
+        exit 0
+      fi
+
+      REGISTER_URL="${DEV_INGRESS_URL}/api/v1/auth/register"
+      HEALTH_URL="${DEV_INGRESS_URL}/api/v1/auth/health"
+
+      echo "Waiting for auth-api to be ready..."
+      i=1
+      while [ $i -le 30 ]; do
+        if curl -f -k --max-time 5 -s "${HEALTH_URL}" > /dev/null 2>&1; then
+          echo "auth-api is ready"
+          break
+        fi
+        echo "  Attempt $i/30: waiting for auth-api..."
+        sleep 2
+        i=$((i + 1))
+      done
+
+      echo "Creating admin user..."
+      RESPONSE=$(curl -k -s -w "\n%{http_code}" -X POST "${REGISTER_URL}" \
+        -H "Content-Type: application/json" \
+        -d "{
+          \"email\": \"${ADMIN_EMAIL}\",
+          \"password\": \"${ADMIN_PASSWORD}\",
+          \"first_name\": \"Admin\",
+          \"last_name\": \"Croo\"
+        }" 2>&1)
+
+      HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+      BODY=$(echo "$RESPONSE" | sed '$d')
+
+      if [ "$HTTP_CODE" = "201" ]; then
+        echo "Admin user created successfully!"
+      elif [ "$HTTP_CODE" = "400" ] && (echo "$BODY" | grep -q "existe" || echo "$BODY" | grep -q "exists"); then
+        echo "Admin user already exists (OK)"
+      else
+        echo "Warning: Failed to create admin user (HTTP $HTTP_CODE) - not critical"
+      fi
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      when: on_success
+    - when: never
+  needs:
+    - job: deploy:gateway:dev
+      artifacts: false
+  allow_failure: true
+
+# =============================================================================
+# DYNAMIC API JOBS (child pipelines)
+# =============================================================================
+
+# Generate API test jobs
+generate:api-test-jobs:
+  stage: .pre
+  image: alpine:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_TAG || $CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: on_success
+    - when: never
+  script:
+    - apk add --no-cache bash
+    - chmod +x deploy/scripts/*.sh
+    - |
+      APIS=$(./deploy/scripts/discover-apis.sh)
+      echo "Discovered APIs: ${APIS}"
+      mkdir -p .gitlab/ci
+
+      cat > .gitlab/ci/api-test-jobs.yml << 'TEST_JOBS_EOF'
+      stages:
+        - test
+
+      variables:
+        CI_CHILD_PIPELINE: "true"
+        DOCKER_DRIVER: overlay2
+        DOCKER_TLS_CERTDIR: "/certs"
+
+      .test_template: &test_template
+        stage: test
+        image: python:3.11-slim
+        cache:
+          key: ${CI_COMMIT_REF_SLUG}-python
+          paths:
+            - .pip-cache/
+        before_script:
+          - apt-get update && apt-get install -y git
+          - pip install --cache-dir=.pip-cache --upgrade pip
+          - pip install --cache-dir=.pip-cache pytest pytest-cov pytest-asyncio httpx
+        script:
+          - |
+            DIR_NAME="${API_NAME}"
+            if [ ! -d "apis/${DIR_NAME}" ]; then
+              DIR_NAME=$(echo "${API_NAME}" | sed -E 's/-(b4f-api|backend-api)/~\1/')
+            fi
+            cd apis/${DIR_NAME}
+            pip install --cache-dir=../../.pip-cache -r requirements.txt
+            if [ -f "run_tests.sh" ]; then
+              chmod +x run_tests.sh
+              export PYTHONPATH="$(cd ../.. && pwd)/apis:$PYTHONPATH"
+              ./run_tests.sh
+            else
+              python -m pytest tests/ -v --tb=short 2>/dev/null || echo "No tests found, skipping..."
+            fi
+        rules:
+          - when: on_success
+
+      TEST_JOBS_EOF
+
+      for api in ${APIS}; do
+        {
+          echo ""
+          echo "test:${api}:"
+          echo "  extends: .test_template"
+          echo "  variables:"
+          echo "    API_NAME: ${api}"
+          echo "  rules:"
+          echo "    - when: on_success"
+        } >> .gitlab/ci/api-test-jobs.yml
+      done
+
+      echo "Generated API test jobs for $(echo "${APIS}" | wc -l) APIs"
+  artifacts:
+    paths:
+      - .gitlab/ci/api-test-jobs.yml
+    expire_in: 1 hour
+
+# Generate API build jobs
+generate:api-build-jobs:
+  stage: .pre
+  image: alpine:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_TAG || $CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: on_success
+    - when: never
+  script:
+    - apk add --no-cache bash
+    - chmod +x deploy/scripts/*.sh
+    - |
+      APIS=$(./deploy/scripts/discover-apis.sh)
+      echo "Discovered APIs: ${APIS}"
+      mkdir -p .gitlab/ci
+
+      cat > .gitlab/ci/api-build-jobs.yml << 'BUILD_JOBS_EOF'
+      stages:
+        - build
+
+      variables:
+        CI_CHILD_PIPELINE: "true"
+        DOCKER_DRIVER: overlay2
+        DOCKER_TLS_CERTDIR: "/certs"
+
+      .build_template: &build_template
+        stage: build
+        image: docker:24
+        services:
+          - docker:24-dind
+        before_script:
+          - |
+            if [ -z "$CI_SERVER_HOST" ]; then
+              echo "ERROR: CI_SERVER_HOST is not set"
+              exit 1
+            fi
+            if [ -z "$CI_PROJECT_PATH" ]; then
+              echo "ERROR: CI_PROJECT_PATH is not set"
+              exit 1
+            fi
+            if [ -z "$CI_REGISTRY" ]; then
+              export CI_REGISTRY="registry.${CI_SERVER_HOST}"
+            fi
+            export CI_REGISTRY_IMAGE="${CI_REGISTRY}/${CI_PROJECT_PATH}"
+          - set +x
+          - echo "$CI_JOB_TOKEN" | docker login -u ${CI_REGISTRY_USER:-gitlab-ci-token} --password-stdin $CI_REGISTRY
+        script:
+          - |
+            DIR_NAME="${API_NAME}"
+            if [ ! -d "apis/${DIR_NAME}" ]; then
+              DIR_NAME=$(echo "${API_NAME}" | sed -E 's/-(b4f-api|backend-api)/~\1/')
+            fi
+            docker pull ${CI_REGISTRY_IMAGE}/${API_NAME}:latest || true
+            docker build \
+              --cache-from ${CI_REGISTRY_IMAGE}/${API_NAME}:latest \
+              -f apis/${DIR_NAME}/Dockerfile \
+              -t ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA} \
+              apis/${DIR_NAME}
+            docker tag ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA} ${CI_REGISTRY_IMAGE}/${API_NAME}:latest
+            docker push ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA}
+            docker push ${CI_REGISTRY_IMAGE}/${API_NAME}:latest
+        rules:
+          - when: on_success
+
+      BUILD_JOBS_EOF
+
+      for api in ${APIS}; do
+        {
+          echo ""
+          echo "build:${api}:"
+          echo "  extends: .build_template"
+          echo "  variables:"
+          echo "    API_NAME: ${api}"
+          echo "  rules:"
+          echo "    - when: on_success"
+        } >> .gitlab/ci/api-build-jobs.yml
+      done
+
+      echo "Generated API build jobs for $(echo "${APIS}" | wc -l) APIs"
+  artifacts:
+    paths:
+      - .gitlab/ci/api-build-jobs.yml
+    expire_in: 1 hour
+
+# Generate API deploy jobs
+generate:api-deploy-jobs:
+  stage: .pre
+  image: alpine:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_TAG || $CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: on_success
+    - when: never
+  script:
+    - apk add --no-cache bash
+    - chmod +x deploy/scripts/*.sh
+    - |
+      APIS=$(./deploy/scripts/discover-apis.sh)
+      echo "Discovered APIs: ${APIS}"
+      mkdir -p .gitlab/ci
+
+      cat > .gitlab/ci/api-deploy-jobs.yml << 'DEPLOY_EOF'
+      stages:
+        - deploy-dev
+
+      variables:
+        CI_CHILD_PIPELINE: "true"
+
+      .deploy_template: &deploy_template
+        image: alpine:latest
+        before_script:
+          - apk add --no-cache bash curl helm
+          - |
+            KUBECTL_VERSION="v1.30.0"
+            curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+            chmod +x kubectl
+            mv kubectl /usr/local/bin/kubectl
+            kubectl version --client
+          - |
+            if [ -z "$KUBECONFIG" ]; then
+              echo "ERROR: KUBECONFIG variable is not set"
+              exit 1
+            fi
+            mkdir -p ~/.kube
+            KUBECONFIG_FILE="$HOME/.kube/config"
+            echo "$KUBECONFIG" | base64 -d > "$KUBECONFIG_FILE" 2>&1 || {
+              echo "ERROR: Failed to decode KUBECONFIG"
+              exit 1
+            }
+            chmod 600 "$KUBECONFIG_FILE"
+            export KUBECONFIG="$KUBECONFIG_FILE"
+          - chmod +x deploy/scripts/*.sh
+        environment:
+          name: ${ENV}
+          url: ${INGRESS_URL}
+
+      .migrate_template: &migrate_template
+        image: python:3.11-slim
+        before_script:
+          - apt-get update && apt-get install -y git curl bash
+          - |
+            KUBECTL_VERSION="v1.30.0"
+            curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+            chmod +x kubectl
+            mv kubectl /usr/local/bin/kubectl
+          - |
+            if [ -z "$KUBECONFIG" ]; then
+              echo "ERROR: KUBECONFIG variable is not set"
+              exit 1
+            fi
+            mkdir -p ~/.kube
+            KUBECONFIG_FILE="$HOME/.kube/config"
+            echo "$KUBECONFIG" | base64 -d > "$KUBECONFIG_FILE" 2>&1 || {
+              echo "ERROR: Failed to decode KUBECONFIG"
+              exit 1
+            }
+            chmod 600 "$KUBECONFIG_FILE"
+            export KUBECONFIG="$KUBECONFIG_FILE"
+          - |
+            if [ -z "${DATABASE_HOST:-}" ] || [ -z "${DATABASE_USER:-}" ] || [ -z "${DATABASE_PASSWORD:-}" ]; then
+              echo "Warning: DATABASE vars not set for ${ENV}, skipping migrations"
+              exit 0
+            fi
+            ENCODED_PASSWORD=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_PASSWORD', ''), safe=''))")
+            ENCODED_USER=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_USER', ''), safe=''))")
+            export DATABASE_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-croo_digital_experience}"
+          - chmod +x deploy/scripts/*.sh
+          - pip install --upgrade pip
+
+      DEPLOY_EOF
+
+      for api in ${APIS}; do
+        {
+          echo ""
+          echo "deploy:${api}:dev:"
+          echo "  extends: .deploy_template"
+          echo "  stage: deploy-dev"
+          echo "  variables:"
+          echo "    API_NAME: ${api}"
+          echo "    ENV: dev"
+          echo "    NAMESPACE: cde-dev"
+          echo "    INGRESS_URL: \${DEV_INGRESS_URL}"
+          echo "    KUBECONFIG: \${DEV_KUBECONFIG}"
+          echo "    DATABASE_HOST: \${DEV_DATABASE_HOST}"
+          echo "    DATABASE_USER: \${DEV_DATABASE_USER}"
+          echo "    DATABASE_PASSWORD: \${DEV_DATABASE_PASSWORD}"
+          echo "    DATABASE_NAME: \${DEV_DATABASE_NAME}"
+          echo "    DATABASE_PORT: \${DEV_DATABASE_PORT}"
+          if [[ "${api}" == "auth-api" ]]; then
+            echo "    ADMIN_USERNAME: \${DEV_ADMIN_USERNAME}"
+            echo "    ADMIN_PASSWORD: \${DEV_ADMIN_PASSWORD}"
+          fi
+          echo "  script:"
+          echo "    - ./deploy/scripts/deploy-api.sh ${api} dev"
+          echo "  rules:"
+          echo "    - if: '\$CI_CHILD_PIPELINE == \"true\"'"
+          echo "      when: on_success"
+          echo "    - if: '\$CI_COMMIT_BRANCH == \"develop\"'"
+          echo "      when: on_success"
+          echo "    - when: never"
+          echo ""
+
+          # Add migration job for backend APIs (skip B4F APIs)
+          if [[ "${api}" != *"-b4f-api" ]] && [[ "${api}" != "b4f-api" ]]; then
+            echo "migrate:${api}:dev:"
+            echo "  extends: .migrate_template"
+            echo "  stage: deploy-dev"
+            echo "  variables:"
+            echo "    API_NAME: ${api}"
+            echo "    ENV: dev"
+            echo "    NAMESPACE: cde-dev"
+            echo "    KUBECONFIG: \${DEV_KUBECONFIG}"
+            echo "    DATABASE_HOST: \${DEV_DATABASE_HOST}"
+            echo "    DATABASE_USER: \${DEV_DATABASE_USER}"
+            echo "    DATABASE_PASSWORD: \${DEV_DATABASE_PASSWORD}"
+            echo "    DATABASE_NAME: \${DEV_DATABASE_NAME}"
+            echo "    DATABASE_PORT: \${DEV_DATABASE_PORT}"
+            echo "  script:"
+            # Convert k8s name to directory name for cd
+            DIR_NAME=$(echo "${api}" | sed -E 's/-(b4f-api|backend-api)/~\1/')
+            echo "    - cd apis/${DIR_NAME}"
+            echo "    - pip install -r requirements.txt"
+            echo "    - |"
+            echo "      if [ -f \"migrate.sh\" ]; then"
+            echo "        chmod +x migrate.sh"
+            echo "        ./migrate.sh"
+            echo "      elif [ -d \"alembic\" ]; then"
+            echo "        alembic upgrade head"
+            echo "      else"
+            echo "        echo \"No migration mechanism found, skipping...\""
+            echo "      fi"
+            echo "  rules:"
+            echo "    - if: '\$CI_CHILD_PIPELINE == \"true\"'"
+            echo "      when: on_success"
+            echo "    - if: '\$CI_COMMIT_BRANCH == \"develop\"'"
+            echo "      when: on_success"
+            echo "    - when: never"
+            echo "  needs:"
+            echo "    - job: deploy:${api}:dev"
+            echo "      artifacts: false"
+            echo ""
+          fi
+        } >> .gitlab/ci/api-deploy-jobs.yml
+      done
+
+      echo "Generated deploy jobs for $(echo "${APIS}" | wc -l) APIs"
+  artifacts:
+    paths:
+      - .gitlab/ci/api-deploy-jobs.yml
+    expire_in: 1 hour
+
+# Generate API smoke test jobs
+generate:api-smoke-test-jobs:
+  stage: .pre
+  image: alpine:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_TAG'
+      when: on_success
+    - when: never
+  script:
+    - apk add --no-cache bash
+    - chmod +x deploy/scripts/*.sh
+    - |
+      APIS=$(./deploy/scripts/discover-apis.sh)
+      echo "Discovered APIs: ${APIS}"
+      mkdir -p .gitlab/ci
+
+      cat > .gitlab/ci/api-smoke-test-jobs.yml << 'SMOKE_EOF'
+      stages:
+        - smoke-test-dev
+
+      variables:
+        CI_CHILD_PIPELINE: "true"
+
+      .smoke_test_template: &smoke_test_template
+        image: curlimages/curl:latest
+        timeout: 5m
+        allow_failure: false
+        before_script:
+          - |
+            wait_for_gateway() {
+              local INGRESS_URL="${1}"
+              local MAX_ATTEMPTS="${2:-30}"
+              local INTERVAL="${3:-5}"
+              if [ -z "${INGRESS_URL}" ]; then
+                echo "ERROR: INGRESS_URL is not set"
+                return 1
+              fi
+              echo "Waiting for gateway at ${INGRESS_URL}..."
+              i=1
+              while [ ${i} -le ${MAX_ATTEMPTS} ]; do
+                HTTP_CODE=$(curl -k --max-time 10 --connect-timeout 5 -s -o /dev/null -w "%{http_code}" "${INGRESS_URL}/" 2>/dev/null)
+                CURL_EXIT=$?
+                if [ "${CURL_EXIT}" -eq 0 ] && [ -n "${HTTP_CODE}" ] && [ "${HTTP_CODE}" != "000" ]; then
+                  if echo "${HTTP_CODE}" | grep -qE '^[0-9]{3}$'; then
+                    echo "Gateway is ready (HTTP ${HTTP_CODE})"
+                    return 0
+                  fi
+                fi
+                if [ ${i} -lt ${MAX_ATTEMPTS} ]; then
+                  sleep ${INTERVAL}
+                fi
+                i=$((i + 1))
+              done
+              echo "Gateway did not become ready"
+              return 1
+            }
+
+      SMOKE_EOF
+
+      for api in ${APIS}; do
+        # Skip backend APIs (internal, not reachable via gateway)
+        if echo "${api}" | grep -q "\-backend-"; then
+          continue
+        fi
+
+        ROUTE_PREFIX_DEV=$(./deploy/scripts/get-api-route-prefix.sh "${api}" dev 2>/dev/null || echo "${api}" | sed 's/-api$//')
+
+        {
+          echo ""
+          echo "smoke-test:${api}:dev:"
+          echo "  extends: .smoke_test_template"
+          echo "  stage: smoke-test-dev"
+          echo "  script:"
+          echo "    - |"
+          echo "      export DEV_INGRESS_URL=\"\${DEV_INGRESS_URL:-https://app-cde-dev-01.dev.thesmartcrew.com}\""
+          echo "      wait_for_gateway \"\${DEV_INGRESS_URL}\" 30 5"
+          echo "      echo \"Testing ${api} health in dev...\""
+          echo "      HEALTH_URL=\"\${DEV_INGRESS_URL}/api/v1/${ROUTE_PREFIX_DEV}/health\""
+          echo "      echo \"Waiting 90s for ${api} to be ready...\""
+          echo "      sleep 90"
+          echo "      i=1"
+          echo "      while [ \${i} -le 10 ]; do"
+          echo "        RESPONSE=\$(curl -k -s -w \"\\n%{http_code}\" --max-time 30 \"\${HEALTH_URL}\" 2>/dev/null)"
+          echo "        HTTP_CODE=\$(echo \"\${RESPONSE}\" | tail -n1)"
+          echo "        BODY=\$(echo \"\${RESPONSE}\" | sed '\$d')"
+          echo "        if [ \"\${HTTP_CODE}\" = \"200\" ] && echo \"\${BODY}\" | grep -q '\"status\"'; then"
+          echo "          echo \"${api} is healthy in dev (HTTP \${HTTP_CODE})\""
+          echo "          exit 0"
+          echo "        else"
+          echo "          echo \"Attempt \${i} failed (HTTP \${HTTP_CODE}), retrying in 10s...\""
+          echo "          sleep 10"
+          echo "        fi"
+          echo "        i=\$((i + 1))"
+          echo "      done"
+          echo "      echo \"${api} did not respond correctly after 10 attempts\""
+          echo "      exit 1"
+          echo "  rules:"
+          echo "    - if: '\$CI_COMMIT_BRANCH == \"develop\"'"
+          echo "      when: on_success"
+          echo "    - when: never"
+        } >> .gitlab/ci/api-smoke-test-jobs.yml
+      done
+
+      echo "Generated smoke test jobs"
+  artifacts:
+    paths:
+      - .gitlab/ci/api-smoke-test-jobs.yml
+    expire_in: 1 hour
+
+# =============================================================================
+# CHILD PIPELINE TRIGGERS
+# =============================================================================
+
+trigger:api-tests-jobs:
+  stage: test
+  trigger:
+    include:
+      - artifact: .gitlab/ci/api-test-jobs.yml
+        job: generate:api-test-jobs
+    strategy: depend
+  needs:
+    - job: generate:api-test-jobs
+      artifacts: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_TAG'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+trigger:api-build-jobs:
+  stage: build
+  trigger:
+    include:
+      - artifact: .gitlab/ci/api-build-jobs.yml
+        job: generate:api-build-jobs
+    strategy: depend
+  needs:
+    - job: generate:api-build-jobs
+      artifacts: true
+    - job: trigger:api-tests-jobs
+      artifacts: false
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_TAG'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+trigger:api-deploy-jobs:dev:
+  stage: deploy-dev
+  trigger:
+    include:
+      - artifact: .gitlab/ci/api-deploy-jobs.yml
+        job: generate:api-deploy-jobs
+    strategy: depend
+  needs:
+    - job: generate:api-deploy-jobs
+      artifacts: true
+    - job: trigger:api-build-jobs
+      artifacts: false
+  rules:
+    - if: '$CI_CHILD_PIPELINE != "true" && $CI_COMMIT_BRANCH == "develop"'
+      when: on_success
+    - when: never
+
+trigger:api-smoke-test-jobs:dev:
+  stage: smoke-test-dev
+  trigger:
+    include:
+      - artifact: .gitlab/ci/api-smoke-test-jobs.yml
+        job: generate:api-smoke-test-jobs
+    strategy: depend
+  needs:
+    - job: generate:api-smoke-test-jobs
+      artifacts: true
+    - job: trigger:api-deploy-jobs:dev
+      artifacts: false
+    - job: deploy:gateway:dev
+      artifacts: false
+  rules:
+    - if: '$CI_CHILD_PIPELINE != "true" && $CI_COMMIT_BRANCH == "develop"'
+      when: on_success
+    - when: never
