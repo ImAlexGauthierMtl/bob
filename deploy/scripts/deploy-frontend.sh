@@ -82,5 +82,19 @@ if eval "${HELM_CMD}"; then
     echo "Frontend deployed successfully"
 else
     echo "Frontend deployment failed"
+    echo ""
+    echo "=== Pod Status ==="
+    kubectl get pods -n "${NAMESPACE}" -l "app.kubernetes.io/component=frontend" -o wide 2>&1 || true
+    echo ""
+    echo "=== Pod Describe ==="
+    kubectl describe pods -n "${NAMESPACE}" -l "app.kubernetes.io/component=frontend" 2>&1 | tail -60 || true
+    echo ""
+    echo "=== Pod Logs ==="
+    POD_NAME=$(kubectl get pods -n "${NAMESPACE}" -l "app.kubernetes.io/component=frontend" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+    if [ -n "${POD_NAME}" ]; then
+        kubectl logs "${POD_NAME}" -n "${NAMESPACE}" --tail=30 2>&1 || true
+    else
+        echo "No pod found"
+    fi
     exit 1
 fi
