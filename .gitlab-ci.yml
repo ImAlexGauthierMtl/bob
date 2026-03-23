@@ -182,8 +182,10 @@ build:frontend:
         exit 0
       fi
       # Export secret from cert-manager namespace and re-import into project namespace
+      kubectl delete secret "${TLS_SECRET_NAME}" -n "${NAMESPACE}" --ignore-not-found=true
       kubectl get secret "${TLS_SECRET_NAME}" -n "${CERT_NS}" -o yaml \
         | sed "s/namespace: ${CERT_NS}/namespace: ${NAMESPACE}/" \
+        | sed '/resourceVersion:/d; /uid:/d; /creationTimestamp:/d; /last-applied-configuration/d' \
         | kubectl apply -n "${NAMESPACE}" -f -
       echo "Certificate '${TLS_SECRET_NAME}' copied to namespace '${NAMESPACE}'"
 
