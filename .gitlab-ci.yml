@@ -829,10 +829,10 @@ generate:api-deploy-jobs:
         script:
           - |
             cd apis/internal/${api}
-            pip install -r requirements.txt
-            if [ -f "migrate.sh" ]; then chmod +x migrate.sh; ./migrate.sh
-            elif [ -d "alembic" ]; then alembic upgrade head
-            else echo "No migrations found, skipping"; fi
+            pip install -r requirements.txt alembic
+            export PYTHONPATH="\${CI_PROJECT_DIR}:\${CI_PROJECT_DIR}/apis:\${PYTHONPATH:-}"
+            if [ -d "alembic" ]; then alembic upgrade head
+            else echo "No alembic directory found, skipping"; fi
         rules:
           - ${RULE}
           - when: never
