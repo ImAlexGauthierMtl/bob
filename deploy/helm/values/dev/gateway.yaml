@@ -6,7 +6,7 @@ ingress:
   className: "nginx"
   tls:
     enabled: true
-    secretName: wildcard-dev-tls
+    secretName: wildcard-croo-tls
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
@@ -26,32 +26,25 @@ cors:
 rateLimit:
   enabled: false
 
-# API Routes Configuration - Croo Digital Experience
-# b4f-api is the main BFF gateway; backend APIs are internal.
+# API Routes — B4F only (exposed via gateway)
 apiRoutes:
-  apis:
-    auth-api:
-      port: 8001
-      routePrefix: "auth"
-    b4f-api:
-      port: 8000
-      routePrefix: "bff"
+  apis: {}
   bffApis:
     auth-b4f-api:
-      port: 8011
-      routePrefix: "auth-bff"
+      port: 8001
+      routePrefix: "auth"
     crm-b4f-api:
-      port: 8012
-      routePrefix: "crm-bff"
+      port: 8002
+      routePrefix: "crm"
     ai-agent-b4f-api:
-      port: 8013
-      routePrefix: "ai-agent-bff"
+      port: 8003
+      routePrefix: "ai-agent"
     communication-b4f-api:
-      port: 8014
-      routePrefix: "communication-bff"
+      port: 8004
+      routePrefix: "communication"
     platform-b4f-api:
-      port: 8015
-      routePrefix: "platform-bff"
+      port: 8005
+      routePrefix: "platform"
     kb-b4f-api:
-      port: 8016
-      routePrefix: "kb-bff"
+      port: 8006
+      routePrefix: "kb"

@@ -44,6 +44,16 @@ if ! kubectl cluster-info 2>&1; then
 fi
 echo ""
 
+# Resolve API directory (exposed or internal)
+if [[ -d "${PROJECT_ROOT}/apis/exposed/${API_NAME}" ]]; then
+    API_LAYER="exposed"
+elif [[ -d "${PROJECT_ROOT}/apis/internal/${API_NAME}" ]]; then
+    API_LAYER="internal"
+else
+    echo "Warning: API directory not found for ${API_NAME}, using default config"
+    API_LAYER=""
+fi
+
 # Values file path: API-specific first, then generic api-values.yaml
 VALUES_FILE="${PROJECT_ROOT}/deploy/helm/values/${ENV}/${API_NAME}-values.yaml"
 if [[ ! -f "${VALUES_FILE}" ]]; then
@@ -63,7 +73,7 @@ fi
 
 # Detect backend APIs that need PostgreSQL
 IS_BACKEND_API=false
-if [[ "${API_NAME}" == *"backend"* ]] || [[ "${API_NAME}" == "auth-api" ]]; then
+if [[ "${API_NAME}" == *"backend"* ]]; then
     IS_BACKEND_API=true
     echo "  Detected backend API - PostgreSQL configuration required"
 fi
@@ -95,7 +105,7 @@ if [ -n "${REGISTRY_SECRET_ARG}" ]; then
     fi
 fi
 
-# Clean up stuck Helm release (pending-install/pending-upgrade from a previous failed run)
+# Clean up stuck Helm release
 RELEASE_STATUS=$(helm status "${API_NAME}" --namespace "${NAMESPACE}" -o json 2>/dev/null | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4 || echo "not-found")
 if [[ "${RELEASE_STATUS}" == "pending-install" || "${RELEASE_STATUS}" == "pending-upgrade" || "${RELEASE_STATUS}" == "pending-rollback" ]]; then
     echo "  Helm release stuck in '${RELEASE_STATUS}', cleaning up..."
@@ -115,8 +125,19 @@ HELM_CMD="helm upgrade --install ${API_NAME} ${HELM_CHART} \
     --set api.image.tag=${CI_COMMIT_SHA} \
     --set service.port=${API_PORT}"
 
-# Inject JWT SECRET_KEY for auth-api and all BFF APIs
-if [[ "${API_NAME}" == "auth-api" ]] || [[ "${API_NAME}" == *"-b4f-api" ]] || [[ "${API_NAME}" == "b4f-api" ]]; then
+# Inject INGRESS_URL for CORS
+if [[ -n "${INGRESS_URL:-}" ]]; then
+    HELM_CMD="${HELM_CMD} --set env.INGRESS_URL=\"${INGRESS_URL}\""
+    HELM_CMD="${HELM_CMD} --set env.CORS_ORIGINS=\"[\\\"${INGRESS_URL}\\\"]\""
+fi
+
+# Inject OTLP_URL for tracing
+if [[ -n "${OTLP_URL:-}" ]]; then
+    HELM_CMD="${HELM_CMD} --set env.OTLP_URL=\"${OTLP_URL}\""
+fi
+
+# Inject JWT SECRET_KEY for B4F APIs (exposed, need auth)
+if [[ "${API_NAME}" == *"-b4f-api" ]]; then
     if [[ -n "${JWT_SECRET_KEY:-}" ]]; then
         echo "  Injecting SECRET_KEY for ${API_NAME}"
         HELM_CMD="${HELM_CMD} --set secrets.jwtSecret=\"${JWT_SECRET_KEY}\""
@@ -125,23 +146,25 @@ if [[ "${API_NAME}" == "auth-api" ]] || [[ "${API_NAME}" == *"-b4f-api" ]] || [[
     fi
 fi
 
-# Inject backend service URLs for the main BFF API
-if [[ "${API_NAME}" == "b4f-api" ]]; then
+# Inject backend service URLs for B4F APIs
+if [[ "${API_NAME}" == *"-b4f-api" ]]; then
     echo "  Injecting backend service URLs for ${API_NAME}..."
     HELM_CMD="${HELM_CMD} \
-        --set env.AUTH_API_URL=http://auth-api:8001 \
-        --set env.CRM_API_URL=http://crm-backend-api:8002 \
-        --set env.AI_AGENT_API_URL=http://ai-agent-api:8003 \
-        --set env.COMMUNICATION_API_URL=http://communication-api:8004 \
-        --set env.PLATFORM_SERVICES_API_URL=http://platform-services-api:8005 \
-        --set env.KB_API_URL=http://kb-api:8006"
+        --set env.USER_BACKEND_API_URL=http://user-backend-api:9001 \
+        --set env.CONTACT_BACKEND_API_URL=http://contact-backend-api:9002 \
+        --set env.ORG_BACKEND_API_URL=http://org-backend-api:9003 \
+        --set env.OPPORTUNITY_BACKEND_API_URL=http://opportunity-backend-api:9004 \
+        --set env.ACTIVITY_BACKEND_API_URL=http://activity-backend-api:9005 \
+        --set env.PRODUCT_BACKEND_API_URL=http://product-backend-api:9006 \
+        --set env.EMAIL_BACKEND_API_URL=http://email-backend-api:9007 \
+        --set env.AGENT_BACKEND_API_URL=http://agent-backend-api:9008 \
+        --set env.WORKFLOW_BACKEND_API_URL=http://workflow-backend-api:9009 \
+        --set env.KB_BACKEND_API_URL=http://kb-backend-api:9010 \
+        --set env.USAGE_BACKEND_API_URL=http://usage-backend-api:9011"
 fi
 
-# Add admin user env for auth-api
-if [[ "${API_NAME}" == "auth-api" ]]; then
-    ENV_UPPER=$(echo "${ENV}" | tr '[:lower:]' '[:upper:]' | tr '-' '_')
-    ADMIN_USERNAME="${ADMIN_USERNAME:-${!ADMIN_USERNAME_VAR:-}}"
-    ADMIN_PASSWORD="${ADMIN_PASSWORD:-${!ADMIN_PASSWORD_VAR:-}}"
+# Add admin user env for auth-b4f-api
+if [[ "${API_NAME}" == "auth-b4f-api" ]]; then
     if [[ -n "${ADMIN_USERNAME:-}" ]] && [[ -n "${ADMIN_PASSWORD:-}" ]]; then
         HELM_CMD="${HELM_CMD} \
             --set env.ADMIN_EMAIL=\"${ADMIN_USERNAME}\" \

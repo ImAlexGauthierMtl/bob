@@ -1,0 +1,25 @@
+# Development environment values for frontend
+
+deployment:
+  replicas: 1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+env:
+  ENVIRONMENT: development
+  API_BASE_URL: "https://app-cde-dev-01.dev.thesmartcrew.com/api"
+
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+imagePullSecrets:
+  enabled: true

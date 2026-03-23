@@ -3,9 +3,11 @@ x-common-env: &common-env
   DEBUG: ${DEBUG:-true}
   JWT_SECRET_KEY: ${SECRET_KEY}
   JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-  CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4511","http://localhost:4700"]}
+  CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4700"]}
+  INGRESS_URL: ${INGRESS_URL:-http://localhost:4200}
   REDIS_URL: redis://redis:6379/0
-  EVENT_BUS_BACKEND: ${EVENT_BUS_BACKEND:-memory}
+  EVENT_BUS_BACKEND: ${EVENT_BUS_BACKEND:-redis}
+  OTLP_URL: ${OTLP_URL:-}
 
 x-db-env: &db-env
   DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@database:5432/${DB_NAME:-croo_digital_experience}
@@ -67,56 +69,13 @@ services:
       retries: 5
 
   # ═══════════════════════════════════════
-  # LEGACY (à déprécier — Phase 8)
-  # ═══════════════════════════════════════
-  legacy-api:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: croo-legacy-api
-    restart: unless-stopped
-    environment:
-      <<: *common-env
-      API_PORT: ${API_PORT:-4500}
-      DATABASE_URL: postgresql://${DB_USER:-croo}:${DB_PASSWORD:-croo}@database:5432/${DB_NAME:-croo_digital_experience}
-      SECRET_KEY: ${SECRET_KEY}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
-      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
-      RATE_LIMIT_MAX_ATTEMPTS: ${RATE_LIMIT_MAX_ATTEMPTS:-5}
-      RATE_LIMIT_WINDOW_MINUTES: ${RATE_LIMIT_WINDOW_MINUTES:-15}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@croo.digital}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      ADMIN_FIRST_NAME: ${ADMIN_FIRST_NAME:-Admin}
-      ADMIN_LAST_NAME: ${ADMIN_LAST_NAME:-Croo}
-      GROQ_API_KEY: ${GROQ_API_KEY}
-      HUNTER_API_KEY: ${HUNTER_API_KEY}
-      SERPER_API_KEY: ${SERPER_API_KEY}
-      WEBHOOK_API_KEY: ${WEBHOOK_API_KEY}
-      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      RICK_REF_AUDIO_PATH: ${RICK_REF_AUDIO_PATH:-/app/app/voice/rick_ref.wav}
-      MS365_CLIENT_ID: ${MS365_CLIENT_ID}
-      MS365_CLIENT_SECRET: ${MS365_CLIENT_SECRET}
-      MS365_TENANT_ID: ${MS365_TENANT_ID}
-      MS365_REDIRECT_URI: ${MS365_REDIRECT_URI}
-      MS365_WEBHOOK_HOST: ${MS365_WEBHOOK_HOST}
-    ports:
-      - "${API_PORT:-4500}:${API_PORT:-4500}"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:${API_PORT:-4500}/health || exit 1"]
-      <<: *healthcheck
-      start_period: 30s
-    depends_on:
-      database:
-        condition: service_healthy
-
-  # ═══════════════════════════════════════
-  # B4F LAYER — Logique métier (exposé)
+  # B4F LAYER — Business logic (exposed)
   # ═══════════════════════════════════════
   auth-b4f-api:
     build:
-      context: ./apis
-      dockerfile: auth~b4f-api/Dockerfile
+      context: .
+      dockerfile: apis/exposed/auth-b4f-api/Dockerfile
+      target: dev
     container_name: croo-auth-b4f-api
     restart: unless-stopped
     environment:
@@ -134,15 +93,18 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8001/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/exposed/auth-b4f-api:/app
     depends_on:
       user-backend-api:
         condition: service_healthy
 
   crm-b4f-api:
     build:
-      context: ./apis
-      dockerfile: crm~b4f-api/Dockerfile
+      context: .
+      dockerfile: apis/exposed/crm-b4f-api/Dockerfile
+      target: dev
     container_name: croo-crm-b4f-api
     restart: unless-stopped
     environment:
@@ -153,7 +115,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8002/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/exposed/crm-b4f-api:/app
     depends_on:
       contact-backend-api:
         condition: service_healthy
@@ -162,8 +126,9 @@ services:
 
   ai-agent-b4f-api:
     build:
-      context: ./apis
-      dockerfile: ai-agent~b4f-api/Dockerfile
+      context: .
+      dockerfile: apis/exposed/ai-agent-b4f-api/Dockerfile
+      target: dev
     container_name: croo-ai-agent-b4f-api
     restart: unless-stopped
     environment:
@@ -176,15 +141,18 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8003/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/exposed/ai-agent-b4f-api:/app
     depends_on:
       agent-backend-api:
         condition: service_healthy
 
   communication-b4f-api:
     build:
-      context: ./apis
-      dockerfile: communication~b4f-api/Dockerfile
+      context: .
+      dockerfile: apis/exposed/communication-b4f-api/Dockerfile
+      target: dev
     container_name: croo-communication-b4f-api
     restart: unless-stopped
     environment:
@@ -201,15 +169,18 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8004/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/exposed/communication-b4f-api:/app
     depends_on:
       email-backend-api:
         condition: service_healthy
 
   platform-b4f-api:
     build:
-      context: ./apis
-      dockerfile: platform~b4f-api/Dockerfile
+      context: .
+      dockerfile: apis/exposed/platform-b4f-api/Dockerfile
+      target: dev
     container_name: croo-platform-b4f-api
     restart: unless-stopped
     environment:
@@ -220,7 +191,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8005/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/exposed/platform-b4f-api:/app
     depends_on:
       workflow-backend-api:
         condition: service_healthy
@@ -229,8 +202,9 @@ services:
 
   kb-b4f-api:
     build:
-      context: ./apis
-      dockerfile: kb~b4f-api/Dockerfile
+      context: .
+      dockerfile: apis/exposed/kb-b4f-api/Dockerfile
+      target: dev
     container_name: croo-kb-b4f-api
     restart: unless-stopped
     environment:
@@ -241,18 +215,21 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8006/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/exposed/kb-b4f-api:/app
     depends_on:
       kb-backend-api:
         condition: service_healthy
 
   # ═══════════════════════════════════════
-  # BACKEND LAYER — CRUD + Events (interne)
+  # BACKEND LAYER — CRUD + Events (internal)
   # ═══════════════════════════════════════
   user-backend-api:
     build:
-      context: ./apis
-      dockerfile: user~backend-api/Dockerfile
+      context: .
+      dockerfile: apis/internal/user-backend-api/Dockerfile
+      target: dev
     container_name: croo-user-backend-api
     restart: unless-stopped
     environment:
@@ -263,7 +240,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9001/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/internal/user-backend-api:/app
     depends_on:
       database:
         condition: service_healthy
@@ -272,8 +251,9 @@ services:
 
   contact-backend-api:
     build:
-      context: ./apis
-      dockerfile: contact~backend-api/Dockerfile
+      context: .
+      dockerfile: apis/internal/contact-backend-api/Dockerfile
+      target: dev
     container_name: croo-contact-backend-api
     restart: unless-stopped
     environment:
@@ -284,7 +264,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9002/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/internal/contact-backend-api:/app
     depends_on:
       database:
         condition: service_healthy
@@ -293,8 +275,9 @@ services:
 
   org-backend-api:
     build:
-      context: ./apis
-      dockerfile: org~backend-api/Dockerfile
+      context: .
+      dockerfile: apis/internal/org-backend-api/Dockerfile
+      target: dev
     container_name: croo-org-backend-api
     restart: unless-stopped
     environment:
@@ -305,7 +288,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9003/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/internal/org-backend-api:/app
     depends_on:
       database:
         condition: service_healthy
@@ -314,8 +299,9 @@ services:
 
   opportunity-backend-api:
     build:
-      context: ./apis
-      dockerfile: opportunity~backend-api/Dockerfile
+      context: .
+      dockerfile: apis/internal/opportunity-backend-api/Dockerfile
+      target: dev
     container_name: croo-opportunity-backend-api
     restart: unless-stopped
     environment:
@@ -326,7 +312,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9004/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/internal/opportunity-backend-api:/app
     depends_on:
       database:
         condition: service_healthy
@@ -335,8 +323,9 @@ services:
 
   activity-backend-api:
     build:
-      context: ./apis
-      dockerfile: activity~backend-api/Dockerfile
+      context: .
+      dockerfile: apis/internal/activity-backend-api/Dockerfile
+      target: dev
     container_name: croo-activity-backend-api
     restart: unless-stopped
     environment:
@@ -347,7 +336,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9005/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/internal/activity-backend-api:/app
     depends_on:
       database:
         condition: service_healthy
@@ -356,8 +347,9 @@ services:
 
   product-backend-api:
     build:
-      context: ./apis
-      dockerfile: product~backend-api/Dockerfile
+      context: .
+      dockerfile: apis/internal/product-backend-api/Dockerfile
+      target: dev
     container_name: croo-product-backend-api
     restart: unless-stopped
     environment:
@@ -368,7 +360,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9006/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/internal/product-backend-api:/app
     depends_on:
       database:
         condition: service_healthy
@@ -377,8 +371,9 @@ services:
 
   email-backend-api:
     build:
-      context: ./apis
-      dockerfile: email~backend-api/Dockerfile
+      context: .
+      dockerfile: apis/internal/email-backend-api/Dockerfile
+      target: dev
     container_name: croo-email-backend-api
     restart: unless-stopped
     environment:
@@ -389,7 +384,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9007/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/internal/email-backend-api:/app
     depends_on:
       database:
         condition: service_healthy
@@ -398,8 +395,9 @@ services:
 
   agent-backend-api:
     build:
-      context: ./apis
-      dockerfile: agent~backend-api/Dockerfile
+      context: .
+      dockerfile: apis/internal/agent-backend-api/Dockerfile
+      target: dev
     container_name: croo-agent-backend-api
     restart: unless-stopped
     environment:
@@ -410,7 +408,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9008/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/internal/agent-backend-api:/app
     depends_on:
       database:
         condition: service_healthy
@@ -419,8 +419,9 @@ services:
 
   workflow-backend-api:
     build:
-      context: ./apis
-      dockerfile: workflow~backend-api/Dockerfile
+      context: .
+      dockerfile: apis/internal/workflow-backend-api/Dockerfile
+      target: dev
     container_name: croo-workflow-backend-api
     restart: unless-stopped
     environment:
@@ -431,7 +432,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9009/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/internal/workflow-backend-api:/app
     depends_on:
       database:
         condition: service_healthy
@@ -440,8 +443,9 @@ services:
 
   kb-backend-api:
     build:
-      context: ./apis
-      dockerfile: kb~backend-api/Dockerfile
+      context: .
+      dockerfile: apis/internal/kb-backend-api/Dockerfile
+      target: dev
     container_name: croo-kb-backend-api
     restart: unless-stopped
     environment:
@@ -452,7 +456,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9010/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/internal/kb-backend-api:/app
     depends_on:
       database:
         condition: service_healthy
@@ -461,8 +467,9 @@ services:
 
   usage-backend-api:
     build:
-      context: ./apis
-      dockerfile: usage~backend-api/Dockerfile
+      context: .
+      dockerfile: apis/internal/usage-backend-api/Dockerfile
+      target: dev
     container_name: croo-usage-backend-api
     restart: unless-stopped
     environment:
@@ -473,7 +480,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9011/health || exit 1"]
       <<: *healthcheck
-    volumes: *shared-volume
+    volumes:
+      - ./apis/shared:/app/shared:ro
+      - ./apis/internal/usage-backend-api:/app
     depends_on:
       database:
         condition: service_healthy
@@ -485,12 +494,16 @@ services:
   # ═══════════════════════════════════════
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: dev
     container_name: croo-frontend
     restart: unless-stopped
     ports:
-      - "4700:4700"
+      - "4200:4200"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       auth-b4f-api:
         condition: service_healthy

@@ -1,7 +1,6 @@
 #!/bin/bash
 # Discover all APIs in the apis/ directory
-# Croo structure: APIs are directly in apis/ (e.g. apis/auth-api/, apis/crm-backend-api/)
-# B4F APIs use ~ in folder name (e.g. apis/auth~b4f-api/) which maps to auth-b4f-api in k8s
+# Structure: apis/exposed/<name>-b4f-api/ and apis/internal/<name>-backend-api/
 
 set -euo pipefail
 
@@ -17,18 +16,22 @@ discover_apis() {
         return 0
     fi
 
-    for dir in "${APIS_DIR}"/*; do
-        if [[ -d "${dir}" ]] && [[ -f "${dir}/Dockerfile" ]]; then
-            local dir_name
-            dir_name=$(basename "${dir}")
-            # Skip the shared directory
-            if [[ "${dir_name}" == "shared" ]]; then
-                continue
+    # Scan exposed/ and internal/ layers
+    for layer in exposed internal; do
+        local layer_dir="${APIS_DIR}/${layer}"
+        [[ -d "${layer_dir}" ]] || continue
+
+        for dir in "${layer_dir}"/*; do
+            if [[ -d "${dir}" ]] && [[ -f "${dir}/Dockerfile" ]]; then
+                local dir_name
+                dir_name=$(basename "${dir}")
+                # Skip the shared directory
+                if [[ "${dir_name}" == "shared" ]]; then
+                    continue
+                fi
+                apis+=("${dir_name}")
             fi
-            # Convert ~ to - for Kubernetes-safe names (auth~b4f-api -> auth-b4f-api)
-            local api_name="${dir_name//\~/-}"
-            apis+=("${api_name}")
-        fi
+        done
     done
 
     if [[ ${#apis[@]} -gt 0 ]]; then

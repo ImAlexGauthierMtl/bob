@@ -1,0 +1,49 @@
+# Staging environment values for gateway (Croo Digital Experience)
+
+ingress:
+  enabled: true
+  host: app-cde-dev-01.staging.thesmartcrew.com
+  className: "nginx"
+  tls:
+    enabled: true
+    secretName: wildcard-croo-tls
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+
+cors:
+  enabled: true
+  allowOrigin: "*"
+  allowMethods: "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+  allowHeaders: "Content-Type, Authorization, X-Tenant-ID, X-Center-ID"
+  allowCredentials: "true"
+  maxAge: "3600"
+
+rateLimit:
+  enabled: false
+
+apiRoutes:
+  apis: {}
+  bffApis:
+    auth-b4f-api:
+      port: 8001
+      routePrefix: "auth"
+    crm-b4f-api:
+      port: 8002
+      routePrefix: "crm"
+    ai-agent-b4f-api:
+      port: 8003
+      routePrefix: "ai-agent"
+    communication-b4f-api:
+      port: 8004
+      routePrefix: "communication"
+    platform-b4f-api:
+      port: 8005
+      routePrefix: "platform"
+    kb-b4f-api:
+      port: 8006
+      routePrefix: "kb"
