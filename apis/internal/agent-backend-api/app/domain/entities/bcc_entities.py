@@ -391,7 +391,7 @@ class BccUserRole(Base, TenantMixin, AuditMixin):
     __tablename__ = "bcc_user_roles"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(String(36), nullable=False, index=True, comment="Soft ref to user-backend-api users.id")
     role_id = Column(String(36), ForeignKey("bcc_roles.id"), nullable=False, index=True)
     current_stage = Column(String(20), nullable=False, default="onboarding")
     assigned_by = Column(String(100), nullable=True)
@@ -405,7 +405,7 @@ class BccUserProgress(Base, TenantMixin, AuditMixin):
     __tablename__ = "bcc_user_progress"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(String(36), nullable=False, index=True, comment="Soft ref to user-backend-api users.id")
     skill_id = Column(String(36), ForeignKey("bcc_skills.id"), nullable=False, index=True)
     score = Column(Float, nullable=False, default=0.0)
     source = Column(String(20), nullable=False, default="self")
@@ -419,7 +419,7 @@ class BccUserTaskLog(Base, TenantMixin, AuditMixin):
     __tablename__ = "bcc_user_task_logs"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(String(36), nullable=False, index=True, comment="Soft ref to user-backend-api users.id")
     task_id = Column(String(36), ForeignKey("bcc_tasks.id"), nullable=False, index=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
     outcome = Column(String(20), nullable=False, default="success")

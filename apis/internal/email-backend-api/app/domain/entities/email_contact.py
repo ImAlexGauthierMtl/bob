@@ -16,6 +16,6 @@ email_contacts = Table(
     Base.metadata,
     Column("id", String(36), primary_key=True, default=generate_uuid),
     Column("synced_email_id", String(36), ForeignKey("synced_emails.id", ondelete="CASCADE"), nullable=False, index=True),
-    Column("contact_id", String(36), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False, index=True),
+    Column("contact_id", String(36), nullable=False, index=True),
     Column("role", String(10), nullable=False, default="from", comment="from | to | cc"),
 )

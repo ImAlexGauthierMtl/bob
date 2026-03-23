@@ -122,7 +122,7 @@ class ClientMap(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
     id = Column(String(36), primary_key=True, default=generate_uuid)
 
     contact_id = Column(
-        String(36), ForeignKey("contacts.id", ondelete="CASCADE"),
+        String(36),
         nullable=False, unique=True, index=True,
     )
 
