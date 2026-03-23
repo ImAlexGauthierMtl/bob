@@ -2,16 +2,16 @@ stages:
   - .pre
   - test
   - build
-  - migrate-dev
   - deploy-dev
+  - migrate-dev
   - smoke-test-dev
   - rollback-dev
-  - migrate-staging
   - deploy-staging
+  - migrate-staging
   - smoke-test-staging
   - rollback-staging
-  - migrate-prod
   - deploy-prod
+  - migrate-prod
   - smoke-test-prod
   - rollback-prod
 
@@ -747,12 +747,12 @@ generate:api-deploy-jobs:
       # Write header with templates
       cat > .gitlab/ci/api-deploy-jobs.yml << 'HEREDOC'
       stages:
-        - migrate-dev
         - deploy-dev
-        - migrate-staging
+        - migrate-dev
         - deploy-staging
-        - migrate-prod
+        - migrate-staging
         - deploy-prod
+        - migrate-prod
       variables:
         CI_CHILD_PIPELINE: "true"
       .deploy_template: &deploy_template
