@@ -51,7 +51,7 @@ def run_migrations_online():
     )
     with connectable.connect() as connection:
         connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS \"{SCHEMA_NAME}\""))
-        connection.execute(text(f"SET search_path TO {SCHEMA_NAME}"))
+        connection.execute(text(f"SET search_path TO "{SCHEMA_NAME}""))
         connection.commit()
         
         context.configure(
