@@ -38,7 +38,7 @@ def run_migrations_offline():
         include_schemas=True,
     )
     with context.begin_transaction():
-        context.execute(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA_NAME}")
+        context.execute(f"CREATE SCHEMA IF NOT EXISTS \"{SCHEMA_NAME}\"")
         context.execute(f"SET search_path TO {SCHEMA_NAME}")
         context.run_migrations()
 
@@ -50,7 +50,7 @@ def run_migrations_online():
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA_NAME}"))
+        connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS \"{SCHEMA_NAME}\""))
         connection.execute(text(f"SET search_path TO {SCHEMA_NAME}"))
         connection.commit()
         
