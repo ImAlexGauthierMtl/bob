@@ -54,6 +54,7 @@ async def create_user(data: UserCreateRequest, db: Session = Depends(get_db)):
         first_name=data.first_name, last_name=data.last_name,
         tenant_id=data.tenant_id or "default",
         role=data.role or "member",
+        is_super_admin=data.is_super_admin or False,
         job_title=data.job_title, phone=data.phone,
         created_by=data.created_by or "system",
     )
@@ -72,9 +73,12 @@ async def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     updates = data.model_dump(exclude_unset=True)
+    password_raw = updates.pop("password", None)
     for key, value in updates.items():
         if hasattr(user, key):
             setattr(user, key, value)
+    if password_raw:
+        user.password_hash = User.hash_password(password_raw)
     user.updated_by = current_user.get("email")
     updated = repo.update(user)
     await publish_user_updated(updated.id, {"email": updated.email, "fields": list(updates.keys())})

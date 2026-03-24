@@ -13,6 +13,7 @@ class UserCreateRequest(BaseModel):
     job_title: Optional[str] = None
     phone: Optional[str] = None
     created_by: Optional[str] = None
+    is_super_admin: Optional[bool] = False
 
 class UserUpdateRequest(BaseModel):
     first_name: Optional[str] = None
@@ -24,6 +25,8 @@ class UserUpdateRequest(BaseModel):
     timezone: Optional[str] = None
     role: Optional[str] = None
     active_organization_id: Optional[str] = None
+    is_super_admin: Optional[bool] = None
+    password: Optional[str] = None
 
 class UserResponse(BaseModel):
     id: str
