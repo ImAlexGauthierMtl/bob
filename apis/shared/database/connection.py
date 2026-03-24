@@ -1,5 +1,6 @@
 """Database connection management for shared library."""
 
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator, Optional
@@ -23,10 +24,13 @@ def create_db_engine(api_name: Optional[str] = None):
         if "sqlite" in database_url:
             connect_args["check_same_thread"] = False
 
+        pool_size = int(os.environ.get("DB_POOL_SIZE", "3"))
+        max_overflow = int(os.environ.get("DB_MAX_OVERFLOW", "5"))
+
         _engines[cache_key] = create_engine(
             database_url,
-            pool_size=10,
-            max_overflow=20,
+            pool_size=pool_size,
+            max_overflow=max_overflow,
             pool_pre_ping=True,
             pool_recycle=300,
             connect_args=connect_args,
