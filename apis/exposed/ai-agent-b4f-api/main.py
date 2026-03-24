@@ -35,6 +35,8 @@ app = FastAPI(root_path=root_path,
 setup_cors(app, "ai-agent")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])
+if api_prefix:
+    app.include_router(monitoring_router, prefix=f"/api/v1/{api_prefix}", tags=["monitoring"])
 
 from app.presentation.routes.bcc_routes import router as bcc_router
 from app.presentation.routes.bob_settings_routes import router as bob_settings_router

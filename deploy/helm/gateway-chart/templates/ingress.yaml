@@ -7,8 +7,6 @@ metadata:
   labels:
     {{- include "gateway-chart.labels" . | nindent 4 }}
   annotations:
-    nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
     {{- if .Values.ingress.annotations }}
     {{- toYaml .Values.ingress.annotations | nindent 4 }}
     {{- end }}
@@ -37,8 +35,8 @@ spec:
         paths:
         {{- range $apiName, $apiConfig := .Values.apiRoutes.apis }}
         {{- $routePrefix := $apiConfig.routePrefix | default $apiName }}
-        - path: {{ printf "/api/v1/%s(/|$)(.*)" $routePrefix }}
-          pathType: ImplementationSpecific
+        - path: {{ printf "/api/v1/%s" $routePrefix }}
+          pathType: Prefix
           backend:
             service:
               name: {{ $apiName }}
@@ -47,8 +45,8 @@ spec:
         {{- end }}
         {{- range $bffName, $bffConfig := .Values.apiRoutes.bffApis }}
         {{- $routePrefix := $bffConfig.routePrefix | default $bffName }}
-        - path: {{ printf "/api/v1/%s(/|$)(.*)" $routePrefix }}
-          pathType: ImplementationSpecific
+        - path: {{ printf "/api/v1/%s" $routePrefix }}
+          pathType: Prefix
           backend:
             service:
               name: {{ $bffName }}
@@ -56,8 +54,8 @@ spec:
                 number: {{ $bffConfig.port }}
         {{- end }}
         {{- if .Values.frontendRoute.enabled }}
-        - path: /()(.*)
-          pathType: ImplementationSpecific
+        - path: {{ .Values.frontendRoute.path }}
+          pathType: Prefix
           backend:
             service:
               name: {{ .Values.frontendRoute.serviceName }}

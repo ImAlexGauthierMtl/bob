@@ -14,6 +14,8 @@ app = FastAPI(root_path=root_path, title="CRM B4F API", version="1.0.0")
 setup_cors(app, "crm")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])
+if api_prefix:
+    app.include_router(monitoring_router, prefix=f"/api/v1/{api_prefix}", tags=["monitoring"])
 
 from app.presentation.routes.contact_routes import router as contact_router
 from app.presentation.routes.organization_routes import router as org_router

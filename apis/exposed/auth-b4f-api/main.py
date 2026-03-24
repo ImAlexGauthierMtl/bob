@@ -87,6 +87,8 @@ app = FastAPI(root_path=root_path,
 setup_cors(app, "auth")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])
+if api_prefix:
+    app.include_router(monitoring_router, prefix=f"/api/v1/{api_prefix}", tags=["monitoring"])
 
 from app.presentation.routes.auth_routes import router as auth_router
 from app.presentation.routes.user_routes import router as user_router

@@ -14,6 +14,8 @@ app = FastAPI(root_path=root_path, title="KB B4F API", version="1.0.0")
 setup_cors(app, "kb")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])
+if api_prefix:
+    app.include_router(monitoring_router, prefix=f"/api/v1/{api_prefix}", tags=["monitoring"])
 
 from app.presentation.routes.kb_routes import router as kb_router
 app.include_router(kb_router, tags=["knowledge-base"])

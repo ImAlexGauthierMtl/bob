@@ -14,6 +14,8 @@ app = FastAPI(root_path=root_path, title="Platform B4F API", version="1.0.0")
 setup_cors(app, "platform-services")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])
+if api_prefix:
+    app.include_router(monitoring_router, prefix=f"/api/v1/{api_prefix}", tags=["monitoring"])
 
 from app.presentation.routes.workflow_routes import router as workflow_router
 from app.presentation.routes.usage_routes import router as usage_router

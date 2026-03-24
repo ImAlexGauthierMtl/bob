@@ -32,6 +32,8 @@ app = FastAPI(root_path=root_path,
 setup_cors(app, "communication")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])
+if api_prefix:
+    app.include_router(monitoring_router, prefix=f"/api/v1/{api_prefix}", tags=["monitoring"])
 
 from app.presentation.routes.ms365_routes import router as ms365_router
 from app.presentation.routes.smart_label_routes import router as smart_label_router
