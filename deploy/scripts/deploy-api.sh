@@ -168,10 +168,19 @@ fi
 
 # Add admin user env for auth-b4f-api
 if [[ "${API_NAME}" == "auth-b4f-api" ]]; then
-    if [[ -n "${ADMIN_USERNAME:-}" ]] && [[ -n "${ADMIN_PASSWORD:-}" ]]; then
+    ADMIN_EMAIL_VAL="${ADMIN_EMAIL:-${ADMIN_USERNAME:-}}"
+    ADMIN_PASS_VAL="${ADMIN_PASSWORD:-}"
+    ADMIN_FNAME="${ADMIN_FIRST_NAME:-Admin}"
+    ADMIN_LNAME="${ADMIN_LAST_NAME:-Croo}"
+    if [[ -n "${ADMIN_EMAIL_VAL}" ]] && [[ -n "${ADMIN_PASS_VAL}" ]]; then
+        echo "  Injecting admin credentials for ${API_NAME}"
         HELM_CMD="${HELM_CMD} \
-            --set env.ADMIN_EMAIL=\"${ADMIN_USERNAME}\" \
-            --set env.ADMIN_PASSWORD=\"${ADMIN_PASSWORD}\""
+            --set env.ADMIN_EMAIL=\"${ADMIN_EMAIL_VAL}\" \
+            --set env.ADMIN_PASSWORD=\"${ADMIN_PASS_VAL}\" \
+            --set env.ADMIN_FIRST_NAME=\"${ADMIN_FNAME}\" \
+            --set env.ADMIN_LAST_NAME=\"${ADMIN_LNAME}\""
+    else
+        echo "  Warning: ADMIN_EMAIL or ADMIN_PASSWORD not set, skipping admin seed"
     fi
 fi
 
