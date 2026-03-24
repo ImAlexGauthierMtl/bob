@@ -1,3 +1,4 @@
+import os
 """KB B4F API — business logic + aggregation, delegates CRUD to kb~backend-api. Port: 8006."""
 from fastapi import FastAPI
 from shared.config import get_settings
@@ -7,7 +8,9 @@ settings = get_settings("kb")
 configure_logging(settings.log_level, settings.log_format)
 logger = get_logger(__name__)
 
-app = FastAPI(title="KB B4F API", version="1.0.0")
+api_prefix = os.environ.get("API_ROUTE_PREFIX", "")
+root_path = f"/api/v1/{api_prefix}" if api_prefix else ""
+app = FastAPI(root_path=root_path, title="KB B4F API", version="1.0.0")
 setup_cors(app, "kb")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])

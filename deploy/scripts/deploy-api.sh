@@ -161,6 +161,9 @@ if [[ "${API_NAME}" == *"-b4f-api" ]]; then
         --set env.WORKFLOW_BACKEND_API_URL=http://workflow-backend-api:9009 \
         --set env.KB_BACKEND_API_URL=http://kb-backend-api:9010 \
         --set env.USAGE_BACKEND_API_URL=http://usage-backend-api:9011"
+    ROUTE_PREFIX=$(${SCRIPT_DIR}/get-api-route-prefix.sh "${API_NAME}" "${ENV}" 2>/dev/null || echo "${API_NAME}" | sed 's/-b4f-api$//')
+    echo "  Injecting API_ROUTE_PREFIX=${ROUTE_PREFIX} for ${API_NAME}"
+    HELM_CMD="${HELM_CMD} --set env.API_ROUTE_PREFIX=\"${ROUTE_PREFIX}\""
 fi
 
 # Add admin user env for auth-b4f-api

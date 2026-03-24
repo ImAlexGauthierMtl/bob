@@ -1,3 +1,4 @@
+import os
 """Auth B4F API — authentication, authorization, JWT management.
 
 B4F layer — business logic only, delegates CRUD to user~backend-api.
@@ -11,7 +12,9 @@ settings = get_settings("auth")
 configure_logging(settings.log_level, settings.log_format)
 logger = get_logger(__name__)
 
-app = FastAPI(
+api_prefix = os.environ.get("API_ROUTE_PREFIX", "")
+root_path = f"/api/v1/{api_prefix}" if api_prefix else ""
+app = FastAPI(root_path=root_path, 
     title="Auth B4F API",
     description="Authentication & Authorization — Croo Digital Experience",
     version="1.0.0",

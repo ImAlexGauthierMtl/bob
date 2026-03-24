@@ -1,3 +1,4 @@
+import os
 """Communication B4F API — MS365 OAuth, Sync Orchestration, AI, Webhooks.
 
 Business-for-Frontend layer — no direct DB access. Port: 8004.
@@ -20,7 +21,9 @@ async def lifespan(app: FastAPI):
     logger.info("communication_b4f_shutdown")
 
 
-app = FastAPI(
+api_prefix = os.environ.get("API_ROUTE_PREFIX", "")
+root_path = f"/api/v1/{api_prefix}" if api_prefix else ""
+app = FastAPI(root_path=root_path, 
     title="Communication B4F API",
     description="MS365 OAuth, Sync, AI Smart Labels, Webhooks — Croo",
     version="1.0.0",

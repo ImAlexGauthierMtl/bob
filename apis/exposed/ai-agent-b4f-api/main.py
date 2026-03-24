@@ -1,3 +1,4 @@
+import os
 """AI Agent B4F API — Business logic layer for Bob, Client Map, Capabilities, Training.
 
 Delegates all CRUD to agent~backend-api. Keeps LLM/agent logic, capability resolution,
@@ -22,7 +23,9 @@ async def lifespan(app: FastAPI):
     logger.info("ai_agent_b4f_api_shutdown")
 
 
-app = FastAPI(
+api_prefix = os.environ.get("API_ROUTE_PREFIX", "")
+root_path = f"/api/v1/{api_prefix}" if api_prefix else ""
+app = FastAPI(root_path=root_path, 
     title="AI Agent B4F API",
     description="Business logic for Bob, Client Map 360°, Capabilities, Training — Croo Digital Experience",
     version="2.0.0",
