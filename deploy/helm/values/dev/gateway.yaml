@@ -2,7 +2,7 @@
 
 ingress:
   enabled: true
-  host: app-cde-dev-01.dev.thesmartcrew.com
+  host: app-cde-dev-01-dev.croo.thesmartcrew.com
   className: "nginx"
   tls:
     enabled: true
