@@ -51,6 +51,7 @@ variables:
 
 .migrate_template: &migrate_template
   image: python:3.11-slim
+  retry: 2
   before_script:
     - apt-get update && apt-get install -y git curl bash
     - |
@@ -774,6 +775,7 @@ generate:api-deploy-jobs:
           - chmod +x deploy/scripts/*.sh
       .migrate_template: &migrate_template
         image: python:3.11-slim
+        retry: 2
         before_script:
           - apt-get update && apt-get install -y git curl bash
           - |
@@ -828,6 +830,7 @@ generate:api-deploy-jobs:
           name: ${ENV_NAME}
         script:
           - |
+            sleep $((RANDOM % 30))
             cd apis/internal/${api}
             pip install -r requirements.txt alembic
             export PYTHONPATH="\${CI_PROJECT_DIR}:\${CI_PROJECT_DIR}/apis:\${PYTHONPATH:-}"
