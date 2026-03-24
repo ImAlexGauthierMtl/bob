@@ -174,11 +174,12 @@ fi
 
 # Add database configuration for backend APIs
 if [[ "${IS_BACKEND_API}" == "true" ]]; then
-    DB_HOST="${DATABASE_HOST:-}"
+    # Use DATABASE_* vars if set, otherwise fall back to DB_* vars from .env
+    DB_HOST="${DATABASE_HOST:-${DB_HOST:-postgres.tools.thesmartcrew.com}}"
     DB_PORT="${DATABASE_PORT:-5432}"
-    DB_NAME="${DATABASE_NAME:-croo_digital_experience}"
-    DB_USER="${DATABASE_USER:-}"
-    DB_PASSWORD="${DATABASE_PASSWORD:-}"
+    DB_NAME="${DATABASE_NAME:-${DB_NAME:-croo_digital_experience}}"
+    DB_USER="${DATABASE_USER:-${DB_USER:-}}"
+    DB_PASSWORD="${DATABASE_PASSWORD:-${DB_PASSWORD:-}}"
 
     if [[ -n "${DB_HOST}" ]] && [[ -n "${DB_USER}" ]] && [[ -n "${DB_PASSWORD}" ]]; then
         urlencode() {
