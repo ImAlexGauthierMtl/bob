@@ -18,10 +18,11 @@ database_url = os.environ.get("DATABASE_URL", "")
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 
-# Import your models' MetaData here for autogenerate support
-# from app.infrastructure.database import Base
-# target_metadata = Base.metadata
-target_metadata = None
+# Import models for autogenerate
+from app.domain.entities.base import Base
+import app.domain.entities.department  # noqa: F401
+import app.domain.entities.organization  # noqa: F401
+target_metadata = Base.metadata
 
 # Schema name derived from API directory name
 SCHEMA_NAME = os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))).replace("-backend-api", "")
