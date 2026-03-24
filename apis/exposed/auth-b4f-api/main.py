@@ -19,7 +19,8 @@ async def seed_admin_user():
     """Create or update the admin user on startup."""
     from app.config import settings as auth_settings
     from app.infrastructure.clients.user_client import user_client
-    from app.presentation.routes.auth_routes import create_access_token
+    from datetime import datetime, timedelta, timezone
+    from jose import jwt
 
     email = auth_settings.admin_email
     password = auth_settings.admin_password
@@ -33,12 +34,20 @@ async def seed_admin_user():
         try:
             existing = await user_client.get_by_email(email)
             if existing:
-                # Generate a system JWT to authenticate the update call
-                system_token = create_access_token(data={
+                # Generate a system JWT signed with jwt_secret_key (shared)
+                # so user-backend-api accepts it for the PATCH call
+                token_data = {
                     "sub": existing["id"],
                     "email": existing["email"],
                     "tenant_id": existing.get("tenant_id", "default"),
-                })
+                    "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+                    "type": "access",
+                }
+                system_token = jwt.encode(
+                    token_data,
+                    settings.jwt_secret_key,
+                    algorithm=settings.jwt_algorithm,
+                )
                 auth_headers = {"authorization": f"Bearer {system_token}"}
 
                 logger.info("admin_seed.updating", email=email, user_id=existing["id"])
