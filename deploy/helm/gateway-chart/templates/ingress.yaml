@@ -1,11 +1,8 @@
 {{- if .Values.ingress.enabled }}
-{{- $hasApis := or .Values.apiRoutes.apis .Values.apiRoutes.bffApis }}
-{{- if $hasApis }}
-# API Ingress — with rewrite-target to strip /api/v1/{prefix} before forwarding
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "gateway-chart.fullname" . }}-api
+  name: {{ include "gateway-chart.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "gateway-chart.labels" . | nindent 4 }}
@@ -58,47 +55,13 @@ spec:
               port:
                 number: {{ $bffConfig.port }}
         {{- end }}
-{{- end }}
----
-{{- if .Values.frontendRoute.enabled }}
-# Frontend Ingress — no rewrite, passes path as-is
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: {{ include "gateway-chart.fullname" . }}-frontend
-  namespace: {{ .Release.Namespace }}
-  labels:
-    {{- include "gateway-chart.labels" . | nindent 4 }}
-  annotations:
-    {{- if .Values.ingress.annotations }}
-    {{- toYaml .Values.ingress.annotations | nindent 4 }}
-    {{- end }}
-    {{- if .Values.cors.enabled }}
-    nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: {{ .Values.cors.allowOrigin | quote }}
-    nginx.ingress.kubernetes.io/cors-allow-methods: {{ .Values.cors.allowMethods | quote }}
-    nginx.ingress.kubernetes.io/cors-allow-headers: {{ .Values.cors.allowHeaders | quote }}
-    nginx.ingress.kubernetes.io/cors-allow-credentials: {{ .Values.cors.allowCredentials | quote }}
-    nginx.ingress.kubernetes.io/cors-max-age: {{ .Values.cors.maxAge | quote }}
-    {{- end }}
-spec:
-  {{- if .Values.ingress.tls.enabled }}
-  tls:
-    - hosts:
-        - {{ .Values.ingress.host }}
-      secretName: {{ .Values.ingress.tls.secretName }}
-  {{- end }}
-  ingressClassName: {{ .Values.ingress.className | default "nginx" }}
-  rules:
-    - host: {{ .Values.ingress.host }}
-      http:
-        paths:
-        - path: /
-          pathType: Prefix
+        {{- if .Values.frontendRoute.enabled }}
+        - path: /(/|$)(.*)
+          pathType: ImplementationSpecific
           backend:
             service:
               name: {{ .Values.frontendRoute.serviceName }}
               port:
                 number: {{ .Values.frontendRoute.servicePort }}
-{{- end }}
+        {{- end }}
 {{- end }}

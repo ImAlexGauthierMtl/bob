@@ -65,7 +65,7 @@ done
 
 # Get ingress host from environment or use default
 if [[ "${ENV}" == "dev" ]]; then
-    INGRESS_HOST="${INGRESS_HOST:-app-cde-dev-01.dev.thesmartcrew.com}"
+    INGRESS_HOST="${INGRESS_HOST:-app-cde-dev-01-dev.croo.thesmartcrew.com}"
 elif [[ "${ENV}" == "staging" ]]; then
     INGRESS_HOST="${INGRESS_HOST:-app-cde-dev-01.staging.thesmartcrew.com}"
 elif [[ "${ENV}" == "prod" ]]; then
