@@ -8,14 +8,13 @@ settings = get_settings("kb")
 configure_logging(settings.log_level, settings.log_format)
 logger = get_logger(__name__)
 
-api_prefix = os.environ.get("API_ROUTE_PREFIX", "")
-root_path = f"/api/v1/{api_prefix}" if api_prefix else ""
-app = FastAPI(root_path=root_path, title="KB B4F API", version="1.0.0")
+app = FastAPI( title="KB B4F API", version="1.0.0")
 setup_cors(app, "kb")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])
-if api_prefix:
-    app.include_router(monitoring_router, prefix=f"/api/v1/{api_prefix}", tags=["monitoring"])
+_api_prefix = os.environ.get("API_ROUTE_PREFIX", "")
+if _api_prefix:
+    app.include_router(monitoring_router, prefix=f"/api/v1/{_api_prefix}", tags=["monitoring"])
 
 from app.presentation.routes.kb_routes import router as kb_router
 app.include_router(kb_router, tags=["knowledge-base"])

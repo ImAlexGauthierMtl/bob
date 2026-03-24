@@ -75,9 +75,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-api_prefix = os.environ.get("API_ROUTE_PREFIX", "")
-root_path = f"/api/v1/{api_prefix}" if api_prefix else ""
-app = FastAPI(root_path=root_path, 
+app = FastAPI( 
     title="Auth B4F API",
     description="Authentication & Authorization — Croo Digital Experience",
     version="1.0.0",
@@ -87,8 +85,9 @@ app = FastAPI(root_path=root_path,
 setup_cors(app, "auth")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])
-if api_prefix:
-    app.include_router(monitoring_router, prefix=f"/api/v1/{api_prefix}", tags=["monitoring"])
+_api_prefix = os.environ.get("API_ROUTE_PREFIX", "")
+if _api_prefix:
+    app.include_router(monitoring_router, prefix=f"/api/v1/{_api_prefix}", tags=["monitoring"])
 
 from app.presentation.routes.auth_routes import router as auth_router
 from app.presentation.routes.user_routes import router as user_router

@@ -21,9 +21,7 @@ async def lifespan(app: FastAPI):
     logger.info("communication_b4f_shutdown")
 
 
-api_prefix = os.environ.get("API_ROUTE_PREFIX", "")
-root_path = f"/api/v1/{api_prefix}" if api_prefix else ""
-app = FastAPI(root_path=root_path, 
+app = FastAPI( 
     title="Communication B4F API",
     description="MS365 OAuth, Sync, AI Smart Labels, Webhooks — Croo",
     version="1.0.0",
@@ -32,8 +30,9 @@ app = FastAPI(root_path=root_path,
 setup_cors(app, "communication")
 app.add_middleware(RequestLoggingMiddleware)
 app.include_router(monitoring_router, tags=["monitoring"])
-if api_prefix:
-    app.include_router(monitoring_router, prefix=f"/api/v1/{api_prefix}", tags=["monitoring"])
+_api_prefix = os.environ.get("API_ROUTE_PREFIX", "")
+if _api_prefix:
+    app.include_router(monitoring_router, prefix=f"/api/v1/{_api_prefix}", tags=["monitoring"])
 
 from app.presentation.routes.ms365_routes import router as ms365_router
 from app.presentation.routes.smart_label_routes import router as smart_label_router
