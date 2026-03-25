@@ -89,7 +89,7 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@croo.digital}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     ports:
-      - "8001:8001"
+      - "${AUTH_B4F_PORT:-8001}:8001"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8001/health || exit 1"]
       <<: *healthcheck
@@ -111,7 +111,7 @@ services:
       <<: [*common-env, *backend-urls]
       PORT: 8002
     ports:
-      - "8002:8002"
+      - "${CRM_B4F_PORT:-8002}:8002"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8002/health || exit 1"]
       <<: *healthcheck
@@ -137,7 +137,7 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY}
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
     ports:
-      - "8003:8003"
+      - "${AI_AGENT_B4F_PORT:-8003}:8003"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8003/health || exit 1"]
       <<: *healthcheck
@@ -165,7 +165,7 @@ services:
       MS365_WEBHOOK_HOST: ${MS365_WEBHOOK_HOST}
       WEBHOOK_API_KEY: ${WEBHOOK_API_KEY}
     ports:
-      - "8004:8004"
+      - "${COMMUNICATION_B4F_PORT:-8004}:8004"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8004/health || exit 1"]
       <<: *healthcheck
@@ -187,7 +187,7 @@ services:
       <<: [*common-env, *backend-urls]
       PORT: 8005
     ports:
-      - "8005:8005"
+      - "${PLATFORM_B4F_PORT:-8005}:8005"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8005/health || exit 1"]
       <<: *healthcheck
@@ -211,7 +211,7 @@ services:
       <<: [*common-env, *backend-urls]
       PORT: 8006
     ports:
-      - "8006:8006"
+      - "${KB_B4F_PORT:-8006}:8006"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8006/health || exit 1"]
       <<: *healthcheck
@@ -260,7 +260,7 @@ services:
       <<: [*common-env, *db-env]
       PORT: 9002
     ports:
-      - "9002:9002"
+      - "${CONTACT_BACKEND_PORT:-9002}:9002"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9002/health || exit 1"]
       <<: *healthcheck
@@ -284,7 +284,7 @@ services:
       <<: [*common-env, *db-env]
       PORT: 9003
     ports:
-      - "9003:9003"
+      - "${ORG_BACKEND_PORT:-9003}:9003"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9003/health || exit 1"]
       <<: *healthcheck
@@ -308,7 +308,7 @@ services:
       <<: [*common-env, *db-env]
       PORT: 9004
     ports:
-      - "9004:9004"
+      - "${OPPORTUNITY_BACKEND_PORT:-9004}:9004"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9004/health || exit 1"]
       <<: *healthcheck
@@ -332,7 +332,7 @@ services:
       <<: [*common-env, *db-env]
       PORT: 9005
     ports:
-      - "9005:9005"
+      - "${ACTIVITY_BACKEND_PORT:-9005}:9005"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9005/health || exit 1"]
       <<: *healthcheck
@@ -356,7 +356,7 @@ services:
       <<: [*common-env, *db-env]
       PORT: 9006
     ports:
-      - "9006:9006"
+      - "${PRODUCT_BACKEND_PORT:-9006}:9006"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9006/health || exit 1"]
       <<: *healthcheck
@@ -380,7 +380,7 @@ services:
       <<: [*common-env, *db-env]
       PORT: 9007
     ports:
-      - "9007:9007"
+      - "${EMAIL_BACKEND_PORT:-9007}:9007"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9007/health || exit 1"]
       <<: *healthcheck
@@ -404,7 +404,7 @@ services:
       <<: [*common-env, *db-env]
       PORT: 9008
     ports:
-      - "9008:9008"
+      - "${AGENT_BACKEND_PORT:-9008}:9008"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9008/health || exit 1"]
       <<: *healthcheck
@@ -428,7 +428,7 @@ services:
       <<: [*common-env, *db-env]
       PORT: 9009
     ports:
-      - "9009:9009"
+      - "${WORKFLOW_BACKEND_PORT:-9009}:9009"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9009/health || exit 1"]
       <<: *healthcheck
@@ -452,7 +452,7 @@ services:
       <<: [*common-env, *db-env]
       PORT: 9010
     ports:
-      - "9010:9010"
+      - "${KB_BACKEND_PORT:-9010}:9010"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9010/health || exit 1"]
       <<: *healthcheck
@@ -476,7 +476,7 @@ services:
       <<: [*common-env, *db-env]
       PORT: 9011
     ports:
-      - "9011:9011"
+      - "${USAGE_BACKEND_PORT:-9011}:9011"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9011/health || exit 1"]
       <<: *healthcheck
@@ -499,8 +499,14 @@ services:
       target: dev
     container_name: croo-frontend
     restart: unless-stopped
+    environment:
+      NODE_OPTIONS: "--max-old-space-size=768"
+    deploy:
+      resources:
+        limits:
+          memory: 3g
     ports:
-      - "4200:4200"
+      - "${FRONTEND_PORT:-4200}:4200"
     volumes:
       - ./frontend:/app
       - /app/node_modules

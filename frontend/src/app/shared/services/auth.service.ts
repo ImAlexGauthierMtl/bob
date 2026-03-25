@@ -27,7 +27,9 @@ export class AuthService {
 
     constructor() {
         if (this.hasToken()) {
-            this.loadCurrentUser();
+            // Defer execution to avoid NG0200 Circular Dependency with authInterceptor
+            // authInterceptor injects AuthService, which fails if AuthService is still instantiating
+            setTimeout(() => this.loadCurrentUser(), 0);
         }
     }
 
