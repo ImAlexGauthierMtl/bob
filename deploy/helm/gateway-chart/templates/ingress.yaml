@@ -35,21 +35,23 @@ spec:
         paths:
         {{- range $apiName, $apiConfig := .Values.apiRoutes.apis }}
         {{- $routePrefix := $apiConfig.routePrefix | default $apiName }}
+        {{- $svcName := $apiConfig.serviceName | default $apiName }}
         - path: {{ printf "/api/v1/%s" $routePrefix }}
           pathType: Prefix
           backend:
             service:
-              name: {{ $apiName }}
+              name: {{ $svcName }}
               port:
                 number: {{ $apiConfig.port }}
         {{- end }}
         {{- range $bffName, $bffConfig := .Values.apiRoutes.bffApis }}
         {{- $routePrefix := $bffConfig.routePrefix | default $bffName }}
+        {{- $svcName := $bffConfig.serviceName | default $bffName }}
         - path: {{ printf "/api/v1/%s" $routePrefix }}
           pathType: Prefix
           backend:
             service:
-              name: {{ $bffName }}
+              name: {{ $svcName }}
               port:
                 number: {{ $bffConfig.port }}
         {{- end }}

@@ -30,21 +30,87 @@ rateLimit:
 apiRoutes:
   apis: {}
   bffApis:
+    # ── Auth B4F (port 8001) ──
     auth-b4f-api:
       port: 8001
       routePrefix: "auth"
-    crm-b4f-api:
+    auth-users:
+      serviceName: auth-b4f-api
+      port: 8001
+      routePrefix: "users"
+    auth-roles:
+      serviceName: auth-b4f-api
+      port: 8001
+      routePrefix: "roles"
+    auth-admin:
+      serviceName: auth-b4f-api
+      port: 8001
+      routePrefix: "admin"
+    # ── CRM B4F (port 8002) ──
+    crm-contacts:
+      serviceName: crm-b4f-api
       port: 8002
-      routePrefix: "crm"
-    ai-agent-b4f-api:
+      routePrefix: "contacts"
+    crm-organizations:
+      serviceName: crm-b4f-api
+      port: 8002
+      routePrefix: "organizations"
+    crm-opportunities:
+      serviceName: crm-b4f-api
+      port: 8002
+      routePrefix: "opportunities"
+    crm-activities:
+      serviceName: crm-b4f-api
+      port: 8002
+      routePrefix: "activities"
+    crm-quotes:
+      serviceName: crm-b4f-api
+      port: 8002
+      routePrefix: "quotes"
+    crm-products:
+      serviceName: crm-b4f-api
+      port: 8002
+      routePrefix: "products"
+    crm-departments:
+      serviceName: crm-b4f-api
+      port: 8002
+      routePrefix: "departments"
+    # ── AI Agent B4F (port 8003) ──
+    ai-bcc:
+      serviceName: ai-agent-b4f-api
       port: 8003
-      routePrefix: "ai-agent"
-    communication-b4f-api:
+      routePrefix: "bcc"
+    ai-bob:
+      serviceName: ai-agent-b4f-api
+      port: 8003
+      routePrefix: "bob"
+    ai-training:
+      serviceName: ai-agent-b4f-api
+      port: 8003
+      routePrefix: "training"
+    ai-capabilities:
+      serviceName: ai-agent-b4f-api
+      port: 8003
+      routePrefix: "capabilities"
+    # ── Communication B4F (port 8004) ──
+    comm-ms365:
+      serviceName: communication-b4f-api
       port: 8004
-      routePrefix: "communication"
-    platform-b4f-api:
+      routePrefix: "ms365"
+    comm-inbox:
+      serviceName: communication-b4f-api
+      port: 8004
+      routePrefix: "inbox"
+    comm-webhooks:
+      serviceName: communication-b4f-api
+      port: 8004
+      routePrefix: "webhooks"
+    # ── Platform B4F (port 8005) ──
+    platform-workflows:
+      serviceName: platform-b4f-api
       port: 8005
-      routePrefix: "platform"
+      routePrefix: "workflows"
+    # ── KB B4F (port 8006) ──
     kb-b4f-api:
       port: 8006
       routePrefix: "kb"
