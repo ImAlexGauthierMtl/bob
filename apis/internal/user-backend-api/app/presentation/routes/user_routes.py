@@ -57,6 +57,7 @@ async def create_user(data: UserCreateRequest, db: Session = Depends(get_db)):
         is_super_admin=data.is_super_admin or False,
         job_title=data.job_title, phone=data.phone,
         created_by=data.created_by or "system",
+        active_organization_id=data.active_organization_id,
     )
     created = repo.create(user)
     await publish_user_created(created.id, {"email": created.email, "tenant_id": created.tenant_id})

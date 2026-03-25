@@ -14,6 +14,7 @@ class UserCreateRequest(BaseModel):
     phone: Optional[str] = None
     created_by: Optional[str] = None
     is_super_admin: Optional[bool] = False
+    active_organization_id: Optional[str] = None
 
 class UserUpdateRequest(BaseModel):
     first_name: Optional[str] = None

@@ -51,12 +51,15 @@ async def seed_admin_user():
                 auth_headers = {"authorization": f"Bearer {system_token}"}
 
                 logger.info("admin_seed.updating", email=email, user_id=existing["id"])
-                await user_client.update(existing["id"], {
+                update_data = {
                     "password": password,
                     "first_name": auth_settings.admin_first_name,
                     "last_name": auth_settings.admin_last_name,
                     "is_super_admin": True,
-                }, forward_headers=auth_headers)
+                }
+                if not existing.get("active_organization_id"):
+                    update_data["active_organization_id"] = "00000000-0000-0000-0000-000000000001"
+                await user_client.update(existing["id"], update_data, forward_headers=auth_headers)
                 logger.info("admin_seed.updated", email=email)
             else:
                 logger.info("admin_seed.creating", email=email)
@@ -68,6 +71,7 @@ async def seed_admin_user():
                     "is_super_admin": True,
                     "role": "admin",
                     "created_by": "system",
+                    "active_organization_id": "00000000-0000-0000-0000-000000000001",
                 })
                 logger.info("admin_seed.created", email=email, user_id=created["id"])
             return

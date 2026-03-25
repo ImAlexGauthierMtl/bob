@@ -27,6 +27,15 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     logger.info("agent_backend_database_tables_created")
 
+    from app.infrastructure.seed_org import seed_default_organization
+    from shared.database import create_session_factory
+    SessionLocal = create_session_factory("agent-backend")
+    db = SessionLocal()
+    try:
+        seed_default_organization(db)
+    finally:
+        db.close()
+
     if hasattr(event_bus, "start_listening"):
         await event_bus.start_listening()
     logger.info("agent_backend_api_started", port=settings.api_port)
