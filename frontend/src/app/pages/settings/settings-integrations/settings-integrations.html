@@ -11,6 +11,36 @@
         <input type="text" placeholder="Search integrations..." class="search-bar__input" />
     </div>
 
+    <!-- MS365 Error Banner -->
+    @if (ms365Error) {
+    <div style="background: var(--color-danger-light, #fef2f2); border: 1px solid var(--color-danger, #ef4444); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px;">
+        <i class="fa-solid fa-circle-exclamation" style="color: var(--color-danger, #ef4444);"></i>
+        <span style="flex: 1; font-size: 13px; color: var(--color-danger, #ef4444);">{{ ms365Error }}</span>
+        <button style="background: none; border: none; cursor: pointer; color: var(--color-danger, #ef4444); font-size: 14px;"
+            (click)="ms365Error = null">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+    }
+
+    <!-- MS365 Needs Reconnection Banner -->
+    @if (ms365NeedsReauth) {
+    <div style="background: var(--color-warning-light, #fffbeb); border: 1px solid var(--color-warning, #f59e0b); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px;">
+        <i class="fa-solid fa-triangle-exclamation" style="color: var(--color-warning, #f59e0b);"></i>
+        <span style="flex: 1; font-size: 13px; color: var(--color-text);">
+            Your Microsoft 365 connection has expired. Please reconnect to resume syncing.
+        </span>
+        <button class="integration-card__btn integration-card__btn--connect" style="padding: 6px 14px; white-space: nowrap;"
+            (click)="connectMs365()" [disabled]="ms365Loading">
+            @if (ms365Loading) {
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            } @else {
+            <i class="fa-solid fa-rotate-right"></i> Reconnect
+            }
+        </button>
+    </div>
+    }
+
     <!-- Connected -->
     <div>
         <p class="section-label">Connected</p>
@@ -32,6 +62,10 @@
                     <span class="status-badge status-badge--green">
                         @if (ms365Syncing) {
                         <i class="fa-solid fa-spinner fa-spin"></i> Syncing
+                        } @else if (ms365NeedsReauth) {
+                        <span class="status-badge status-badge--yellow" style="background: var(--color-warning-light, #fffbeb); color: var(--color-warning, #f59e0b);">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Expired
+                        </span>
                         } @else {
                         Active
                         }

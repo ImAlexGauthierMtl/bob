@@ -17,22 +17,25 @@ export class SettingsIntegrationsComponent implements OnInit {
     ms365Connection: MS365Connection | null = null;
     ms365Loading = false;
     ms365Syncing = false;
+    ms365Error: string | null = null;
 
     ngOnInit(): void {
         this.loadMs365Status();
 
-        // Check for OAuth callback result
         const params = new URLSearchParams(window.location.search);
         const ms365Status = params.get('ms365');
         if (ms365Status === 'connected') {
             this.loadMs365Status();
-            // Clean URL
+            window.history.replaceState({}, '', window.location.pathname);
+        } else if (ms365Status === 'error') {
+            this.ms365Error = 'Connection to Microsoft 365 failed. Please try again.';
             window.history.replaceState({}, '', window.location.pathname);
         }
     }
 
     loadMs365Status(): void {
         this.ms365Loading = true;
+        this.ms365Error = null;
         this.ms365Service.getConnection().subscribe({
             next: (conn) => {
                 this.ms365Connection = conn;
@@ -46,12 +49,18 @@ export class SettingsIntegrationsComponent implements OnInit {
 
     connectMs365(): void {
         this.ms365Loading = true;
+        this.ms365Error = null;
         this.ms365Service.getAuthUrl().subscribe({
             next: (data) => {
                 window.location.href = data.auth_url;
             },
-            error: () => {
+            error: (err) => {
                 this.ms365Loading = false;
+                if (err?.status === 503) {
+                    this.ms365Error = 'Microsoft 365 is not configured on this instance. Contact your administrator.';
+                } else {
+                    this.ms365Error = 'Failed to initiate connection. Please try again.';
+                }
             },
         });
     }
@@ -74,6 +83,7 @@ export class SettingsIntegrationsComponent implements OnInit {
 
     forceSync(): void {
         this.ms365Syncing = true;
+        this.ms365Error = null;
         this.ms365Service.triggerSync().subscribe({
             next: (result) => {
                 this.ms365Syncing = false;
@@ -81,11 +91,18 @@ export class SettingsIntegrationsComponent implements OnInit {
             },
             error: () => {
                 this.ms365Syncing = false;
+                this.ms365Error = 'Sync failed. Your connection may need to be refreshed.';
             },
         });
     }
 
     get ms365IsConnected(): boolean {
         return !!this.ms365Connection?.is_active;
+    }
+
+    get ms365NeedsReauth(): boolean {
+        if (!this.ms365Connection) return false;
+        return this.ms365Connection.connection_status === 'token_expired'
+            || this.ms365Connection.connection_status === 'needs_reauth';
     }
 }

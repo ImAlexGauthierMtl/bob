@@ -41,7 +41,8 @@ class MS365GraphService:
     # ── OAuth2 Flow ──────────────────────────────────────────────────
 
     def build_auth_url(self, state: Optional[str] = None) -> str:
-        """Build the Microsoft OAuth2 authorization URL."""
+        """Build the Microsoft OAuth2 authorization URL using proper URL encoding."""
+        from urllib.parse import urlencode
         params = {
             "client_id": self._client_id,
             "response_type": "code",
@@ -51,7 +52,7 @@ class MS365GraphService:
         }
         if state:
             params["state"] = state
-        query = "&".join(f"{k}={v}" for k, v in params.items())
+        query = urlencode(params)
         return f"{AUTHORITY}/oauth2/v2.0/authorize?{query}"
 
     async def exchange_code_for_tokens(self, code: str) -> Dict[str, Any]:
@@ -382,7 +383,7 @@ class MS365GraphService:
     # ── Token Management Helpers ─────────────────────────────────────
 
     async def ensure_valid_token(self, access_token: str, refresh_token: str, expires_at: datetime) -> Tuple[str, Optional[Dict[str, Any]]]:
-        """Check if token is valid. If expired, refresh it."""
+        """Check if token is valid. If expired, refresh it. On refresh failure, re-raise."""
         if datetime.now(timezone.utc) >= expires_at:
             new_tokens = await self.refresh_access_token(refresh_token)
             return new_tokens["access_token"], new_tokens

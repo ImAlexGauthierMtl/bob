@@ -34,6 +34,7 @@ class MS365Connection(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
 
     # Connection state
     is_active = Column(Boolean, default=True, nullable=False)
+    connection_status = Column(String(50), default="active", nullable=False, comment="Connection state: active, token_expired, needs_reauth")
 
     # Sync state — delta tokens for incremental sync
     last_email_sync = Column(DateTime(timezone=True), nullable=True)

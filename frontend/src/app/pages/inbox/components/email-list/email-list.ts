@@ -1,6 +1,7 @@
 import { Component, EventEmitter, OnInit, Output, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { SyncedEmail } from '../../../../shared/models/ms365.model';
+import { RouterLink } from '@angular/router';
+import { SyncedEmail, MS365Connection } from '../../../../shared/models/ms365.model';
 import { MS365Service } from '../../../../shared/services/ms365.service';
 import { finalize } from 'rxjs';
 import { InboxFilter } from '../inbox-sidebar/inbox-sidebar';
@@ -8,7 +9,7 @@ import { InboxFilter } from '../inbox-sidebar/inbox-sidebar';
 @Component({
     selector: 'app-email-list',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, RouterLink],
     templateUrl: './email-list.html',
     styleUrl: './email-list.css'
 })
@@ -38,11 +39,42 @@ export class EmailListComponent implements OnInit {
     currentSmartLabel = '';
     initialized = false;
 
+    ms365Connection: MS365Connection | null = null;
+    connectionChecked = false;
+
     constructor(private ms365Service: MS365Service) {}
 
     ngOnInit(): void {
         this.initialized = true;
+        this.checkConnection();
         this.loadEmails();
+    }
+
+    checkConnection(): void {
+        this.ms365Service.getConnection().subscribe({
+            next: (conn) => {
+                this.ms365Connection = conn;
+                this.connectionChecked = true;
+            },
+            error: () => {
+                this.connectionChecked = true;
+            },
+        });
+    }
+
+    get showConnectionBanner(): boolean {
+        if (!this.connectionChecked) return false;
+        if (!this.ms365Connection) return true;
+        return !this.ms365Connection.is_active
+            || this.ms365Connection.connection_status === 'token_expired'
+            || this.ms365Connection.connection_status === 'needs_reauth';
+    }
+
+    get connectionBannerMessage(): string {
+        if (!this.ms365Connection) {
+            return 'Connect your Microsoft 365 account to sync your emails.';
+        }
+        return 'Your Microsoft 365 connection needs to be refreshed.';
     }
 
     loadEmails(reset = false): void {
@@ -67,7 +99,7 @@ export class EmailListComponent implements OnInit {
 
     onScroll(event: Event): void {
         const target = event.target as HTMLElement;
-        const offset = 150; // trigger 150px before the bottom
+        const offset = 150;
         if (target.scrollHeight - target.scrollTop <= target.clientHeight + offset) {
             this.loadMore();
         }
@@ -82,7 +114,6 @@ export class EmailListComponent implements OnInit {
 
     selectEmail(email: SyncedEmail): void {
         this.selectedEmailId = email.id;
-        // Ensure it displays read visually if click (could update backend later)
         email.is_read = true;
         this.emailSelected.emit(email);
     }
