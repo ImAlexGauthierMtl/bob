@@ -86,7 +86,13 @@ async def oauth_callback(
     from jose import jwt
     try:
         logger.info("ms365_callback_received", state=state, has_code=bool(code))
+        # #region agent log cf6b4c – step 1: token exchange
+        logger.info("ms365_cb_step", step="1_exchange_start")
+        # #endregion
         token_data = await graph_service.exchange_code_for_tokens(code)
+        # #region agent log cf6b4c – step 2: profile fetch
+        logger.info("ms365_cb_step", step="2_exchange_ok", has_access_token=bool(token_data.get("access_token")))
+        # #endregion
         profile = await graph_service.get_user_profile(token_data["access_token"])
         logger.info("ms365_profile_fetched", profile_id=profile.get("id"), email=profile.get("mail"))
 
@@ -94,6 +100,9 @@ async def oauth_callback(
         if not user_id:
             raise HTTPException(status_code=400, detail="Missing state parameter")
 
+        # #region agent log cf6b4c – step 3: JWT generation
+        logger.info("ms365_cb_step", step="3_jwt_gen", user_id=user_id, has_secret=bool(settings.jwt_secret_key))
+        # #endregion
         token_payload = {
             "sub": user_id,
             "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
@@ -104,7 +113,13 @@ async def oauth_callback(
 
         expires_at = (datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 3600))).isoformat()
 
+        # #region agent log cf6b4c – step 4: get existing connection
+        logger.info("ms365_cb_step", step="4_get_conn", user_id=user_id)
+        # #endregion
         existing_conn = await connection_client.get_by_user(user_id, forward_headers=service_headers)
+        # #region agent log cf6b4c – step 5: connection result
+        logger.info("ms365_cb_step", step="5_conn_result", has_existing=bool(existing_conn))
+        # #endregion
 
         conn_data = {
             "access_token": token_data["access_token"],
@@ -122,20 +137,29 @@ async def oauth_callback(
             conn_data["user_id"] = user_id
             await connection_client.create(conn_data, forward_headers=service_headers)
 
+        # #region agent log cf6b4c – step 6: success
+        logger.info("ms365_cb_step", step="6_saved_ok")
+        # #endregion
         logger.info("ms365_connected", user_id=user_id, ms_email=profile.get("mail"))
 
         sync_service = MS365SyncService(service_headers)
         asyncio.create_task(sync_service.sync_emails(conn_data))
         asyncio.create_task(sync_service.sync_calendar(conn_data))
 
-        frontend_url = getattr(settings, "frontend_url", "http://localhost:4700")
+        frontend_url = os.environ.get("INGRESS_URL", "http://localhost:4700").rstrip("/")
+        # #region agent log cf6b4c – step 7: redirect
+        logger.info("ms365_cb_step", step="7_redirect", frontend_url=frontend_url)
+        # #endregion
         return RedirectResponse(url=f"{frontend_url}/settings/integrations?ms365=connected")
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("ms365_callback_error", error=str(e))
-        frontend_url = getattr(settings, "frontend_url", "http://localhost:4700")
+        # #region agent log cf6b4c – callback error detail
+        import traceback
+        logger.error("ms365_callback_error", error=str(e), error_type=type(e).__name__, tb=traceback.format_exc())
+        # #endregion
+        frontend_url = os.environ.get("INGRESS_URL", "http://localhost:4700").rstrip("/")
         return RedirectResponse(url=f"{frontend_url}/settings/integrations?ms365=error")
 
 
