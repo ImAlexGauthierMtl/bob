@@ -109,7 +109,7 @@ async def oauth_callback(
             "type": "access",
         }
         system_jwt = jwt.encode(token_payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
-        service_headers = {"X-Service-Auth": f"Bearer {system_jwt}"}
+        service_headers = {"Authorization": f"Bearer {system_jwt}"}
 
         expires_at = (datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 3600))).isoformat()
 
