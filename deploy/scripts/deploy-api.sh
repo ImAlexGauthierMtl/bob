@@ -136,14 +136,12 @@ if [[ -n "${OTLP_URL:-}" ]]; then
     HELM_CMD="${HELM_CMD} --set env.OTLP_URL=\"${OTLP_URL}\""
 fi
 
-# Inject JWT SECRET_KEY for B4F APIs (exposed, need auth)
-if [[ "${API_NAME}" == *"-b4f-api" ]]; then
-    if [[ -n "${JWT_SECRET_KEY:-}" ]]; then
-        echo "  Injecting SECRET_KEY for ${API_NAME}"
-        HELM_CMD="${HELM_CMD} --set secrets.jwtSecret=\"${JWT_SECRET_KEY}\""
-    else
-        echo "  Warning: JWT_SECRET_KEY not set"
-    fi
+# Inject JWT SECRET_KEY for all APIs (both B4F and backends use shared auth_middleware)
+if [[ -n "${JWT_SECRET_KEY:-}" ]]; then
+    echo "  Injecting SECRET_KEY for ${API_NAME}"
+    HELM_CMD="${HELM_CMD} --set secrets.jwtSecret=\"${JWT_SECRET_KEY}\""
+else
+    echo "  Warning: JWT_SECRET_KEY not set"
 fi
 
 # Microsoft 365 OAuth — communication B4F only (env read at process start; was never wired to Helm before)
