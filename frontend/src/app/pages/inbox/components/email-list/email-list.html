@@ -19,6 +19,15 @@
     <!-- Scrollable List -->
     <div class="email-list-scroll" (scroll)="onScroll($event)">
         <div class="email-list-items">
+
+            <!-- Connection Banner -->
+            <div *ngIf="showConnectionBanner" style="background: var(--color-warning-light, #fffbeb); border: 1px solid var(--color-warning, #f59e0b); border-radius: 8px; padding: 12px 16px; margin: 8px 12px; display: flex; align-items: center; gap: 10px;">
+                <i class="fa-solid fa-triangle-exclamation" style="color: var(--color-warning, #f59e0b); font-size: 16px;"></i>
+                <span style="flex: 1; font-size: 13px;">{{ connectionBannerMessage }}</span>
+                <a routerLink="/settings/integrations" style="font-size: 13px; font-weight: 500; color: var(--color-accent); text-decoration: none; white-space: nowrap;">
+                    Go to Settings <i class="fa-solid fa-arrow-right" style="margin-left: 4px;"></i>
+                </a>
+            </div>
             
             <div *ngIf="isLoading && emails.length === 0" class="email-list-state">
                 <i class="fa-solid fa-circle-notch fa-spin email-list-state__spinner"></i>

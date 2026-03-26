@@ -1,7 +1,8 @@
 """MS365 routes — OAuth flow, sync orchestration, email/event proxying via HTTP client."""
 
 import os
-from typing import Optional
+import asyncio
+from typing import Optional, Union
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
@@ -36,12 +37,31 @@ router = APIRouter(prefix="/api/v1/ms365")
 graph_service = MS365GraphService()
 
 
+# ── Helpers ───────────────────────────────────────────────────────
+
+def _parse_token_expiry(value: Union[str, datetime, None]) -> datetime:
+    """Parse token_expires_at from various formats into a timezone-aware datetime."""
+    if isinstance(value, datetime):
+        return value
+    if not value:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    try:
+        return datetime.fromisoformat(value)
+    except Exception:
+        try:
+            return datetime.fromtimestamp(float(value), tz=timezone.utc)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid token_expires_at format")
+
+
 # ── OAuth2 Flow ──────────────────────────────────────────────────
 
 @router.get("/auth-url", response_model=MS365AuthUrlResponse)
 async def get_auth_url(
     current_user: dict = Depends(get_current_user),
 ):
+    if not graph_service._client_id or not graph_service._client_secret or not graph_service._redirect_uri:
+        raise HTTPException(status_code=503, detail="MS365 configuration missing. Please set CLIENT_ID, CLIENT_SECRET, and REDIRECT_URI.")
     auth_url = graph_service.build_auth_url(state=current_user["user_id"])
     return MS365AuthUrlResponse(auth_url=auth_url)
 
@@ -52,7 +72,10 @@ async def oauth_callback(
     code: str = Query(...),
     state: Optional[str] = Query(None),
 ):
-    """OAuth2 callback — exchanges code for tokens and creates/updates connection via backend."""
+    """OAuth2 callback — exchanges code for tokens and creates/updates connection via backend.
+    Uses service-to-service authentication (system JWT) when calling the email-backend-api.
+    """
+    from jose import jwt
     try:
         logger.info("ms365_callback_received", state=state, has_code=bool(code))
         token_data = await graph_service.exchange_code_for_tokens(code)
@@ -63,10 +86,17 @@ async def oauth_callback(
         if not user_id:
             raise HTTPException(status_code=400, detail="Missing state parameter")
 
-        headers = request.headers
+        token_payload = {
+            "sub": user_id,
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+            "type": "access",
+        }
+        system_jwt = jwt.encode(token_payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+        service_headers = {"X-Service-Auth": f"Bearer {system_jwt}"}
+
         expires_at = (datetime.now(timezone.utc) + timedelta(seconds=token_data.get("expires_in", 3600))).isoformat()
 
-        existing_conn = await connection_client.get_by_user(user_id, forward_headers=headers)
+        existing_conn = await connection_client.get_by_user(user_id, forward_headers=service_headers)
 
         conn_data = {
             "access_token": token_data["access_token"],
@@ -79,12 +109,17 @@ async def oauth_callback(
         }
 
         if existing_conn:
-            await connection_client.update(existing_conn["id"], conn_data, forward_headers=headers)
+            await connection_client.update(existing_conn["id"], conn_data, forward_headers=service_headers)
         else:
             conn_data["user_id"] = user_id
-            await connection_client.create(conn_data, forward_headers=headers)
+            await connection_client.create(conn_data, forward_headers=service_headers)
 
         logger.info("ms365_connected", user_id=user_id, ms_email=profile.get("mail"))
+
+        sync_service = MS365SyncService(service_headers)
+        asyncio.create_task(sync_service.sync_emails(conn_data))
+        asyncio.create_task(sync_service.sync_calendar(conn_data))
+
         frontend_url = getattr(settings, "frontend_url", "http://localhost:4700")
         return RedirectResponse(url=f"{frontend_url}/settings/integrations?ms365=connected")
 
@@ -241,8 +276,9 @@ async def send_email(
         raise HTTPException(status_code=400, detail="No active MS365 connection.")
 
     try:
+        expires_at = _parse_token_expiry(conn.get("token_expires_at"))
         access_token, new_data = await graph_service.ensure_valid_token(
-            conn.get("access_token"), conn.get("refresh_token"), conn.get("token_expires_at")
+            conn.get("access_token"), conn.get("refresh_token"), expires_at
         )
         if new_data:
             await connection_client.update(conn["id"], new_data, forward_headers=request.headers)
@@ -256,7 +292,10 @@ async def send_email(
             bcc_recipients=send_request.bcc_recipients,
             body_type=send_request.body_type,
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        await connection_client.update(conn["id"], {"is_active": False, "connection_status": "token_expired"}, forward_headers=request.headers)
         logger.error("ms365_send_email_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -277,8 +316,9 @@ async def reply_email(
         raise HTTPException(status_code=404, detail="Email not found.")
 
     try:
+        expires_at = _parse_token_expiry(conn.get("token_expires_at"))
         access_token, new_data = await graph_service.ensure_valid_token(
-            conn.get("access_token"), conn.get("refresh_token"), conn.get("token_expires_at")
+            conn.get("access_token"), conn.get("refresh_token"), expires_at
         )
         if new_data:
             await connection_client.update(conn["id"], new_data, forward_headers=request.headers)
@@ -289,7 +329,10 @@ async def reply_email(
             comment=reply_request.comment,
             reply_all=reply_request.reply_all,
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        await connection_client.update(conn["id"], {"is_active": False, "connection_status": "token_expired"}, forward_headers=request.headers)
         logger.error("ms365_reply_email_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -310,8 +353,9 @@ async def forward_email(
         raise HTTPException(status_code=404, detail="Email not found.")
 
     try:
+        expires_at = _parse_token_expiry(conn.get("token_expires_at"))
         access_token, new_data = await graph_service.ensure_valid_token(
-            conn.get("access_token"), conn.get("refresh_token"), conn.get("token_expires_at")
+            conn.get("access_token"), conn.get("refresh_token"), expires_at
         )
         if new_data:
             await connection_client.update(conn["id"], new_data, forward_headers=request.headers)
@@ -322,7 +366,10 @@ async def forward_email(
             to_recipients=fwd_request.to_recipients,
             comment=fwd_request.comment,
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        await connection_client.update(conn["id"], {"is_active": False, "connection_status": "token_expired"}, forward_headers=request.headers)
         logger.error("ms365_forward_email_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -381,7 +428,6 @@ async def ms365_webhook(
             logger.warning("ms365_webhook_invalid_client_state")
             raise HTTPException(status_code=403, detail="Invalid client state")
 
-    import asyncio
     sync_service = MS365SyncService(request.headers)
     asyncio.ensure_future(sync_service.handle_webhook_notification(notifications))
 

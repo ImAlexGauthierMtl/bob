@@ -5,6 +5,7 @@ export interface MS365Connection {
     user_id: string;
     ms_email: string | null;
     is_active: boolean;
+    connection_status: 'active' | 'token_expired' | 'needs_reauth' | string;
     last_email_sync: string | null;
     last_calendar_sync: string | null;
     created_at: string;
