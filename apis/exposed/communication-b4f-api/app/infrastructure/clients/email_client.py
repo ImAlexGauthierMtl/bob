@@ -17,7 +17,11 @@ class ConnectionClient:
         resp = await self._client.get(f"/api/v1/connections/by-user/{user_id}", forward_headers=forward_headers)
         if resp.status_code == 404:
             return None
-        resp.raise_for_status()
+        # #region agent log cf6b4c – capture 500 body
+        if resp.status_code >= 400:
+            body_text = resp.text
+            raise Exception(f"CONN_CLIENT|{resp.status_code}|{body_text[:2000]}")
+        # #endregion
         data = resp.json()
         return data if data else None
 
