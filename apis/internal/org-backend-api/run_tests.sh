@@ -10,6 +10,7 @@ if [ ! -d ".venv" ]; then
 fi
 
 source .venv/bin/activate
+pip install -q --upgrade pip
 pip install -q -r requirements.txt
 pip install -q pytest pytest-cov pytest-asyncio httpx
 
