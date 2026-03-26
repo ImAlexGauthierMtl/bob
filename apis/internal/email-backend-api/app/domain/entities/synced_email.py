@@ -48,7 +48,7 @@ class SyncedEmail(Base, TenantMixin, AuditMixin):
     importance = Column(String(20), nullable=True, default="normal")
     has_attachments = Column(Boolean, default=False, nullable=False)
     attachments_meta = Column(JSON, nullable=True, comment="List of {name, size, contentType} dicts")
-    folder = Column(String(100), nullable=True, default="inbox", index=True)
+    folder = Column(String(255), nullable=True, default="inbox", index=True)
     smart_label = Column(String(50), nullable=True, index=True, comment="AI-assigned category")
     ai_summary = Column(Text, nullable=True, comment="Short AI-generated summary of email content")
     ai_action_items = Column(JSON, nullable=True, comment="List of action items extracted by AI")

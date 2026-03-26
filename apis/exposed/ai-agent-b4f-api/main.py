@@ -39,12 +39,14 @@ if _api_prefix:
 
 from app.presentation.routes.bcc_routes import router as bcc_router
 from app.presentation.routes.bob_settings_routes import router as bob_settings_router
+from app.presentation.routes.bob_chat_routes import router as bob_chat_router
 from app.presentation.routes.client_map_routes import router as client_map_router
 from app.presentation.routes.capability_routes import router as capability_router
 from app.presentation.routes.training_routes import router as training_router
 
 app.include_router(bcc_router, tags=["bcc"])
 app.include_router(bob_settings_router, tags=["bob-settings"])
+app.include_router(bob_chat_router, tags=["bob-chat"])
 app.include_router(client_map_router, tags=["client-map"])
 app.include_router(capability_router, tags=["capabilities"])
 app.include_router(training_router, tags=["training"])

@@ -29,6 +29,13 @@ def upgrade() -> None:
             comment='Connection state: active, token_expired, needs_reauth',
         ),
     )
+    # Widen folder column — MS Graph parentFolderId can exceed 100 chars
+    op.alter_column(
+        'synced_emails',
+        'folder',
+        type_=sa.String(length=255),
+        existing_type=sa.String(length=100),
+    )
 
 
 def downgrade() -> None:

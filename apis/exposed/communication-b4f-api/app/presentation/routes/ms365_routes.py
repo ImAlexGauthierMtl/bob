@@ -142,9 +142,16 @@ async def oauth_callback(
         # #endregion
         logger.info("ms365_connected", user_id=user_id, ms_email=profile.get("mail"))
 
-        sync_service = MS365SyncService(service_headers)
-        asyncio.create_task(sync_service.sync_emails(conn_data))
-        asyncio.create_task(sync_service.sync_calendar(conn_data))
+        # Fetch the full connection detail (with id, user_id, tokens) for sync
+        full_conn = await connection_client.get_by_user(user_id, forward_headers=service_headers)
+        if full_conn:
+            # Merge token fields that may not be in the response
+            full_conn.setdefault("access_token", conn_data["access_token"])
+            full_conn.setdefault("refresh_token", conn_data.get("refresh_token"))
+            full_conn.setdefault("token_expires_at", conn_data["token_expires_at"])
+            sync_service = MS365SyncService(service_headers)
+            asyncio.create_task(sync_service.sync_emails(full_conn))
+            asyncio.create_task(sync_service.sync_calendar(full_conn))
 
         frontend_url = os.environ.get("INGRESS_URL", "http://localhost:4700").rstrip("/")
         # #region agent log cf6b4c – step 7: redirect
@@ -208,6 +215,11 @@ async def force_sync(
     conn = await connection_client.get_by_user(current_user["user_id"], forward_headers=request.headers)
     if not conn or not conn.get("is_active"):
         raise HTTPException(status_code=404, detail="No active MS365 connection")
+
+    # Fetch full connection detail with tokens if available via the detail endpoint
+    full_conn = await connection_client.get(conn["id"], forward_headers=request.headers)
+    if full_conn:
+        conn = full_conn
 
     sync_service = MS365SyncService(request.headers)
     try:

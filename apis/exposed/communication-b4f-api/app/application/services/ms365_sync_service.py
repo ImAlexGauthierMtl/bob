@@ -51,7 +51,7 @@ def _graph_msg_to_upsert(msg: Dict[str, Any], connection_id: str, user_id: str) 
         "is_read": msg.get("isRead", False),
         "importance": msg.get("importance", "normal"),
         "has_attachments": msg.get("hasAttachments", False),
-        "folder": msg.get("parentFolderId"),
+        "folder": (msg.get("parentFolderId") or "inbox")[:255],
         "conversation_id": msg.get("conversationId"),
     }
 
