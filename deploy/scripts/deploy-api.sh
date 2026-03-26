@@ -146,6 +146,22 @@ if [[ "${API_NAME}" == *"-b4f-api" ]]; then
     fi
 fi
 
+# Microsoft 365 OAuth — communication B4F only (env read at process start; was never wired to Helm before)
+if [[ "${API_NAME}" == "communication-b4f-api" ]]; then
+    if [[ -n "${MS365_CLIENT_ID:-}" ]] && [[ -n "${MS365_CLIENT_SECRET:-}" ]] && [[ -n "${MS365_REDIRECT_URI:-}" ]]; then
+        echo "  Injecting MS365 OAuth secrets for ${API_NAME}"
+        HELM_CMD="${HELM_CMD} --set secrets.ms365ClientId=\"${MS365_CLIENT_ID}\""
+        HELM_CMD="${HELM_CMD} --set secrets.ms365ClientSecret=\"${MS365_CLIENT_SECRET}\""
+        HELM_CMD="${HELM_CMD} --set secrets.ms365RedirectUri=\"${MS365_REDIRECT_URI}\""
+        if [[ -n "${MS365_TENANT_ID:-}" ]]; then
+            HELM_CMD="${HELM_CMD} --set secrets.ms365TenantId=\"${MS365_TENANT_ID}\""
+        fi
+    else
+        echo "  Warning: MS365_CLIENT_ID, MS365_CLIENT_SECRET, and MS365_REDIRECT_URI must be set in GitLab CI/CD variables"
+        echo "           for Microsoft 365 connect to work (otherwise /ms365/auth-url returns 503)."
+    fi
+fi
+
 # Inject backend service URLs for B4F APIs
 if [[ "${API_NAME}" == *"-b4f-api" ]]; then
     echo "  Injecting backend service URLs for ${API_NAME}..."

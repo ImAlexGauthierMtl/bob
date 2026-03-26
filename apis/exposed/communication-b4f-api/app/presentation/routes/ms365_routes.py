@@ -36,7 +36,6 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1/ms365")
 graph_service = MS365GraphService()
 
-
 # ── Helpers ───────────────────────────────────────────────────────
 
 def _parse_token_expiry(value: Union[str, datetime, None]) -> datetime:
@@ -60,7 +59,16 @@ def _parse_token_expiry(value: Union[str, datetime, None]) -> datetime:
 async def get_auth_url(
     current_user: dict = Depends(get_current_user),
 ):
-    if not graph_service._client_id or not graph_service._client_secret or not graph_service._redirect_uri:
+    has_cid = bool(graph_service._client_id)
+    has_sec = bool(graph_service._client_secret)
+    has_uri = bool(graph_service._redirect_uri)
+    logger.info(
+        "ms365_auth_url_env_check",
+        has_client_id=has_cid,
+        has_client_secret=has_sec,
+        has_redirect_uri=has_uri,
+    )
+    if not has_cid or not has_sec or not has_uri:
         raise HTTPException(status_code=503, detail="MS365 configuration missing. Please set CLIENT_ID, CLIENT_SECRET, and REDIRECT_URI.")
     auth_url = graph_service.build_auth_url(state=current_user["user_id"])
     return MS365AuthUrlResponse(auth_url=auth_url)

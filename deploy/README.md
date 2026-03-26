@@ -61,9 +61,12 @@ Configure these in **GitLab > Settings > CI/CD > Variables**:
 | `DEV_ADMIN_USERNAME` | Admin email for initial setup | `admin@croo.digital` |
 | `DEV_ADMIN_PASSWORD` | Admin password for initial setup | (none, skips provisioning) |
 | `GROQ_API_KEY` | Groq API key for AI agent | (none) |
-| `MS365_CLIENT_ID` | Microsoft 365 client ID | (none) |
-| `MS365_CLIENT_SECRET` | Microsoft 365 client secret | (none) |
-| `MS365_TENANT_ID` | Microsoft 365 tenant ID | (none) |
+| `MS365_CLIENT_ID` | Microsoft 365 app (client) ID — injected into **communication-b4f-api** K8s secret | (none) |
+| `MS365_CLIENT_SECRET` | Microsoft 365 client secret (masked in GitLab) | (none) |
+| `MS365_REDIRECT_URI` | OAuth redirect URL registered in Azure (must match app registration) | (none) |
+| `MS365_TENANT_ID` | Optional; empty tenant segment in authority if omitted | (none) |
+
+For M365 “Connect” in the app, **all three** of `MS365_CLIENT_ID`, `MS365_CLIENT_SECRET`, and `MS365_REDIRECT_URI` must be set as GitLab CI/CD variables for the deploy job environment; `deploy-api.sh` passes them into the Helm release for `communication-b4f-api` only.
 
 ## Environments
 

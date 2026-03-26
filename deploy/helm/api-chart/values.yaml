@@ -68,6 +68,11 @@ secrets:
   enabled: true
   name: ""
   jwtSecret: ""
+  # communication-b4f-api OAuth (optional; injected by deploy-api.sh when CI vars are set)
+  ms365ClientId: ""
+  ms365ClientSecret: ""
+  ms365TenantId: ""
+  ms365RedirectUri: ""
 
 # Service Configuration
 service:
