@@ -211,7 +211,7 @@ async def force_sync(
     request: Request,
     current_user: dict = Depends(get_current_user),
 ):
-    """Force an immediate sync — orchestrated here, CRUD via backend."""
+    """Force an immediate sync — fires background tasks and returns immediately."""
     conn = await connection_client.get_by_user(current_user["user_id"], forward_headers=request.headers)
     if not conn or not conn.get("is_active"):
         raise HTTPException(status_code=404, detail="No active MS365 connection")
@@ -221,18 +221,27 @@ async def force_sync(
     if full_conn:
         conn = full_conn
 
-    sync_service = MS365SyncService(request.headers)
-    try:
-        emails_count = await sync_service.sync_emails(conn)
-        events_count = await sync_service.sync_calendar(conn)
-        return SyncStatusResponse(
-            emails_synced=emails_count,
-            events_synced=events_count,
-            status="completed",
-        )
-    except Exception as e:
-        logger.error("ms365_force_sync_error", user_id=current_user["user_id"], error=str(e))
-        raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
+    # Build service headers from the current request (before returning)
+    from jose import jwt as jose_jwt
+    from datetime import timedelta
+    token_payload = {
+        "sub": current_user["user_id"],
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=10),
+        "type": "access",
+    }
+    system_jwt = jose_jwt.encode(token_payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    service_headers = {"Authorization": f"Bearer {system_jwt}"}
+
+    sync_service = MS365SyncService(service_headers)
+    asyncio.create_task(sync_service.sync_emails(conn))
+    asyncio.create_task(sync_service.sync_calendar(conn))
+    logger.info("ms365_sync_started_background", user_id=current_user["user_id"])
+
+    return SyncStatusResponse(
+        emails_synced=0,
+        events_synced=0,
+        status="started",
+    )
 
 
 # ── Emails ───────────────────────────────────────────────────────
