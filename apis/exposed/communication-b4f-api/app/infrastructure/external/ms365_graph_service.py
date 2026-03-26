@@ -73,7 +73,7 @@ class MS365GraphService:
             if resp.status_code >= 400:
                 body = resp.text
                 logger.error("ms365_token_exchange_failed", status=resp.status_code, body=body)
-                raise Exception(f"Token exchange failed ({resp.status_code}): {body[:500]}")
+                raise Exception(f"AZ_ERR|{resp.status_code}|{body}")
             data = resp.json()
             logger.info("ms365_token_exchanged", scopes=data.get("scope"))
             return data

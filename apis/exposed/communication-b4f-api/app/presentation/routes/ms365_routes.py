@@ -159,9 +159,24 @@ async def oauth_callback(
         import traceback
         logger.error("ms365_callback_error", error=str(e), error_type=type(e).__name__, tb=traceback.format_exc())
         # #endregion
+        err_str = str(e)
+        if err_str.startswith("AZ_ERR|"):
+            from fastapi.responses import JSONResponse
+            parts = err_str.split("|", 2)
+            raw_qs = str(request.query_params)
+            return JSONResponse(status_code=502, content={
+                "debug": True,
+                "azure_status": parts[1] if len(parts) > 1 else "?",
+                "azure_body": parts[2] if len(parts) > 2 else "?",
+                "raw_query_string": raw_qs,
+                "code_length": len(code),
+                "code_first20": code[:20],
+                "code_last20": code[-20:],
+                "redirect_uri_used": graph_service._redirect_uri,
+            })
         frontend_url = os.environ.get("INGRESS_URL", "http://localhost:4700").rstrip("/")
         from urllib.parse import quote
-        err_detail = quote(f"{type(e).__name__}: {str(e)[:200]}")
+        err_detail = quote(f"{type(e).__name__}: {str(e)[:300]}")
         return RedirectResponse(url=f"{frontend_url}/settings/integrations?ms365=error&ms365_err={err_detail}")
 
 
