@@ -1,7 +1,7 @@
 """Auth API configuration — extends shared settings."""
 
 from shared.config import Settings
-from typing import Optional
+from pydantic import model_validator
 
 
 class AuthSettings(Settings):
@@ -23,6 +23,19 @@ class AuthSettings(Settings):
 
     # Secret key (alias for jwt_secret_key)
     secret_key: str = ""
+
+    @model_validator(mode="after")
+    def sync_secret_keys(self) -> "AuthSettings":
+        """Ensure jwt_secret_key and secret_key are always in sync.
+
+        Prevents token signing/verification mismatch when only one
+        of SECRET_KEY or JWT_SECRET_KEY is set in the environment.
+        """
+        if self.secret_key and not self.jwt_secret_key:
+            self.jwt_secret_key = self.secret_key
+        elif self.jwt_secret_key and not self.secret_key:
+            self.secret_key = self.jwt_secret_key
+        return self
 
 
 settings = AuthSettings()
