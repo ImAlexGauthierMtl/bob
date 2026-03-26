@@ -229,7 +229,7 @@ class MS365GraphService:
                 f"{GRAPH_BASE}/me/calendarView/delta"
                 f"?startDateTime={start_dt}&endDateTime={end_dt}"
                 f"&$select=subject,body,location,start,end,isAllDay,organizer,"
-                f"attendees,showAs,isCancelled,recurrence,onlineMeeting"
+                f"attendees,isCancelled,recurrence,onlineMeetingUrl"
                 f"&$top={top}"
             )
 
