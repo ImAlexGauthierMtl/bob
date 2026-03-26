@@ -160,7 +160,9 @@ async def oauth_callback(
         logger.error("ms365_callback_error", error=str(e), error_type=type(e).__name__, tb=traceback.format_exc())
         # #endregion
         frontend_url = os.environ.get("INGRESS_URL", "http://localhost:4700").rstrip("/")
-        return RedirectResponse(url=f"{frontend_url}/settings/integrations?ms365=error")
+        from urllib.parse import quote
+        err_detail = quote(f"{type(e).__name__}: {str(e)[:200]}")
+        return RedirectResponse(url=f"{frontend_url}/settings/integrations?ms365=error&ms365_err={err_detail}")
 
 
 # ── Connection Management ────────────────────────────────────────
