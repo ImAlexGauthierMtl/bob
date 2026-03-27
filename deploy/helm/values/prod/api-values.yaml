@@ -1,12 +1,13 @@
 # Production environment values for APIs
+# Initial deployment — lean resources, scale up when needed
 
 deployment:
-  replicas: 2
+  replicas: 1
 
 resources:
   requests:
-    cpu: 200m
-    memory: 256Mi
+    cpu: 50m
+    memory: 128Mi
   limits:
     cpu: 500m
     memory: 512Mi
@@ -17,14 +18,10 @@ env:
   LOG_FORMAT: json
 
 autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 5
-  targetCPUUtilizationPercentage: 75
+  enabled: false
 
 podDisruptionBudget:
-  enabled: true
-  minAvailable: 1
+  enabled: false
 
 imagePullSecrets:
   enabled: true
