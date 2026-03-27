@@ -79,7 +79,7 @@ for ENV in dev staging prod; do
     case "$ENV" in
         dev)     INGRESS="https://app-cde-dev-01.dev.thesmartcrew.com" ;;
         staging) INGRESS="https://app-cde-dev-01.staging.thesmartcrew.com" ;;
-        prod)    INGRESS="https://app-cde-dev-01.thesmartcrew.com" ;;
+        prod)    INGRESS="https://cde.croo.io" ;;
     esac
     set_var "INGRESS_URL" "$INGRESS" "$ENV"
 

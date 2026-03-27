@@ -10,6 +10,9 @@ metadata:
     {{- if .Values.ingress.annotations }}
     {{- toYaml .Values.ingress.annotations | nindent 4 }}
     {{- end }}
+    {{- if .Values.ingress.tls.clusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.tls.clusterIssuer | quote }}
+    {{- end }}
     {{- if .Values.cors.enabled }}
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/cors-allow-origin: {{ .Values.cors.allowOrigin | quote }}

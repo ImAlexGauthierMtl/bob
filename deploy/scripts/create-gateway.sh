@@ -69,7 +69,7 @@ if [[ "${ENV}" == "dev" ]]; then
 elif [[ "${ENV}" == "staging" ]]; then
     INGRESS_HOST="${INGRESS_HOST:-app-cde-dev-01.staging.thesmartcrew.com}"
 elif [[ "${ENV}" == "prod" ]]; then
-    INGRESS_HOST="${INGRESS_HOST:-cde.thesmartcrew.com}"
+    INGRESS_HOST="${INGRESS_HOST:-cde.croo.io}"
 else
     INGRESS_HOST="${INGRESS_HOST:-${ENV}.cde.thesmartcrew.com}"
 fi
@@ -83,6 +83,9 @@ if [[ "${ENV}" == "dev" ]]; then
     TLS_SECRET_NAME="wildcard-dev-tls"
 elif [[ "${ENV}" == "staging" ]]; then
     TLS_SECRET_NAME="wildcard-staging-tls"
+elif [[ "${ENV}" == "prod" ]]; then
+    # Prod uses a dedicated cert managed by cert-manager in the prod namespace
+    TLS_SECRET_NAME="cde-croo-io-tls"
 fi
 
 if [[ -n "${TLS_SECRET_NAME}" ]]; then
@@ -98,6 +101,9 @@ if [[ -n "${TLS_SECRET_NAME}" ]]; then
             echo "  TLS certificate copied to ${NAMESPACE}"
         else
             echo "  Warning: TLS secret ${TLS_SECRET_NAME} not found in cert-manager namespace"
+            if [[ "${ENV}" == "prod" ]]; then
+                echo "  Note: Prod cert is managed by cert-manager directly in cde-prod namespace"
+            fi
         fi
     else
         echo "  TLS certificate already exists in ${NAMESPACE}"
