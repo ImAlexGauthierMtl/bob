@@ -69,6 +69,16 @@ HELM_CMD="helm upgrade --install frontend ${HELM_CHART} \
     --set frontend.image.repository=${IMAGE_REPO} \
     --set frontend.image.tag=${CI_COMMIT_SHA}"
 
+# Override API_BASE_URL from INGRESS_URL CI variable if available
+if [[ -n "${INGRESS_URL:-}" ]]; then
+    HELM_CMD="${HELM_CMD} --set env.API_BASE_URL=${INGRESS_URL}/api"
+fi
+
+# Override ENVIRONMENT from ENV variable
+if [[ -n "${ENV:-}" ]]; then
+    HELM_CMD="${HELM_CMD} --set env.ENVIRONMENT=${ENV}"
+fi
+
 if [ -n "${VALUES_ARG}" ]; then
     HELM_CMD="${HELM_CMD} ${VALUES_ARG}"
 fi

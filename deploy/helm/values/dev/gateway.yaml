@@ -1,12 +1,14 @@
 # Development environment values for gateway (Croo Digital Experience)
+# NOTE: ingress.host and ingress.tls.secretName are overridden dynamically
+# from CI/CD variables (INGRESS_URL, TLS_SECRET_NAME) via create-gateway.sh --set
 
 ingress:
   enabled: true
-  host: app-cde-dev-01-dev.croo.thesmartcrew.com
+  host: ""  # Overridden by create-gateway.sh from INGRESS_URL
   className: "nginx"
   tls:
     enabled: true
-    secretName: wildcard-croo-tls
+    secretName: ""  # Overridden by create-gateway.sh from TLS_SECRET_NAME
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"

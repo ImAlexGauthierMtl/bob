@@ -63,29 +63,27 @@ for api in ${APIS}; do
 EOF
 done
 
-# Get ingress host from environment or use default
-if [[ "${ENV}" == "dev" ]]; then
-    INGRESS_HOST="${INGRESS_HOST:-app-cde-dev-01-dev.croo.thesmartcrew.com}"
-elif [[ "${ENV}" == "staging" ]]; then
-    INGRESS_HOST="${INGRESS_HOST:-app-cde-dev-01.staging.thesmartcrew.com}"
+# Get ingress host from INGRESS_URL CI variable (strip https://)
+# Falls back to env-specific defaults only if INGRESS_URL is not set
+if [[ -n "${INGRESS_URL:-}" ]]; then
+    INGRESS_HOST=$(echo "${INGRESS_URL}" | sed 's|https://||' | sed 's|http://||' | sed 's|/$||')
 elif [[ "${ENV}" == "prod" ]]; then
     INGRESS_HOST="${INGRESS_HOST:-cde.croo.io}"
 else
-    INGRESS_HOST="${INGRESS_HOST:-${ENV}.cde.thesmartcrew.com}"
+    INGRESS_HOST="${INGRESS_HOST:-app-cde-dev-01-${ENV}.croo.thesmartcrew.com}"
 fi
 
 echo "Creating/updating gateway in ${NAMESPACE}..."
 echo "  Ingress host: ${INGRESS_HOST}"
 
 # Copy TLS certificate from cert-manager namespace if needed
-TLS_SECRET_NAME=""
-if [[ "${ENV}" == "dev" ]]; then
-    TLS_SECRET_NAME="wildcard-dev-tls"
-elif [[ "${ENV}" == "staging" ]]; then
-    TLS_SECRET_NAME="wildcard-staging-tls"
-elif [[ "${ENV}" == "prod" ]]; then
-    # Prod uses a dedicated cert managed by cert-manager in the prod namespace
-    TLS_SECRET_NAME="cde-croo-io-tls"
+# Uses TLS_SECRET_NAME CI variable, falls back to env-specific defaults
+if [[ -z "${TLS_SECRET_NAME:-}" ]]; then
+    if [[ "${ENV}" == "prod" ]]; then
+        TLS_SECRET_NAME="cde-croo-io-tls"
+    else
+        TLS_SECRET_NAME="wildcard-croo-tls"
+    fi
 fi
 
 if [[ -n "${TLS_SECRET_NAME}" ]]; then
@@ -118,6 +116,7 @@ if [[ -f "${VALUES_FILE}" ]]; then
         --namespace ${NAMESPACE} \
         --create-namespace \
         --set ingress.host=${INGRESS_HOST} \
+        --set ingress.tls.secretName=${TLS_SECRET_NAME} \
         -f ${TEMP_VALUES} \
         -f ${VALUES_FILE} \
         --wait \
@@ -127,6 +126,7 @@ else
         --namespace ${NAMESPACE} \
         --create-namespace \
         --set ingress.host=${INGRESS_HOST} \
+        --set ingress.tls.secretName=${TLS_SECRET_NAME} \
         -f ${TEMP_VALUES} \
         --wait \
         --timeout 5m"
@@ -148,6 +148,7 @@ if [[ ${HELM_EXIT} -ne 0 ]]; then
                 --namespace "${NAMESPACE}" \
                 --create-namespace \
                 --set ingress.host="${INGRESS_HOST}" \
+                --set ingress.tls.secretName="${TLS_SECRET_NAME}" \
                 -f "${TEMP_VALUES}" \
                 -f "${VALUES_FILE}" \
                 --wait \
@@ -157,6 +158,7 @@ if [[ ${HELM_EXIT} -ne 0 ]]; then
                 --namespace "${NAMESPACE}" \
                 --create-namespace \
                 --set ingress.host="${INGRESS_HOST}" \
+                --set ingress.tls.secretName="${TLS_SECRET_NAME}" \
                 -f "${TEMP_VALUES}" \
                 --wait \
                 --timeout 5m

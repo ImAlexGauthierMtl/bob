@@ -1,13 +1,14 @@
 # Production environment values for gateway (Croo Digital Experience)
-# Domain: cde.croo.io — Dedicated Let's Encrypt cert via HTTP01
+# NOTE: ingress.host and ingress.tls.secretName are overridden dynamically
+# from CI/CD variables (INGRESS_URL, TLS_SECRET_NAME) via create-gateway.sh --set
 
 ingress:
   enabled: true
-  host: cde.croo.io
+  host: ""  # Overridden by create-gateway.sh from INGRESS_URL
   className: "nginx"
   tls:
     enabled: true
-    secretName: cde-croo-io-tls
+    secretName: ""  # Overridden by create-gateway.sh from TLS_SECRET_NAME
     clusterIssuer: letsencrypt-prod
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod

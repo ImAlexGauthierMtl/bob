@@ -1,4 +1,6 @@
 # Production environment values for frontend
+# NOTE: API_BASE_URL and ENVIRONMENT are overridden dynamically
+# from CI/CD variables (INGRESS_URL) via deploy-frontend.sh --set
 
 deployment:
   replicas: 2
@@ -12,8 +14,8 @@ resources:
     memory: 512Mi
 
 env:
-  ENVIRONMENT: production
-  API_BASE_URL: "https://cde.croo.io/api"
+  ENVIRONMENT: prod
+  API_BASE_URL: ""
 
 autoscaling:
   enabled: false

@@ -1,4 +1,6 @@
-# Development environment values for frontend
+# Staging environment values for frontend
+# NOTE: API_BASE_URL and ENVIRONMENT are overridden dynamically
+# from CI/CD variables (INGRESS_URL) via deploy-frontend.sh --set
 
 deployment:
   replicas: 1
@@ -12,8 +14,8 @@ resources:
     memory: 512Mi
 
 env:
-  ENVIRONMENT: development
-  API_BASE_URL: "https://app-cde-dev-01.dev.thesmartcrew.com/api"
+  ENVIRONMENT: staging
+  API_BASE_URL: ""
 
 autoscaling:
   enabled: false
