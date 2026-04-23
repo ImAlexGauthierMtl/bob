@@ -67,38 +67,14 @@ variables:
       export KUBECONFIG="$KUBECONFIG_FILE"
     - chmod +x deploy/scripts/*.sh
 
+# Migrate template — runs alembic inside a running K8s pod via kubectl exec.
+# The managed PostgreSQL is reachable only through the in-cluster PgBouncer
+# service (pgbouncer.postgresql.svc.cluster.local), whose DNS does not
+# resolve from the GitLab CI runner, so migrations must run inside the app
+# cluster where the DATABASE_URL (injected by Helm) is valid.
 .migrate_template: &migrate_template
-  image: python:3.11-slim
+  <<: *deploy_template
   retry: 2
-  before_script:
-    - apt-get update && apt-get install -y git curl bash
-    - |
-      KUBECTL_VERSION="v1.30.0"
-      curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-      chmod +x kubectl
-      mv kubectl /usr/local/bin/kubectl
-    - |
-      if [ -z "$CROO_KUBECONFIG" ]; then
-        echo "ERROR: CROO_KUBECONFIG variable is not set"
-        exit 1
-      fi
-      mkdir -p ~/.kube
-      KUBECONFIG_FILE="$HOME/.kube/config"
-      printf '%s' "$CROO_KUBECONFIG" > "$KUBECONFIG_FILE"
-      chmod 600 "$KUBECONFIG_FILE"
-      export KUBECONFIG="$KUBECONFIG_FILE"
-    - |
-      if [ -z "${DATABASE_HOST:-}" ] || [ -z "${DATABASE_USER:-}" ] || [ -z "${DATABASE_PASSWORD:-}" ]; then
-        echo "Warning: DATABASE vars not set for ${ENV}, skipping migrations"
-        exit 0
-      fi
-      ENCODED_PASSWORD=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_PASSWORD', ''), safe=''))")
-      ENCODED_USER=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_USER', ''), safe=''))")
-      DB_SSLMODE="${DATABASE_SSLMODE:-disable}"
-      export DATABASE_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-croo_digital_experience}?sslmode=${DB_SSLMODE}"
-      echo "Database configured: ${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-croo_digital_experience} (sslmode=${DB_SSLMODE})"
-    - chmod +x deploy/scripts/*.sh
-    - pip install --upgrade pip
 
 .smoke_test_template: &smoke_test_template
   image: curlimages/curl:latest
@@ -837,30 +813,12 @@ generate:api-deploy-jobs:
             chmod 600 "$HOME/.kube/config"
             export KUBECONFIG="$HOME/.kube/config"
           - chmod +x deploy/scripts/*.sh
+      # Migrate template — runs alembic inside a running K8s pod via kubectl exec.
+      # The managed PostgreSQL is reachable only through the in-cluster PgBouncer
+      # service, whose DNS does not resolve from the GitLab CI runner.
       .migrate_template: &migrate_template
-        image: python:3.11-slim
+        <<: *deploy_template
         retry: 2
-        before_script:
-          - apt-get update && apt-get install -y git curl bash
-          - |
-            curl -LO "https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl"
-            chmod +x kubectl && mv kubectl /usr/local/bin/kubectl
-          - |
-            if [ -z "$CROO_KUBECONFIG" ]; then exit 0; fi
-            mkdir -p ~/.kube
-            printf '%s' "$CROO_KUBECONFIG" > "$HOME/.kube/config"
-            chmod 600 "$HOME/.kube/config"
-            export KUBECONFIG="$HOME/.kube/config"
-          - |
-            if [ -z "${DATABASE_HOST:-}" ] || [ -z "${DATABASE_USER:-}" ] || [ -z "${DATABASE_PASSWORD:-}" ]; then
-              echo "Warning: DATABASE vars not set, skipping"; exit 0
-            fi
-            ENCODED_PASSWORD=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_PASSWORD', ''), safe=''))")
-            ENCODED_USER=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_USER', ''), safe=''))")
-            DB_SSLMODE="${DATABASE_SSLMODE:-disable}"
-            export DATABASE_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-croo_digital_experience}?sslmode=${DB_SSLMODE}"
-          - chmod +x deploy/scripts/*.sh
-          - pip install --upgrade pip
       HEREDOC
 
       # Generate jobs for each environment
@@ -893,14 +851,12 @@ generate:api-deploy-jobs:
         stage: ${MIGRATE_STAGE}
         environment:
           name: ${ENV_NAME}
+        variables:
+          API_NAME: ${api}
+          NAMESPACE: ${NS}
         script:
-          - |
-            sleep $((RANDOM % 30))
-            cd apis/internal/${api}
-            pip install -r requirements.txt alembic
-            export PYTHONPATH="\${CI_PROJECT_DIR}:\${CI_PROJECT_DIR}/apis:\${PYTHONPATH:-}"
-            if [ -d "alembic" ]; then alembic upgrade head
-            else echo "No alembic directory found, skipping"; fi
+          - chmod +x deploy/scripts/*.sh
+          - ./deploy/scripts/run-migration-in-pod.sh "\${API_NAME}" "\${NAMESPACE}"
         rules:
           - ${RULE}
           - when: never
