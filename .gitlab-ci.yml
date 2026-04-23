@@ -1,3 +1,8 @@
+include:
+  - project: 'infrastructure/ci-templates'
+    ref: main
+    file: '/kaniko.yml'
+
 workflow:
   rules:
     # Tags: only run when pipeline is manually triggered via GitLab UI
@@ -27,10 +32,14 @@ stages:
   - smoke-test-prod
   - rollback-prod
 
+# All jobs run on the Kubernetes executor on ovh_tools_mks (tags: [k8s]).
+# Image pulls for `image:` and `services:` go through Harbor transparently
+# via containerd's registry-mirror config on every node.
+default:
+  tags: [k8s]
+
 variables:
   CI_CHILD_PIPELINE: "false"
-  DOCKER_DRIVER: overlay2
-  DOCKER_TLS_CERTDIR: "/certs"
 
 # =============================================================================
 # TEMPLATES
@@ -152,29 +161,15 @@ test:frontend:
   allow_failure: true
 
 build:frontend:
-  stage: build
-  image: docker:24
-  services:
-    - docker:24-dind
-  before_script:
-    - |
-      if [ -z "$CI_SERVER_HOST" ]; then echo "ERROR: CI_SERVER_HOST is not set"; exit 1; fi
-      if [ -z "$CI_PROJECT_PATH" ]; then echo "ERROR: CI_PROJECT_PATH is not set"; exit 1; fi
-      if [ -z "$CI_REGISTRY" ]; then export CI_REGISTRY="registry.${CI_SERVER_HOST}"; fi
-      export CI_REGISTRY_IMAGE="${CI_REGISTRY}/${CI_PROJECT_PATH}"
-    - set +x
-    - echo "$CI_JOB_TOKEN" | docker login -u ${CI_REGISTRY_USER:-gitlab-ci-token} --password-stdin $CI_REGISTRY
-  script:
-    - |
-      docker pull ${CI_REGISTRY_IMAGE}/frontend:latest || true
-      docker build \
-        --cache-from ${CI_REGISTRY_IMAGE}/frontend:latest \
-        --target production \
-        -f frontend/Dockerfile \
-        -t ${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA} .
-      docker tag ${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA} ${CI_REGISTRY_IMAGE}/frontend:latest
-      docker push ${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA}
-      docker push ${CI_REGISTRY_IMAGE}/frontend:latest
+  extends: .kaniko_frontend_build
+  variables:
+    KANIKO_IMAGE_NAME: frontend
+    # Build from project root so the Dockerfile can COPY cross-project paths
+    # if needed. Kaniko --cache-repo per image provides the layer cache that
+    # docker --cache-from used to provide.
+    KANIKO_CONTEXT: ${CI_PROJECT_DIR}
+    KANIKO_DOCKERFILE: frontend/Dockerfile
+    KANIKO_EXTRA_ARGS: "--target=production"
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
     - if: '$CI_COMMIT_TAG'
@@ -691,47 +686,50 @@ generate:api-build-jobs:
       mkdir -p .gitlab/ci
 
       cat > .gitlab/ci/api-build-jobs.yml << 'HEREDOC'
+      # Auto-generated child pipeline for API build jobs.
+      # Each job extends .kaniko_build from infrastructure/ci-templates —
+      # the shared template uses the wrapped Kaniko image that injects
+      # --registry-mirror for Harbor's dockerhub proxy cache, so base
+      # images in user Dockerfiles are pulled transparently through Harbor.
+
+      include:
+        - project: 'infrastructure/ci-templates'
+          ref: main
+          file: '/kaniko.yml'
+
       stages:
         - build
+
       variables:
         CI_CHILD_PIPELINE: "true"
-        DOCKER_DRIVER: overlay2
-        DOCKER_TLS_CERTDIR: "/certs"
-      .build_template: &build_template
-        stage: build
-        image: docker:24
-        services:
-          - docker:24-dind
-        before_script:
-          - |
-            if [ -z "$CI_SERVER_HOST" ]; then echo "ERROR: CI_SERVER_HOST not set"; exit 1; fi
-            if [ -z "$CI_PROJECT_PATH" ]; then echo "ERROR: CI_PROJECT_PATH not set"; exit 1; fi
-            if [ -z "$CI_REGISTRY" ]; then export CI_REGISTRY="registry.${CI_SERVER_HOST}"; fi
-            export CI_REGISTRY_IMAGE="${CI_REGISTRY}/${CI_PROJECT_PATH}"
-          - set +x
-          - echo "$CI_JOB_TOKEN" | docker login -u ${CI_REGISTRY_USER:-gitlab-ci-token} --password-stdin $CI_REGISTRY
-        script:
-          - |
-            if [ -d "apis/exposed/${API_NAME}" ]; then DIR_PATH="apis/exposed/${API_NAME}"
-            elif [ -d "apis/internal/${API_NAME}" ]; then DIR_PATH="apis/internal/${API_NAME}"
-            else echo "ERROR: API not found: ${API_NAME}"; exit 1; fi
-            docker pull ${CI_REGISTRY_IMAGE}/${API_NAME}:latest || true
-            docker build \
-              --cache-from ${CI_REGISTRY_IMAGE}/${API_NAME}:latest \
-              --target production \
-              -f ${DIR_PATH}/Dockerfile \
-              -t ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA} .
-            docker tag ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA} ${CI_REGISTRY_IMAGE}/${API_NAME}:latest
-            docker push ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA}
-            docker push ${CI_REGISTRY_IMAGE}/${API_NAME}:latest
+
+      default:
+        tags:
+          - k8s
+
       HEREDOC
 
+      # Resolve apis/exposed/<api> vs apis/internal/<api> at generation
+      # time and emit the correct KANIKO_DOCKERFILE / KANIKO_CONTEXT.
       for api in ${APIS}; do
-        echo "" >> .gitlab/ci/api-build-jobs.yml
-        echo "build:${api}:" >> .gitlab/ci/api-build-jobs.yml
-        echo "  extends: .build_template" >> .gitlab/ci/api-build-jobs.yml
-        echo "  variables:" >> .gitlab/ci/api-build-jobs.yml
-        echo "    API_NAME: ${api}" >> .gitlab/ci/api-build-jobs.yml
+        if [ -d "apis/exposed/${api}" ]; then
+          API_DIR="apis/exposed/${api}"
+        elif [ -d "apis/internal/${api}" ]; then
+          API_DIR="apis/internal/${api}"
+        else
+          echo "SKIP: API directory not found for ${api}"
+          continue
+        fi
+        {
+          echo ""
+          echo "build:${api}:"
+          echo "  extends: .kaniko_build"
+          echo "  variables:"
+          echo "    KANIKO_IMAGE_NAME: ${api}"
+          echo "    KANIKO_CONTEXT: \${CI_PROJECT_DIR}"
+          echo "    KANIKO_DOCKERFILE: ${API_DIR}/Dockerfile"
+          echo "    KANIKO_EXTRA_ARGS: \"--target=production\""
+        } >> .gitlab/ci/api-build-jobs.yml
       done
   artifacts:
     paths:
