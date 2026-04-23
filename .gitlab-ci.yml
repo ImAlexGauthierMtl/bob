@@ -687,25 +687,74 @@ generate:api-build-jobs:
 
       cat > .gitlab/ci/api-build-jobs.yml << 'HEREDOC'
       # Auto-generated child pipeline for API build jobs.
-      # Each job extends .kaniko_build from infrastructure/ci-templates —
-      # the shared template uses the wrapped Kaniko image that injects
-      # --registry-mirror for Harbor's dockerhub proxy cache, so base
-      # images in user Dockerfiles are pulled transparently through Harbor.
-
-      include:
-        - project: 'infrastructure/ci-templates'
-          ref: main
-          file: '/kaniko.yml'
+      # `.kaniko_build` is inlined here instead of `include:`-ing
+      # `infrastructure/ci-templates/kaniko.yml`, because that template
+      # defines `KANIKO_DOCKERFILE: Dockerfile` at pipeline-level and, in
+      # this GitLab version, pipeline-level variables from an included
+      # file silently override per-job `variables:` — which would pin
+      # every build to `Dockerfile` (non-existent) and surface as:
+      #   error resolving dockerfile path: please provide a valid path...
+      # We still use the wrapped Kaniko image published by ci-templates
+      # so base-image pulls go through Harbor's dockerhub proxy mirror.
 
       stages:
         - build
 
       variables:
         CI_CHILD_PIPELINE: "true"
+        KANIKO_IMAGE: gitlab.tools.thesmartcrew.com:5050/infrastructure/ci-templates/kaniko:v0.1.0
+        KANIKO_CACHE_TTL: "168h"
+        KANIKO_SNAPSHOT_MODE: redo
+        KANIKO_EXTRA_ARGS: ""
+        KANIKO_COMPRESSED_CACHING: "false"
+        KANIKO_SINGLE_SNAPSHOT: "true"
+        KUBERNETES_CPU_REQUEST: "500m"
+        KUBERNETES_CPU_LIMIT: "2"
+        KUBERNETES_MEMORY_REQUEST: "1Gi"
+        KUBERNETES_MEMORY_LIMIT: "4Gi"
 
       default:
         tags:
           - k8s
+
+      # Inlined equivalent of `.kaniko_build` from infrastructure/ci-templates.
+      .kaniko_build:
+        stage: build
+        image:
+          name: $KANIKO_IMAGE
+          entrypoint: [""]
+        tags: [k8s]
+        before_script:
+          - |
+            if [ -z "${KANIKO_IMAGE_NAME:-}" ]; then
+              echo "ERROR: KANIKO_IMAGE_NAME is not set"; exit 1
+            fi
+            if [ -z "${KANIKO_CONTEXT:-}" ]; then
+              echo "ERROR: KANIKO_CONTEXT is not set"; exit 1
+            fi
+            if [ -z "${KANIKO_DOCKERFILE:-}" ]; then
+              echo "ERROR: KANIKO_DOCKERFILE is not set"; exit 1
+            fi
+          - mkdir -p /kaniko/.docker
+          - |
+            AUTH=$(printf '%s' "${CI_REGISTRY_USER:-gitlab-ci-token}:${CI_JOB_TOKEN}" | base64 | tr -d '\n')
+            printf '{"auths":{"%s":{"auth":"%s"}}}' "$CI_REGISTRY" "$AUTH" > /kaniko/.docker/config.json
+        script:
+          - /busybox/sh /kaniko/wrapped-entrypoint.sh
+              --context "dir://${KANIKO_CONTEXT}"
+              --dockerfile "${KANIKO_DOCKERFILE}"
+              --destination "${CI_REGISTRY_IMAGE}/${KANIKO_IMAGE_NAME}:${CI_COMMIT_SHA}"
+              --destination "${CI_REGISTRY_IMAGE}/${KANIKO_IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}"
+              --destination "${CI_REGISTRY_IMAGE}/${KANIKO_IMAGE_NAME}:latest"
+              --cache=true
+              --cache-repo "${CI_REGISTRY_IMAGE}/${KANIKO_IMAGE_NAME}/cache"
+              --cache-ttl "${KANIKO_CACHE_TTL}"
+              --snapshot-mode "${KANIKO_SNAPSHOT_MODE}"
+              --compressed-caching=${KANIKO_COMPRESSED_CACHING}
+              --single-snapshot=${KANIKO_SINGLE_SNAPSHOT}
+              ${KANIKO_EXTRA_ARGS}
+        rules:
+          - when: on_success
 
       HEREDOC
 
