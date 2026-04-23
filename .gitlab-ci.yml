@@ -94,8 +94,9 @@ variables:
       fi
       ENCODED_PASSWORD=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_PASSWORD', ''), safe=''))")
       ENCODED_USER=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_USER', ''), safe=''))")
-      export DATABASE_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-croo_digital_experience}"
-      echo "Database configured: ${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-croo_digital_experience}"
+      DB_SSLMODE="${DATABASE_SSLMODE:-disable}"
+      export DATABASE_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-croo_digital_experience}?sslmode=${DB_SSLMODE}"
+      echo "Database configured: ${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-croo_digital_experience} (sslmode=${DB_SSLMODE})"
     - chmod +x deploy/scripts/*.sh
     - pip install --upgrade pip
 
@@ -856,7 +857,8 @@ generate:api-deploy-jobs:
             fi
             ENCODED_PASSWORD=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_PASSWORD', ''), safe=''))")
             ENCODED_USER=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_USER', ''), safe=''))")
-            export DATABASE_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-croo_digital_experience}"
+            DB_SSLMODE="${DATABASE_SSLMODE:-disable}"
+            export DATABASE_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-croo_digital_experience}?sslmode=${DB_SSLMODE}"
           - chmod +x deploy/scripts/*.sh
           - pip install --upgrade pip
       HEREDOC
