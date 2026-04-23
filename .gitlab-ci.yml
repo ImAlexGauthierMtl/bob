@@ -62,10 +62,7 @@ variables:
       fi
       mkdir -p ~/.kube
       KUBECONFIG_FILE="$HOME/.kube/config"
-      echo "$CROO_KUBECONFIG" | base64 -d > "$KUBECONFIG_FILE" 2>&1 || {
-        echo "ERROR: Failed to decode CROO_KUBECONFIG"
-        exit 1
-      }
+      printf '%s' "$CROO_KUBECONFIG" > "$KUBECONFIG_FILE"
       chmod 600 "$KUBECONFIG_FILE"
       export KUBECONFIG="$KUBECONFIG_FILE"
     - chmod +x deploy/scripts/*.sh
@@ -87,10 +84,7 @@ variables:
       fi
       mkdir -p ~/.kube
       KUBECONFIG_FILE="$HOME/.kube/config"
-      echo "$CROO_KUBECONFIG" | base64 -d > "$KUBECONFIG_FILE" 2>&1 || {
-        echo "ERROR: Failed to decode CROO_KUBECONFIG"
-        exit 1
-      }
+      printf '%s' "$CROO_KUBECONFIG" > "$KUBECONFIG_FILE"
       chmod 600 "$KUBECONFIG_FILE"
       export KUBECONFIG="$KUBECONFIG_FILE"
     - |
@@ -821,7 +815,7 @@ generate:api-deploy-jobs:
           - |
             if [ -z "$CROO_KUBECONFIG" ]; then echo "ERROR: CROO_KUBECONFIG not set"; exit 1; fi
             mkdir -p ~/.kube
-            echo "$CROO_KUBECONFIG" | base64 -d > "$HOME/.kube/config" 2>&1
+            printf '%s' "$CROO_KUBECONFIG" > "$HOME/.kube/config"
             chmod 600 "$HOME/.kube/config"
             export KUBECONFIG="$HOME/.kube/config"
           - chmod +x deploy/scripts/*.sh
@@ -836,7 +830,7 @@ generate:api-deploy-jobs:
           - |
             if [ -z "$CROO_KUBECONFIG" ]; then exit 0; fi
             mkdir -p ~/.kube
-            echo "$CROO_KUBECONFIG" | base64 -d > "$HOME/.kube/config" 2>&1
+            printf '%s' "$CROO_KUBECONFIG" > "$HOME/.kube/config"
             chmod 600 "$HOME/.kube/config"
             export KUBECONFIG="$HOME/.kube/config"
           - |
