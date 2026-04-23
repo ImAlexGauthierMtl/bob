@@ -682,14 +682,16 @@ generate:api-build-jobs:
       cat > .gitlab/ci/api-build-jobs.yml << 'HEREDOC'
       # Auto-generated child pipeline for API build jobs.
       # `.kaniko_build` is inlined here instead of `include:`-ing
-      # `infrastructure/ci-templates/kaniko.yml`, because that template
-      # defines `KANIKO_DOCKERFILE: Dockerfile` at pipeline-level and, in
-      # this GitLab version, pipeline-level variables from an included
-      # file silently override per-job `variables:` — which would pin
-      # every build to `Dockerfile` (non-existent) and surface as:
+      # `infrastructure/ci-templates/kaniko.yml`, because the parent
+      # pipeline (which includes that template) propagates pipeline-level
+      # variables (including `KANIKO_DOCKERFILE: Dockerfile`) into child
+      # pipelines as env vars, and per-job `variables:` overrides for
+      # `KANIKO_DOCKERFILE` are silently shadowed at GitLab's variable-
+      # expansion time — surfacing as:
       #   error resolving dockerfile path: please provide a valid path...
-      # We still use the wrapped Kaniko image published by ci-templates
-      # so base-image pulls go through Harbor's dockerhub proxy mirror.
+      # We use a distinct variable `KANIKO_DOCKERFILE_PATH` (not defined
+      # by the shared template) to avoid the collision, and still use the
+      # wrapped Kaniko image so base pulls go through Harbor's mirror.
 
       stages:
         - build
@@ -726,8 +728,8 @@ generate:api-build-jobs:
             if [ -z "${KANIKO_CONTEXT:-}" ]; then
               echo "ERROR: KANIKO_CONTEXT is not set"; exit 1
             fi
-            if [ -z "${KANIKO_DOCKERFILE:-}" ]; then
-              echo "ERROR: KANIKO_DOCKERFILE is not set"; exit 1
+            if [ -z "${KANIKO_DOCKERFILE_PATH:-}" ]; then
+              echo "ERROR: KANIKO_DOCKERFILE_PATH is not set"; exit 1
             fi
           - mkdir -p /kaniko/.docker
           - |
@@ -736,7 +738,7 @@ generate:api-build-jobs:
         script:
           - /busybox/sh /kaniko/wrapped-entrypoint.sh
               --context "dir://${KANIKO_CONTEXT}"
-              --dockerfile "${KANIKO_DOCKERFILE}"
+              --dockerfile "${KANIKO_DOCKERFILE_PATH}"
               --destination "${CI_REGISTRY_IMAGE}/${KANIKO_IMAGE_NAME}:${CI_COMMIT_SHA}"
               --destination "${CI_REGISTRY_IMAGE}/${KANIKO_IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}"
               --destination "${CI_REGISTRY_IMAGE}/${KANIKO_IMAGE_NAME}:latest"
@@ -770,7 +772,7 @@ generate:api-build-jobs:
           echo "  variables:"
           echo "    KANIKO_IMAGE_NAME: ${api}"
           echo "    KANIKO_CONTEXT: \${CI_PROJECT_DIR}"
-          echo "    KANIKO_DOCKERFILE: ${API_DIR}/Dockerfile"
+          echo "    KANIKO_DOCKERFILE_PATH: ${API_DIR}/Dockerfile"
           echo "    KANIKO_EXTRA_ARGS: \"--target=production\""
         } >> .gitlab/ci/api-build-jobs.yml
       done
