@@ -51,9 +51,13 @@ fi
 echo "Working directory: ${WORKDIR}"
 echo "Running: alembic upgrade head (timeout ${TIMEOUT}s)"
 
+# alembic is a dev dependency and is not baked into the runtime image, so we
+# install it on the fly inside the pod before running the migration. The
+# install is quick (pure Python, SQLAlchemy is already present) and does not
+# mutate the image.
 kubectl exec -n "${NAMESPACE}" "${POD}" -- \
   env PYTHONPATH="${WORKDIR}:${WORKDIR}/shared" \
   timeout "${TIMEOUT}" \
-  sh -c "cd ${WORKDIR} && python3 -m alembic upgrade head"
+  sh -c "cd ${WORKDIR} && pip install --quiet --no-cache-dir alembic && alembic upgrade head"
 
 echo "=== Migrations completed successfully for ${API_NAME} ==="
