@@ -183,12 +183,27 @@ build:frontend:
         echo "Warning: TLS_SECRET_NAME not configured for ${ENV}, skipping"
         exit 0
       fi
-      # Export secret from cert-manager namespace and re-import into project namespace
+      # Rebuild the TLS secret in the target namespace from the decoded
+      # tls.crt / tls.key of the source cert-manager secret. This avoids
+      # roundtripping through `kubectl get -o yaml | sed | kubectl apply`,
+      # which breaks on multi-line annotations such as
+      # `kubectl.kubernetes.io/last-applied-configuration` and fails with:
+      #   unable to decode "STDIN": json: cannot unmarshal object into
+      #   Go struct field ObjectMeta.metadata.annotations of type string
+      TMP=$(mktemp -d)
+      kubectl get secret "${TLS_SECRET_NAME}" -n "${CERT_NS}" -o jsonpath='{.data.tls\.crt}' | base64 -d > "${TMP}/tls.crt"
+      kubectl get secret "${TLS_SECRET_NAME}" -n "${CERT_NS}" -o jsonpath='{.data.tls\.key}' | base64 -d > "${TMP}/tls.key"
+      if [ ! -s "${TMP}/tls.crt" ] || [ ! -s "${TMP}/tls.key" ]; then
+        echo "ERROR: tls.crt or tls.key is empty in secret ${TLS_SECRET_NAME}@${CERT_NS}"
+        rm -rf "${TMP}"; exit 1
+      fi
+      kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
       kubectl delete secret "${TLS_SECRET_NAME}" -n "${NAMESPACE}" --ignore-not-found=true
-      kubectl get secret "${TLS_SECRET_NAME}" -n "${CERT_NS}" -o yaml \
-        | sed "s/namespace: ${CERT_NS}/namespace: ${NAMESPACE}/" \
-        | sed '/resourceVersion:/d; /uid:/d; /creationTimestamp:/d; /last-applied-configuration/d' \
-        | kubectl apply -n "${NAMESPACE}" -f -
+      kubectl create secret tls "${TLS_SECRET_NAME}" \
+        -n "${NAMESPACE}" \
+        --cert="${TMP}/tls.crt" \
+        --key="${TMP}/tls.key"
+      rm -rf "${TMP}"
       echo "Certificate '${TLS_SECRET_NAME}' copied to namespace '${NAMESPACE}'"
 
 # =============================================================================
