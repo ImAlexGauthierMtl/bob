@@ -24,8 +24,14 @@ import app.domain.entities.department  # noqa: F401
 import app.domain.entities.organization  # noqa: F401
 target_metadata = Base.metadata
 
-# Schema name derived from API directory name
-SCHEMA_NAME = os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))).replace("-backend-api", "")
+# Schema name derived from API_NAME env var (injected by Helm) with a
+# filesystem fallback for local runs from source. In-pod the source lives
+# under /app so the filesystem-based derivation would return "app" for
+# every API and cause all APIs to share a single alembic_version table.
+_api_name = os.environ.get("API_NAME") or os.path.basename(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
+SCHEMA_NAME = _api_name.replace("-backend-api", "")
 
 
 def run_migrations_offline():

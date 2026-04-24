@@ -225,8 +225,14 @@ if [[ "${IS_BACKEND_API}" == "true" ]]; then
         }
         ENCODED_USER=$(urlencode "${DB_USER}")
         ENCODED_PASSWORD=$(urlencode "${DB_PASSWORD}")
-        DB_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require"
-        echo "  Configuring PostgreSQL: ${DB_HOST}:${DB_PORT}/${DB_NAME}"
+        # Default to sslmode=disable because in-cluster traffic reaches the
+        # database through PgBouncer, which terminates the upstream TLS to
+        # the managed PostgreSQL and does not itself offer client TLS.
+        # Override via DATABASE_SSLMODE CI variable if ever talking to a
+        # TLS-enabled endpoint directly.
+        DB_SSLMODE="${DATABASE_SSLMODE:-disable}"
+        DB_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
+        echo "  Configuring PostgreSQL: ${DB_HOST}:${DB_PORT}/${DB_NAME} (sslmode=${DB_SSLMODE})"
         HELM_CMD="${HELM_CMD} --set env.DATABASE_URL=\"${DB_URL}\""
     else
         echo "  Warning: DATABASE_HOST/USER/PASSWORD not set for ${ENV}"

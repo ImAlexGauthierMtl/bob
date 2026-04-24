@@ -1,3 +1,8 @@
+include:
+  - project: 'infrastructure/ci-templates'
+    ref: main
+    file: '/kaniko.yml'
+
 workflow:
   rules:
     # Tags: only run when pipeline is manually triggered via GitLab UI
@@ -27,10 +32,14 @@ stages:
   - smoke-test-prod
   - rollback-prod
 
+# All jobs run on the Kubernetes executor on ovh_tools_mks (tags: [k8s]).
+# Image pulls for `image:` and `services:` go through Harbor transparently
+# via containerd's registry-mirror config on every node.
+default:
+  tags: [k8s]
+
 variables:
   CI_CHILD_PIPELINE: "false"
-  DOCKER_DRIVER: overlay2
-  DOCKER_TLS_CERTDIR: "/certs"
 
 # =============================================================================
 # TEMPLATES
@@ -53,48 +62,19 @@ variables:
       fi
       mkdir -p ~/.kube
       KUBECONFIG_FILE="$HOME/.kube/config"
-      echo "$CROO_KUBECONFIG" | base64 -d > "$KUBECONFIG_FILE" 2>&1 || {
-        echo "ERROR: Failed to decode CROO_KUBECONFIG"
-        exit 1
-      }
+      printf '%s' "$CROO_KUBECONFIG" > "$KUBECONFIG_FILE"
       chmod 600 "$KUBECONFIG_FILE"
       export KUBECONFIG="$KUBECONFIG_FILE"
     - chmod +x deploy/scripts/*.sh
 
+# Migrate template — runs alembic inside a running K8s pod via kubectl exec.
+# The managed PostgreSQL is reachable only through the in-cluster PgBouncer
+# service (pgbouncer.postgresql.svc.cluster.local), whose DNS does not
+# resolve from the GitLab CI runner, so migrations must run inside the app
+# cluster where the DATABASE_URL (injected by Helm) is valid.
 .migrate_template: &migrate_template
-  image: python:3.11-slim
+  <<: *deploy_template
   retry: 2
-  before_script:
-    - apt-get update && apt-get install -y git curl bash
-    - |
-      KUBECTL_VERSION="v1.30.0"
-      curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-      chmod +x kubectl
-      mv kubectl /usr/local/bin/kubectl
-    - |
-      if [ -z "$CROO_KUBECONFIG" ]; then
-        echo "ERROR: CROO_KUBECONFIG variable is not set"
-        exit 1
-      fi
-      mkdir -p ~/.kube
-      KUBECONFIG_FILE="$HOME/.kube/config"
-      echo "$CROO_KUBECONFIG" | base64 -d > "$KUBECONFIG_FILE" 2>&1 || {
-        echo "ERROR: Failed to decode CROO_KUBECONFIG"
-        exit 1
-      }
-      chmod 600 "$KUBECONFIG_FILE"
-      export KUBECONFIG="$KUBECONFIG_FILE"
-    - |
-      if [ -z "${DATABASE_HOST:-}" ] || [ -z "${DATABASE_USER:-}" ] || [ -z "${DATABASE_PASSWORD:-}" ]; then
-        echo "Warning: DATABASE vars not set for ${ENV}, skipping migrations"
-        exit 0
-      fi
-      ENCODED_PASSWORD=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_PASSWORD', ''), safe=''))")
-      ENCODED_USER=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_USER', ''), safe=''))")
-      export DATABASE_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-croo_digital_experience}"
-      echo "Database configured: ${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-croo_digital_experience}"
-    - chmod +x deploy/scripts/*.sh
-    - pip install --upgrade pip
 
 .smoke_test_template: &smoke_test_template
   image: curlimages/curl:latest
@@ -152,29 +132,15 @@ test:frontend:
   allow_failure: true
 
 build:frontend:
-  stage: build
-  image: docker:24
-  services:
-    - docker:24-dind
-  before_script:
-    - |
-      if [ -z "$CI_SERVER_HOST" ]; then echo "ERROR: CI_SERVER_HOST is not set"; exit 1; fi
-      if [ -z "$CI_PROJECT_PATH" ]; then echo "ERROR: CI_PROJECT_PATH is not set"; exit 1; fi
-      if [ -z "$CI_REGISTRY" ]; then export CI_REGISTRY="registry.${CI_SERVER_HOST}"; fi
-      export CI_REGISTRY_IMAGE="${CI_REGISTRY}/${CI_PROJECT_PATH}"
-    - set +x
-    - echo "$CI_JOB_TOKEN" | docker login -u ${CI_REGISTRY_USER:-gitlab-ci-token} --password-stdin $CI_REGISTRY
-  script:
-    - |
-      docker pull ${CI_REGISTRY_IMAGE}/frontend:latest || true
-      docker build \
-        --cache-from ${CI_REGISTRY_IMAGE}/frontend:latest \
-        --target production \
-        -f frontend/Dockerfile \
-        -t ${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA} .
-      docker tag ${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA} ${CI_REGISTRY_IMAGE}/frontend:latest
-      docker push ${CI_REGISTRY_IMAGE}/frontend:${CI_COMMIT_SHA}
-      docker push ${CI_REGISTRY_IMAGE}/frontend:latest
+  extends: .kaniko_frontend_build
+  variables:
+    KANIKO_IMAGE_NAME: frontend
+    # Build from project root so the Dockerfile can COPY cross-project paths
+    # if needed. Kaniko --cache-repo per image provides the layer cache that
+    # docker --cache-from used to provide.
+    KANIKO_CONTEXT: ${CI_PROJECT_DIR}
+    KANIKO_DOCKERFILE: frontend/Dockerfile
+    KANIKO_EXTRA_ARGS: "--target=production"
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
     - if: '$CI_COMMIT_TAG'
@@ -194,12 +160,27 @@ build:frontend:
         echo "Warning: TLS_SECRET_NAME not configured for ${ENV}, skipping"
         exit 0
       fi
-      # Export secret from cert-manager namespace and re-import into project namespace
+      # Rebuild the TLS secret in the target namespace from the decoded
+      # tls.crt / tls.key of the source cert-manager secret. This avoids
+      # roundtripping through `kubectl get -o yaml | sed | kubectl apply`,
+      # which breaks on multi-line annotations such as
+      # `kubectl.kubernetes.io/last-applied-configuration` and fails with:
+      #   unable to decode "STDIN": json: cannot unmarshal object into
+      #   Go struct field ObjectMeta.metadata.annotations of type string
+      TMP=$(mktemp -d)
+      kubectl get secret "${TLS_SECRET_NAME}" -n "${CERT_NS}" -o jsonpath='{.data.tls\.crt}' | base64 -d > "${TMP}/tls.crt"
+      kubectl get secret "${TLS_SECRET_NAME}" -n "${CERT_NS}" -o jsonpath='{.data.tls\.key}' | base64 -d > "${TMP}/tls.key"
+      if [ ! -s "${TMP}/tls.crt" ] || [ ! -s "${TMP}/tls.key" ]; then
+        echo "ERROR: tls.crt or tls.key is empty in secret ${TLS_SECRET_NAME}@${CERT_NS}"
+        rm -rf "${TMP}"; exit 1
+      fi
+      kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
       kubectl delete secret "${TLS_SECRET_NAME}" -n "${NAMESPACE}" --ignore-not-found=true
-      kubectl get secret "${TLS_SECRET_NAME}" -n "${CERT_NS}" -o yaml \
-        | sed "s/namespace: ${CERT_NS}/namespace: ${NAMESPACE}/" \
-        | sed '/resourceVersion:/d; /uid:/d; /creationTimestamp:/d; /last-applied-configuration/d' \
-        | kubectl apply -n "${NAMESPACE}" -f -
+      kubectl create secret tls "${TLS_SECRET_NAME}" \
+        -n "${NAMESPACE}" \
+        --cert="${TMP}/tls.crt" \
+        --key="${TMP}/tls.key"
+      rm -rf "${TMP}"
       echo "Certificate '${TLS_SECRET_NAME}' copied to namespace '${NAMESPACE}'"
 
 # =============================================================================
@@ -691,47 +672,101 @@ generate:api-build-jobs:
       mkdir -p .gitlab/ci
 
       cat > .gitlab/ci/api-build-jobs.yml << 'HEREDOC'
+      # Auto-generated child pipeline for API build jobs.
+      # `.kaniko_build` is inlined here instead of `include:`-ing
+      # `infrastructure/ci-templates/kaniko.yml`, because the parent
+      # pipeline (which includes that template) propagates pipeline-level
+      # variables (including `KANIKO_DOCKERFILE: Dockerfile`) into child
+      # pipelines as env vars, and per-job `variables:` overrides for
+      # `KANIKO_DOCKERFILE` are silently shadowed at GitLab's variable-
+      # expansion time — surfacing as:
+      #   error resolving dockerfile path: please provide a valid path...
+      # We use a distinct variable `KANIKO_DOCKERFILE_PATH` (not defined
+      # by the shared template) to avoid the collision, and still use the
+      # wrapped Kaniko image so base pulls go through Harbor's mirror.
+
       stages:
         - build
+
       variables:
         CI_CHILD_PIPELINE: "true"
-        DOCKER_DRIVER: overlay2
-        DOCKER_TLS_CERTDIR: "/certs"
-      .build_template: &build_template
+        KANIKO_IMAGE: gitlab.tools.thesmartcrew.com:5050/infrastructure/ci-templates/kaniko:v0.1.0
+        KANIKO_CACHE_TTL: "168h"
+        KANIKO_SNAPSHOT_MODE: redo
+        KANIKO_EXTRA_ARGS: ""
+        KANIKO_COMPRESSED_CACHING: "false"
+        KANIKO_SINGLE_SNAPSHOT: "true"
+        KUBERNETES_CPU_REQUEST: "500m"
+        KUBERNETES_CPU_LIMIT: "2"
+        KUBERNETES_MEMORY_REQUEST: "1Gi"
+        KUBERNETES_MEMORY_LIMIT: "4Gi"
+
+      default:
+        tags:
+          - k8s
+
+      # Inlined equivalent of `.kaniko_build` from infrastructure/ci-templates.
+      .kaniko_build:
         stage: build
-        image: docker:24
-        services:
-          - docker:24-dind
+        image:
+          name: $KANIKO_IMAGE
+          entrypoint: [""]
+        tags: [k8s]
         before_script:
           - |
-            if [ -z "$CI_SERVER_HOST" ]; then echo "ERROR: CI_SERVER_HOST not set"; exit 1; fi
-            if [ -z "$CI_PROJECT_PATH" ]; then echo "ERROR: CI_PROJECT_PATH not set"; exit 1; fi
-            if [ -z "$CI_REGISTRY" ]; then export CI_REGISTRY="registry.${CI_SERVER_HOST}"; fi
-            export CI_REGISTRY_IMAGE="${CI_REGISTRY}/${CI_PROJECT_PATH}"
-          - set +x
-          - echo "$CI_JOB_TOKEN" | docker login -u ${CI_REGISTRY_USER:-gitlab-ci-token} --password-stdin $CI_REGISTRY
-        script:
+            if [ -z "${KANIKO_IMAGE_NAME:-}" ]; then
+              echo "ERROR: KANIKO_IMAGE_NAME is not set"; exit 1
+            fi
+            if [ -z "${KANIKO_CONTEXT:-}" ]; then
+              echo "ERROR: KANIKO_CONTEXT is not set"; exit 1
+            fi
+            if [ -z "${KANIKO_DOCKERFILE_PATH:-}" ]; then
+              echo "ERROR: KANIKO_DOCKERFILE_PATH is not set"; exit 1
+            fi
+          - mkdir -p /kaniko/.docker
           - |
-            if [ -d "apis/exposed/${API_NAME}" ]; then DIR_PATH="apis/exposed/${API_NAME}"
-            elif [ -d "apis/internal/${API_NAME}" ]; then DIR_PATH="apis/internal/${API_NAME}"
-            else echo "ERROR: API not found: ${API_NAME}"; exit 1; fi
-            docker pull ${CI_REGISTRY_IMAGE}/${API_NAME}:latest || true
-            docker build \
-              --cache-from ${CI_REGISTRY_IMAGE}/${API_NAME}:latest \
-              --target production \
-              -f ${DIR_PATH}/Dockerfile \
-              -t ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA} .
-            docker tag ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA} ${CI_REGISTRY_IMAGE}/${API_NAME}:latest
-            docker push ${CI_REGISTRY_IMAGE}/${API_NAME}:${CI_COMMIT_SHA}
-            docker push ${CI_REGISTRY_IMAGE}/${API_NAME}:latest
+            AUTH=$(printf '%s' "${CI_REGISTRY_USER:-gitlab-ci-token}:${CI_JOB_TOKEN}" | base64 | tr -d '\n')
+            printf '{"auths":{"%s":{"auth":"%s"}}}' "$CI_REGISTRY" "$AUTH" > /kaniko/.docker/config.json
+        script:
+          - /busybox/sh /kaniko/wrapped-entrypoint.sh
+              --context "dir://${KANIKO_CONTEXT}"
+              --dockerfile "${KANIKO_DOCKERFILE_PATH}"
+              --destination "${CI_REGISTRY_IMAGE}/${KANIKO_IMAGE_NAME}:${CI_COMMIT_SHA}"
+              --destination "${CI_REGISTRY_IMAGE}/${KANIKO_IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}"
+              --destination "${CI_REGISTRY_IMAGE}/${KANIKO_IMAGE_NAME}:latest"
+              --cache=true
+              --cache-repo "${CI_REGISTRY_IMAGE}/${KANIKO_IMAGE_NAME}/cache"
+              --cache-ttl "${KANIKO_CACHE_TTL}"
+              --snapshot-mode "${KANIKO_SNAPSHOT_MODE}"
+              --compressed-caching=${KANIKO_COMPRESSED_CACHING}
+              --single-snapshot=${KANIKO_SINGLE_SNAPSHOT}
+              ${KANIKO_EXTRA_ARGS}
+        rules:
+          - when: on_success
+
       HEREDOC
 
+      # Resolve apis/exposed/<api> vs apis/internal/<api> at generation
+      # time and emit the correct KANIKO_DOCKERFILE / KANIKO_CONTEXT.
       for api in ${APIS}; do
-        echo "" >> .gitlab/ci/api-build-jobs.yml
-        echo "build:${api}:" >> .gitlab/ci/api-build-jobs.yml
-        echo "  extends: .build_template" >> .gitlab/ci/api-build-jobs.yml
-        echo "  variables:" >> .gitlab/ci/api-build-jobs.yml
-        echo "    API_NAME: ${api}" >> .gitlab/ci/api-build-jobs.yml
+        if [ -d "apis/exposed/${api}" ]; then
+          API_DIR="apis/exposed/${api}"
+        elif [ -d "apis/internal/${api}" ]; then
+          API_DIR="apis/internal/${api}"
+        else
+          echo "SKIP: API directory not found for ${api}"
+          continue
+        fi
+        {
+          echo ""
+          echo "build:${api}:"
+          echo "  extends: .kaniko_build"
+          echo "  variables:"
+          echo "    KANIKO_IMAGE_NAME: ${api}"
+          echo "    KANIKO_CONTEXT: \${CI_PROJECT_DIR}"
+          echo "    KANIKO_DOCKERFILE_PATH: ${API_DIR}/Dockerfile"
+          echo "    KANIKO_EXTRA_ARGS: \"--target=production\""
+        } >> .gitlab/ci/api-build-jobs.yml
       done
   artifacts:
     paths:
@@ -774,33 +809,16 @@ generate:api-deploy-jobs:
           - |
             if [ -z "$CROO_KUBECONFIG" ]; then echo "ERROR: CROO_KUBECONFIG not set"; exit 1; fi
             mkdir -p ~/.kube
-            echo "$CROO_KUBECONFIG" | base64 -d > "$HOME/.kube/config" 2>&1
+            printf '%s' "$CROO_KUBECONFIG" > "$HOME/.kube/config"
             chmod 600 "$HOME/.kube/config"
             export KUBECONFIG="$HOME/.kube/config"
           - chmod +x deploy/scripts/*.sh
+      # Migrate template — runs alembic inside a running K8s pod via kubectl exec.
+      # The managed PostgreSQL is reachable only through the in-cluster PgBouncer
+      # service, whose DNS does not resolve from the GitLab CI runner.
       .migrate_template: &migrate_template
-        image: python:3.11-slim
+        <<: *deploy_template
         retry: 2
-        before_script:
-          - apt-get update && apt-get install -y git curl bash
-          - |
-            curl -LO "https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl"
-            chmod +x kubectl && mv kubectl /usr/local/bin/kubectl
-          - |
-            if [ -z "$CROO_KUBECONFIG" ]; then exit 0; fi
-            mkdir -p ~/.kube
-            echo "$CROO_KUBECONFIG" | base64 -d > "$HOME/.kube/config" 2>&1
-            chmod 600 "$HOME/.kube/config"
-            export KUBECONFIG="$HOME/.kube/config"
-          - |
-            if [ -z "${DATABASE_HOST:-}" ] || [ -z "${DATABASE_USER:-}" ] || [ -z "${DATABASE_PASSWORD:-}" ]; then
-              echo "Warning: DATABASE vars not set, skipping"; exit 0
-            fi
-            ENCODED_PASSWORD=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_PASSWORD', ''), safe=''))")
-            ENCODED_USER=$(python3 -c "import urllib.parse, os; print(urllib.parse.quote(os.environ.get('DATABASE_USER', ''), safe=''))")
-            export DATABASE_URL="postgresql+psycopg://${ENCODED_USER}:${ENCODED_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-croo_digital_experience}"
-          - chmod +x deploy/scripts/*.sh
-          - pip install --upgrade pip
       HEREDOC
 
       # Generate jobs for each environment
@@ -833,14 +851,12 @@ generate:api-deploy-jobs:
         stage: ${MIGRATE_STAGE}
         environment:
           name: ${ENV_NAME}
+        variables:
+          API_NAME: ${api}
+          NAMESPACE: ${NS}
         script:
-          - |
-            sleep $((RANDOM % 30))
-            cd apis/internal/${api}
-            pip install -r requirements.txt alembic
-            export PYTHONPATH="\${CI_PROJECT_DIR}:\${CI_PROJECT_DIR}/apis:\${PYTHONPATH:-}"
-            if [ -d "alembic" ]; then alembic upgrade head
-            else echo "No alembic directory found, skipping"; fi
+          - chmod +x deploy/scripts/*.sh
+          - ./deploy/scripts/run-migration-in-pod.sh "\${API_NAME}" "\${NAMESPACE}"
         rules:
           - ${RULE}
           - when: never
