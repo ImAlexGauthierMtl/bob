@@ -468,7 +468,7 @@ rollback:gateway:staging:
 # =============================================================================
 
 # NOTE: No copy-cert:prod job — cert is managed by cert-manager via
-# ingress annotation (cert-manager.io/cluster-issuer: letsencrypt-prod)
+# ingress annotation (cert-manager.io/cluster-issuer: letsencrypt-http-prod)
 
 deploy:frontend:prod:
   <<: *deploy_template

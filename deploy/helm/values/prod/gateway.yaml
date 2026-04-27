@@ -9,9 +9,9 @@ ingress:
   tls:
     enabled: true
     secretName: ""  # Overridden by create-gateway.sh from TLS_SECRET_NAME
-    clusterIssuer: letsencrypt-prod
+    clusterIssuer: letsencrypt-http-prod
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
+    cert-manager.io/cluster-issuer: letsencrypt-http-prod
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
