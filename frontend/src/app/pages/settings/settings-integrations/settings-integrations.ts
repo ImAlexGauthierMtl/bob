@@ -56,6 +56,12 @@ export class SettingsIntegrationsComponent implements OnInit {
     // Membrane platform config modal
     showMembraneConfigModal = false;
     membraneConfigured = false;
+    /** True when the server confirmed a secret is already stored. Drives the
+     *  masked placeholder so users can see "there's one, I just don't display
+     *  it for security" instead of an empty field (which reads as "unset"). */
+    membraneSecretConfigured = false;
+    /** Local flag: user clicked "Change secret" and is now editing freely. */
+    membraneEditingSecret = false;
     membraneConfigForm: MembraneConfig = {
         workspace_key: '',
         workspace_secret: '',
@@ -163,6 +169,10 @@ export class SettingsIntegrationsComponent implements OnInit {
 
         this.loadMs365Status();
         this.loadMembraneData();
+        // Load config status on mount so the top banner accurately shows
+        // "Configured" vs "Not configured" without requiring the user to
+        // open the modal first.
+        this.loadMembraneConfig();
 
         const params = new URLSearchParams(window.location.search);
         const ms365Status = params.get('ms365');
@@ -392,20 +402,39 @@ export class SettingsIntegrationsComponent implements OnInit {
         this.membraneConfigError = null;
         this.membraneConfigSuccess = null;
         this.membraneConfigSaving = false;
+        this.membraneEditingSecret = false;
         this.loadMembraneConfig();
         this.showMembraneConfigModal = true;
     }
 
     closeMembraneConfig(): void {
         this.showMembraneConfigModal = false;
+        this.membraneEditingSecret = false;
+    }
+
+    /** User clicks "Change secret" — unlocks the secret input for editing. */
+    startEditingSecret(): void {
+        this.membraneEditingSecret = true;
+        this.membraneConfigForm.workspace_secret = '';
+    }
+
+    /** User clicks "Keep existing secret" — locks the input back. */
+    cancelEditingSecret(): void {
+        this.membraneEditingSecret = false;
+        this.membraneConfigForm.workspace_secret = '';
     }
 
     loadMembraneConfig(): void {
         this.membraneService.getConfig().subscribe({
             next: (res) => {
                 this.membraneConfigured = res.configured;
+                this.membraneSecretConfigured = res.secret_configured;
                 this.membraneConfigForm.workspace_key = res.workspace_key;
                 this.membraneConfigForm.api_url = res.api_url;
+                this.membraneConfigForm.workspace_secret = '';
+                // If no secret exists yet, open the input in edit mode so the
+                // user can type something; otherwise show it as locked/masked.
+                this.membraneEditingSecret = !res.secret_configured;
             },
             error: (err) => {
                 console.error('Failed to load Membrane config', err);
@@ -416,12 +445,26 @@ export class SettingsIntegrationsComponent implements OnInit {
     saveMembraneConfig(): void {
         this.membraneConfigError = null;
         this.membraneConfigSuccess = null;
-        this.membraneConfigSaving = true;
 
-        this.membraneService.updateConfig(this.membraneConfigForm).subscribe({
+        // Build a partial payload — omit the secret when the user isn't actively
+        // editing it. This prevents the common "I opened the modal, saved, and
+        // my secret got wiped because the field was empty" footgun.
+        const payload: MembraneConfig = {
+            workspace_key: this.membraneConfigForm.workspace_key,
+            api_url: this.membraneConfigForm.api_url,
+        };
+        if (this.membraneEditingSecret && this.membraneConfigForm.workspace_secret) {
+            payload.workspace_secret = this.membraneConfigForm.workspace_secret;
+        }
+
+        this.membraneConfigSaving = true;
+        this.membraneService.updateConfig(payload).subscribe({
             next: (res) => {
                 this.membraneConfigSaving = false;
                 this.membraneConfigured = res.configured;
+                this.membraneSecretConfigured = res.secret_configured;
+                this.membraneEditingSecret = false;
+                this.membraneConfigForm.workspace_secret = '';
                 this.membraneConfigSuccess = res.message || 'Configuration saved successfully';
                 this.loadMembraneData();
             },

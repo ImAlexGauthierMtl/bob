@@ -201,13 +201,27 @@ async def list_connections(
     client = MembraneClient(token)
     try:
         items = await client.list_connections()
-        # Optionally filter by integration_key client-side
-        if integration_key:
-            items = [
-                c for c in items
-                if c.get("integrationKey") == integration_key or c.get("integrationId") == integration_key
-            ]
-        return MembraneConnectionListResponse(items=items)
+        # Membrane returns camelCase keys and may use `connectorId` + `key`
+        # (for direct connectors like microsoft-outlook) instead of
+        # `integrationId` + `integrationKey` (for integration apps). Normalize
+        # both shapes to snake_case so the frontend sees a consistent schema.
+        normalized: list[dict[str, Any]] = []
+        for c in items:
+            key = c.get("integrationKey") or c.get("key")
+            iid = c.get("integrationId") or c.get("connectorId")
+            if integration_key and key != integration_key and iid != integration_key:
+                continue
+            normalized.append({
+                "id": c.get("id"),
+                "integration_id": iid,
+                "integration_key": key,
+                "connector_id": c.get("connectorId"),
+                "name": c.get("name"),
+                "disconnected": bool(c.get("disconnected", False)),
+                "state": c.get("state"),
+                "created_at": c.get("createdAt"),
+            })
+        return MembraneConnectionListResponse(items=normalized)
     except httpx.HTTPStatusError as exc:
         logger.error("membrane_list_connections_error", status=exc.response.status_code, detail=str(exc))
         raise HTTPException(status_code=502, detail="Failed to fetch connections from Membrane")
@@ -779,11 +793,20 @@ async def proxy_list_events(
 async def get_membrane_config(
     current_user: dict = Depends(get_current_user),
 ):
-    """Read current Membrane platform configuration (no secret returned)."""
+    """Read current Membrane platform configuration.
+
+    Never returns the workspace secret. Instead returns a `secret_configured`
+    boolean so the UI can render a masked placeholder instead of an empty
+    field (which is misleading — users think it's missing and try to save,
+    overwriting the existing secret).
+    """
+    current = _get_runtime_settings()
+    has_secret = bool(current.membrane_workspace_secret)
     return MembraneConfigResponse(
-        workspace_key=settings.membrane_workspace_key or "",
-        api_url=settings.membrane_api_url,
-        configured=bool(settings.membrane_workspace_key and settings.membrane_workspace_secret),
+        workspace_key=current.membrane_workspace_key or "",
+        api_url=current.membrane_api_url,
+        configured=bool(current.membrane_workspace_key and has_secret),
+        secret_configured=has_secret,
     )
 
 
@@ -794,20 +817,44 @@ async def update_membrane_config(
 ):
     """Update Membrane platform credentials (super-admin only).
 
-    This overwrites the workspace key / secret in-memory. In production,
-    persist to a secrets store and restart the service.
+    Partial update semantics:
+      - workspace_key and api_url are always updated from the request
+      - workspace_secret is ONLY updated when the request contains a non-empty
+        value — this lets the UI hide the secret (render '••••••') without
+        accidentally wiping it when the super-admin just wants to rotate the
+        key or change the API URL.
     """
-    from app.infrastructure.external.membrane_service import set_membrane_credentials
+    from app.infrastructure.external.membrane_service import (
+        set_membrane_credentials,
+        _get_settings as _current_settings,
+    )
+
+    current = _current_settings()
+    # Treat empty string, whitespace, or a mask-only placeholder as "no change"
+    incoming_secret = (request.workspace_secret or "").strip()
+    is_masked = incoming_secret and set(incoming_secret) <= {"•", "*", " "}
+    effective_secret = (
+        current.membrane_workspace_secret
+        if not incoming_secret or is_masked
+        else incoming_secret
+    )
 
     set_membrane_credentials(
         workspace_key=request.workspace_key,
-        workspace_secret=request.workspace_secret,
+        workspace_secret=effective_secret,
         api_url=request.api_url,
     )
 
     return MembraneConfigResponse(
         workspace_key=request.workspace_key,
         api_url=request.api_url,
-        configured=bool(request.workspace_key and request.workspace_secret),
+        configured=bool(request.workspace_key and effective_secret),
+        secret_configured=bool(effective_secret),
         message="Membrane configuration updated successfully",
     )
+
+
+def _get_runtime_settings():
+    """Fetch the current (possibly UI-overridden) Membrane settings."""
+    from app.infrastructure.external.membrane_service import _get_settings as _cur
+    return _cur()

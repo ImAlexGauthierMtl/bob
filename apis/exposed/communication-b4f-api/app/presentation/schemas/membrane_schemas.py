@@ -19,11 +19,19 @@ class MembraneTokenResponse(BaseModel):
 
 class MembraneConnectionResponse(BaseModel):
     id: str
-    integration_id: str
-    integration_key: str
-    name: str
-    disconnected: bool
+    # Membrane connections may be tied to an integration app (`integrationId` /
+    # `integrationKey`), a direct connector (`connectorId` / `key`), or an
+    # external app. We keep both shapes optional and let the frontend pick
+    # whichever is present.
+    integration_id: Optional[str] = None
+    integration_key: Optional[str] = None
+    connector_id: Optional[str] = None
+    name: Optional[str] = None
+    disconnected: bool = False
+    state: Optional[str] = None
     created_at: Optional[str] = None
+
+    model_config = {"extra": "allow", "populate_by_name": True}
 
 
 class MembraneConnectionListResponse(BaseModel):
@@ -74,7 +82,9 @@ class MembraneWebhookPayload(BaseModel):
 
 class MembraneConfigRequest(BaseModel):
     workspace_key: str
-    workspace_secret: str
+    # Optional — omit or pass empty/None to keep the existing secret unchanged.
+    # Must never be rendered back to the UI for safety.
+    workspace_secret: Optional[str] = None
     api_url: str = "https://api.getmembrane.com"
 
 
@@ -82,4 +92,7 @@ class MembraneConfigResponse(BaseModel):
     workspace_key: str
     api_url: str
     configured: bool
+    # Explicit flag so the UI can show a masked placeholder ("••••••••") when a
+    # secret is already configured — distinguishes "never set" from "set but hidden".
+    secret_configured: bool = False
     message: Optional[str] = None

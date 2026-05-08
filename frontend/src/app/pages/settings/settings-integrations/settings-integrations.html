@@ -188,9 +188,38 @@
         </div>
 
         <div style="margin-bottom: 16px;">
-            <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Workspace Secret</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label style="font-size: 13px; font-weight: 500;">Workspace Secret</label>
+                @if (membraneSecretConfigured) {
+                    @if (!membraneEditingSecret) {
+                    <button type="button"
+                        style="background: none; border: none; cursor: pointer; font-size: 12px; color: var(--color-primary); padding: 0;"
+                        (click)="startEditingSecret()">
+                        <i class="fa-solid fa-pen-to-square"></i> Change secret
+                    </button>
+                    } @else {
+                    <button type="button"
+                        style="background: none; border: none; cursor: pointer; font-size: 12px; color: var(--color-text-muted); padding: 0;"
+                        (click)="cancelEditingSecret()">
+                        <i class="fa-solid fa-xmark"></i> Keep existing
+                    </button>
+                    }
+                }
+            </div>
+            @if (membraneSecretConfigured && !membraneEditingSecret) {
+            <input type="text" class="search-bar__input" style="width: 100%; font-family: monospace; color: var(--color-text-muted);"
+                value="••••••••••••••••••••••••••••••••" readonly
+                title="A secret is already configured. Click 'Change secret' to replace it." />
+            <p style="margin: 6px 0 0; font-size: 11px; color: var(--color-text-muted);">
+                <i class="fa-solid fa-shield-halved"></i>
+                A secret is stored. For security it's never displayed again — click "Change secret" to rotate.
+            </p>
+            } @else {
             <input type="password" class="search-bar__input" style="width: 100%;"
-                [(ngModel)]="membraneConfigForm.workspace_secret" placeholder="Your workspace secret" />
+                [(ngModel)]="membraneConfigForm.workspace_secret"
+                [placeholder]="membraneSecretConfigured ? 'Enter new secret to replace existing' : 'Paste your workspace secret'"
+                autocomplete="new-password" />
+            }
         </div>
 
         <div style="margin-bottom: 20px;">

@@ -53,7 +53,8 @@ export interface MembraneConnectUrlResponse {
 
 export interface MembraneConfig {
     workspace_key: string;
-    workspace_secret: string;
+    /** Optional: leave empty / omit to keep the existing secret unchanged. */
+    workspace_secret?: string;
     api_url: string;
 }
 
@@ -61,5 +62,7 @@ export interface MembraneConfigResponse {
     workspace_key: string;
     api_url: string;
     configured: boolean;
+    /** True when a secret is already stored server-side (value never returned). */
+    secret_configured: boolean;
     message?: string;
 }
