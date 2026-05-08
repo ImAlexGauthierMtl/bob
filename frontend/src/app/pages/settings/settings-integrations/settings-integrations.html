@@ -8,18 +8,27 @@
     <!-- Search -->
     <div class="search-bar">
         <i class="fa-solid fa-search search-bar__icon"></i>
-        <input type="text" placeholder="Search integrations..." class="search-bar__input" />
+        <input type="text" placeholder="Search integrations..." class="search-bar__input"
+            (input)="onSearch($any($event).target.value)" />
     </div>
 
-    <!-- MS365 Error Banner -->
-    @if (ms365Error) {
+    <!-- Error Banner -->
+    @if (ms365Error || membraneError) {
     <div style="background: var(--color-danger-light, #fef2f2); border: 1px solid var(--color-danger, #ef4444); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px;">
         <i class="fa-solid fa-circle-exclamation" style="color: var(--color-danger, #ef4444);"></i>
-        <span style="flex: 1; font-size: 13px; color: var(--color-danger, #ef4444);">{{ ms365Error }}</span>
+        <span style="flex: 1; font-size: 13px; color: var(--color-danger, #ef4444);">{{ ms365Error || membraneError }}</span>
         <button style="background: none; border: none; cursor: pointer; color: var(--color-danger, #ef4444); font-size: 14px;"
-            (click)="ms365Error = null">
+            (click)="ms365Error = null; membraneError = null">
             <i class="fa-solid fa-xmark"></i>
         </button>
+    </div>
+    }
+
+    <!-- Loading -->
+    @if (membraneLoading) {
+    <div style="text-align: center; padding: 24px; color: var(--color-text-muted);">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px;"></i>
+        <p style="margin-top: 8px; font-size: 14px;">Loading integrations...</p>
     </div>
     }
 
@@ -42,30 +51,25 @@
     }
 
     <!-- Connected -->
+    @if (connectedIntegrations.length > 0) {
     <div>
         <p class="section-label">Connected</p>
         <div class="integration-grid">
-
-            <!-- Microsoft 365 — Connected State -->
-            @if (ms365IsConnected) {
+            @for (integration of connectedIntegrations; track integration.key) {
             <div class="integration-card">
                 <div class="integration-card__header">
                     <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--ms">
-                            <i class="fa-brands fa-microsoft"></i>
+                        <div class="integration-card__icon {{ integration.iconColorClass }}">
+                            <i class="{{ integration.iconClass }}"></i>
                         </div>
                         <div>
-                            <p class="integration-card__name">Microsoft 365</p>
-                            <p class="integration-card__sub">{{ ms365Connection?.ms_email || 'Outlook, Calendar' }}</p>
+                            <p class="integration-card__name">{{ integration.name }}</p>
+                            <p class="integration-card__sub">{{ integration.description }}</p>
                         </div>
                     </div>
                     <span class="status-badge status-badge--green">
-                        @if (ms365Syncing) {
+                        @if (integration.isLegacyMs365 && ms365Syncing) {
                         <i class="fa-solid fa-spinner fa-spin"></i> Syncing
-                        } @else if (ms365NeedsReauth) {
-                        <span class="status-badge status-badge--yellow" style="background: var(--color-warning-light, #fffbeb); color: var(--color-warning, #f59e0b);">
-                            <i class="fa-solid fa-triangle-exclamation"></i> Expired
-                        </span>
                         } @else {
                         Active
                         }
@@ -73,8 +77,9 @@
                 </div>
                 <div class="integration-card__expanded">
                     <p style="font-size: 13px; color: var(--color-text-muted); margin: 0 0 12px;">
-                        Your Microsoft 365 account is currently connected successfully.
+                        Your {{ integration.name }} account is currently connected successfully.
                     </p>
+                    @if (integration.isLegacyMs365) {
                     <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px; font-size: 12px;">
                         <button class="integration-card__btn" (click)="forceSync(); $event.stopPropagation()"
                             [disabled]="ms365Syncing" style="padding: 4px 8px;">
@@ -92,79 +97,44 @@
                             }
                         </span>
                     </div>
+                    }
                 </div>
                 <div class="integration-card__actions">
+                    @if (integration.isLegacyMs365) {
                     <button class="integration-card__btn" routerLink="/settings/ms365">Configure</button>
-                    <button class="integration-card__btn integration-card__btn--disconnect"
-                        (click)="disconnectMs365()">Disconnect</button>
+                    <button class="integration-card__btn integration-card__btn--disconnect" (click)="disconnectMs365()">Disconnect</button>
+                    } @else {
+                    <button class="integration-card__btn" (click)="disconnectMembrane(integration.connection!.id)">Disconnect</button>
+                    }
                 </div>
             </div>
             }
-
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--blue">
-                            <i class="fa-brands fa-google"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">Google Workspace</p>
-                            <p class="integration-card__sub">Gmail, Calendar, Drive</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-badge--green">Active</span>
-                </div>
-                <p class="integration-card__desc">Sync emails, calendar events, and files automatically</p>
-                <div class="integration-card__actions">
-                    <button class="integration-card__btn">Configure</button>
-                    <button class="integration-card__btn integration-card__btn--disconnect">Disconnect</button>
-                </div>
-            </div>
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--purple">
-                            <i class="fa-brands fa-slack"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">Slack</p>
-                            <p class="integration-card__sub">Team communication</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-badge--green">Active</span>
-                </div>
-                <p class="integration-card__desc">Get notifications and updates in your Slack workspace</p>
-                <div class="integration-card__actions">
-                    <button class="integration-card__btn">Configure</button>
-                    <button class="integration-card__btn integration-card__btn--disconnect">Disconnect</button>
-                </div>
-            </div>
         </div>
     </div>
+    }
 
     <!-- Available -->
     <div class="settings-section">
         <p class="section-label">Available</p>
         <div class="integration-grid">
-
-            <!-- Microsoft 365 — Available State (not connected) -->
-            @if (!ms365IsConnected) {
+            @for (integration of availableIntegrations; track integration.key) {
             <div class="integration-card">
                 <div class="integration-card__header">
                     <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--ms">
-                            <i class="fa-brands fa-microsoft"></i>
+                        <div class="integration-card__icon {{ integration.iconColorClass }}">
+                            <i class="{{ integration.iconClass }}"></i>
                         </div>
-                        <div class="integration-card__info">
-                            <p class="integration-card__name">Microsoft 365</p>
-                            <p class="integration-card__sub">Outlook, Calendar Exchange</p>
+                        <div>
+                            <p class="integration-card__name">{{ integration.name }}</p>
+                            <p class="integration-card__sub">{{ integration.description }}</p>
                         </div>
                     </div>
                 </div>
-                <p class="integration-card__desc">Emails, contacts & calendar on two-way sync.</p>
+                <p class="integration-card__desc">{{ integration.description }}</p>
                 <button class="integration-card__btn integration-card__btn--connect" style="width:100%"
-                    (click)="connectMs365()" [disabled]="ms365Loading">
-                    @if (ms365Loading) {
+                    (click)="integration.key === 'microsoft-365' ? connectMs365() : connectMembrane(integration.key)"
+                    [disabled]="ms365Loading && integration.key === 'microsoft-365'">
+                    @if (ms365Loading && integration.key === 'microsoft-365') {
                     <i class="fa-solid fa-spinner fa-spin"></i> Connecting...
                     } @else {
                     Connect
@@ -172,82 +142,6 @@
                 </button>
             </div>
             }
-
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--orange">
-                            <i class="fa-brands fa-hubspot"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">HubSpot</p>
-                            <p class="integration-card__sub">Marketing automation</p>
-                        </div>
-                    </div>
-                </div>
-                <p class="integration-card__desc">Sync contacts and marketing campaigns with HubSpot</p>
-                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
-            </div>
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--sf">
-                            <i class="fa-brands fa-salesforce"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">Salesforce</p>
-                            <p class="integration-card__sub">CRM integration</p>
-                        </div>
-                    </div>
-                </div>
-                <p class="integration-card__desc">Bi-directional sync with Salesforce CRM data</p>
-                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
-            </div>
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--mc">
-                            <i class="fa-brands fa-mailchimp"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">Mailchimp</p>
-                            <p class="integration-card__sub">Email marketing</p>
-                        </div>
-                    </div>
-                </div>
-                <p class="integration-card__desc">Manage email campaigns and subscriber lists</p>
-                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
-            </div>
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--indigo">
-                            <i class="fa-brands fa-stripe"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">Stripe</p>
-                            <p class="integration-card__sub">Payment processing</p>
-                        </div>
-                    </div>
-                </div>
-                <p class="integration-card__desc">Process payments and manage subscriptions</p>
-                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
-            </div>
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--github">
-                            <i class="fa-brands fa-github"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">GitHub</p>
-                            <p class="integration-card__sub">Development tracking</p>
-                        </div>
-                    </div>
-                </div>
-                <p class="integration-card__desc">Link development work to opportunities and projects</p>
-                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
-            </div>
         </div>
     </div>
 

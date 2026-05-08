@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     # Observability
     otel_exporter_otlp_endpoint: Optional[str] = None
 
+    # Membrane Integration Platform
+    membrane_workspace_key: Optional[str] = None
+    membrane_workspace_secret: Optional[str] = None
+    membrane_api_url: str = "https://api.getmembrane.com"
+
     # Auth-specific (used by auth-api seeding, ignored by other services)
     admin_email: str = "admin@croo.digital"
     admin_password: Optional[str] = None
