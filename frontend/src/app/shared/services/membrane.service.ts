@@ -10,6 +10,8 @@ import {
     MembraneActionRunRequest,
     MembraneActionRunResponse,
     MembraneConnectUrlResponse,
+    MembraneConfig,
+    MembraneConfigResponse,
 } from '../models/membrane.model';
 
 const API_URL = `${environment.communicationApiUrl}`;
@@ -86,5 +88,15 @@ export class MembraneService {
                 console.error('Failed to get Membrane connect URL', err);
             },
         });
+    }
+
+    // ── Platform Configuration ───────────────────────────────────
+
+    getConfig(): Observable<MembraneConfigResponse> {
+        return this.http.get<MembraneConfigResponse>(`${API_URL}/membrane/config`);
+    }
+
+    updateConfig(config: MembraneConfig): Observable<MembraneConfigResponse> {
+        return this.http.put<MembraneConfigResponse>(`${API_URL}/membrane/config`, config);
     }
 }

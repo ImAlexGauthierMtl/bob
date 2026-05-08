@@ -32,6 +32,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
     return next(req).pipe(
         catchError((error: HttpErrorResponse) => {
+            if (error.status === 0) {
+                // Backend unreachable (network error / connection refused) — skip refresh
+                console.warn('[AuthInterceptor] Backend unreachable, skipping refresh for:', req.url);
+                return throwError(() => error);
+            }
             if (error.status === 401) {
                 if (!isRefreshing) {
                     // First 401 — initiate refresh
@@ -52,7 +57,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
                         catchError((refreshError) => {
                             isRefreshing = false;
                             refreshTokenSubject.next(null);
-                            authService.logout();
+                            // Only logout on 401 from refresh; keep session on network errors
+                            if (refreshError?.status !== 0) {
+                                authService.logout();
+                            }
                             return throwError(() => refreshError);
                         }),
                     );

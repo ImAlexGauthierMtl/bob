@@ -53,7 +53,11 @@ class Settings(BaseSettings):
     # Membrane Integration Platform
     membrane_workspace_key: Optional[str] = None
     membrane_workspace_secret: Optional[str] = None
+    membrane_client_token: Optional[str] = None
     membrane_api_url: str = "https://api.getmembrane.com"
+    # HMAC-SHA256 secret used to verify incoming Membrane webhooks.
+    # Configure the same value in Membrane Console → Admin → Webhooks → Secret.
+    membrane_webhook_secret: Optional[str] = None
 
     # Auth-specific (used by auth-api seeding, ignored by other services)
     admin_email: str = "admin@croo.digital"

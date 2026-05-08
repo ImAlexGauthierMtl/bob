@@ -21,6 +21,7 @@ if database_url:
 # Import models for autogenerate
 from app.domain.entities.base import Base
 import app.domain.entities.email_contact  # noqa: F401
+import app.domain.entities.integration_setting  # noqa: F401
 import app.domain.entities.ms365_connection  # noqa: F401
 import app.domain.entities.smart_label  # noqa: F401
 import app.domain.entities.synced_email  # noqa: F401

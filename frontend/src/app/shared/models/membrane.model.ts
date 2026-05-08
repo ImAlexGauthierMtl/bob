@@ -50,3 +50,16 @@ export interface MembraneConnectUrlResponse {
     url: string;
     integration_key: string;
 }
+
+export interface MembraneConfig {
+    workspace_key: string;
+    workspace_secret: string;
+    api_url: string;
+}
+
+export interface MembraneConfigResponse {
+    workspace_key: string;
+    api_url: string;
+    configured: boolean;
+    message?: string;
+}

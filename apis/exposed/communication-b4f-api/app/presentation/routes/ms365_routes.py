@@ -1,4 +1,12 @@
-"""MS365 routes — OAuth flow, sync orchestration, email/event proxying via HTTP client."""
+"""MS365 routes — OAuth flow, sync orchestration, email/event proxying via HTTP client.
+
+DEPRECATED: This custom MS365 integration is being replaced by Membrane (getmembrane.com).
+Membrane handles OAuth2, token refresh, delta sync, and provider-specific API calls.
+During the transition period, these routes remain available for existing MS365 connections.
+New integrations should use /api/v1/membrane/* routes.
+
+Planned removal: Phase 5 of Membrane migration (see plan 1778258726920-shiny-otter).
+"""
 
 import os
 import asyncio

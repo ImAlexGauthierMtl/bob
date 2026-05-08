@@ -25,6 +25,8 @@ export interface AuthUser {
     last_name: string;
     active_organization_id: string | null;
     active_organization_name: string | null;
+    role?: string;
+    is_super_admin?: boolean;
     created_at: string;
     updated_at: string;
 }

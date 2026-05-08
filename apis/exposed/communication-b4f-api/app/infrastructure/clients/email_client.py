@@ -7,6 +7,39 @@ from shared.infrastructure import get_logger
 logger = get_logger(__name__)
 
 
+class IntegrationSettingsClient:
+    """HTTP client for integration settings CRUD."""
+
+    def __init__(self):
+        self._client = create_service_client("email~backend-api")
+
+    async def list(self, forward_headers=None) -> list:
+        resp = await self._client.get("/api/v1/integration-settings", forward_headers=forward_headers)
+        resp.raise_for_status()
+        return resp.json().get("items", [])
+
+    async def upsert(self, data: dict, forward_headers=None) -> dict:
+        resp = await self._client.post("/api/v1/integration-settings", json=data, forward_headers=forward_headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get(self, integration_key: str, forward_headers=None) -> Optional[dict]:
+        items = await self.list(forward_headers=forward_headers)
+        for item in items:
+            if item.get("integration_key") == integration_key:
+                return item
+        return None
+
+    async def update(self, integration_key: str, data: dict, forward_headers=None) -> dict:
+        resp = await self._client.patch(f"/api/v1/integration-settings/{integration_key}", json=data, forward_headers=forward_headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def delete(self, integration_key: str, forward_headers=None) -> bool:
+        resp = await self._client.delete(f"/api/v1/integration-settings/{integration_key}", forward_headers=forward_headers)
+        return resp.status_code == 204
+
+
 class ConnectionClient:
     """HTTP client for MS365 connection CRUD."""
 
@@ -176,3 +209,4 @@ connection_client = ConnectionClient()
 email_crud_client = EmailCrudClient()
 event_crud_client = EventCrudClient()
 smart_label_client = SmartLabelClient()
+integration_settings_client = IntegrationSettingsClient()

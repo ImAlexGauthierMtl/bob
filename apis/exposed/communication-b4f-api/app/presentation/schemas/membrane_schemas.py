@@ -36,8 +36,9 @@ class MembraneIntegrationResponse(BaseModel):
     id: str
     key: str
     name: str
-    logo_uri: Optional[str] = None
+    iconUrl: Optional[str] = None
     description: Optional[str] = None
+    status: str = "active"
 
 
 class MembraneIntegrationListResponse(BaseModel):
@@ -47,7 +48,7 @@ class MembraneIntegrationListResponse(BaseModel):
 # ── Action ───────────────────────────────────────────────────────
 
 class MembraneActionRunRequest(BaseModel):
-    action_key: str
+    action_key: Optional[str] = None
     connection_id: Optional[str] = None
     input: Dict[str, Any] = {}
 
@@ -67,3 +68,18 @@ class MembraneWebhookPayload(BaseModel):
     tenant_key: str
     data: Dict[str, Any]
     timestamp: Optional[str] = None
+
+
+# ── Platform Configuration (managed via UI) ───────────────────────
+
+class MembraneConfigRequest(BaseModel):
+    workspace_key: str
+    workspace_secret: str
+    api_url: str = "https://api.getmembrane.com"
+
+
+class MembraneConfigResponse(BaseModel):
+    workspace_key: str
+    api_url: str
+    configured: bool
+    message: Optional[str] = None

@@ -26,6 +26,20 @@ def _get_settings():
     return _settings
 
 
+def set_membrane_credentials(workspace_key: str, workspace_secret: str, api_url: str, client_token: Optional[str] = None):
+    """Update the global Membrane credentials at runtime (e.g. from UI config)."""
+    global _settings
+    current = _get_settings()
+    _settings = current.model_copy(update={
+        "membrane_workspace_key": workspace_key,
+        "membrane_workspace_secret": workspace_secret,
+        "membrane_api_url": api_url,
+    })
+    if client_token:
+        _settings = _settings.model_copy(update={"membrane_client_token": client_token})
+    logger.info("membrane_credentials_updated", api_url=api_url, has_key=bool(workspace_key), has_client_token=bool(client_token))
+
+
 # ── JWT Token Generation ─────────────────────────────────────────
 
 def generate_membrane_token(
@@ -66,11 +80,15 @@ def generate_membrane_token(
 class MembraneClient:
     """Low-level REST client for Membrane API."""
 
-    def __init__(self, token: str):
-        self._token = token
-        self._base = _get_settings().membrane_api_url.rstrip("/")
+    def __init__(self, token: Optional[str] = None):
+        settings = _get_settings()
+        self._base = settings.membrane_api_url.rstrip("/")
+        # Prefer an explicit token; fall back to a service-level client token
+        effective_token = token or getattr(settings, "membrane_client_token", None)
+        if not effective_token:
+            raise RuntimeError("No Membrane token available (tenant or client token required)")
         self._client = httpx.AsyncClient(
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            headers={"Authorization": f"Bearer {effective_token}", "Content-Type": "application/json"},
             timeout=60.0,
         )
 

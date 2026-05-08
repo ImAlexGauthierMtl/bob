@@ -1,10 +1,14 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MS365Service } from '../../../shared/services/ms365.service';
 import { MembraneService } from '../../../shared/services/membrane.service';
+import { IntegrationSettingsService } from '../../../shared/services/integration-settings.service';
+import { AuthService } from '../../../shared/services/auth.service';
 import { MS365Connection } from '../../../shared/models/ms365.model';
-import { MembraneConnection, MembraneIntegration } from '../../../shared/models/membrane.model';
+import { MembraneConnection, MembraneIntegration, MembraneConfig } from '../../../shared/models/membrane.model';
+import { IntegrationSetting } from '../../../shared/models/integration-setting.model';
 
 type IntegrationViewModel = {
     key: string;
@@ -19,13 +23,15 @@ type IntegrationViewModel = {
 @Component({
     selector: 'croo-settings-integrations',
     standalone: true,
-    imports: [CommonModule, RouterLink],
+    imports: [CommonModule, RouterLink, FormsModule],
     templateUrl: './settings-integrations.html',
     styleUrls: ['../settings-shared.css'],
 })
 export class SettingsIntegrationsComponent implements OnInit {
     private ms365Service = inject(MS365Service);
     private membraneService = inject(MembraneService);
+    private integrationSettingsService = inject(IntegrationSettingsService);
+    private authService = inject(AuthService);
 
     // Legacy MS365 state
     ms365Connection: MS365Connection | null = null;
@@ -39,6 +45,22 @@ export class SettingsIntegrationsComponent implements OnInit {
     membraneLoading = false;
     membraneError: string | null = null;
     searchQuery = '';
+
+    // Admin config
+    integrationSettings: IntegrationSetting[] = [];
+    isAdmin = false;
+
+    // Membrane platform config modal
+    showMembraneConfigModal = false;
+    membraneConfigured = false;
+    membraneConfigForm: MembraneConfig = {
+        workspace_key: '',
+        workspace_secret: '',
+        api_url: 'https://api.getmembrane.com',
+    };
+    membraneConfigSaving = false;
+    membraneConfigError: string | null = null;
+    membraneConfigSuccess: string | null = null;
 
     get connectedIntegrations(): IntegrationViewModel[] {
         const connected: IntegrationViewModel[] = [];
@@ -94,8 +116,9 @@ export class SettingsIntegrationsComponent implements OnInit {
             { key: 'stripe', name: 'Stripe', iconClass: 'fa-brands fa-stripe', iconColorClass: 'integration-card__icon--indigo', description: 'Process payments and manage subscriptions' },
             { key: 'github', name: 'GitHub', iconClass: 'fa-brands fa-github', iconColorClass: 'integration-card__icon--github', description: 'Link development work to opportunities and projects' },
         ];
+        const availableKeys = new Set(available.map(a => a.key));
         for (const h of hardcoded) {
-            if (!connectedKeys.has(h.key)) {
+            if (!connectedKeys.has(h.key) && !availableKeys.has(h.key)) {
                 available.push(h);
             }
         }
@@ -120,6 +143,13 @@ export class SettingsIntegrationsComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        this.authService.user$.subscribe((user) => {
+            this.isAdmin = user?.role === 'admin' || user?.is_super_admin === true;
+            if (this.isAdmin) {
+                this.loadIntegrationSettings();
+            }
+        });
+
         this.loadMs365Status();
         this.loadMembraneData();
 
@@ -138,6 +168,43 @@ export class SettingsIntegrationsComponent implements OnInit {
         if (membraneStatus === 'connected') {
             this.loadMembraneData();
             window.history.replaceState({}, '', window.location.pathname);
+        }
+    }
+
+    // ── Admin Settings ──────────────────────────────────────────────
+
+    loadIntegrationSettings(): void {
+        this.integrationSettingsService.list().subscribe({
+            next: (res) => {
+                this.integrationSettings = res.items;
+            },
+            error: (err) => {
+                console.error('Failed to load integration settings', err);
+            },
+        });
+    }
+
+    getSettingFor(integrationKey: string): IntegrationSetting | undefined {
+        return this.integrationSettings.find(s => s.integration_key === integrationKey);
+    }
+
+    getScopeFor(integrationKey: string): string {
+        return this.getSettingFor(integrationKey)?.scope_mode ?? 'per-user';
+    }
+
+    setScope(integrationKey: string, scope: string): void {
+        const existing = this.getSettingFor(integrationKey);
+        const payload = { integration_key: integrationKey, scope_mode: scope, is_enabled: true };
+        if (existing) {
+            this.integrationSettingsService.update(integrationKey, { scope_mode: scope }).subscribe({
+                next: () => this.loadIntegrationSettings(),
+                error: (err) => console.error('Failed to update scope', err),
+            });
+        } else {
+            this.integrationSettingsService.upsert(payload).subscribe({
+                next: () => this.loadIntegrationSettings(),
+                error: (err) => console.error('Failed to create setting', err),
+            });
         }
     }
 
@@ -260,7 +327,7 @@ export class SettingsIntegrationsComponent implements OnInit {
 
     // ── Helpers ─────────────────────────────────────────────────
 
-    private _iconForIntegration(key: string): string {
+    _iconForIntegration(key: string): string {
         const map: Record<string, string> = {
             'microsoft-outlook': 'fa-brands fa-microsoft',
             'hubspot': 'fa-brands fa-hubspot',
@@ -274,7 +341,7 @@ export class SettingsIntegrationsComponent implements OnInit {
         return map[key.toLowerCase()] || 'fa-solid fa-plug';
     }
 
-    private _colorClassForIntegration(key: string): string {
+    _colorClassForIntegration(key: string): string {
         const map: Record<string, string> = {
             'microsoft-outlook': 'integration-card__icon--ms',
             'hubspot': 'integration-card__icon--orange',
@@ -288,7 +355,7 @@ export class SettingsIntegrationsComponent implements OnInit {
         return map[key.toLowerCase()] || 'integration-card__icon--gray';
     }
 
-    private _defaultDescription(key: string): string {
+    _defaultDescription(key: string): string {
         const map: Record<string, string> = {
             'microsoft-outlook': 'Sync emails and calendar with Microsoft Outlook',
             'hubspot': 'Sync contacts and deals with HubSpot CRM',
@@ -296,5 +363,51 @@ export class SettingsIntegrationsComponent implements OnInit {
             'slack': 'Get notifications and send messages to Slack',
         };
         return map[key.toLowerCase()] || 'Connect this integration to your workspace';
+    }
+
+    // ── Membrane Platform Config ─────────────────────────────────
+
+    openMembraneConfig(): void {
+        this.membraneConfigError = null;
+        this.membraneConfigSuccess = null;
+        this.membraneConfigSaving = false;
+        this.loadMembraneConfig();
+        this.showMembraneConfigModal = true;
+    }
+
+    closeMembraneConfig(): void {
+        this.showMembraneConfigModal = false;
+    }
+
+    loadMembraneConfig(): void {
+        this.membraneService.getConfig().subscribe({
+            next: (res) => {
+                this.membraneConfigured = res.configured;
+                this.membraneConfigForm.workspace_key = res.workspace_key;
+                this.membraneConfigForm.api_url = res.api_url;
+            },
+            error: (err) => {
+                console.error('Failed to load Membrane config', err);
+            },
+        });
+    }
+
+    saveMembraneConfig(): void {
+        this.membraneConfigError = null;
+        this.membraneConfigSuccess = null;
+        this.membraneConfigSaving = true;
+
+        this.membraneService.updateConfig(this.membraneConfigForm).subscribe({
+            next: (res) => {
+                this.membraneConfigSaving = false;
+                this.membraneConfigured = res.configured;
+                this.membraneConfigSuccess = res.message || 'Configuration saved successfully';
+                this.loadMembraneData();
+            },
+            error: (err) => {
+                this.membraneConfigSaving = false;
+                this.membraneConfigError = err?.error?.detail || 'Failed to save configuration. Check your credentials.';
+            },
+        });
     }
 }
