@@ -126,7 +126,7 @@
                     <button class="integration-card__btn" routerLink="/settings/ms365">Configure</button>
                     <button class="integration-card__btn integration-card__btn--disconnect" (click)="disconnectMs365()">Disconnect</button>
                     } @else {
-                    <button class="integration-card__btn" (click)="disconnectMembrane(integration.connection!.id)">Disconnect</button>
+                    <button class="integration-card__btn" (click)="disconnectMembrane(integration.connection!)">Disconnect</button>
                     }
                 </div>
             </div>
@@ -154,13 +154,8 @@
                 </div>
                 <p class="integration-card__desc">{{ integration.description }}</p>
                 <button class="integration-card__btn integration-card__btn--connect" style="width:100%"
-                    (click)="integration.key === 'microsoft-365' ? connectMs365() : connectMembrane(integration.key)"
-                    [disabled]="ms365Loading && integration.key === 'microsoft-365'">
-                    @if (ms365Loading && integration.key === 'microsoft-365') {
-                    <i class="fa-solid fa-spinner fa-spin"></i> Connecting...
-                    } @else {
+                    (click)="connectMembrane(integration.key)">
                     Connect
-                    }
                 </button>
             </div>
             }

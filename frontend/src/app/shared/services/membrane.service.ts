@@ -90,6 +90,19 @@ export class MembraneService {
         });
     }
 
+    /** Disconnect a Membrane connection.
+     *
+     * `integrationKey` is optional but recommended: it ensures the backend
+     * resolves the tenantKey with the correct scope (per-user vs per-org).
+     */
+    disconnect(connectionId: string, integrationKey?: string): Observable<void> {
+        let url = `${API_URL}/membrane/connections/${encodeURIComponent(connectionId)}`;
+        if (integrationKey) {
+            url += `?integration_key=${encodeURIComponent(integrationKey)}`;
+        }
+        return this.http.delete<void>(url);
+    }
+
     // ── Platform Configuration ───────────────────────────────────
 
     getConfig(): Observable<MembraneConfigResponse> {

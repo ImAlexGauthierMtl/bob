@@ -33,11 +33,14 @@ export class SettingsIntegrationsComponent implements OnInit {
     private integrationSettingsService = inject(IntegrationSettingsService);
     private authService = inject(AuthService);
 
-    // Legacy MS365 state
+    // Legacy MS365 state (deprecated — kept during transition for existing connections)
     ms365Connection: MS365Connection | null = null;
     ms365Loading = false;
     ms365Syncing = false;
     ms365Error: string | null = null;
+
+    /** Key used consistently for the Outlook integration across legacy and Membrane. */
+    readonly OUTLOOK_KEY = 'microsoft-outlook';
 
     // Membrane state
     membraneConnections: MembraneConnection[] = [];
@@ -64,11 +67,14 @@ export class SettingsIntegrationsComponent implements OnInit {
 
     get connectedIntegrations(): IntegrationViewModel[] {
         const connected: IntegrationViewModel[] = [];
-        // Legacy MS365 (during transition)
-        if (this.ms365IsConnected) {
+        const hasMembraneOutlook = this.membraneConnections.some(
+            c => !c.disconnected && c.integration_key === this.OUTLOOK_KEY,
+        );
+        // Legacy MS365 (during transition) — only shown if no Membrane Outlook yet
+        if (this.ms365IsConnected && !hasMembraneOutlook) {
             connected.push({
-                key: 'microsoft-365',
-                name: 'Microsoft 365',
+                key: this.OUTLOOK_KEY,
+                name: 'Microsoft Outlook',
                 iconClass: 'fa-brands fa-microsoft',
                 iconColorClass: 'integration-card__icon--ms',
                 description: this.ms365Connection?.ms_email || 'Outlook, Calendar',
@@ -89,6 +95,11 @@ export class SettingsIntegrationsComponent implements OnInit {
             });
         }
         return connected;
+    }
+
+    /** True when the Membrane catalog already lists Microsoft-Outlook. */
+    get _hasOutlookInMembraneCatalog(): boolean {
+        return this.membraneIntegrations.some(i => i.key === this.OUTLOOK_KEY);
     }
 
     get availableIntegrations(): IntegrationViewModel[] {
@@ -123,11 +134,11 @@ export class SettingsIntegrationsComponent implements OnInit {
             }
         }
 
-        // Legacy MS365 available (during transition)
-        if (!this.ms365IsConnected) {
+        // Legacy MS365 available (only if no Membrane connection AND not in Membrane catalog already)
+        if (!this.ms365IsConnected && !this._hasOutlookInMembraneCatalog) {
             available.unshift({
-                key: 'microsoft-outlook',
-                name: 'Microsoft 365',
+                key: this.OUTLOOK_KEY,
+                name: 'Microsoft Outlook',
                 iconClass: 'fa-brands fa-microsoft',
                 iconColorClass: 'integration-card__icon--ms',
                 description: 'Emails, contacts & calendar on two-way sync.',
@@ -288,12 +299,22 @@ export class SettingsIntegrationsComponent implements OnInit {
         });
     }
 
-    disconnectMembrane(connectionId: string): void {
+    disconnectMembrane(connection: MembraneConnection): void {
         if (!confirm('Disconnect this integration? Your synced data will be preserved.')) {
             return;
         }
-        // TODO: call membrane disconnect API when available
-        this.membraneConnections = this.membraneConnections.filter(c => c.id !== connectionId);
+        this.membraneLoading = true;
+        this.membraneService.disconnect(connection.id, connection.integration_key).subscribe({
+            next: () => {
+                this.membraneLoading = false;
+                this.membraneConnections = this.membraneConnections.filter(c => c.id !== connection.id);
+            },
+            error: (err) => {
+                this.membraneLoading = false;
+                console.error('Failed to disconnect Membrane integration', err);
+                alert('Failed to disconnect. Please try again.');
+            },
+        });
     }
 
     forceSync(): void {

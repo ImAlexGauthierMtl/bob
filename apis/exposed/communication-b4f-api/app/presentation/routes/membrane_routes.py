@@ -202,6 +202,42 @@ async def list_connections(
         await client.close()
 
 
+@router.delete("/connections/{connection_id}", status_code=204)
+async def delete_connection(
+    connection_id: str,
+    integration_key: Optional[str] = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """Disconnect a Membrane connection.
+
+    The tenantKey is resolved exactly as for list/connect so users can only
+    ever delete connections that belong to their own scope.
+    """
+    tenant_key = await _resolve_tenant_key(current_user, integration_key or "")
+    token = generate_membrane_token(
+        tenant_key=tenant_key,
+        name=current_user.get("email", tenant_key),
+        fields={"croo_user_id": current_user["user_id"]},
+        expires_minutes=5,
+    )
+    client = MembraneClient(token)
+    try:
+        removed = await client.delete_connection(connection_id)
+        logger.info(
+            "membrane_connection_deleted",
+            connection_id=connection_id,
+            tenant_key=tenant_key,
+            existed=removed,
+        )
+        if not removed:
+            raise HTTPException(status_code=404, detail="Connection not found")
+    except httpx.HTTPStatusError as exc:
+        logger.error("membrane_delete_connection_error", status=exc.response.status_code, detail=str(exc))
+        raise HTTPException(status_code=502, detail="Failed to delete connection on Membrane")
+    finally:
+        await client.close()
+
+
 @router.get("/integrations", response_model=MembraneIntegrationListResponse)
 async def list_integrations(
     current_user: dict = Depends(get_current_user),

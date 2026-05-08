@@ -124,6 +124,17 @@ class MembraneClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def delete_connection(self, connection_id: str) -> bool:
+        """Delete (disconnect) a Membrane connection by ID.
+
+        Returns True if the connection was removed, False if it didn't exist.
+        """
+        resp = await self._client.delete(f"{self._base}/connections/{connection_id}")
+        if resp.status_code == 404:
+            return False
+        resp.raise_for_status()
+        return True
+
     async def close(self):
         await self._client.aclose()
 
