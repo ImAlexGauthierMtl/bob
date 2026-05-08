@@ -16,7 +16,11 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.domain.entities import ms365_connection, synced_email, synced_event, email_contact, smart_label, integration_setting  # noqa: F401
+    from app.domain.entities import (
+        ms365_connection, synced_email, synced_event,
+        email_contact, smart_label, integration_setting,
+        membrane_connection, membrane_synced_email, membrane_synced_event,
+    )  # noqa: F401
     from app.infrastructure.database import init as db_init, get_engine
     db_init("email-backend")
     engine = get_engine()
@@ -49,3 +53,6 @@ app.include_router(event_router, tags=["events"])
 app.include_router(email_contact_router, tags=["email-contacts"])
 app.include_router(smart_label_router, tags=["smart-labels"])
 app.include_router(integration_settings_router, tags=["integration-settings"])
+
+from app.presentation.routes.membrane_routes import router as membrane_router
+app.include_router(membrane_router, tags=["membrane"])

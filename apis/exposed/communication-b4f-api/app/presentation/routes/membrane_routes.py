@@ -16,7 +16,7 @@ import hashlib
 import hmac
 import json
 import os
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Union
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -427,25 +427,258 @@ async def membrane_webhook(request: Request):
 
 
 async def _handle_email_webhook(payload: MembraneWebhookPayload):
-    """Delegate email events to the email-backend-api for persistence."""
-    from app.infrastructure.clients.email_client import email_crud_client
-    # Build an upsert request from the Membrane payload
-    # TODO: map Membrane email schema to Croo synced_email schema
-    logger.info("membrane_webhook_email", tenant_key=payload.tenant_key, message_id=payload.data.get("id"))
-    # Future: call email_crud_client.upsert() with mapped data
-    pass
+    """Delegate email events to the email-backend-api for persistence.
+
+    Maps the Membrane email payload schema to MembraneEmailUpsertRequest
+    and upserts via membrane_crud_client.
+    """
+    from app.infrastructure.clients.email_client import membrane_crud_client
+
+    tenant_id, user_id = _parse_tenant_key(payload.tenant_key)
+    d = payload.data
+    membrane_conn_id = d.get("connectionId") or d.get("connection_id")
+
+    # Look up the local membrane_connection record (create if missing)
+    local_conn_id = await _resolve_local_connection(
+        membrane_conn_id=membrane_conn_id,
+        user_id=user_id,
+        tenant_id=tenant_id,
+        integration_key=payload.integration_key,
+    )
+    if not local_conn_id:
+        logger.warning("membrane_webhook_email_no_connection", tenant_key=payload.tenant_key)
+        return
+
+    email_data = {
+        "membrane_connection_id": local_conn_id,
+        "user_id": user_id,
+        "provider_message_id": d.get("id") or d.get("messageId") or d.get("message_id"),
+        "provider": payload.integration_key,
+        "subject": d.get("subject"),
+        "body_preview": d.get("bodyPreview") or d.get("body_preview") or _text_preview(d.get("body")),
+        "body_html": d.get("bodyHtml") or d.get("body_html") or d.get("body"),
+        "from_address": _extract_address(d.get("from")),
+        "from_name": _extract_name(d.get("from")),
+        "to_addresses": _extract_addresses(d.get("to")),
+        "cc_addresses": _extract_addresses(d.get("cc")),
+        "received_at": _parse_iso(d.get("receivedAt") or d.get("received_at")),
+        "is_read": bool(d.get("isRead") or d.get("is_read", False)),
+        "importance": d.get("importance", "normal"),
+        "has_attachments": bool(d.get("hasAttachments") or d.get("has_attachments", False)),
+        "attachments_meta": d.get("attachments") or d.get("attachments_meta"),
+        "folder": d.get("folder") or "inbox",
+        "conversation_id": d.get("conversationId") or d.get("conversation_id"),
+    }
+
+    try:
+        await membrane_crud_client.upsert_email(email_data)
+        logger.info("membrane_webhook_email_persisted", provider_message_id=email_data["provider_message_id"], tenant_key=payload.tenant_key)
+    except Exception as exc:
+        logger.error("membrane_webhook_email_persist_failed", error=str(exc), tenant_key=payload.tenant_key)
 
 
 async def _handle_event_webhook(payload: MembraneWebhookPayload):
     """Delegate calendar events to the email-backend-api."""
-    logger.info("membrane_webhook_event", tenant_key=payload.tenant_key, event_id=payload.data.get("id"))
-    pass
+    from app.infrastructure.clients.email_client import membrane_crud_client
+
+    tenant_id, user_id = _parse_tenant_key(payload.tenant_key)
+    d = payload.data
+    membrane_conn_id = d.get("connectionId") or d.get("connection_id")
+
+    local_conn_id = await _resolve_local_connection(
+        membrane_conn_id=membrane_conn_id,
+        user_id=user_id,
+        tenant_id=tenant_id,
+        integration_key=payload.integration_key,
+    )
+    if not local_conn_id:
+        logger.warning("membrane_webhook_event_no_connection", tenant_key=payload.tenant_key)
+        return
+
+    event_data = {
+        "membrane_connection_id": local_conn_id,
+        "user_id": user_id,
+        "provider_event_id": d.get("id") or d.get("eventId") or d.get("event_id"),
+        "provider": payload.integration_key,
+        "subject": d.get("subject"),
+        "body_html": d.get("bodyHtml") or d.get("body_html") or d.get("body"),
+        "location": d.get("location"),
+        "start_time": _parse_iso(d.get("start") or d.get("startTime") or d.get("start_time")),
+        "end_time": _parse_iso(d.get("end") or d.get("endTime") or d.get("end_time")),
+        "is_all_day": bool(d.get("isAllDay") or d.get("is_all_day", False)),
+        "organizer_email": _extract_address(d.get("organizer")),
+        "organizer_name": _extract_name(d.get("organizer")),
+        "attendees": _extract_attendees(d.get("attendees")),
+        "status": d.get("status", "none"),
+        "is_cancelled": bool(d.get("isCancelled") or d.get("is_cancelled", False)),
+        "recurrence": d.get("recurrence"),
+        "online_meeting_url": d.get("onlineMeetingUrl") or d.get("online_meeting_url"),
+    }
+
+    try:
+        await membrane_crud_client.upsert_event(event_data)
+        logger.info("membrane_webhook_event_persisted", provider_event_id=event_data["provider_event_id"], tenant_key=payload.tenant_key)
+    except Exception as exc:
+        logger.error("membrane_webhook_event_persist_failed", error=str(exc), tenant_key=payload.tenant_key)
 
 
 async def _handle_crm_webhook(payload: MembraneWebhookPayload):
     """Delegate CRM events (HubSpot deals, contacts) to the CRM backend."""
     logger.info("membrane_webhook_crm", tenant_key=payload.tenant_key, record_type=payload.data.get("type"))
     pass
+
+
+# ── Helpers ──────────────────────────────────────────────────────
+
+def _parse_tenant_key(tenant_key: str) -> tuple:
+    """Parse a tenantKey back into (tenant_id, user_or_org_id).
+
+    Expected formats:
+      t:{tenant_id}:u:{user_id}
+      t:{tenant_id}:o:{org_id}
+      t:{tenant_id}
+    """
+    parts = tenant_key.split(":")
+    tenant_id = parts[1] if len(parts) >= 2 else "default"
+    entity_id = parts[3] if len(parts) >= 4 else ""
+    return tenant_id, entity_id
+
+
+async def _resolve_local_connection(
+    membrane_conn_id: Optional[str],
+    user_id: str,
+    tenant_id: str,
+    integration_key: str,
+) -> Optional[str]:
+    """Return the local membrane_connections.id for a given Membrane connection ID.
+
+    If no record exists, create one via the email-backend-api so that
+    subsequent webhook payloads can be linked.
+    """
+    from app.infrastructure.clients.email_client import membrane_crud_client
+    if not membrane_conn_id:
+        return None
+    try:
+        # Upsert a connection record (backend will update if existing)
+        resp = await membrane_crud_client.upsert_connection({
+            "user_id": user_id,
+            "membrane_connection_id": membrane_conn_id,
+            "integration_key": integration_key,
+            "connection_name": integration_key,
+            "is_active": True,
+        })
+        return resp.get("id")
+    except Exception as exc:
+        logger.warning("resolve_local_connection_failed", error=str(exc), membrane_conn_id=membrane_conn_id)
+        return None
+
+
+def _extract_address(addr: Any) -> Optional[str]:
+    if not addr:
+        return None
+    if isinstance(addr, dict):
+        return addr.get("email") or addr.get("address")
+    if isinstance(addr, str):
+        return addr
+    return None
+
+
+def _extract_name(addr: Any) -> Optional[str]:
+    if not addr:
+        return None
+    if isinstance(addr, dict):
+        return addr.get("name")
+    return None
+
+
+def _extract_addresses(items: Any) -> Optional[list]:
+    if not items:
+        return None
+    if isinstance(items, list):
+        return [{"address": _extract_address(i), "name": _extract_name(i)} for i in items]
+    return None
+
+
+def _extract_attendees(items: Any) -> Optional[list]:
+    if not items:
+        return None
+    if isinstance(items, list):
+        return [{"email": _extract_address(i), "name": _extract_name(i), "status": (i.get("status") or "none") if isinstance(i, dict) else "none"} for i in items]
+    return None
+
+
+def _parse_iso(value: Any) -> Optional[str]:
+    if not value:
+        return None
+    if isinstance(value, str):
+        return value
+    return None
+
+
+def _text_preview(html_or_text: Optional[str], max_len: int = 500) -> Optional[str]:
+    if not html_or_text:
+        return None
+    # Naive strip of HTML tags for preview
+    import re
+    text = re.sub(r"<[^>]+>", " ", html_or_text)
+    text = text.strip()
+    if len(text) > max_len:
+        text = text[:max_len] + "…"
+    return text or None
+
+
+# ── Frontend Proxy (email-backend-api bridge) ──────────────────
+
+@router.get("/connections/by-user/{user_id}")
+async def proxy_get_connection_by_user(
+    user_id: str,
+    integration_key: Optional[str] = Query(None),
+    current_user: dict = Depends(get_current_user),
+):
+    """Return a user's Membrane connection record from email-backend-api."""
+    from app.infrastructure.clients.email_client import membrane_crud_client
+    data = await membrane_crud_client.get_connection_by_user(
+        user_id, integration_key=integration_key, forward_headers=current_user,
+    )
+    if not data:
+        raise HTTPException(status_code=404, detail="Connection not found")
+    return data
+
+
+@router.get("/emails")
+async def proxy_list_emails(
+    user_id: str = Query(...),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    folder: Optional[str] = None,
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """List Membrane-synced emails via email-backend-api."""
+    from app.infrastructure.clients.email_client import membrane_crud_client
+    return await membrane_crud_client.list_emails(
+        user_id, skip=skip, limit=limit, folder=folder, search=search,
+        forward_headers=current_user,
+    )
+
+
+@router.get("/events")
+async def proxy_list_events(
+    user_id: str = Query(...),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    from_date: Optional[datetime] = None,
+    to_date: Optional[datetime] = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """List Membrane-synced events via email-backend-api."""
+    from app.infrastructure.clients.email_client import membrane_crud_client
+    _from = from_date.isoformat() if from_date else None
+    _to = to_date.isoformat() if to_date else None
+    return await membrane_crud_client.list_events(
+        user_id, skip=skip, limit=limit, from_date=_from, to_date=_to,
+        forward_headers=current_user,
+    )
 
 
 # ── Platform Configuration ───────────────────────────────────────

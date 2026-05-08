@@ -26,6 +26,9 @@ import app.domain.entities.ms365_connection  # noqa: F401
 import app.domain.entities.smart_label  # noqa: F401
 import app.domain.entities.synced_email  # noqa: F401
 import app.domain.entities.synced_event  # noqa: F401
+import app.domain.entities.membrane_connection  # noqa: F401
+import app.domain.entities.membrane_synced_email  # noqa: F401
+import app.domain.entities.membrane_synced_event  # noqa: F401
 target_metadata = Base.metadata
 
 # Schema name derived from API_NAME env var (injected by Helm) with a

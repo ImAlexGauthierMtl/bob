@@ -205,8 +205,68 @@ class SmartLabelClient:
         return resp.status_code == 204
 
 
+class MembraneCrudClient:
+    """HTTP client for Membrane-backed CRUD in email~backend-api."""
+
+    def __init__(self):
+        self._client = create_service_client("email~backend-api")
+
+    async def upsert_connection(self, data: dict, forward_headers=None) -> dict:
+        resp = await self._client.post("/api/v1/membrane/connections", json=data, forward_headers=forward_headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_connection(self, connection_id: str, forward_headers=None) -> Optional[dict]:
+        resp = await self._client.get(f"/api/v1/membrane/connections/{connection_id}", forward_headers=forward_headers)
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        return resp.json()
+
+    async def upsert_email(self, data: dict, forward_headers=None) -> dict:
+        resp = await self._client.post("/api/v1/membrane/emails", json=data, forward_headers=forward_headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def upsert_event(self, data: dict, forward_headers=None) -> dict:
+        resp = await self._client.post("/api/v1/membrane/events", json=data, forward_headers=forward_headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_connection_by_user(self, user_id: str, integration_key: Optional[str] = None, forward_headers=None) -> Optional[dict]:
+        params = {}
+        if integration_key:
+            params["integration_key"] = integration_key
+        resp = await self._client.get(f"/api/v1/membrane/connections/by-user/{user_id}", params=params, forward_headers=forward_headers)
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        return resp.json()
+
+    async def list_emails(self, user_id: str, skip: int = 0, limit: int = 50, folder: Optional[str] = None, search: Optional[str] = None, forward_headers=None) -> dict:
+        params: Dict[str, str] = {"user_id": user_id, "skip": str(skip), "limit": str(limit)}
+        if folder:
+            params["folder"] = folder
+        if search:
+            params["search"] = search
+        resp = await self._client.get("/api/v1/membrane/emails", params=params, forward_headers=forward_headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def list_events(self, user_id: str, skip: int = 0, limit: int = 50, from_date: Optional[str] = None, to_date: Optional[str] = None, forward_headers=None) -> dict:
+        params: Dict[str, str] = {"user_id": user_id, "skip": str(skip), "limit": str(limit)}
+        if from_date:
+            params["from_date"] = from_date
+        if to_date:
+            params["to_date"] = to_date
+        resp = await self._client.get("/api/v1/membrane/events", params=params, forward_headers=forward_headers)
+        resp.raise_for_status()
+        return resp.json()
+
+
 connection_client = ConnectionClient()
 email_crud_client = EmailCrudClient()
 event_crud_client = EventCrudClient()
 smart_label_client = SmartLabelClient()
 integration_settings_client = IntegrationSettingsClient()
+membrane_crud_client = MembraneCrudClient()
