@@ -19,7 +19,8 @@ import os
 from typing import Optional, Dict, Any, List, Union
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
+from fastapi.responses import HTMLResponse
 import httpx
 import structlog
 
@@ -46,6 +47,18 @@ from app.presentation.schemas.membrane_schemas import (
 logger = structlog.get_logger(__name__)
 settings = get_settings("communication")
 router = APIRouter(prefix="/api/v1/membrane")
+
+# Built-in connectors exposed by Membrane as `~connector.<key>`. When the frontend
+# sends one of these as `integration_key` (stripped of the prefix for readability),
+# we must send it as `connectorKey` — not `integrationKey` — to /connect.
+_WELL_KNOWN_CONNECTORS = {
+    "microsoft-outlook", "gmail", "slack", "google-drive", "dropbox",
+    "microsoft-sharepoint", "onedrive", "salesforce", "confluence", "hubspot",
+    "zoho-crm", "dynamics-crm", "pipedrive", "monday", "google-sheets",
+    "quickbooks", "attio", "jira", "xero", "mailchimp", "stripe", "github",
+    "notion", "asana", "freshsales", "keap", "airtable", "bamboohr",
+    "activecampaign", "sugarcrm", "outreach", "box",
+}
 
 # ── Tenant Key Resolution ─────────────────────────────────────────
 #
@@ -324,10 +337,19 @@ async def get_connect_url(
     redirect_uri: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
 ):
-    """Return a hosted Membrane connection URL for the frontend to redirect to.
+    """Return a one-shot URL that will auto-POST to Membrane /connect.
 
-    This avoids embedding the React SDK if we prefer a redirect flow.
+    This endpoint is Bearer-authenticated. It generates the Membrane JWT scoped
+    to the current user's tenantKey and returns a URL to our public
+    /connect-redirect endpoint. The returned URL contains the Membrane token in
+    the query string — safe because:
+      - the token is already scoped and expires in 30 min
+      - it will be sent to Membrane in clear text from the browser anyway
     """
+    if not redirect_uri:
+        ingress = os.environ.get("INGRESS_URL", "http://localhost:4700").rstrip("/")
+        redirect_uri = f"{ingress}/settings/integrations?membrane=connected&integration={integration_key}"
+
     tenant_key = await _resolve_tenant_key(current_user, integration_key)
     token = generate_membrane_token(
         tenant_key=tenant_key,
@@ -335,11 +357,81 @@ async def get_connect_url(
         fields={"croo_user_id": current_user["user_id"]},
         expires_minutes=30,
     )
-    if not redirect_uri:
+
+    from urllib.parse import urlencode
+    # The /connect-redirect endpoint is served by this backend (communication-b4f-api).
+    # PUBLIC_API_URL points to the backend as seen from the browser (e.g. http://localhost:28004
+    # in dev, https://api.croo.io in prod). Falls back to INGRESS_URL/api if not set.
+    public_api = os.environ.get("PUBLIC_API_URL")
+    if not public_api:
         ingress = os.environ.get("INGRESS_URL", "http://localhost:4700").rstrip("/")
-        redirect_uri = f"{ingress}/settings/integrations?membrane=connected&integration={integration_key}"
-    url = build_connect_url(integration_key, token, redirect_uri)
+        public_api = ingress
+    public_api = public_api.rstrip("/")
+    params = {
+        "integration_key": integration_key,
+        "redirect_uri": redirect_uri,
+        "token": token,
+    }
+    url = f"{public_api}/api/v1/membrane/connect-redirect?{urlencode(params)}"
     return {"url": url, "integration_key": integration_key}
+
+
+@router.get("/connect-redirect", response_class=HTMLResponse)
+async def connect_redirect(
+    integration_key: str,
+    redirect_uri: str,
+    token: str,
+):
+    """Serve an HTML page that auto-submits a form POST to Membrane /connect.
+
+    Membrane's /connect is POST-only with params in form body — a simple browser
+    redirect (GET) returns 404. We serve this auto-submit HTML page so the
+    browser ends up making a proper POST to Membrane with the JWT in the body.
+
+    This endpoint is PUBLIC (no Bearer auth) because the browser redirects to it
+    directly. The Membrane JWT in the `token` query param carries tenant scope
+    and a 30-min expiry, so leaking it in URL is no worse than the frontend
+    passing it to Membrane directly.
+    """
+    import html as html_escape_mod
+    import json as json_mod
+    membrane_api = settings.membrane_api_url.rstrip("/")
+    # Membrane expects everything in a JSON-stringified `payload` form field,
+    # including the tenant JWT (browsers can't add an Authorization header to
+    # a form POST).
+    #
+    # Membrane distinguishes "integrations" (custom per-workspace apps) from
+    # "connectors" (built-in Microsoft/Google/etc. providers). Direct connectors
+    # such as microsoft-outlook, gmail, slack expose themselves in the catalog
+    # with the prefix `~connector.<key>`. When calling `/connect`, we must pass
+    # those under `connectorKey`, not `integrationKey`.
+    payload_data = {
+        "redirectUri": redirect_uri,
+        "token": token,
+        # Membrane connectors can expose multiple auth options (oauth2, auth-proxy,
+        # service-account, …). For built-in MS/Google connectors the hosted dashboard
+        # defaults to `auth-proxy`, which brokers the OAuth flow through Membrane's
+        # own credentials instead of requiring the workspace to provision an OAuth
+        # app. This matches how users connect from getmembrane.com directly.
+        "authOptionKey": "auth-proxy",
+    }
+    if integration_key.startswith("~connector.") or integration_key in _WELL_KNOWN_CONNECTORS:
+        normalized = integration_key.replace("~connector.", "")
+        payload_data["connectorKey"] = normalized
+    else:
+        payload_data["integrationKey"] = integration_key
+    payload_json = json_mod.dumps(payload_data)
+    html_body = f"""<!DOCTYPE html>
+<html><head><meta charset=\"utf-8\"><title>Connecting to {html_escape_mod.escape(integration_key)}...</title>
+<style>body {{ font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; color: #555; }}</style>
+</head><body>
+<div>Connecting to {html_escape_mod.escape(integration_key)}... <noscript>JavaScript is required.</noscript></div>
+<form id=\"f\" method=\"POST\" action=\"{html_escape_mod.escape(membrane_api)}/connect\" enctype=\"application/x-www-form-urlencoded\">
+  <input type=\"hidden\" name=\"payload\" value='{html_escape_mod.escape(payload_json)}'>
+</form>
+<script>document.getElementById('f').submit();</script>
+</body></html>"""
+    return HTMLResponse(content=html_body)
 
 
 # ── Webhook Reception ────────────────────────────────────────────

@@ -142,26 +142,32 @@ class MembraneClient:
 # ── URL Builders (for frontend redirect flows) ───────────────────
 
 def build_connect_url(integration_key: str, token: str, redirect_uri: str) -> str:
-    """Build a hosted Membrane connection URL for the frontend to redirect to."""
+    """Build a Membrane `/connect` URL for the frontend to redirect the user to.
+
+    Docs: https://docs.getmembrane.com/docs/ways-to-use-membrane/embedded-ui/connection-ui/connection-ui-without-the-front-end-sdk
+    The `/connect` endpoint handles OAuth2/OAuth1/client-credentials/proxy flows and
+    redirects the browser to `redirectUri` when done (with ?connectionId=... on success
+    or ?error=... on failure).
+    """
+    from urllib.parse import quote
     settings = _get_settings()
-    # Membrane hosted UI embed endpoint
-    base = "https://ui.getmembrane.com"
-    # Override if self-hosted
-    if "integration.app" in settings.membrane_api_url:
-        base = "https://ui.integration.app"
+    base = settings.membrane_api_url.rstrip("/")
     return (
-        f"{base}/embed/integrations/{integration_key}/connect"
-        f"?token={token}&redirectUri={redirect_uri}"
+        f"{base}/connect"
+        f"?integrationKey={quote(integration_key)}"
+        f"&token={quote(token)}"
+        f"&redirectUri={quote(redirect_uri)}"
     )
 
 
 def build_reconnect_url(connection_id: str, token: str, redirect_uri: str) -> str:
-    """Build a hosted Membrane reconnect URL."""
+    """Build a reconnect URL — reuses /connect with connectionId to update credentials."""
+    from urllib.parse import quote
     settings = _get_settings()
-    base = "https://ui.getmembrane.com"
-    if "integration.app" in settings.membrane_api_url:
-        base = "https://ui.integration.app"
+    base = settings.membrane_api_url.rstrip("/")
     return (
-        f"{base}/embed/connections/{connection_id}/refresh"
-        f"?token={token}&redirectUri={redirect_uri}"
+        f"{base}/connect"
+        f"?connectionId={quote(connection_id)}"
+        f"&token={quote(token)}"
+        f"&redirectUri={quote(redirect_uri)}"
     )
