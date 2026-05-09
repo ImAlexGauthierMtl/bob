@@ -1,8 +1,8 @@
 import { Component, EventEmitter, OnInit, Output, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { SyncedEmail, MS365Connection } from '../../../../shared/models/ms365.model';
-import { MS365Service } from '../../../../shared/services/ms365.service';
+import { UnifiedEmail, UnifiedConnection } from '../../../../shared/models/unified-email.model';
+import { EmailService } from '../../../../shared/services/email.service';
 import { finalize } from 'rxjs';
 import { InboxFilter } from '../inbox-sidebar/inbox-sidebar';
 
@@ -15,7 +15,7 @@ import { InboxFilter } from '../inbox-sidebar/inbox-sidebar';
 })
 export class EmailListComponent implements OnInit {
 
-    @Output() emailSelected = new EventEmitter<SyncedEmail>();
+    @Output() emailSelected = new EventEmitter<UnifiedEmail>();
 
     @Input() set filter(val: InboxFilter) {
         if (!val) return;
@@ -27,7 +27,7 @@ export class EmailListComponent implements OnInit {
         }
     }
 
-    emails: SyncedEmail[] = [];
+    emails: UnifiedEmail[] = [];
     isLoading = false;
     total = 0;
     skip = 0;
@@ -39,10 +39,10 @@ export class EmailListComponent implements OnInit {
     currentSmartLabel = '';
     initialized = false;
 
-    ms365Connection: MS365Connection | null = null;
+    emailConnection: UnifiedConnection | null = null;
     connectionChecked = false;
 
-    constructor(private ms365Service: MS365Service) {}
+    constructor(private emailService: EmailService) {}
 
     ngOnInit(): void {
         this.initialized = true;
@@ -51,9 +51,9 @@ export class EmailListComponent implements OnInit {
     }
 
     checkConnection(): void {
-        this.ms365Service.getConnection().subscribe({
+        this.emailService.getConnection().subscribe({
             next: (conn) => {
-                this.ms365Connection = conn;
+                this.emailConnection = conn;
                 this.connectionChecked = true;
             },
             error: () => {
@@ -64,17 +64,17 @@ export class EmailListComponent implements OnInit {
 
     get showConnectionBanner(): boolean {
         if (!this.connectionChecked) return false;
-        if (!this.ms365Connection) return true;
-        return !this.ms365Connection.is_active
-            || this.ms365Connection.connection_status === 'token_expired'
-            || this.ms365Connection.connection_status === 'needs_reauth';
+        if (!this.emailConnection) return true;
+        return !this.emailConnection.isActive
+            || this.emailConnection.status === 'token_expired'
+            || this.emailConnection.status === 'needs_reauth';
     }
 
     get connectionBannerMessage(): string {
-        if (!this.ms365Connection) {
-            return 'Connect your Microsoft 365 account to sync your emails.';
+        if (!this.emailConnection) {
+            return 'Connect your email account via Settings > Integrations to sync your emails.';
         }
-        return 'Your Microsoft 365 connection needs to be refreshed.';
+        return 'Your email connection needs to be refreshed. Go to Settings > Integrations.';
     }
 
     loadEmails(reset = false): void {
@@ -86,7 +86,7 @@ export class EmailListComponent implements OnInit {
         }
 
         this.isLoading = true;
-        this.ms365Service.getEmails(this.skip, this.limit, this.currentFolder, this.currentSearch, this.currentSmartLabel)
+        this.emailService.getEmails(this.skip, this.limit, this.currentFolder, this.currentSearch, this.currentSmartLabel)
             .pipe(finalize(() => this.isLoading = false))
             .subscribe({
                 next: (res) => {
@@ -95,6 +95,14 @@ export class EmailListComponent implements OnInit {
                 },
                 error: (err) => console.error('Failed to load emails', err)
             });
+    }
+
+    onRefresh(): void {
+        // Trigger background sync then reload
+        this.emailService.triggerSync().subscribe({
+            next: () => this.loadEmails(true),
+            error: () => this.loadEmails(true) // load anyway even if sync fails
+        });
     }
 
     onScroll(event: Event): void {
@@ -112,7 +120,7 @@ export class EmailListComponent implements OnInit {
         }
     }
 
-    selectEmail(email: SyncedEmail): void {
+    selectEmail(email: UnifiedEmail): void {
         this.selectedEmailId = email.id;
         email.is_read = true;
         this.emailSelected.emit(email);

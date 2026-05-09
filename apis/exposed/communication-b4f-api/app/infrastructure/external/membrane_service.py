@@ -135,6 +135,24 @@ class MembraneClient:
         resp.raise_for_status()
         return True
 
+    async def proxy_get(self, connection_id: str, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Call a proxied GET on the underlying connector's API."""
+        path = path.lstrip("/")
+        url = f"{self._base}/connections/{connection_id}/proxy/{path}"
+        resp = await self._client.get(url, params=params or {})
+        resp.raise_for_status()
+        return resp.json()
+
+    async def proxy_post(self, connection_id: str, path: str, json_body: Dict[str, Any]) -> Dict[str, Any]:
+        """Call a proxied POST on the underlying connector's API (e.g. sendMail, reply, forward)."""
+        path = path.lstrip("/")
+        url = f"{self._base}/connections/{connection_id}/proxy/{path}"
+        resp = await self._client.post(url, json=json_body)
+        resp.raise_for_status()
+        if resp.status_code == 204 or not resp.content:
+            return {}
+        return resp.json()
+
     async def close(self):
         await self._client.aclose()
 

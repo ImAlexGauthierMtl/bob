@@ -18,6 +18,8 @@ export interface MembraneBackendConnection {
     created_at: string;
 }
 
+import { AttachmentMeta } from '../models/ms365.model';
+
 export interface MembraneBackendEmail {
     id: string;
     membrane_connection_id: string;
@@ -33,7 +35,9 @@ export interface MembraneBackendEmail {
     cc_addresses: Array<{ address: string; name: string }> | null;
     received_at: string | null;
     is_read: boolean;
+    importance?: string;
     has_attachments: boolean;
+    attachments_meta?: AttachmentMeta[] | null;
     folder: string;
     conversation_id: string | null;
     linked_contact_id: string | null;
@@ -93,12 +97,42 @@ export class MembraneBackendService {
         return this.http.get<MembraneBackendConnection>(url);
     }
 
+    /** Get a specific synced email from Membrane backend. */
+    getEmail(id: string, userId: string): Observable<MembraneBackendEmail> {
+        return this.http.get<MembraneBackendEmail>(`${API_URL}/membrane/emails/${id}?user_id=${userId}`);
+    }
+
     /** List emails from Membrane backend. */
-    getEmails(userId: string, skip = 0, limit = 20, folder?: string, search?: string): Observable<MembraneBackendEmailList> {
+    getEmails(userId: string, skip = 0, limit = 20, folder?: string, search?: string, smartLabel?: string, linkedContactId?: string): Observable<MembraneBackendEmailList> {
         const params: Record<string, string> = { user_id: userId, skip: String(skip), limit: String(limit) };
         if (folder) params['folder'] = folder;
         if (search) params['search'] = search;
+        if (smartLabel) params['smart_label'] = smartLabel;
+        if (linkedContactId) params['linked_contact_id'] = linkedContactId;
         return this.http.get<MembraneBackendEmailList>(`${API_URL}/membrane/emails`, { params });
+    }
+
+    /** Send a new email via Membrane backend. */
+    sendEmail(userId: string, request: { subject: string; body_content: string; to_recipients: string[]; cc_recipients?: string[]; bcc_recipients?: string[]; body_type?: string }): Observable<{ status: string }> {
+        return this.http.post<{ status: string }>(`${API_URL}/membrane/emails/send`, { ...request, user_id: userId });
+    }
+
+    /** Reply to an email via Membrane backend. */
+    replyEmail(id: string, userId: string, request: { comment: string; reply_all?: boolean }): Observable<{ status: string }> {
+        return this.http.post<{ status: string }>(`${API_URL}/membrane/emails/${id}/reply`, { ...request, user_id: userId });
+    }
+
+    /** Forward an email via Membrane backend. */
+    forwardEmail(id: string, userId: string, request: { to_recipients: string[]; comment?: string }): Observable<{ status: string }> {
+        return this.http.post<{ status: string }>(`${API_URL}/membrane/emails/${id}/forward`, { ...request, user_id: userId });
+    }
+
+    /** Pull recent emails from Membrane into the local DB. */
+    syncEmails(top = 50): Observable<{ status: string; synced: number; fetched: number; errors: string[] }> {
+        return this.http.post<{ status: string; synced: number; fetched: number; errors: string[] }>(
+            `${API_URL}/membrane/sync-emails?top=${top}`,
+            {}
+        );
     }
 
     /** List events from Membrane backend. */

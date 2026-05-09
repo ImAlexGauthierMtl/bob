@@ -253,6 +253,22 @@ class MembraneCrudClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def get_email(self, email_id: str, user_id: str, forward_headers=None) -> Optional[dict]:
+        params = {"user_id": user_id}
+        resp = await self._client.get(f"/api/v1/membrane/emails/{email_id}", params=params, forward_headers=forward_headers)
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_event(self, event_id: str, user_id: str, forward_headers=None) -> Optional[dict]:
+        params = {"user_id": user_id}
+        resp = await self._client.get(f"/api/v1/membrane/events/{event_id}", params=params, forward_headers=forward_headers)
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        return resp.json()
+
     async def list_events(self, user_id: str, skip: int = 0, limit: int = 50, from_date: Optional[str] = None, to_date: Optional[str] = None, forward_headers=None) -> dict:
         params: Dict[str, str] = {"user_id": user_id, "skip": str(skip), "limit": str(limit)}
         if from_date:

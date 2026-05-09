@@ -1,18 +1,16 @@
 """Integration Settings routes — per-tenant CRUD for integration configuration.
 
-NOTE: Admin authorization is enforced at the B4F layer (communication-b4f-api)
-which is the only public ingress. This internal service is expected to be
-reachable only from the B4F through cluster-internal networking / service mesh.
-If that assumption changes, add a `require_admin` dependency here that fetches
-the user's role from user-backend-api (defense in depth). Tracked in
-docs/MEMBRANE_ARCHITECTURE.md §9.
+Admin authorization is enforced BOTH at the B4F layer (communication-b4f-api)
+and here via `require_admin` for defense in depth. Mutating routes (POST,
+PATCH, DELETE) re-fetch the user's role from user~backend-api before allowing
+the operation.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.infrastructure.database import get_db
-from app.middleware.auth import get_current_user
+from app.middleware.auth import get_current_user, require_admin
 from app.infrastructure.persistence.integration_settings_repository import IntegrationSettingsRepository
 from app.presentation.schemas.integration_settings_schemas import (
     IntegrationSettingCreate,
@@ -29,6 +27,7 @@ async def list_settings(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """List per-tenant integration settings. Open to any authenticated tenant user."""
     repo = IntegrationSettingsRepository(db)
     items = repo.list_settings(current_user["tenant_id"])
     return IntegrationSettingListResponse(items=[IntegrationSettingResponse.model_validate(i) for i in items])
@@ -36,10 +35,12 @@ async def list_settings(
 
 @router.post("", response_model=IntegrationSettingResponse, status_code=status.HTTP_201_CREATED)
 async def create_or_update_setting(
+    request: Request,
     data: IntegrationSettingCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
+    """Create or upsert an integration setting. Admin only."""
     repo = IntegrationSettingsRepository(db)
     setting = repo.upsert_setting(current_user["tenant_id"], data.integration_key, data.model_dump())
     return IntegrationSettingResponse.model_validate(setting)
@@ -47,11 +48,13 @@ async def create_or_update_setting(
 
 @router.patch("/{integration_key}", response_model=IntegrationSettingResponse)
 async def update_setting(
+    request: Request,
     integration_key: str,
     data: IntegrationSettingUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
+    """Update an integration setting. Admin only."""
     repo = IntegrationSettingsRepository(db)
     existing = repo.get_setting(current_user["tenant_id"], integration_key)
     if not existing:
@@ -67,10 +70,12 @@ async def update_setting(
 
 @router.delete("/{integration_key}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_setting(
+    request: Request,
     integration_key: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
+    """Delete an integration setting. Admin only."""
     repo = IntegrationSettingsRepository(db)
     deleted = repo.delete_setting(current_user["tenant_id"], integration_key)
     if not deleted:

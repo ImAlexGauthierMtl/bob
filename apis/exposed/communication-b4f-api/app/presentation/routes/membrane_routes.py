@@ -136,9 +136,15 @@ async def _resolve_tenant_key(
         if setting:
             scope = setting.get("scope_mode", _default_scope_for(integration_key))
             return _build_tenant_key(tenant_id, scope, user_id, org_id)
-    except Exception:
-        # Backend unavailable or setting not found — fall through to default
-        pass
+    except Exception as exc:
+        # Backend unavailable or setting not found — fall through to default.
+        # Log so we don't silently lose audit trail during outages.
+        logger.warning(
+            "integration_setting_lookup_failed",
+            integration_key=integration_key,
+            tenant_id=tenant_id,
+            error=str(exc),
+        )
 
     # Category-based default
     scope = _default_scope_for(integration_key)
@@ -198,8 +204,8 @@ async def list_connections(
         fields={"croo_user_id": current_user["user_id"]},
         expires_minutes=5,
     )
-    client = MembraneClient(token)
     try:
+        client = MembraneClient(token)
         items = await client.list_connections()
         # Membrane returns camelCase keys and may use `connectorId` + `key`
         # (for direct connectors like microsoft-outlook) instead of
@@ -225,6 +231,9 @@ async def list_connections(
     except httpx.HTTPStatusError as exc:
         logger.error("membrane_list_connections_error", status=exc.response.status_code, detail=str(exc))
         raise HTTPException(status_code=502, detail="Failed to fetch connections from Membrane")
+    except RuntimeError as exc:
+        logger.error("membrane_list_connections_failed", error=str(exc))
+        raise HTTPException(status_code=503, detail="Membrane integration not configured")
     finally:
         await client.close()
 
@@ -247,8 +256,8 @@ async def delete_connection(
         fields={"croo_user_id": current_user["user_id"]},
         expires_minutes=5,
     )
-    client = MembraneClient(token)
     try:
+        client = MembraneClient(token)
         removed = await client.delete_connection(connection_id)
         logger.info(
             "membrane_connection_deleted",
@@ -261,6 +270,9 @@ async def delete_connection(
     except httpx.HTTPStatusError as exc:
         logger.error("membrane_delete_connection_error", status=exc.response.status_code, detail=str(exc))
         raise HTTPException(status_code=502, detail="Failed to delete connection on Membrane")
+    except RuntimeError as exc:
+        logger.error("membrane_delete_connection_failed", error=str(exc))
+        raise HTTPException(status_code=503, detail="Membrane integration not configured")
     finally:
         await client.close()
 
@@ -271,8 +283,8 @@ async def list_integrations(
 ):
     """List available integrations configured in the Membrane workspace."""
     # Workspace-scoped read: use the service client token if available
-    client = MembraneClient()
     try:
+        client = MembraneClient()
         raw_items = await client.list_integrations()
         # Map Membrane format to frontend-expected schema
         items = []
@@ -290,7 +302,8 @@ async def list_integrations(
     except httpx.HTTPStatusError as exc:
         logger.error("membrane_list_integrations_error", status=exc.response.status_code)
         raise HTTPException(status_code=502, detail="Failed to fetch integrations from Membrane")
-    except RuntimeError:
+    except RuntimeError as exc:
+        logger.error("membrane_list_integrations_failed", error=str(exc))
         raise HTTPException(status_code=503, detail="Membrane integration not configured")
     finally:
         await client.close()
@@ -322,8 +335,8 @@ async def run_action(
         fields={"croo_user_id": current_user["user_id"]},
         expires_minutes=10,
     )
-    client = MembraneClient(token)
     try:
+        client = MembraneClient(token)
         result = await client.run_action(
             action_key=action_key,
             input_data=body.input,
@@ -339,6 +352,9 @@ async def run_action(
             detail = exc.response.text[:200]
         logger.error("membrane_action_run_error", action_key=action_key, status=exc.response.status_code, detail=detail)
         raise HTTPException(status_code=exc.response.status_code, detail=detail)
+    except RuntimeError as exc:
+        logger.error("membrane_action_run_failed", error=str(exc))
+        raise HTTPException(status_code=503, detail="Membrane integration not configured")
     finally:
         await client.close()
 
@@ -738,13 +754,14 @@ def _text_preview(html_or_text: Optional[str], max_len: int = 500) -> Optional[s
 @router.get("/connections/by-user/{user_id}")
 async def proxy_get_connection_by_user(
     user_id: str,
+    request: Request,
     integration_key: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Return a user's Membrane connection record from email-backend-api."""
     from app.infrastructure.clients.email_client import membrane_crud_client
     data = await membrane_crud_client.get_connection_by_user(
-        user_id, integration_key=integration_key, forward_headers=current_user,
+        user_id, integration_key=integration_key, forward_headers=request.headers,
     )
     if not data:
         raise HTTPException(status_code=404, detail="Connection not found")
@@ -753,6 +770,7 @@ async def proxy_get_connection_by_user(
 
 @router.get("/emails")
 async def proxy_list_emails(
+    request: Request,
     user_id: str = Query(...),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -764,12 +782,13 @@ async def proxy_list_emails(
     from app.infrastructure.clients.email_client import membrane_crud_client
     return await membrane_crud_client.list_emails(
         user_id, skip=skip, limit=limit, folder=folder, search=search,
-        forward_headers=current_user,
+        forward_headers=request.headers,
     )
 
 
 @router.get("/events")
 async def proxy_list_events(
+    request: Request,
     user_id: str = Query(...),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -783,8 +802,326 @@ async def proxy_list_events(
     _to = to_date.isoformat() if to_date else None
     return await membrane_crud_client.list_events(
         user_id, skip=skip, limit=limit, from_date=_from, to_date=_to,
-        forward_headers=current_user,
+        forward_headers=request.headers,
     )
+
+
+@router.get("/emails/{email_id}")
+async def proxy_get_email(
+    email_id: str,
+    request: Request,
+    user_id: str = Query(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Get a single Membrane-synced email via email-backend-api."""
+    from app.infrastructure.clients.email_client import membrane_crud_client
+    data = await membrane_crud_client.get_email(email_id, user_id, forward_headers=request.headers)
+    if not data:
+        raise HTTPException(status_code=404, detail="Email not found")
+    return data
+
+
+@router.get("/events/{event_id}")
+async def proxy_get_event(
+    event_id: str,
+    request: Request,
+    user_id: str = Query(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Get a single Membrane-synced event via email-backend-api."""
+    from app.infrastructure.clients.email_client import membrane_crud_client
+    data = await membrane_crud_client.get_event(event_id, user_id, forward_headers=request.headers)
+    if not data:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return data
+
+
+async def _get_membrane_client_for_user(current_user: dict, request: Request):
+    """Resolve the Membrane connection for the current user and return (MembraneClient, remote_connection_id)."""
+    from app.infrastructure.clients.email_client import membrane_crud_client
+
+    user_id = current_user["user_id"]
+    local_conn = await membrane_crud_client.get_connection_by_user(
+        user_id, forward_headers=request.headers,
+    )
+    if not local_conn:
+        raise HTTPException(status_code=404, detail="No Membrane email connection found for this user")
+
+    tenant_key = _build_tenant_key(
+        current_user.get("tenant_id", "default"),
+        _default_scope_for(local_conn.get("integration_key", "")),
+        user_id,
+        current_user.get("active_organization_id"),
+    )
+    token = generate_membrane_token(
+        tenant_key=tenant_key,
+        name=current_user.get("email", tenant_key),
+        fields={"croo_user_id": user_id},
+        expires_minutes=10,
+    )
+    client = MembraneClient(token)
+    return client, local_conn.get("membrane_connection_id")
+
+
+@router.post("/emails/send")
+async def proxy_send_email(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """Send a new email via the Membrane MS Graph proxy."""
+    body = await request.json()
+    to_recipients = body.get("to_recipients") or []
+    if isinstance(to_recipients, str):
+        to_recipients = [a.strip() for a in to_recipients.split(",") if a.strip()]
+    cc_recipients = body.get("cc_recipients") or []
+    if isinstance(cc_recipients, str):
+        cc_recipients = [a.strip() for a in cc_recipients.split(",") if a.strip()]
+    bcc_recipients = body.get("bcc_recipients") or []
+    subject = body.get("subject", "")
+    body_content = body.get("body_content", "")
+    body_type = body.get("body_type", "HTML")
+
+    graph_msg = {
+        "subject": subject,
+        "body": {"contentType": body_type, "content": body_content},
+        "toRecipients": [{"emailAddress": {"address": a}} for a in to_recipients],
+    }
+    if cc_recipients:
+        graph_msg["ccRecipients"] = [{"emailAddress": {"address": a}} for a in cc_recipients]
+    if bcc_recipients:
+        graph_msg["bccRecipients"] = [{"emailAddress": {"address": a}} for a in bcc_recipients]
+
+    client, conn_id = await _get_membrane_client_for_user(current_user, request)
+    try:
+        result = await client.proxy_post(conn_id, "/me/sendMail", {"message": graph_msg})
+        logger.info("membrane_email_sent", user_id=current_user["user_id"], to=to_recipients)
+        return {"status": "sent"}
+    except Exception as exc:
+        logger.error("membrane_send_email_failed", error=str(exc))
+        raise HTTPException(status_code=502, detail=f"Failed to send email via Membrane: {exc}")
+    finally:
+        await client.close()
+
+
+@router.post("/emails/{email_id}/reply")
+async def proxy_reply_email(
+    email_id: str,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """Reply to an email via the Membrane MS Graph proxy."""
+    from app.infrastructure.clients.email_client import membrane_crud_client
+
+    body = await request.json()
+    comment = body.get("comment", "")
+    reply_all = body.get("reply_all", False)
+
+    user_id = current_user["user_id"]
+    email_data = await membrane_crud_client.get_email(email_id, user_id, forward_headers=request.headers)
+    if not email_data:
+        raise HTTPException(status_code=404, detail="Email not found")
+
+    provider_msg_id = email_data.get("provider_message_id")
+    local_conn_id = email_data.get("membrane_connection_id")
+    if not provider_msg_id or not local_conn_id:
+        raise HTTPException(status_code=400, detail="Email missing provider message ID or connection ID")
+
+    # Resolve the remote Membrane connection ID from the local connection record
+    local_conn = await membrane_crud_client.get_connection(local_conn_id, forward_headers=request.headers)
+    if not local_conn:
+        raise HTTPException(status_code=404, detail="Local Membrane connection not found")
+    remote_conn_id = local_conn.get("membrane_connection_id")
+
+    client, _ = await _get_membrane_client_for_user(current_user, request)
+    try:
+        endpoint = f"/me/messages/{provider_msg_id}/{'replyAll' if reply_all else 'reply'}"
+        result = await client.proxy_post(remote_conn_id, endpoint, {"comment": comment})
+        logger.info("membrane_email_replied", user_id=user_id, message_id=provider_msg_id)
+
+        # Persist the reply in the local DB so it appears in the inbox feed
+        sender_email = current_user.get("email", "")
+        sender_name = f"{current_user.get('first_name', '')} {current_user.get('last_name', '')}".strip() or sender_email
+        reply_subject = email_data.get("subject", "")
+        if not reply_subject.lower().startswith("re:"):
+            reply_subject = f"Re: {reply_subject}"
+        try:
+            await membrane_crud_client.upsert_email({
+                "membrane_connection_id": local_conn_id,
+                "user_id": user_id,
+                "provider_message_id": f"local-reply-{email_id}",
+                "provider": local_conn.get("integration_key", "microsoft-outlook"),
+                "subject": reply_subject,
+                "body_preview": comment[:200] if comment else None,
+                "body_html": comment,
+                "from_address": sender_email,
+                "from_name": sender_name,
+                "to_addresses": [{"address": email_data.get("from_address", ""), "name": email_data.get("from_name", "")}],
+                "received_at": datetime.now(timezone.utc).isoformat(),
+                "is_read": True,
+                "folder": "sent",
+                "has_attachments": False,
+                "conversation_id": email_data.get("conversation_id"),
+            }, forward_headers=request.headers)
+        except Exception as persist_exc:
+            logger.warning("membrane_reply_persist_failed", error=str(persist_exc))
+
+        return {"status": "replied"}
+    except Exception as exc:
+        logger.error("membrane_reply_email_failed", error=str(exc))
+        raise HTTPException(status_code=502, detail=f"Failed to reply via Membrane: {exc}")
+    finally:
+        await client.close()
+
+
+@router.post("/emails/{email_id}/forward")
+async def proxy_forward_email(
+    email_id: str,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """Forward an email via the Membrane MS Graph proxy."""
+    from app.infrastructure.clients.email_client import membrane_crud_client
+
+    body = await request.json()
+    to_recipients = body.get("to_recipients") or []
+    if isinstance(to_recipients, str):
+        to_recipients = [a.strip() for a in to_recipients.split(",") if a.strip()]
+    comment = body.get("comment", "")
+
+    user_id = current_user["user_id"]
+    email_data = await membrane_crud_client.get_email(email_id, user_id, forward_headers=request.headers)
+    if not email_data:
+        raise HTTPException(status_code=404, detail="Email not found")
+
+    provider_msg_id = email_data.get("provider_message_id")
+    local_conn_id = email_data.get("membrane_connection_id")
+    if not provider_msg_id or not local_conn_id:
+        raise HTTPException(status_code=400, detail="Email missing provider message ID or connection ID")
+
+    # Resolve the remote Membrane connection ID from the local connection record
+    local_conn = await membrane_crud_client.get_connection(local_conn_id, forward_headers=request.headers)
+    if not local_conn:
+        raise HTTPException(status_code=404, detail="Local Membrane connection not found")
+    remote_conn_id = local_conn.get("membrane_connection_id")
+
+    client, _ = await _get_membrane_client_for_user(current_user, request)
+    try:
+        endpoint = f"/me/messages/{provider_msg_id}/forward"
+        payload = {
+            "comment": comment,
+            "toRecipients": [{"emailAddress": {"address": a}} for a in to_recipients],
+        }
+        result = await client.proxy_post(remote_conn_id, endpoint, payload)
+        logger.info("membrane_email_forwarded", user_id=user_id, message_id=provider_msg_id, to=to_recipients)
+
+        # Persist the forwarded email in the local DB so it appears in the inbox feed
+        sender_email = current_user.get("email", "")
+        sender_name = f"{current_user.get('first_name', '')} {current_user.get('last_name', '')}".strip() or sender_email
+        fwd_subject = email_data.get("subject", "")
+        if not fwd_subject.lower().startswith("fw:"):
+            fwd_subject = f"Fw: {fwd_subject}"
+        try:
+            await membrane_crud_client.upsert_email({
+                "membrane_connection_id": local_conn_id,
+                "user_id": user_id,
+                "provider_message_id": f"local-fwd-{email_id}",
+                "provider": local_conn.get("integration_key", "microsoft-outlook"),
+                "subject": fwd_subject,
+                "body_preview": (comment or "")[:200] if comment else None,
+                "body_html": comment,
+                "from_address": sender_email,
+                "from_name": sender_name,
+                "to_addresses": [{"address": a, "name": a} for a in to_recipients],
+                "received_at": datetime.now(timezone.utc).isoformat(),
+                "is_read": True,
+                "folder": "sent",
+                "has_attachments": False,
+                "conversation_id": email_data.get("conversation_id"),
+            }, forward_headers=request.headers)
+        except Exception as persist_exc:
+            logger.warning("membrane_forward_persist_failed", error=str(persist_exc))
+
+        return {"status": "forwarded"}
+    except Exception as exc:
+        logger.error("membrane_forward_email_failed", error=str(exc))
+        raise HTTPException(status_code=502, detail=f"Failed to forward via Membrane: {exc}")
+    finally:
+        await client.close()
+
+
+@router.post("/sync-emails")
+async def trigger_membrane_sync(
+    request: Request,
+    top: int = Query(50, ge=1, le=200),
+    current_user: dict = Depends(get_current_user),
+):
+    """Pull recent emails from Membrane (MS Graph proxy) and upsert into local DB.
+
+    Used by the frontend refresh button and by initial sync after a user
+    connects their mailbox. Falls back to creating a local membrane_connection
+    row on the fly if one doesn't exist yet.
+    """
+    from app.infrastructure.clients.email_client import membrane_crud_client
+    from app.infrastructure.external.membrane_service import generate_membrane_token, MembraneClient
+    from app.application.services.membrane_sync_service import sync_membrane_emails
+
+    user_id = current_user["user_id"]
+
+    # 1) Find (or create) the local membrane_connection row
+    local_conn = await membrane_crud_client.get_connection_by_user(
+        user_id, forward_headers=request.headers,
+    )
+
+    if not local_conn:
+        # Look up the active remote Membrane connection and persist a local row
+        tenant_key = _build_tenant_key(
+            current_user.get("tenant_id", "default"),
+            _default_scope_for("microsoft-outlook"),
+            user_id,
+            current_user.get("active_organization_id"),
+        )
+        token = generate_membrane_token(
+            tenant_key=tenant_key,
+            name=current_user.get("email", tenant_key),
+            fields={"croo_user_id": user_id},
+            expires_minutes=5,
+        )
+        try:
+            client = MembraneClient(token)
+            remote_conns = await client.list_connections()
+        except RuntimeError as exc:
+            logger.error("membrane_sync_lookup_failed", error=str(exc))
+            raise HTTPException(status_code=503, detail="Membrane integration not configured")
+        finally:
+            await client.close()
+
+        active = next((c for c in remote_conns if not c.get("disconnected") and c.get("connected")), None)
+        if not active:
+            raise HTTPException(status_code=400, detail="No active Membrane email connection for this user.")
+
+        local_conn = await membrane_crud_client.upsert_connection(
+            {
+                "user_id": user_id,
+                "membrane_connection_id": active["id"],
+                "integration_key": active.get("key") or "microsoft-outlook",
+                "connection_name": active.get("name") or current_user.get("email", "email"),
+                "is_active": True,
+            },
+            forward_headers=request.headers,
+        )
+
+    # 2) Pull recent messages via the Membrane proxy and upsert
+    try:
+        result = await sync_membrane_emails(
+            user=current_user,
+            local_connection=local_conn,
+            top=top,
+            forward_headers=request.headers,
+        )
+        return {"status": "ok", **result}
+    except Exception as exc:
+        logger.error("membrane_sync_endpoint_failed", user_id=user_id, error=str(exc))
+        raise HTTPException(status_code=500, detail=f"Sync failed: {exc}")
 
 
 # ── Platform Configuration ───────────────────────────────────────
