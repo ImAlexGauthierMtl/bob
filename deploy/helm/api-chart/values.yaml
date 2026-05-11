@@ -74,6 +74,13 @@ secrets:
   ms365TenantId: ""
   ms365RedirectUri: ""
 
+
+  # Membrane integration (optional; injected by deploy-api.sh when CI vars are set)
+  membraneWorkspaceKey: ""
+  membraneWorkspaceSecret: ""
+  membraneClientToken: ""
+  membraneWebhookSecret: ""
+
 # Service Configuration
 service:
   type: ClusterIP
