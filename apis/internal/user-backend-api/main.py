@@ -27,11 +27,12 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         from app.infrastructure.seed import run_seed
-        from app.infrastructure.seed_roles import seed_roles
+        from app.infrastructure.seed_roles import seed_roles, backfill_user_roles
         run_seed(db)
         admin = db.query(user.User).filter(user.User.email == settings.admin_email).first()
         if admin:
             seed_roles(db, tenant_id=admin.tenant_id)
+            backfill_user_roles(db, tenant_id=admin.tenant_id)
     finally:
         db.close()
 

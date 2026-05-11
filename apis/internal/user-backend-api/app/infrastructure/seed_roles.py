@@ -138,3 +138,33 @@ def seed_roles(db: Session, tenant_id: str) -> None:
                 db.add(UserRole(user_id=user.id, role_id=admin_role.id))
                 logger.info("admin_role_assigned", user_id=user.id)
         db.commit()
+
+
+
+def backfill_user_roles(db: Session, tenant_id: str) -> None:
+    """Assign UserRole entries to existing users who are missing them.
+
+    This is needed because the original user-creation code only set the
+    User.role string column but never inserted a UserRole row. Non-admin
+    users ended up with empty roles/permissions after login, causing
+    permission-denied errors that appeared as connection problems on the
+    frontend.
+    """
+    repo = RoleRepository(db)
+    users = db.query(User).filter(User.tenant_id == tenant_id).all()
+    assigned = 0
+    for user in users:
+        role_name = user.role or "member"
+        matching_role = repo.get_role_by_name(role_name, tenant_id)
+        if not matching_role:
+            logger.warning("backfill_skip_no_role", user_id=user.id, role_name=role_name)
+            continue
+        existing = db.query(UserRole).filter(
+            UserRole.user_id == user.id, UserRole.role_id == matching_role.id,
+        ).first()
+        if not existing:
+            db.add(UserRole(user_id=user.id, role_id=matching_role.id))
+            assigned += 1
+    if assigned:
+        db.commit()
+        logger.info("backfill_user_roles", tenant_id=tenant_id, assigned=assigned)
