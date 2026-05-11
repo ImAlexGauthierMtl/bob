@@ -115,6 +115,13 @@ for ENV in dev staging prod; do
     set_var "MS365_TENANT_ID"     "" "$ENV" "false"
     set_var "MS365_REDIRECT_URI"  "" "$ENV" "false"
     set_var "MS365_WEBHOOK_HOST"  "" "$ENV" "false"
+
+
+    # ── Membrane integration ──
+    set_var "MEMBRANE_WORKSPACE_KEY"    "" "$ENV" "true"
+    set_var "MEMBRANE_WORKSPACE_SECRET" "" "$ENV" "true"
+    set_var "MEMBRANE_CLIENT_TOKEN"     "" "$ENV" "true"
+    set_var "MEMBRANE_WEBHOOK_SECRET"   "" "$ENV" "true"
 done
 
 echo ""

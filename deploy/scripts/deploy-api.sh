@@ -160,6 +160,29 @@ if [[ "${API_NAME}" == "communication-b4f-api" ]]; then
     fi
 fi
 
+# Membrane integration — communication B4F only (env read at process start; previously not wired to Helm)
+if [[ "${API_NAME}" == "communication-b4f-api" ]]; then
+    if [[ -n "${MEMBRANE_WORKSPACE_KEY:-}" ]] && [[ -n "${MEMBRANE_WORKSPACE_SECRET:-}" ]]; then
+        echo "  Injecting Membrane credentials for ${API_NAME}"
+        HELM_CMD="${HELM_CMD} --set secrets.membraneWorkspaceKey=\"${MEMBRANE_WORKSPACE_KEY}\""
+        HELM_CMD="${HELM_CMD} --set secrets.membraneWorkspaceSecret=\"${MEMBRANE_WORKSPACE_SECRET}\""
+        if [[ -n "${MEMBRANE_CLIENT_TOKEN:-}" ]]; then
+            HELM_CMD="${HELM_CMD} --set secrets.membraneClientToken=\"${MEMBRANE_CLIENT_TOKEN}\""
+        fi
+        if [[ -n "${MEMBRANE_WEBHOOK_SECRET:-}" ]]; then
+            HELM_CMD="${HELM_CMD} --set secrets.membraneWebhookSecret=\"${MEMBRANE_WEBHOOK_SECRET}\""
+        fi
+        # PUBLIC_API_URL is needed for the connect-redirect flow to build correct callback URLs
+        if [[ -n "${INGRESS_URL:-}" ]]; then
+            HELM_CMD="${HELM_CMD} --set env.PUBLIC_API_URL=\"${INGRESS_URL}\""
+        fi
+    else
+        echo "  Warning: MEMBRANE_WORKSPACE_KEY and MEMBRANE_WORKSPACE_SECRET not set in GitLab CI/CD variables"
+        echo "           for Membrane integration to work (otherwise /membrane/* endpoints return 503)."
+    fi
+fi
+
+
 # Inject backend service URLs for B4F APIs
 if [[ "${API_NAME}" == *"-b4f-api" ]]; then
     echo "  Injecting backend service URLs for ${API_NAME}..."

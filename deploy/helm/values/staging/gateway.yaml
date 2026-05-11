@@ -106,6 +106,14 @@ apiRoutes:
       serviceName: communication-b4f-api
       port: 8004
       routePrefix: "webhooks"
+    comm-membrane:
+      serviceName: communication-b4f-api
+      port: 8004
+      routePrefix: "membrane"
+    comm-integration-settings:
+      serviceName: communication-b4f-api
+      port: 8004
+      routePrefix: "integration-settings"
     # ── Platform B4F (port 8005) ──
     platform-workflows:
       serviceName: platform-b4f-api
