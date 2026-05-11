@@ -1,9 +1,9 @@
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { SyncedEmail, EmailAiInsightResponse } from '../../../../shared/models/ms365.model';
-import { MS365Service } from '../../../../shared/services/ms365.service';
+import { UnifiedEmail } from '../../../../shared/models/unified-email.model';
+import { EmailService } from '../../../../shared/services/email.service';
 import { catchError, finalize } from 'rxjs/operators';
 import { of } from 'rxjs';
 
@@ -15,7 +15,8 @@ import { of } from 'rxjs';
     styleUrl: './email-reading-pane.css'
 })
 export class EmailReadingPaneComponent implements OnChanges {
-    @Input() email: SyncedEmail | null = null;
+    @Input() email: UnifiedEmail | null = null;
+    @Output() emailActionCompleted = new EventEmitter<void>();
     
     replyForm: FormGroup;
     isReplying = false;
@@ -28,7 +29,7 @@ export class EmailReadingPaneComponent implements OnChanges {
     activeTab: 'reply' | 'forward' = 'reply';
     sanitizedBodyHtml: SafeHtml | null = null;
 
-    constructor(private ms365Service: MS365Service, private fb: FormBuilder, private sanitizer: DomSanitizer) {
+    constructor(private emailService: EmailService, private fb: FormBuilder, private sanitizer: DomSanitizer) {
         this.replyForm = this.fb.group({
             comment: ['', Validators.required]
         });
@@ -69,14 +70,14 @@ export class EmailReadingPaneComponent implements OnChanges {
         this.replyError = null;
         const comment = this.replyForm.get('comment')?.value;
 
-        this.ms365Service.replyEmail(this.email.id, { comment, reply_all: false })
+        this.emailService.replyEmail(this.email.id, { comment, reply_all: false })
             .pipe(
                 finalize(() => this.isReplying = false)
             )
             .subscribe({
                 next: () => {
                     this.replyForm.reset();
-                    // Optionally trigger a toast or update local thread
+                    this.emailActionCompleted.emit();
                 },
                 error: (err) => {
                     console.error('Failed to reply', err);
@@ -104,7 +105,7 @@ export class EmailReadingPaneComponent implements OnChanges {
             return;
         }
 
-        this.ms365Service.forwardEmail(this.email.id, { 
+        this.emailService.forwardEmail(this.email.id, { 
             to_recipients, 
             comment: formValues.comment || '' 
         })
@@ -114,7 +115,7 @@ export class EmailReadingPaneComponent implements OnChanges {
             .subscribe({
                 next: () => {
                     this.forwardForm.reset();
-                    // Optionally show success message
+                    this.emailActionCompleted.emit();
                 },
                 error: (err) => {
                     console.error('Failed to forward', err);
@@ -132,4 +133,3 @@ export class EmailReadingPaneComponent implements OnChanges {
         return label.split(' > ').map(p => p.trim());
     }
 }
-

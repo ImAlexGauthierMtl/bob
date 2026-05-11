@@ -2,16 +2,15 @@
     <!-- Toolbar -->
     <div class="email-list-toolbar">
         <div class="email-list-toolbar__actions">
-            <input type="checkbox" class="email-list-toolbar__checkbox">
-            <button (click)="loadEmails(true)" class="email-list-toolbar__btn" [class.animate-spin]="isLoading">
+            <!-- Hidden: select-all checkbox (no backend) -->
+            <!-- <input type="checkbox" class="email-list-toolbar__checkbox"> -->
+            <button (click)="onRefresh()" class="email-list-toolbar__btn" [class.animate-spin]="isLoading">
                 <i class="fa-solid fa-rotate-right text-sm"></i>
             </button>
-            <button class="email-list-toolbar__btn">
-                <i class="fa-solid fa-trash text-sm"></i>
-            </button>
-            <button class="email-list-toolbar__btn">
-                <i class="fa-solid fa-folder text-sm"></i>
-            </button>
+            <!-- Hidden: trash button (no backend) -->
+            <!-- <button class="email-list-toolbar__btn"><i class="fa-solid fa-trash text-sm"></i></button> -->
+            <!-- Hidden: folder button (no backend) -->
+            <!-- <button class="email-list-toolbar__btn"><i class="fa-solid fa-folder text-sm"></i></button> -->
         </div>
         <p class="email-list-toolbar__stats">{{ emails.length > 0 ? skip + 1 : 0 }}-{{ skip + emails.length }} of {{ total }}</p>
     </div>
@@ -48,11 +47,13 @@
                 <div class="email-item__inner">
                     <!-- Actions -->
                     <div style="display: flex; flex-direction: column; align-items: center;">
-                        <input type="checkbox" class="email-item__check" (click)="$event.stopPropagation()">
-                        <button class="email-item__star" [class.email-item__star--active]="email.importance === 'high'" (click)="$event.stopPropagation()">
+                        <!-- Hidden: item checkbox (no backend) -->
+                        <!-- <input type="checkbox" class="email-item__check" (click)="$event.stopPropagation()"> -->
+                        <!-- Hidden: star button (no backend) -->
+                        <!-- <button class="email-item__star" [class.email-item__star--active]="email.importance === 'high'" (click)="$event.stopPropagation()">
                             <i class="fa-solid fa-star" *ngIf="email.importance === 'high'"></i>
                             <i class="fa-regular fa-star" *ngIf="email.importance !== 'high'"></i>
-                        </button>
+                        </button> -->
                     </div>
                     
                     <!-- Avatar -->

@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MS365Service } from '../../../../shared/services/ms365.service';
+import { EmailService } from '../../../../shared/services/email.service';
 import { finalize } from 'rxjs';
 
 @Component({
@@ -19,7 +19,7 @@ export class EmailComposeComponent {
     isSending = false;
     errorMsg = '';
 
-    constructor(private fb: FormBuilder, private ms365Service: MS365Service) {
+    constructor(private fb: FormBuilder, private emailService: EmailService) {
         this.composeForm = this.fb.group({
             to: ['', [Validators.required]],
             cc: [''],
@@ -42,7 +42,7 @@ export class EmailComposeComponent {
         const toRecipients = formValue.to.split(',').map((e: string) => e.trim()).filter((e: string) => e);
         const ccRecipients = formValue.cc ? formValue.cc.split(',').map((e: string) => e.trim()).filter((e: string) => e) : [];
 
-        this.ms365Service.sendEmail({
+        this.emailService.sendEmail({
             subject: formValue.subject,
             body_content: formValue.body,
             to_recipients: toRecipients,

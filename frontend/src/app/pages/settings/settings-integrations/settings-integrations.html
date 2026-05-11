@@ -5,21 +5,52 @@
         <p class="settings-panel__subtitle">Connect your favorite tools and services</p>
     </div>
 
+    <!-- Membrane Platform Status (Admin only) -->
+    @if (isAdmin) {
+    <div style="background: var(--color-surface, #f8fafc); border: 1px solid var(--color-border, #e2e8f0); border-radius: 8px; padding: 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+        <div style="width: 40px; height: 40px; border-radius: 8px; background: var(--color-primary-light, #e0e7ff); display: flex; align-items: center; justify-content: center;">
+            <i class="fa-solid fa-network-wired" style="color: var(--color-primary, #4f46e5);"></i>
+        </div>
+        <div style="flex: 1;">
+            <p style="font-weight: 600; font-size: 14px; margin: 0;">Membrane Integration Platform</p>
+            <p style="font-size: 12px; color: var(--color-text-muted); margin: 2px 0 0;">
+                @if (membraneConfigured) {
+                    <i class="fa-solid fa-check-circle" style="color: var(--color-success, #10b981);"></i> Configured — integrations available
+                } @else {
+                    <i class="fa-solid fa-circle-xmark" style="color: var(--color-danger, #ef4444);"></i> Not configured — set up your Membrane credentials to enable integrations
+                }
+            </p>
+        </div>
+        <button class="integration-card__btn" (click)="openMembraneConfig()">
+            <i class="fa-solid fa-gear"></i> Configure
+        </button>
+    </div>
+    }
+
     <!-- Search -->
     <div class="search-bar">
         <i class="fa-solid fa-search search-bar__icon"></i>
-        <input type="text" placeholder="Search integrations..." class="search-bar__input" />
+        <input type="text" placeholder="Search integrations..." class="search-bar__input"
+            (input)="onSearch($any($event).target.value)" />
     </div>
 
-    <!-- MS365 Error Banner -->
-    @if (ms365Error) {
+    <!-- Error Banner -->
+    @if (ms365Error || membraneError) {
     <div style="background: var(--color-danger-light, #fef2f2); border: 1px solid var(--color-danger, #ef4444); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px;">
         <i class="fa-solid fa-circle-exclamation" style="color: var(--color-danger, #ef4444);"></i>
-        <span style="flex: 1; font-size: 13px; color: var(--color-danger, #ef4444);">{{ ms365Error }}</span>
+        <span style="flex: 1; font-size: 13px; color: var(--color-danger, #ef4444);">{{ ms365Error || membraneError }}</span>
         <button style="background: none; border: none; cursor: pointer; color: var(--color-danger, #ef4444); font-size: 14px;"
-            (click)="ms365Error = null">
+            (click)="ms365Error = null; membraneError = null">
             <i class="fa-solid fa-xmark"></i>
         </button>
+    </div>
+    }
+
+    <!-- Loading -->
+    @if (membraneLoading) {
+    <div style="text-align: center; padding: 24px; color: var(--color-text-muted);">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px;"></i>
+        <p style="margin-top: 8px; font-size: 14px;">Loading integrations...</p>
     </div>
     }
 
@@ -42,30 +73,25 @@
     }
 
     <!-- Connected -->
+    @if (connectedIntegrations.length > 0) {
     <div>
         <p class="section-label">Connected</p>
         <div class="integration-grid">
-
-            <!-- Microsoft 365 — Connected State -->
-            @if (ms365IsConnected) {
+            @for (integration of connectedIntegrations; track integration.key) {
             <div class="integration-card">
                 <div class="integration-card__header">
                     <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--ms">
-                            <i class="fa-brands fa-microsoft"></i>
+                        <div class="integration-card__icon {{ integration.iconColorClass }}">
+                            <i class="{{ integration.iconClass }}"></i>
                         </div>
                         <div>
-                            <p class="integration-card__name">Microsoft 365</p>
-                            <p class="integration-card__sub">{{ ms365Connection?.ms_email || 'Outlook, Calendar' }}</p>
+                            <p class="integration-card__name">{{ integration.name }}</p>
+                            <p class="integration-card__sub">{{ integration.description }}</p>
                         </div>
                     </div>
                     <span class="status-badge status-badge--green">
-                        @if (ms365Syncing) {
+                        @if (integration.isLegacyMs365 && ms365Syncing) {
                         <i class="fa-solid fa-spinner fa-spin"></i> Syncing
-                        } @else if (ms365NeedsReauth) {
-                        <span class="status-badge status-badge--yellow" style="background: var(--color-warning-light, #fffbeb); color: var(--color-warning, #f59e0b);">
-                            <i class="fa-solid fa-triangle-exclamation"></i> Expired
-                        </span>
                         } @else {
                         Active
                         }
@@ -73,8 +99,9 @@
                 </div>
                 <div class="integration-card__expanded">
                     <p style="font-size: 13px; color: var(--color-text-muted); margin: 0 0 12px;">
-                        Your Microsoft 365 account is currently connected successfully.
+                        Your {{ integration.name }} account is currently connected successfully.
                     </p>
+                    @if (integration.isLegacyMs365) {
                     <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px; font-size: 12px;">
                         <button class="integration-card__btn" (click)="forceSync(); $event.stopPropagation()"
                             [disabled]="ms365Syncing" style="padding: 4px 8px;">
@@ -92,163 +119,230 @@
                             }
                         </span>
                     </div>
+                    }
                 </div>
                 <div class="integration-card__actions">
+                    @if (integration.isLegacyMs365) {
                     <button class="integration-card__btn" routerLink="/settings/ms365">Configure</button>
-                    <button class="integration-card__btn integration-card__btn--disconnect"
-                        (click)="disconnectMs365()">Disconnect</button>
+                    <button class="integration-card__btn integration-card__btn--disconnect" (click)="disconnectMs365()">Disconnect</button>
+                    } @else {
+                    <button class="integration-card__btn" (click)="disconnectMembrane(integration.connection!)">Disconnect</button>
+                    }
                 </div>
             </div>
             }
-
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--blue">
-                            <i class="fa-brands fa-google"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">Google Workspace</p>
-                            <p class="integration-card__sub">Gmail, Calendar, Drive</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-badge--green">Active</span>
-                </div>
-                <p class="integration-card__desc">Sync emails, calendar events, and files automatically</p>
-                <div class="integration-card__actions">
-                    <button class="integration-card__btn">Configure</button>
-                    <button class="integration-card__btn integration-card__btn--disconnect">Disconnect</button>
-                </div>
-            </div>
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--purple">
-                            <i class="fa-brands fa-slack"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">Slack</p>
-                            <p class="integration-card__sub">Team communication</p>
-                        </div>
-                    </div>
-                    <span class="status-badge status-badge--green">Active</span>
-                </div>
-                <p class="integration-card__desc">Get notifications and updates in your Slack workspace</p>
-                <div class="integration-card__actions">
-                    <button class="integration-card__btn">Configure</button>
-                    <button class="integration-card__btn integration-card__btn--disconnect">Disconnect</button>
-                </div>
-            </div>
         </div>
     </div>
+    }
 
     <!-- Available -->
     <div class="settings-section">
         <p class="section-label">Available</p>
         <div class="integration-grid">
+            @for (integration of availableIntegrations; track integration.key) {
+            <div class="integration-card">
+                <div class="integration-card__header">
+                    <div class="integration-card__brand">
+                        <div class="integration-card__icon {{ integration.iconColorClass }}">
+                            <i class="{{ integration.iconClass }}"></i>
+                        </div>
+                        <div>
+                            <p class="integration-card__name">{{ integration.name }}</p>
+                            <p class="integration-card__sub">{{ integration.description }}</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="integration-card__desc">{{ integration.description }}</p>
+                <button class="integration-card__btn integration-card__btn--connect" style="width:100%"
+                    (click)="connectMembrane(integration.key)">
+                    Connect
+                </button>
+            </div>
+            }
+        </div>
+</div>
 
-            <!-- Microsoft 365 — Available State (not connected) -->
-            @if (!ms365IsConnected) {
+<!-- Membrane Configuration Modal -->
+@if (showMembraneConfigModal) {
+<div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;"
+    (click)="showMembraneConfigModal = false">
+    <div style="background: white; border-radius: 12px; padding: 24px; width: 100%; max-width: 480px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);"
+        (click)="$event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0; font-size: 18px;">Configure Membrane Platform</h3>
+        <button style="background: none; border: none; cursor: pointer; font-size: 18px; color: var(--color-text-muted);"
+            (click)="closeMembraneConfig()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <p style="font-size: 13px; color: var(--color-text-muted); margin-bottom: 16px;">
+            Enter your <a href="https://getmembrane.com" target="_blank" style="color: var(--color-primary);">getmembrane.com</a> workspace credentials.
+            These are used to generate scoped JWTs for your users.
+        </p>
+
+        <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Workspace Key</label>
+            <input type="text" class="search-bar__input" style="width: 100%;"
+                [(ngModel)]="membraneConfigForm.workspace_key" placeholder="e.g. croo-prod-2025" />
+        </div>
+
+        <div style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label style="font-size: 13px; font-weight: 500;">Workspace Secret</label>
+                @if (membraneSecretConfigured) {
+                    @if (!membraneEditingSecret) {
+                    <button type="button"
+                        style="background: none; border: none; cursor: pointer; font-size: 12px; color: var(--color-primary); padding: 0;"
+                        (click)="startEditingSecret()">
+                        <i class="fa-solid fa-pen-to-square"></i> Change secret
+                    </button>
+                    } @else {
+                    <button type="button"
+                        style="background: none; border: none; cursor: pointer; font-size: 12px; color: var(--color-text-muted); padding: 0;"
+                        (click)="cancelEditingSecret()">
+                        <i class="fa-solid fa-xmark"></i> Keep existing
+                    </button>
+                    }
+                }
+            </div>
+            @if (membraneSecretConfigured && !membraneEditingSecret) {
+            <input type="text" class="search-bar__input" style="width: 100%; font-family: monospace; color: var(--color-text-muted);"
+                value="••••••••••••••••••••••••••••••••" readonly
+                title="A secret is already configured. Click 'Change secret' to replace it." />
+            <p style="margin: 6px 0 0; font-size: 11px; color: var(--color-text-muted);">
+                <i class="fa-solid fa-shield-halved"></i>
+                A secret is stored. For security it's never displayed again — click "Change secret" to rotate.
+            </p>
+            } @else {
+            <input type="password" class="search-bar__input" style="width: 100%;"
+                [(ngModel)]="membraneConfigForm.workspace_secret"
+                [placeholder]="membraneSecretConfigured ? 'Enter new secret to replace existing' : 'Paste your workspace secret'"
+                autocomplete="new-password" />
+            }
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">API URL</label>
+            <input type="text" class="search-bar__input" style="width: 100%;"
+                [(ngModel)]="membraneConfigForm.api_url" placeholder="https://api.getmembrane.com" />
+        </div>
+
+        @if (membraneConfigError) {
+        <div style="background: var(--color-danger-light, #fef2f2); border: 1px solid var(--color-danger, #ef4444); border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; font-size: 13px; color: var(--color-danger, #ef4444);">
+            <i class="fa-solid fa-circle-exclamation"></i> {{ membraneConfigError }}
+        </div>
+        }
+
+        @if (membraneConfigSuccess) {
+        <div style="background: var(--color-success-light, #ecfdf5); border: 1px solid var(--color-success, #10b981); border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; font-size: 13px; color: var(--color-success, #10b981);">
+            <i class="fa-solid fa-check-circle"></i> {{ membraneConfigSuccess }}
+        </div>
+        }
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="integration-card__btn" (click)="showMembraneConfigModal = false"
+                [disabled]="membraneConfigSaving">
+                Cancel
+            </button>
+            <button class="integration-card__btn integration-card__btn--connect" (click)="saveMembraneConfig()"
+                [disabled]="membraneConfigSaving">
+                @if (membraneConfigSaving) {
+                <i class="fa-solid fa-spinner fa-spin"></i> Saving...
+                } @else {
+                <i class="fa-solid fa-floppy-disk"></i> Save
+                }
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Admin Configuration -->
+    @if (isAdmin) {
+    <div class="settings-section" style="margin-top: 32px;">
+        <p class="section-label">Admin Configuration</p>
+        <p style="font-size: 13px; color: var(--color-text-muted); margin-bottom: 12px;">
+            Define how each integration is scoped within your tenant. Changes apply to all users.
+        </p>
+        <div class="integration-grid">
+            <!-- Membrane integrations -->
+            @for (integration of membraneIntegrations; track integration.key) {
+            <div class="integration-card">
+                <div class="integration-card__header">
+                    <div class="integration-card__brand">
+                        <div class="integration-card__icon {{ _colorClassForIntegration(integration.key) }}">
+                            <i class="{{ _iconForIntegration(integration.key) }}"></i>
+                        </div>
+                        <div>
+                            <p class="integration-card__name">{{ integration.name }}</p>
+                            <p class="integration-card__sub">Scope mode</p>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 8px 0;">
+                    <select class="search-bar__input"
+                        [value]="getScopeFor(integration.key)"
+                        (change)="setScope(integration.key, $any($event).target.value)">
+                        <option value="per-user">Per User (each user connects individually)</option>
+                        <option value="per-organization">Per Organization (shared by active org)</option>
+                        <option value="per-tenant">Per Tenant (shared across entire tenant)</option>
+                    </select>
+                </div>
+            </div>
+            }
+            <!-- Hardcoded integrations that don't appear in membraneIntegrations yet -->
+            @for (hardcoded of [{key:'hubspot',name:'HubSpot'},{key:'salesforce',name:'Salesforce'},{key:'slack',name:'Slack'}]; track hardcoded.key) {
+            @if (!membraneIntegrations.some(i => i.key === hardcoded.key)) {
+            <div class="integration-card">
+                <div class="integration-card__header">
+                    <div class="integration-card__brand">
+                        <div class="integration-card__icon {{ _colorClassForIntegration(hardcoded.key) }}">
+                            <i class="{{ _iconForIntegration(hardcoded.key) }}"></i>
+                        </div>
+                        <div>
+                            <p class="integration-card__name">{{ hardcoded.name }}</p>
+                            <p class="integration-card__sub">Scope mode</p>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 8px 0;">
+                    <select class="search-bar__input"
+                        [value]="getScopeFor(hardcoded.key)"
+                        (change)="setScope(hardcoded.key, $any($event).target.value)">
+                        <option value="per-user">Per User</option>
+                        <option value="per-organization">Per Organization</option>
+                        <option value="per-tenant">Per Tenant</option>
+                    </select>
+                </div>
+            </div>
+            }
+            }
+            <!-- Legacy MS365 scope config -->
             <div class="integration-card">
                 <div class="integration-card__header">
                     <div class="integration-card__brand">
                         <div class="integration-card__icon integration-card__icon--ms">
                             <i class="fa-brands fa-microsoft"></i>
                         </div>
-                        <div class="integration-card__info">
-                            <p class="integration-card__name">Microsoft 365</p>
-                            <p class="integration-card__sub">Outlook, Calendar Exchange</p>
-                        </div>
-                    </div>
-                </div>
-                <p class="integration-card__desc">Emails, contacts & calendar on two-way sync.</p>
-                <button class="integration-card__btn integration-card__btn--connect" style="width:100%"
-                    (click)="connectMs365()" [disabled]="ms365Loading">
-                    @if (ms365Loading) {
-                    <i class="fa-solid fa-spinner fa-spin"></i> Connecting...
-                    } @else {
-                    Connect
-                    }
-                </button>
-            </div>
-            }
-
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--orange">
-                            <i class="fa-brands fa-hubspot"></i>
-                        </div>
                         <div>
-                            <p class="integration-card__name">HubSpot</p>
-                            <p class="integration-card__sub">Marketing automation</p>
+                            <p class="integration-card__name">Microsoft 365 / Outlook</p>
+                            <p class="integration-card__sub">Scope mode</p>
                         </div>
                     </div>
                 </div>
-                <p class="integration-card__desc">Sync contacts and marketing campaigns with HubSpot</p>
-                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
-            </div>
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--sf">
-                            <i class="fa-brands fa-salesforce"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">Salesforce</p>
-                            <p class="integration-card__sub">CRM integration</p>
-                        </div>
-                    </div>
+                <div style="padding: 8px 0;">
+                    <select class="search-bar__input"
+                        [value]="getScopeFor('microsoft-outlook')"
+                        (change)="setScope('microsoft-outlook', $any($event).target.value)">
+                        <option value="per-user">Per User (recommended for email)</option>
+                        <option value="per-organization">Per Organization</option>
+                        <option value="per-tenant">Per Tenant</option>
+                    </select>
                 </div>
-                <p class="integration-card__desc">Bi-directional sync with Salesforce CRM data</p>
-                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
-            </div>
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--mc">
-                            <i class="fa-brands fa-mailchimp"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">Mailchimp</p>
-                            <p class="integration-card__sub">Email marketing</p>
-                        </div>
-                    </div>
-                </div>
-                <p class="integration-card__desc">Manage email campaigns and subscriber lists</p>
-                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
-            </div>
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--indigo">
-                            <i class="fa-brands fa-stripe"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">Stripe</p>
-                            <p class="integration-card__sub">Payment processing</p>
-                        </div>
-                    </div>
-                </div>
-                <p class="integration-card__desc">Process payments and manage subscriptions</p>
-                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
-            </div>
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--github">
-                            <i class="fa-brands fa-github"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">GitHub</p>
-                            <p class="integration-card__sub">Development tracking</p>
-                        </div>
-                    </div>
-                </div>
-                <p class="integration-card__desc">Link development work to opportunities and projects</p>
-                <button class="integration-card__btn integration-card__btn--connect" style="width:100%">Connect</button>
             </div>
         </div>
     </div>
+    }
 
 </div>

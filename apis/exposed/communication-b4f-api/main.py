@@ -37,7 +37,11 @@ if _api_prefix:
 from app.presentation.routes.ms365_routes import router as ms365_router
 from app.presentation.routes.smart_label_routes import router as smart_label_router
 from app.presentation.routes.webhook_routes import router as webhook_router
+from app.presentation.routes.membrane_routes import router as membrane_router
+from app.presentation.routes.integration_settings_routes import router as integration_settings_router
 
 app.include_router(ms365_router, tags=["ms365"])
 app.include_router(smart_label_router, tags=["smart-labels"])
 app.include_router(webhook_router, tags=["webhooks"])
+app.include_router(membrane_router, tags=["membrane"])
+app.include_router(integration_settings_router, tags=["integration-settings"])

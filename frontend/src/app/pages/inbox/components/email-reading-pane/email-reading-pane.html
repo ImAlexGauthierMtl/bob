@@ -17,21 +17,16 @@
         <div class="reading-pane__header-bar">
             <div class="reading-pane__actions-row">
                 <div class="reading-pane__actions-group">
-                    <button class="reading-pane__btn">
-                        <i class="fa-solid fa-arrow-left"></i>
-                    </button>
-                    <button class="reading-pane__btn">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                    <button class="reading-pane__btn">
-                        <i class="fa-solid fa-folder"></i>
-                    </button>
+                    <!-- Hidden: back arrow (no backend) -->
+                    <!-- <button class="reading-pane__btn"><i class="fa-solid fa-arrow-left"></i></button> -->
+                    <!-- Hidden: trash (no backend) -->
+                    <!-- <button class="reading-pane__btn"><i class="fa-solid fa-trash"></i></button> -->
+                    <!-- Hidden: folder (no backend) -->
+                    <!-- <button class="reading-pane__btn"><i class="fa-solid fa-folder"></i></button> -->
                 </div>
                 <div class="reading-pane__actions-group">
-<!-- Button removed to favor automatic parsing via backend AI script -->
-                    <button class="reading-pane__btn">
-                        <i class="fa-solid fa-ellipsis-vertical"></i>
-                    </button>
+                    <!-- Hidden: ellipsis (no backend) -->
+                    <!-- <button class="reading-pane__btn"><i class="fa-solid fa-ellipsis-vertical"></i></button> -->
                 </div>
             </div>
         </div>
@@ -93,12 +88,10 @@
                     <div class="email-meta">
                         <p class="email-meta__time">{{ email.received_at | date:'medium' }}</p>
                         <div class="email-meta__actions">
-                            <button class="email-meta__btn">
-                                <i class="fa-regular fa-star text-sm"></i>
-                            </button>
-                            <button class="email-meta__btn email-meta__btn--reply">
-                                <i class="fa-solid fa-reply text-sm"></i>
-                            </button>
+                            <!-- Hidden: star button (no backend) -->
+                            <!-- <button class="email-meta__btn"><i class="fa-regular fa-star text-sm"></i></button> -->
+                            <!-- Hidden: reply button in meta (redundant with action tabs) -->
+                            <!-- <button class="email-meta__btn email-meta__btn--reply"><i class="fa-solid fa-reply text-sm"></i></button> -->
                         </div>
                     </div>
                 </div>
@@ -154,12 +147,10 @@
                     
                     <div class="email-form-toolbar">
                         <div class="email-form-tools">
-                            <button type="button" class="email-form-tool-btn">
-                                <i class="fa-solid fa-text-height"></i>
-                            </button>
-                            <button type="button" class="email-form-tool-btn">
-                                <i class="fa-solid fa-paperclip"></i>
-                            </button>
+                            <!-- Hidden: text-height tool (no backend) -->
+                            <!-- <button type="button" class="email-form-tool-btn"><i class="fa-solid fa-text-height"></i></button> -->
+                            <!-- Hidden: paperclip tool (no backend) -->
+                            <!-- <button type="button" class="email-form-tool-btn"><i class="fa-solid fa-paperclip"></i></button> -->
                         </div>
                         <button type="submit" [disabled]="replyForm.invalid || isReplying" class="btn-primary-action">
                             <i class="fa-solid fa-circle-notch fa-spin" *ngIf="isReplying"></i>
@@ -185,12 +176,10 @@
                     
                     <div class="email-form-toolbar">
                         <div class="email-form-tools">
-                            <button type="button" class="email-form-tool-btn">
-                                <i class="fa-solid fa-text-height"></i>
-                            </button>
-                            <button type="button" class="email-form-tool-btn">
-                                <i class="fa-solid fa-paperclip"></i>
-                            </button>
+                            <!-- Hidden: text-height tool (no backend) -->
+                            <!-- <button type="button" class="email-form-tool-btn"><i class="fa-solid fa-text-height"></i></button> -->
+                            <!-- Hidden: paperclip tool (no backend) -->
+                            <!-- <button type="button" class="email-form-tool-btn"><i class="fa-solid fa-paperclip"></i></button> -->
                         </div>
                         <button type="submit" [disabled]="forwardForm.invalid || isForwarding" class="btn-primary-action">
                             <i class="fa-solid fa-circle-notch fa-spin" *ngIf="isForwarding"></i>

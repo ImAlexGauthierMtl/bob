@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InboxSidebarComponent, InboxFilter } from './components/inbox-sidebar/inbox-sidebar';
@@ -6,7 +6,7 @@ import { EmailListComponent } from './components/email-list/email-list';
 import { EmailReadingPaneComponent } from './components/email-reading-pane/email-reading-pane';
 import { EmailComposeComponent } from './components/email-compose/email-compose';
 
-import { SyncedEmail } from '../../shared/models/ms365.model';
+import { UnifiedEmail } from '../../shared/models/unified-email.model';
 
 @Component({
     selector: 'app-inbox-overview',
@@ -24,9 +24,11 @@ import { SyncedEmail } from '../../shared/models/ms365.model';
 })
 export class InboxOverviewComponent implements OnInit {
 
-    selectedEmail: SyncedEmail | null = null;
+    selectedEmail: UnifiedEmail | null = null;
     currentFilter: InboxFilter = {};
     isComposeOpen = false;
+
+    @ViewChild(EmailListComponent) emailList!: EmailListComponent;
 
     constructor() {}
 
@@ -38,7 +40,7 @@ export class InboxOverviewComponent implements OnInit {
         this.selectedEmail = null; // reset selection when changing folder
     }
 
-    onEmailSelected(email: SyncedEmail): void {
+    onEmailSelected(email: UnifiedEmail): void {
         this.selectedEmail = email;
     }
 
@@ -51,7 +53,11 @@ export class InboxOverviewComponent implements OnInit {
     }
 
     onEmailSent(): void {
-        // Optionally show a toast notification here
         this.closeCompose();
+        this.emailList?.loadEmails(true);
+    }
+
+    onEmailActionCompleted(): void {
+        this.emailList?.loadEmails(true);
     }
 }

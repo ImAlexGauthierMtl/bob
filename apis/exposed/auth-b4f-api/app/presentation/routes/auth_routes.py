@@ -113,7 +113,12 @@ async def login(credentials: UserLoginRequest, request: Request):
         add_failed_attempt(client_ip)
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    access_token = create_access_token(data={"sub": user_data["id"], "email": user_data["email"], "tenant_id": user_data.get("tenant_id")})
+    access_token = create_access_token(data={
+        "sub": user_data["id"],
+        "email": user_data["email"],
+        "tenant_id": user_data.get("tenant_id"),
+        "active_organization_id": user_data.get("active_organization_id"),
+    })
     refresh_token = create_refresh_token(data={"sub": user_data["id"]})
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
@@ -126,7 +131,12 @@ async def refresh(token_data: RefreshTokenRequest, request: Request):
     user_data = await user_client.get_by_id(payload.get("sub"), forward_headers=request.headers)
     if not user_data:
         raise HTTPException(status_code=401, detail="User not found")
-    access_token = create_access_token(data={"sub": user_data["id"], "email": user_data["email"], "tenant_id": user_data.get("tenant_id")})
+    access_token = create_access_token(data={
+        "sub": user_data["id"],
+        "email": user_data["email"],
+        "tenant_id": user_data.get("tenant_id"),
+        "active_organization_id": user_data.get("active_organization_id"),
+    })
     refresh_token = create_refresh_token(data={"sub": user_data["id"]})
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 

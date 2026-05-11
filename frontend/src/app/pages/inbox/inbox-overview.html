@@ -20,14 +20,15 @@
                 <i class="fa-solid fa-search inbox-search__icon"></i>
                 <input type="text" placeholder="Search emails, contacts, subjects..." class="inbox-search__input">
             </div>
-            <div class="inbox-filters">
+            <!-- Hidden: Filter and Sort buttons (no backend implementation) -->
+            <!-- <div class="inbox-filters">
                 <button class="btn btn-outline">
                     <i class="fa-solid fa-filter"></i> Filter
                 </button>
                 <button class="btn btn-outline">
                     <i class="fa-solid fa-arrow-down-wide-short"></i> Sort
                 </button>
-            </div>
+            </div> -->
         </div>
     </header>
 
@@ -47,7 +48,7 @@
 
             <!-- Reading Pane -->
             <div class="inbox-reading-col">
-                <app-email-reading-pane [email]="selectedEmail"></app-email-reading-pane>
+                <app-email-reading-pane [email]="selectedEmail" (emailActionCompleted)="onEmailActionCompleted()"></app-email-reading-pane>
             </div>
 
 

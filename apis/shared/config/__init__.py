@@ -50,6 +50,15 @@ class Settings(BaseSettings):
     # Observability
     otel_exporter_otlp_endpoint: Optional[str] = None
 
+    # Membrane Integration Platform
+    membrane_workspace_key: Optional[str] = None
+    membrane_workspace_secret: Optional[str] = None
+    membrane_client_token: Optional[str] = None
+    membrane_api_url: str = "https://api.getmembrane.com"
+    # HMAC-SHA256 secret used to verify incoming Membrane webhooks.
+    # Configure the same value in Membrane Console → Admin → Webhooks → Secret.
+    membrane_webhook_secret: Optional[str] = None
+
     # Auth-specific (used by auth-api seeding, ignored by other services)
     admin_email: str = "admin@croo.digital"
     admin_password: Optional[str] = None
@@ -64,6 +73,11 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
         """Enforce strict security constraints in non-development environments."""
+        # Fallback: if JWT_SECRET_KEY is empty but SECRET_KEY is set, use it.
+        # Many deployments use a single SECRET_KEY env var.
+        if not self.jwt_secret_key and self.secret_key:
+            self.jwt_secret_key = self.secret_key
+
         is_dev = self.environment.lower() in ("development", "dev")
 
         if not is_dev:
