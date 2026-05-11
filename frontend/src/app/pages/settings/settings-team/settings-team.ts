@@ -15,16 +15,20 @@ export class SettingsTeamComponent implements OnInit {
     total = 0;
     isLoading = true;
 
-    // Dialog state
+    // Add user dialog state
     showAddDialog = false;
-    userInput = '';
-    isProcessing = false;
     isCreating = false;
     statusMessage = '';
     statusType: 'info' | 'success' | 'error' = 'info';
 
-    // Parsed preview
-    parsedPreview: Partial<CreateUserDto> | null = null;
+    // Form fields
+    newUserEmail = '';
+    newUserPassword = '';
+    newUserFirstName = '';
+    newUserLastName = '';
+    newUserRole = 'member';
+    newUserJobTitle = '';
+    newUserPhone = '';
 
     // Search
     searchQuery = '';
@@ -143,53 +147,55 @@ export class SettingsTeamComponent implements OnInit {
 
     openAddDialog(): void {
         this.showAddDialog = true;
-        this.resetDialog();
+        this.resetForm();
     }
 
     closeAddDialog(): void {
         this.showAddDialog = false;
     }
 
-    resetDialog(): void {
-        this.userInput = '';
-        this.isProcessing = false;
+    resetForm(): void {
+        this.newUserEmail = '';
+        this.newUserPassword = '';
+        this.newUserFirstName = '';
+        this.newUserLastName = '';
+        this.newUserRole = 'member';
+        this.newUserJobTitle = '';
+        this.newUserPhone = '';
         this.isCreating = false;
         this.statusMessage = '';
-        this.parsedPreview = null;
     }
 
-    // ── Bob Agent Processing ─────────────────
-
-    processInput(): void {
-        if (!this.userInput.trim()) return;
-        this.isProcessing = true;
-        this.statusMessage = '';
-        this.parsedPreview = null;
-
-        setTimeout(() => {
-            this.parsedPreview = this.parseUserText(this.userInput);
-            this.isProcessing = false;
-        }, 600);
+    get isFormValid(): boolean {
+        return !!(
+            this.newUserEmail.trim() &&
+            this.newUserPassword.trim().length >= 8 &&
+            this.newUserFirstName.trim() &&
+            this.newUserLastName.trim()
+        );
     }
 
-    createFromParsed(): void {
-        if (!this.parsedPreview?.first_name || !this.parsedPreview?.last_name || !this.parsedPreview?.email) return;
+    createUser(): void {
+        if (!this.isFormValid) return;
         this.isCreating = true;
+        this.statusMessage = '';
 
         const data: CreateUserDto = {
-            email: this.parsedPreview.email,
-            password: this.generateTempPassword(),
-            first_name: this.parsedPreview.first_name,
-            last_name: this.parsedPreview.last_name,
-            role: this.parsedPreview.role || 'member',
-            job_title: this.parsedPreview.job_title,
-            phone: this.parsedPreview.phone,
+            email: this.newUserEmail.trim(),
+            password: this.newUserPassword,
+            first_name: this.newUserFirstName.trim(),
+            last_name: this.newUserLastName.trim(),
+            role: this.newUserRole,
+            job_title: this.newUserJobTitle.trim() || undefined,
+            phone: this.newUserPhone.trim() || undefined,
         };
 
         this.userService.create(data).subscribe({
             next: () => {
-                this.showAddDialog = false;
+                this.statusMessage = '✅ User created successfully';
+                this.statusType = 'success';
                 this.loadUsers();
+                setTimeout(() => this.closeAddDialog(), 1000);
             },
             error: (err) => {
                 this.isCreating = false;
@@ -197,79 +203,6 @@ export class SettingsTeamComponent implements OnInit {
                 this.statusType = 'error';
             },
         });
-    }
-
-    /**
-     * Smart text parser — extracts user fields from free-form text.
-     */
-    private parseUserText(text: string): Partial<CreateUserDto> {
-        const result: Partial<CreateUserDto> = {};
-
-        const emailMatch = text.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
-        if (emailMatch) {
-            result.email = emailMatch[0];
-            text = text.replace(emailMatch[0], '');
-        }
-
-        const phoneMatch = text.match(/(?:\+?1?\s*)?(?:\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}/);
-        if (phoneMatch) {
-            result.phone = phoneMatch[0].trim();
-            text = text.replace(phoneMatch[0], '');
-        }
-
-        text = text.replace(/[,;|·•—–-]+/g, ' ').replace(/\s+/g, ' ').trim();
-
-        const roleMap: Record<string, string> = {
-            admin: 'admin',
-            manager: 'manager',
-            'sales rep': 'sales_rep',
-            sales: 'sales_rep',
-            support: 'support',
-            member: 'member',
-        };
-        const roleLower = text.toLowerCase();
-        for (const [keyword, role] of Object.entries(roleMap)) {
-            if (roleLower.includes(keyword)) {
-                result.role = role;
-                text = text.replace(new RegExp(keyword, 'i'), '').trim();
-                break;
-            }
-        }
-
-        const titleKeywords = /\b(CEO|CTO|CFO|COO|CMO|CIO|VP|Director|Manager|Engineer|Developer|Designer|Analyst|Coordinator|Specialist|Lead|Head|Chief|Senior|Junior|Sr\.|Jr\.|President|Founder|Partner|Associate|Consultant|Advisor|Officer)\b/i;
-
-        const words = text.split(' ').filter(w => w.length > 0);
-        let titleStartIdx = -1;
-        for (let i = 0; i < words.length; i++) {
-            if (titleKeywords.test(words[i])) {
-                titleStartIdx = i;
-                break;
-            }
-        }
-
-        if (titleStartIdx >= 0) {
-            const namePart = words.slice(0, titleStartIdx).join(' ').trim();
-            const titlePart = words.slice(titleStartIdx).join(' ').trim();
-            if (namePart) {
-                const nameParts = namePart.split(' ');
-                result.first_name = nameParts[0];
-                result.last_name = nameParts.slice(1).join(' ') || 'Unknown';
-            }
-            if (titlePart) {
-                result.job_title = titlePart;
-            }
-        } else {
-            const cleanedWords = words.filter(w => !(/^\d+$/.test(w)));
-            if (cleanedWords.length >= 2) {
-                result.first_name = cleanedWords[0];
-                result.last_name = cleanedWords.slice(1).join(' ');
-            } else if (cleanedWords.length === 1) {
-                result.first_name = cleanedWords[0];
-                result.last_name = 'Unknown';
-            }
-        }
-
-        return result;
     }
 
     private generateTempPassword(): string {

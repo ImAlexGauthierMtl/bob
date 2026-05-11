@@ -6,7 +6,7 @@
             <p class="settings-panel__subtitle">Manage your team and their access levels</p>
         </div>
         <button class="btn btn-accent" (click)="openAddDialog()">
-            <i class="fa-solid fa-user-plus"></i> Invite Member
+            <i class="fa-solid fa-user-plus"></i> Add Member
         </button>
     </div>
 
@@ -138,11 +138,11 @@
             <div class="dialog-header">
                 <div class="dialog-header__left">
                     <div class="dialog-header__icon">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <i class="fa-solid fa-user-plus"></i>
                     </div>
                     <div>
-                        <h3 class="dialog-header__title">Invite Team Member</h3>
-                        <p class="dialog-header__subtitle">Bob will extract the details for you</p>
+                        <h3 class="dialog-header__title">Create New User</h3>
+                        <p class="dialog-header__subtitle">Add a team member and set their password</p>
                     </div>
                 </div>
                 <button class="dialog-close" (click)="closeAddDialog()">
@@ -150,102 +150,73 @@
                 </button>
             </div>
 
-            <!-- Input -->
+            <!-- Form -->
             <div class="dialog-body">
-                <p class="dialog-hint">
-                    Type or paste member info — Bob will extract name, email, role, and title automatically.
-                </p>
-                <div class="dialog-search-row">
-                    <textarea [(ngModel)]="userInput" class="dialog-textarea" rows="3"
-                        placeholder="e.g. Jennifer Williams jennifer.w@company.com Manager Sales Director"
-                        (keydown.enter)="$event.preventDefault(); processInput()">
-                        </textarea>
-                    <button class="btn btn-accent" (click)="processInput()"
-                        [disabled]="isProcessing || !userInput.trim()">
-                        @if (isProcessing) {
-                        <i class="fa-solid fa-spinner fa-spin"></i>
-                        } @else {
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Parse
-                        }
-                    </button>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label"><i class="fa-solid fa-user"></i> First Name</label>
+                        <input type="text" class="form-input" [(ngModel)]="newUserFirstName"
+                            placeholder="e.g. Jennifer" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fa-solid fa-user"></i> Last Name</label>
+                        <input type="text" class="form-input" [(ngModel)]="newUserLastName"
+                            placeholder="e.g. Williams" />
+                    </div>
                 </div>
 
-                <!-- Processing -->
-                @if (isProcessing) {
-                <div class="dialog-processing">
-                    <i class="fa-solid fa-brain fa-beat-fade"></i>
-                    <span>Bob is analyzing...</span>
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-envelope"></i> Email</label>
+                    <input type="email" class="form-input" [(ngModel)]="newUserEmail"
+                        placeholder="e.g. jennifer.w@company.com" />
                 </div>
-                }
 
-                <!-- Error -->
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-lock"></i> Password</label>
+                    <input type="password" class="form-input" [(ngModel)]="newUserPassword"
+                        placeholder="Minimum 8 characters" />
+                    <p class="form-hint">The user will use this password to log in. They can change it later.</p>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label"><i class="fa-solid fa-shield-halved"></i> Role</label>
+                        <select class="form-input" [(ngModel)]="newUserRole">
+                            @for (opt of roleOptions; track opt.value) {
+                            <option [value]="opt.value">{{ opt.label }}</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fa-solid fa-briefcase"></i> Job Title</label>
+                        <input type="text" class="form-input" [(ngModel)]="newUserJobTitle"
+                            placeholder="e.g. Sales Director" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-phone"></i> Phone <span style="font-weight:var(--font-weight-light);color:var(--color-gray-400)">(optional)</span></label>
+                    <input type="tel" class="form-input" [(ngModel)]="newUserPhone"
+                        placeholder="e.g. +1 555-123-4567" />
+                </div>
+
                 @if (statusMessage) {
                 <div class="dialog-status dialog-status--{{ statusType }}">
                     {{ statusMessage }}
                 </div>
                 }
 
-                <!-- Preview -->
-                @if (parsedPreview && !isProcessing) {
-                <div class="dialog-result">
-                    <h4 class="dialog-result__title">
-                        <i class="fa-solid fa-check-circle" style="color:var(--color-accent)"></i>
-                        Bob extracted:
-                    </h4>
-                    <div class="dialog-result__grid">
-                        @if (parsedPreview.first_name) {
-                        <div class="dialog-result__field">
-                            <span class="dialog-result__label">First Name</span>
-                            <span class="dialog-result__value">{{ parsedPreview.first_name }}</span>
-                        </div>
+                <div class="dialog-result__actions" style="margin-top:1.5rem">
+                    <button class="btn btn-accent" (click)="createUser()"
+                        [disabled]="isCreating || !isFormValid">
+                        @if (isCreating) {
+                        <i class="fa-solid fa-spinner fa-spin"></i> Creating...
+                        } @else {
+                        <i class="fa-solid fa-user-plus"></i> Create User
                         }
-                        @if (parsedPreview.last_name) {
-                        <div class="dialog-result__field">
-                            <span class="dialog-result__label">Last Name</span>
-                            <span class="dialog-result__value">{{ parsedPreview.last_name }}</span>
-                        </div>
-                        }
-                        @if (parsedPreview.email) {
-                        <div class="dialog-result__field">
-                            <span class="dialog-result__label">Email</span>
-                            <span class="dialog-result__value">{{ parsedPreview.email }}</span>
-                        </div>
-                        }
-                        @if (parsedPreview.role) {
-                        <div class="dialog-result__field">
-                            <span class="dialog-result__label">Role</span>
-                            <span class="dialog-result__value">{{ parsedPreview.role }}</span>
-                        </div>
-                        }
-                        @if (parsedPreview.job_title) {
-                        <div class="dialog-result__field">
-                            <span class="dialog-result__label">Job Title</span>
-                            <span class="dialog-result__value">{{ parsedPreview.job_title }}</span>
-                        </div>
-                        }
-                        @if (parsedPreview.phone) {
-                        <div class="dialog-result__field">
-                            <span class="dialog-result__label">Phone</span>
-                            <span class="dialog-result__value">{{ parsedPreview.phone }}</span>
-                        </div>
-                        }
-                    </div>
-
-                    <div class="dialog-result__actions">
-                        <button class="btn btn-accent" (click)="createFromParsed()"
-                            [disabled]="isCreating || !parsedPreview.email">
-                            @if (isCreating) {
-                            <i class="fa-solid fa-spinner fa-spin"></i> Creating...
-                            } @else {
-                            <i class="fa-solid fa-user-plus"></i> Create Member
-                            }
-                        </button>
-                        <button class="btn btn-outline" (click)="resetDialog()">
-                            <i class="fa-solid fa-rotate-left"></i> Try Again
-                        </button>
-                    </div>
+                    </button>
+                    <button class="btn btn-outline" (click)="closeAddDialog()">Cancel</button>
                 </div>
-                }
             </div>
         </div>
     </div>
