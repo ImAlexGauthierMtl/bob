@@ -6,6 +6,8 @@ from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
 from app.infrastructure.persistence.user_repository import UserRepository
 from app.domain.entities.user import User
+from app.domain.entities.role import UserRole
+from app.infrastructure.persistence.role_repository import RoleRepository
 from app.events.publishers import publish_user_created, publish_user_updated, publish_user_deleted
 from app.presentation.schemas.user_schemas import (
     UserCreateRequest, UserUpdateRequest, UserResponse, UserListResponse,
@@ -60,6 +62,22 @@ async def create_user(data: UserCreateRequest, db: Session = Depends(get_db)):
         active_organization_id=data.active_organization_id,
     )
     created = repo.create(user)
+
+    # Assign the matching RBAC role so the user has permissions after login.
+    # Without this, get_user_roles() returns [] and every permission-gated
+    # API call returns 403 — the user appears to have a "connection problem".
+    role_repo = RoleRepository(db)
+    role_name = data.role or "member"
+    tenant = data.tenant_id or "default"
+    matching_role = role_repo.get_role_by_name(role_name, tenant)
+    if matching_role:
+        existing_user_role = db.query(UserRole).filter(
+            UserRole.user_id == created.id, UserRole.role_id == matching_role.id,
+        ).first()
+        if not existing_user_role:
+            db.add(UserRole(user_id=created.id, role_id=matching_role.id))
+            db.commit()
+
     await publish_user_created(created.id, {"email": created.email, "tenant_id": created.tenant_id})
     return UserResponse.model_validate(created)
 

@@ -26,7 +26,7 @@ x-backend-urls: &backend-urls
   USAGE_BACKEND_API_URL: http://usage-backend-api:9011
 
 x-shared-volume: &shared-volume
-  - ./apis/shared:/app/shared:ro
+  - ./apis/shared:/shared:ro
 
 x-healthcheck: &healthcheck
   interval: 30s
@@ -94,8 +94,9 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:8001/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/exposed/auth-b4f-api:/app
+      - ./apis/exposed/auth-b4f-api/app:/app/app
+      - ./apis/exposed/auth-b4f-api/main.py:/app/main.py
+
     depends_on:
       user-backend-api:
         condition: service_healthy
@@ -116,8 +117,9 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:8002/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/exposed/crm-b4f-api:/app
+      - ./apis/exposed/crm-b4f-api/app:/app/app
+      - ./apis/exposed/crm-b4f-api/main.py:/app/main.py
+
     depends_on:
       contact-backend-api:
         condition: service_healthy
@@ -142,8 +144,9 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:8003/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/exposed/ai-agent-b4f-api:/app
+      - ./apis/exposed/ai-agent-b4f-api/app:/app/app
+      - ./apis/exposed/ai-agent-b4f-api/main.py:/app/main.py
+
     depends_on:
       agent-backend-api:
         condition: service_healthy
@@ -176,8 +179,9 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:8004/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/exposed/communication-b4f-api:/app
+      - ./apis/exposed/communication-b4f-api/app:/app/app
+      - ./apis/exposed/communication-b4f-api/main.py:/app/main.py
+
     depends_on:
       email-backend-api:
         condition: service_healthy
@@ -198,8 +202,9 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:8005/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/exposed/platform-b4f-api:/app
+      - ./apis/exposed/platform-b4f-api/app:/app/app
+      - ./apis/exposed/platform-b4f-api/main.py:/app/main.py
+
     depends_on:
       workflow-backend-api:
         condition: service_healthy
@@ -222,8 +227,9 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:8006/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/exposed/kb-b4f-api:/app
+      - ./apis/exposed/kb-b4f-api/app:/app/app
+      - ./apis/exposed/kb-b4f-api/main.py:/app/main.py
+
     depends_on:
       kb-backend-api:
         condition: service_healthy
@@ -247,8 +253,10 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:9001/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/internal/user-backend-api:/app
+      - ./apis/internal/user-backend-api/app:/app/app
+      - ./apis/internal/user-backend-api/main.py:/app/main.py
+      - ./apis/internal/user-backend-api/alembic:/app/alembic
+
     depends_on:
       database:
         condition: service_healthy
@@ -271,8 +279,10 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:9002/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/internal/contact-backend-api:/app
+      - ./apis/internal/contact-backend-api/app:/app/app
+      - ./apis/internal/contact-backend-api/main.py:/app/main.py
+      - ./apis/internal/contact-backend-api/alembic:/app/alembic
+
     depends_on:
       database:
         condition: service_healthy
@@ -295,8 +305,10 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:9003/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/internal/org-backend-api:/app
+      - ./apis/internal/org-backend-api/app:/app/app
+      - ./apis/internal/org-backend-api/main.py:/app/main.py
+      - ./apis/internal/org-backend-api/alembic:/app/alembic
+
     depends_on:
       database:
         condition: service_healthy
@@ -319,8 +331,10 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:9004/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/internal/opportunity-backend-api:/app
+      - ./apis/internal/opportunity-backend-api/app:/app/app
+      - ./apis/internal/opportunity-backend-api/main.py:/app/main.py
+      - ./apis/internal/opportunity-backend-api/alembic:/app/alembic
+
     depends_on:
       database:
         condition: service_healthy
@@ -343,8 +357,10 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:9005/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/internal/activity-backend-api:/app
+      - ./apis/internal/activity-backend-api/app:/app/app
+      - ./apis/internal/activity-backend-api/main.py:/app/main.py
+      - ./apis/internal/activity-backend-api/alembic:/app/alembic
+
     depends_on:
       database:
         condition: service_healthy
@@ -367,8 +383,10 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:9006/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/internal/product-backend-api:/app
+      - ./apis/internal/product-backend-api/app:/app/app
+      - ./apis/internal/product-backend-api/main.py:/app/main.py
+      - ./apis/internal/product-backend-api/alembic:/app/alembic
+
     depends_on:
       database:
         condition: service_healthy
@@ -391,8 +409,10 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:9007/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/internal/email-backend-api:/app
+      - ./apis/internal/email-backend-api/app:/app/app
+      - ./apis/internal/email-backend-api/main.py:/app/main.py
+      - ./apis/internal/email-backend-api/alembic:/app/alembic
+
     depends_on:
       database:
         condition: service_healthy
@@ -415,8 +435,10 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:9008/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/internal/agent-backend-api:/app
+      - ./apis/internal/agent-backend-api/app:/app/app
+      - ./apis/internal/agent-backend-api/main.py:/app/main.py
+      - ./apis/internal/agent-backend-api/alembic:/app/alembic
+
     depends_on:
       database:
         condition: service_healthy
@@ -439,8 +461,10 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:9009/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/internal/workflow-backend-api:/app
+      - ./apis/internal/workflow-backend-api/app:/app/app
+      - ./apis/internal/workflow-backend-api/main.py:/app/main.py
+      - ./apis/internal/workflow-backend-api/alembic:/app/alembic
+
     depends_on:
       database:
         condition: service_healthy
@@ -463,8 +487,10 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:9010/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/internal/kb-backend-api:/app
+      - ./apis/internal/kb-backend-api/app:/app/app
+      - ./apis/internal/kb-backend-api/main.py:/app/main.py
+      - ./apis/internal/kb-backend-api/alembic:/app/alembic
+
     depends_on:
       database:
         condition: service_healthy
@@ -487,8 +513,10 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:9011/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/shared:/app/shared:ro
-      - ./apis/internal/usage-backend-api:/app
+      - ./apis/internal/usage-backend-api/app:/app/app
+      - ./apis/internal/usage-backend-api/main.py:/app/main.py
+      - ./apis/internal/usage-backend-api/alembic:/app/alembic
+
     depends_on:
       database:
         condition: service_healthy

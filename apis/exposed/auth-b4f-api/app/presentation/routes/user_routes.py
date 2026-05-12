@@ -21,6 +21,11 @@ async def create_user(data: UserCreateByAdminRequest, request: Request, current_
     payload = data.model_dump()
     payload["tenant_id"] = current_user["tenant_id"]
     payload["created_by"] = current_user["email"]
+    # Inherit the admin's active organization so the new user can navigate
+    # the app immediately after login instead of getting stuck on the
+    # org-selector page (which requires permissions they may not yet have).
+    if not payload.get("active_organization_id"):
+        payload["active_organization_id"] = current_user.get("active_organization_id")
     created = await user_client.create(payload, forward_headers=request.headers)
     return created
 
