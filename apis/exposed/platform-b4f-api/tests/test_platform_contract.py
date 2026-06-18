@@ -7,7 +7,7 @@ from jose import jwt
 import main
 from app.infrastructure.clients.platform_clients import UsageClient, WorkflowClient
 from app.middleware.auth import get_current_user, settings
-from app.presentation.routes import enrichment_routes, usage_routes, workflow_routes
+from app.presentation.routes import enrichment_routes, overview_routes, usage_routes, workflow_routes
 
 
 class FakeWorkflowClient:
@@ -135,8 +135,14 @@ def client(monkeypatch):
     main.app.dependency_overrides[workflow_routes.get_current_user] = lambda: {"user_id": "user-1"}
     main.app.dependency_overrides[usage_routes.get_current_user] = lambda: {"user_id": "user-1"}
     main.app.dependency_overrides[enrichment_routes.get_current_user] = lambda: {"user_id": "user-1"}
+    main.app.dependency_overrides[overview_routes.get_current_user] = lambda: {"user_id": "user-1", "tenant_id": "tenant-1"}
     monkeypatch.setattr(workflow_routes, "workflow_client", FakeWorkflowClient())
     monkeypatch.setattr(usage_routes, "usage_client", FakeUsageClient())
+    monkeypatch.setattr(
+        overview_routes,
+        "overview_service",
+        overview_routes.PlatformOverviewService(FakeWorkflowClient(), FakeUsageClient()),
+    )
     with TestClient(main.app) as test_client:
         yield test_client
     main.app.dependency_overrides.clear()
@@ -199,6 +205,15 @@ def test_usage_and_enrichment_routes(client):
     assert client.get("/admin/usage/by-intent/corr-1").json()["correlation_id"] == "corr-1"
     assert client.post("/organizations/org-1/enrich").json()["status"] == "not_implemented"
     assert client.get("/organizations/org-1/enrich/status").json()["organization_id"] == "org-1"
+
+
+def test_platform_overview_composes_workflow_and_usage(client):
+    payload = client.get("/overview").json()
+    assert payload["tenant_id"] == "tenant-1"
+    assert payload["monitoring"] == {"runs": 4}
+    assert payload["usage"]["summary"] is True
+    assert payload["recent_executions"][0]["limit"] == 5
+    assert payload["totals"] == {"workflows": 0, "recent_executions": 1}
 
 
 def test_auth_dependency_accepts_valid_jwt():
@@ -276,5 +291,5 @@ def test_python_package_contract_loads_runtime_components():
         "/metrics",
     )
     assert contract.load_app() is main.app
-    assert contract.load_runtime_routes() == (workflow_routes, usage_routes, enrichment_routes)
+    assert contract.load_runtime_routes() == (overview_routes, workflow_routes, usage_routes, enrichment_routes)
     assert contract.load_runtime_client_classes() == (WorkflowClient, UsageClient)

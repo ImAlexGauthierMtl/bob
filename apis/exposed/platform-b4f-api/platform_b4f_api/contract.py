@@ -14,6 +14,7 @@ def load_app() -> Any:
 def load_runtime_routes() -> tuple[Any, Any, Any]:
     """Load runtime Platform route modules."""
     return (
+        import_module("app.presentation.routes.overview_routes"),
         import_module("app.presentation.routes.workflow_routes"),
         import_module("app.presentation.routes.usage_routes"),
         import_module("app.presentation.routes.enrichment_routes"),
