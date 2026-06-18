@@ -10,6 +10,7 @@ from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.kb_repository import KBRepository
 from app.middleware.auth import get_current_user, settings
+from app.presentation import deps as kb_deps
 from app.presentation.routes import kb_routes
 from app.presentation.schemas import kb_schemas
 
@@ -252,12 +253,12 @@ def client(monkeypatch, repo):
     async def noop_publish(*args, **kwargs):
         return None
 
-    monkeypatch.setattr(kb_routes, "KBRepository", lambda db: repo)
-    monkeypatch.setattr(kb_routes, "publish_article_created", noop_publish)
-    monkeypatch.setattr(kb_routes, "publish_article_updated", noop_publish)
-    monkeypatch.setattr(kb_routes, "publish_article_deleted", noop_publish)
+    monkeypatch.setattr(kb_deps, "KBRepository", lambda db: repo)
+    monkeypatch.setattr(kb_deps, "publish_article_created", noop_publish)
+    monkeypatch.setattr(kb_deps, "publish_article_updated", noop_publish)
+    monkeypatch.setattr(kb_deps, "publish_article_deleted", noop_publish)
     main.app.dependency_overrides[kb_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[kb_routes.get_db] = lambda: FakeDB()
+    main.app.dependency_overrides[kb_deps.get_db] = lambda: FakeDB()
     test_client = TestClient(main.app)
     yield test_client
     test_client.close()
@@ -308,7 +309,7 @@ def test_category_routes(client, monkeypatch):
     assert client.get("/api/v1/kb/categories/cat-1").json()["slug"] == "getting-started"
     assert client.patch("/api/v1/kb/categories/cat-1", json={"name": "Updated"}).json()["name"] == "Updated"
 
-    monkeypatch.setattr(kb_routes, "KBRepository", lambda db: EmptyKBRepository(db))
+    monkeypatch.setattr(kb_deps, "KBRepository", lambda db: EmptyKBRepository(db))
     assert client.get("/api/v1/kb/categories/missing").status_code == 404
     assert client.patch("/api/v1/kb/categories/missing", json={"name": "Updated"}).status_code == 404
 
@@ -340,7 +341,7 @@ def test_article_routes(client, repo, monkeypatch):
     assert client.delete("/api/v1/kb/articles/article-1").status_code == 204
     assert client.get("/api/v1/kb/stats").json()["total_articles"] == 1
 
-    monkeypatch.setattr(kb_routes, "KBRepository", lambda db: EmptyKBRepository(db))
+    monkeypatch.setattr(kb_deps, "KBRepository", lambda db: EmptyKBRepository(db))
     assert client.get("/api/v1/kb/articles/missing").status_code == 404
     assert client.patch("/api/v1/kb/articles/missing", json={"title": "Nope"}).status_code == 404
     assert client.delete("/api/v1/kb/articles/missing").status_code == 404
