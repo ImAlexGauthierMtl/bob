@@ -46,7 +46,7 @@ from app.presentation.schemas.membrane_schemas import (
 
 logger = structlog.get_logger(__name__)
 settings = get_settings("communication")
-router = APIRouter(prefix="/api/v1/membrane")
+router = APIRouter(prefix="/membrane")
 
 # Built-in connectors exposed by Membrane as `~connector.<key>`. When the frontend
 # sends one of these as `integration_key` (stripped of the prefix for readability),

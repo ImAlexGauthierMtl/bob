@@ -1,0 +1,13 @@
+replicaCount: 2
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+env_:
+- name: ENVIRONMENT
+  value: prod
+- name: API_BASE_URL
+  value: /api

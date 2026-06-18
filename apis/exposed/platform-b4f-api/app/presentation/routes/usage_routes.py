@@ -10,7 +10,7 @@ router = APIRouter()
 
 # ── Tenant self-service ───────────────────────────
 
-@router.get("/api/v1/usage")
+@router.get("/usage")
 async def list_usage(
     request: Request,
     skip: int = Query(0, ge=0),
@@ -28,7 +28,7 @@ async def list_usage(
     )
 
 
-@router.get("/api/v1/usage/summary")
+@router.get("/usage/summary")
 async def get_usage_summary(
     request: Request,
     date_from: Optional[datetime] = None,
@@ -40,7 +40,7 @@ async def get_usage_summary(
 
 # ── Admin cross-tenant ────────────────────────────
 
-@router.get("/api/v1/admin/usage")
+@router.get("/admin/usage")
 async def admin_list_usage(
     request: Request,
     tenant_id: Optional[str] = Query(None),
@@ -59,7 +59,7 @@ async def admin_list_usage(
     )
 
 
-@router.get("/api/v1/admin/usage/summary")
+@router.get("/admin/usage/summary")
 async def admin_get_usage_summary(
     request: Request,
     tenant_id: str = Query(...),
@@ -70,7 +70,7 @@ async def admin_get_usage_summary(
     return await usage_client.admin_summary(tenant_id, date_from, date_to, forward_headers=request.headers)
 
 
-@router.get("/api/v1/admin/usage/by-intent")
+@router.get("/admin/usage/by-intent")
 async def admin_usage_by_intent(
     request: Request,
     tenant_id: Optional[str] = Query(None),
@@ -81,7 +81,7 @@ async def admin_usage_by_intent(
     return await usage_client.admin_by_intent(tenant_id, skip, limit, forward_headers=request.headers)
 
 
-@router.get("/api/v1/admin/usage/by-intent/{correlation_id}")
+@router.get("/admin/usage/by-intent/{correlation_id}")
 async def admin_usage_intent_detail(
     correlation_id: str,
     request: Request,

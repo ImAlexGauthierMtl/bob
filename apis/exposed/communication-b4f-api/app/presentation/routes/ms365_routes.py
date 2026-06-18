@@ -41,7 +41,7 @@ from app.agents.llm_client import llm_client
 import json
 
 logger = structlog.get_logger(__name__)
-router = APIRouter(prefix="/api/v1/ms365")
+router = APIRouter(prefix="/ms365")
 graph_service = MS365GraphService()
 
 # ── Helpers ───────────────────────────────────────────────────────

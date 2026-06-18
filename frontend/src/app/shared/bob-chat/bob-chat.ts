@@ -392,7 +392,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     private loadVoiceSettings(): void {
         const token = this.authService.getToken();
         if (!token) return;
-        this.http.get<any>(`${environment.apiUrl}/bob/settings`, {
+        this.http.get<any>(`${environment.aiAgentApiUrl}/bob/settings`, {
             headers: { Authorization: `Bearer ${token}` },
         }).subscribe({
             next: (data) => {

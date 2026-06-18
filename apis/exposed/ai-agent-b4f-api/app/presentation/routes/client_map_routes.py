@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from app.middleware.auth import get_current_user
 from app.infrastructure.clients.agent_client import client_map_client
 
-router = APIRouter(prefix="/api/v1/contacts/{contact_id}/client-map")
+router = APIRouter(prefix="/contacts/{contact_id}/client-map")
 
 
 def _fh(request: Request) -> dict:

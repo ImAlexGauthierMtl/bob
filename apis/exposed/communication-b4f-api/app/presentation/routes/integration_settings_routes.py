@@ -16,7 +16,7 @@ from app.presentation.schemas.integration_settings_schemas import (
     IntegrationSettingListResponse,
 )
 
-router = APIRouter(prefix="/api/v1/integration-settings")
+router = APIRouter(prefix="/integration-settings")
 
 
 @router.get("", response_model=IntegrationSettingListResponse)

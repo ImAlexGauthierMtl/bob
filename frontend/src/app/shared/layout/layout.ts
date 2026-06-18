@@ -43,7 +43,7 @@ export class LayoutComponent implements OnInit {
     ) { }
 
     ngOnInit(): void {
-        this.http.get<CurrentUser>(`${environment.apiUrl}/auth/me`).subscribe({
+        this.http.get<CurrentUser>(`${environment.authApiUrl}/auth/me`).subscribe({
             next: (user) => {
                 this.userName = `${user.first_name} ${user.last_name}`;
                 this.userRole = user.job_title || user.role;

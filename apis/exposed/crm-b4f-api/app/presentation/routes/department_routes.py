@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from app.infrastructure.clients.crm_clients import org_client
 from app.middleware.auth import get_current_user
 
-router = APIRouter(prefix="/api/v1/departments")
+router = APIRouter(prefix="/departments")
 
 
 @router.get("")

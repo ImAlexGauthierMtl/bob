@@ -26,9 +26,9 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | M-02 | § 2.7 | Alembic et DB | `dx_intermediate_check_apis` + base Alembic | Aucune DDL runtime, migrations avec schema + downgrade testé | VIOLATION | critique |
 | M-03 | § 3, § 14 | Frontend Angular/NGRX | `dx_intermediate_check_frontend_ngrx`, `dx_intermediate_check_frontend_clean_archi` | Store feature par B4F, HTTP dans Effects, modèles domaine | VIOLATION | à corriger |
 | M-04 | § 4, § 8.3 | CI/CD | `dx_intermediate_check_cicd_pipeline` | `.gitlab-ci.yml` minimal, parent/child, 5 stages, Harbor verify, pas de migrate stage | VIOLATION | critique |
-| M-05 | § 5, § 8.4 | Kubernetes et gateway | `dx_intermediate_check_k8s_config` | Gateway unique, Backends internes, initContainer migrate, Lease RBAC | VIOLATION | critique |
+| M-05 | § 5, § 8.4 | Kubernetes et gateway | `dx_intermediate_check_k8s_config` | Gateway unique, Backends internes, initContainer migrate, Lease RBAC | A_VERIFIER | critique |
 | M-06 | § 6, § 8.5 | Variables d'environnement | `dx_intermediate_check_env_vars` | Variables scopées GitLab, pas de préfixes DEV/STAGING/PROD, `.env.example` | A_VERIFIER | critique |
-| M-07 | § 7, § 8.6 | Harbor registry | `dx_intermediate_check_registry_to_k8s` | Harbor robot, imagePullSecrets, Cosign, absence `CI_REGISTRY_*` | A_VERIFIER | critique |
+| M-07 | § 7, § 8.6 | Harbor registry | `dx_intermediate_check_registry_to_k8s` | Harbor robot, imagePullSecrets, Cosign, absence `CI_REGISTRY_*` | VIOLATION | critique |
 | M-08 | § 5.8-5.10, § 8.8 | Observabilité et probes | `dx_intermediate_check_k8s_config` | `/liveness`, `/readiness`, `/startup`, `/health`, `/metrics`, logs JSON, trace_id | A_VERIFIER | critique |
 | M-09 | § 10, § 11 | Conventions et dev local | `dx_intermediate_check_local_dev` | Wrappers racine, scripts par API, compose postgres/pgbouncer/redis/alloy | VIOLATION | à corriger |
 | M-10 | § 12 | Clean Architecture API | `dx_intermediate_check_clean_archi_apis` | `domain/application/infrastructure/presentation`, import-linter, tests par couche | A_VERIFIER | à corriger |
@@ -71,36 +71,36 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | DB-03 | Première migration crée le schéma du service | § 2.7.2, § 2.7.5 | `dx_base_check_alembic_first_revision_creates_schema` | Lire première révision par backend | A_VERIFIER | Audit à compléter |
 | DB-04 | Downgrade non vide | § 2.7.5 | `dx_base_check_alembic_downgrade_not_empty` | `rg "def downgrade|pass|NotImplementedError"` | A_VERIFIER | Fonctions présentes, contenu à valider |
 | DB-05 | Downgrade symétrique | § 2.7.5 | `dx_base_check_alembic_downgrade_symmetric` | Comparer opérations upgrade/downgrade | A_VERIFIER | Audit manuel requis |
-| DB-06 | CI teste downgrade puis upgrade | § 2.7.5, § 4.9 | `dx_base_check_alembic_ci_tests_downgrade` | Lire `.gitlab-ci.yml` / template child | OK | Les 11 `apis/internal/*-backend-api/run_tests.sh` exécutent `alembic upgrade head`, `alembic downgrade -1`, puis `alembic upgrade head`; le child pipeline appelle `run_tests.sh` quand présent |
-| DB-07 | InitContainer exécute `scripts/migrate_with_lease.py` | § 2.7.5 | `dx_base_check_api_migration_initcontainer` | Lire deployment chart/values | VIOLATION | InitContainer absent |
-| DB-08 | Lease Kubernetes et RBAC présents | § 2.7.5 | `dx_base_check_api_migration_lease` | Chercher `coordination.k8s.io`, `leases` | VIOLATION | RBAC absent |
+| DB-06 | CI teste downgrade puis upgrade | § 2.7.5, § 4.9 | `dx_base_check_alembic_ci_tests_downgrade` | Lire `.gitlab-ci.yml` / template child | VIOLATION | Après bascule au template partagé, `templates/child/stages/test.yml` ne lance pas `run_tests.sh`; APIs CDE non packagées donc tests Python skippés |
+| DB-07 | InitContainer exécute `scripts/migrate_with_lease.py` | § 2.7.5 | `dx_base_check_api_migration_initcontainer` | Lire deployment chart/values | OK | `deploy/values/*/*-backend-api.yaml` active `initContainers.migrate.enabled`; chart partagé `api-chart` lance `/app/scripts/migrate_with_lease.py` |
+| DB-08 | Lease Kubernetes et RBAC présents | § 2.7.5 | `dx_base_check_api_migration_lease` | Chercher `coordination.k8s.io`, `leases` | OK | Chart partagé `api-chart/templates/migration-lease-rbac.yaml` fournit Lease/RBAC; les backends activent l'initContainer |
 | DB-09 | Pool SQLAlchemy compatible PgBouncer | § 2.7.3-2.7.4 | `dx_base_check_api_db_pool_size` | Lire `apis/shared/database` | A_VERIFIER | Audit à compléter |
 
 ### 4. CI/CD
 
 | ID | Règle | Section | Skill | Méthode de validation | Statut initial | Preuve actuelle / à collecter |
 |---|---|---:|---|---|---|---|
-| CI-01 | `.gitlab-ci.yml` inclut seulement le repo partagé v1.0 | § 4.1 | `dx_base_check_cicd_canonical_includes` | Lire `include:` | VIOLATION | Inclut `infrastructure/ci-templates` |
-| CI-02 | Includes taggés, jamais `main` | § 4.1, § 4.12 | `dx_base_check_cicd_include_tag_version` | Lire `ref:` | VIOLATION | `ref: main` |
-| CI-03 | Parent/child et 5 stages seulement | § 4.2 | `dx_base_check_cicd_five_stages_only` | Lire `stages:` | VIOLATION | Stages multiples dont migrate/rollback par env |
-| CI-04 | Aucun stage de migration | § 4.2, § 4.12 | `dx_base_check_cicd_no_migration_stage` | Chercher `migrate-` | VIOLATION | `migrate-dev/staging/prod` présents |
-| CI-05 | Aucun `allow_failure: true` | § 4.9 | `dx_base_check_cicd_no_allow_failure` | `rg "allow_failure"` | VIOLATION | Frontend test en allow_failure |
-| CI-06 | Couverture 85 %, JUnit, Cobertura | § 4.9 | `dx_base_check_cicd_coverage_85_percent` | Lire jobs test | VIOLATION | Les 11 scripts backend imposent `--cov-fail-under=85`, `coverage.xml` et `junit.xml`; les B4F et la CI globale restent à aligner |
-| CI-07 | Kaniko + Harbor, pas Docker-in-Docker | § 4.10 | `dx_base_check_cicd_kaniko_build` | Lire build jobs | A_VERIFIER | Kaniko présent mais repo include legacy |
-| CI-08 | Job `verify:<api>` Harbor/Cosign | § 4.10 | `dx_base_check_cicd_verify_job` | Lire child pipeline/template | VIOLATION | Non visible dans CI actuelle |
-| CI-09 | Pas de déploiement auto staging/prod | § 4.3 | `dx_base_check_cicd_no_auto_deploy_staging_prod` | Lire rules deploy staging/prod | A_VERIFIER | Audit à compléter |
-| CI-10 | Projet values-only, pas de scripts/charts partagés locaux | § 4.1, § 8.3 | `dx_base_check_cicd_no_deploy_scripts_in_project` | `find deploy/helm deploy/scripts` | VIOLATION | `deploy/helm` et `deploy/scripts` présents |
+| CI-01 | `.gitlab-ci.yml` inclut seulement le repo partagé v1.0 | § 4.1 | `dx_base_check_cicd_canonical_includes` | Lire `include:` | OK | Deux includes uniquement vers `croo-dev/ci-cd-unified-template-v1.0` |
+| CI-02 | Includes taggés, jamais `main` | § 4.1, § 4.12 | `dx_base_check_cicd_include_tag_version` | Lire `ref:` | OK | Les deux includes pin `v1.0.70`; `CICD_TEMPLATES_REF=v1.0.70` |
+| CI-03 | Parent/child et 5 stages seulement | § 4.2 | `dx_base_check_cicd_five_stages_only` | Lire `stages:` | VIOLATION | Template partagé `v1.0.70` génère aussi `deploy-infra`; écart upstream vs règle 5 stages |
+| CI-04 | Aucun stage de migration | § 4.2, § 4.12 | `dx_base_check_cicd_no_migration_stage` | Chercher `migrate-` | OK | `.gitlab-ci.yml` local minimal, aucun stage `migrate-*`; migrations via initContainer |
+| CI-05 | Aucun `allow_failure: true` | § 4.9 | `dx_base_check_cicd_no_allow_failure` | `rg "allow_failure"` | OK | Aucun `allow_failure` local; template child `test.yml` indique pas d'`allow_failure` |
+| CI-06 | Couverture 85 %, JUnit, Cobertura | § 4.9 | `dx_base_check_cicd_coverage_85_percent` | Lire jobs test | VIOLATION | Template partagé impose JUnit/Cobertura/85 %, mais APIs CDE sans `pyproject.toml`/`setup.py` sont skippées |
+| CI-07 | Kaniko + Harbor, pas Docker-in-Docker | § 4.10 | `dx_base_check_cicd_kaniko_build` | Lire build jobs | OK | Build via `/kaniko.yml` du repo partagé, images Harbor |
+| CI-08 | Job `verify:<api>` Harbor/Cosign | § 4.10 | `dx_base_check_cicd_verify_job` | Lire child pipeline/template | VIOLATION | Le child génère 18 jobs `verify:<api>`, mais `templates/child/stages/build.yml` v1.0.70 écrit `status=skipped` et `REQUIRE_COSIGN=false`; la vérification Harbor/Cosign stricte n'est pas active |
+| CI-09 | Pas de déploiement auto staging/prod | § 4.3 | `dx_base_check_cicd_no_auto_deploy_staging_prod` | Lire rules deploy staging/prod | OK | `deploy.yml` partagé rend staging/prod manuels sur tag `v*` |
+| CI-10 | Projet values-only, pas de scripts/charts partagés locaux | § 4.1, § 8.3 | `dx_base_check_cicd_no_deploy_scripts_in_project` | `find deploy/helm deploy/scripts` | OK | Charts/scripts supprimés; seuls `deploy/values/{dev,staging,prod}` restent |
 
 ### 5. Kubernetes et gateway
 
 | ID | Règle | Section | Skill | Méthode de validation | Statut initial | Preuve actuelle / à collecter |
 |---|---|---:|---|---|---|---|
 | K-01 | Envs canoniques `dev/staging/prod` | § 5.1 | `dx_base_check_k8s_env_names_canonical` | Lire deploy values/CI | OK | Dossiers values dev/staging/prod |
-| K-02 | `NAMESPACE` non hardcodé | § 5.3 | `dx_base_check_k8s_namespace_from_variable` | Lire CI/scripts | VIOLATION | `cde-dev` hardcodé dans CI |
-| K-03 | `KUBECONFIG_VARIABLE`, pas variable directe | § 5.4 | `dx_base_check_k8s_kubeconfig_indirection` | Lire CI | VIOLATION | `CROO_KUBECONFIG` direct |
-| K-04 | Gateway unique par namespace | § 5.11 | `dx_base_check_gateway_chart_exists` | Lire charts/ingress | A_VERIFIER | Chart présent, conformité à valider |
+| K-02 | `NAMESPACE` non hardcodé | § 5.3 | `dx_base_check_k8s_namespace_from_variable` | Lire CI/scripts | OK | CI locale ne hardcode plus de namespace; résolution portée par le template partagé |
+| K-03 | `KUBECONFIG_VARIABLE`, pas variable directe | § 5.4 | `dx_base_check_k8s_kubeconfig_indirection` | Lire CI | OK | `resolve-kubeconfig.sh` du template partagé utilise `KUBECONFIG_VARIABLE` |
+| K-04 | Gateway unique par namespace | § 5.11 | `dx_base_check_gateway_chart_exists` | Lire charts/ingress | OK | Gateway porté par `ci-cd-unified-template-v1.0/deploy/helm/gateway-chart` |
 | K-05 | Gateway route `/` vers frontend | § 5.11-5.12 | `dx_base_check_gateway_routes_frontend_root` | Lire ingress | OK | `frontendRoute` présent |
-| K-06 | Gateway route `/api/<service>/v1` vers B4F seulement | § 5.11 | `dx_base_check_gateway_routes_apis_under_api_prefix` | Lire `apiRoutes` | VIOLATION | `apiRoutes.apis` peut exposer backends |
+| K-06 | Gateway route `/api/<service>/v1` vers B4F seulement | § 5.11 | `dx_base_check_gateway_routes_apis_under_api_prefix` | Lire `apiRoutes` | OK | `deploy-gateway.sh` partagé découvre seulement `apis/exposed/*-b4f-api`; routes publiques alignées côté frontend/B4F |
 | K-07 | HTTPS redirect et wildcard TLS | § 5.7, § 5.11 | `dx_base_check_gateway_uses_wildcard_tls` | Lire values/annotations | A_VERIFIER | Audit à compléter |
 | K-08 | Probes health non authentifiées | § 5.10 | `dx_base_check_k8s_health_endpoints` | Appeler/lire routes API | A_VERIFIER | Audit à compléter |
 
@@ -108,11 +108,11 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 
 | ID | Règle | Section | Skill | Méthode de validation | Statut initial | Preuve actuelle / à collecter |
 |---|---|---:|---|---|---|---|
-| R-01 | Harbor registry primaire | § 7.1 | `dx_base_check_registry_harbor_primary` | Lire CI variables/templates | A_VERIFIER | Dépend du template cible |
-| R-02 | Robot account Harbor | § 7.2-7.3 | `dx_base_check_registry_robot_account` | Vérifier variables GitLab | BLOQUE | Nécessite accès GitLab variables |
-| R-03 | Aucun `CI_REGISTRY_*` / `DEPLOY_TOKEN_*` | § 7.3, § 8.6 | `dx_base_check_registry_harbor_primary` | `rg "CI_REGISTRY|DEPLOY_TOKEN"` | A_VERIFIER | Audit à compléter |
-| R-04 | `imagePullSecrets` et ServiceAccount | § 7.7 | `dx_base_check_registry_imagepullsecrets` | Lire chart/values | A_VERIFIER | Audit à compléter |
-| R-05 | Verify Harbor + Cosign | § 4.10, § 7.7 | `dx_base_check_cicd_verify_job` | Lire pipeline/template | VIOLATION | Non visible dans CI actuelle |
+| R-01 | Harbor registry primaire | § 7.1 | `dx_base_check_registry_harbor_primary` | Lire CI variables/templates | VIOLATION | Le template Kaniko pousse vers Harbor, mais le pipeline enfant `18933` échoue avant build: variables `HARBOR_URL`, `HARBOR_PROJECT`, `HARBOR_ROBOT_USER`, `HARBOR_ROBOT_TOKEN` absentes |
+| R-02 | Robot account Harbor | § 7.2-7.3 | `dx_base_check_registry_robot_account` | Vérifier variables GitLab | VIOLATION | Variables GitLab projet: aucun `HARBOR_*`; traces jobs `361698`, `361688`, `361684`, `361682`: `ERROR: HARBOR_URL, HARBOR_PROJECT, HARBOR_ROBOT_USER and HARBOR_ROBOT_TOKEN must be set` |
+| R-03 | Aucun `CI_REGISTRY_*` / `DEPLOY_TOKEN_*` | § 7.3, § 8.6 | `dx_base_check_registry_harbor_primary` | `rg "CI_REGISTRY|DEPLOY_TOKEN"` | OK | `rg "CI_REGISTRY|DEPLOY_TOKEN" .gitlab-ci.yml deploy/values apis frontend` ne retourne aucun usage actif |
+| R-04 | `imagePullSecrets` et ServiceAccount | § 7.7 | `dx_base_check_registry_imagepullsecrets` | Lire chart/values | A_VERIFIER | Le chart partagé définit `serviceAccount: harbor-registry-deployer` et `registrySecret: harbor-registry-cred`; provisioning réel par environnement non vérifié |
+| R-05 | Verify Harbor + Cosign | § 4.10, § 7.7 | `dx_base_check_cicd_verify_job` | Lire pipeline/template | VIOLATION | `verify:<api>` existe, mais v1.0.70 n'exécute pas encore le verifier Harbor pullable et Cosign strict; `HARBOR_VERIFY_STRICT` par défaut à `false` |
 
 ### 7. Frontend
 
@@ -122,7 +122,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | F-02 | Un feature NGRX par B4F | § 3.1 | `dx_base_check_frontend_ngrx_feature_per_b4f` | Chercher `store/<feature>` | VIOLATION | Store feature absent ou incomplet |
 | F-03 | Aucun HTTP hors Effects | § 3.1-3.6 | `dx_base_check_frontend_ngrx_no_http_outside_effects` | Recherche `HttpClient`/services dans components | A_VERIFIER | Audit à compléter |
 | F-04 | Templates utilisent `| async` | § 3.1 | `dx_base_check_frontend_ngrx_template_uses_async` | Lire templates critiques | A_VERIFIER | Audit à compléter |
-| F-05 | API base URL = `/api` | § 5.12 | `dx_base_check_frontend_api_base_url_is_api` | Lire environments | A_VERIFIER | Audit à compléter |
+| F-05 | API base URL = `/api` | § 5.12 | `dx_base_check_frontend_api_base_url_is_api` | Lire environments | OK | Production utilise `/api/<b4f>/v1` et le frontend chart injecte `API_BASE_URL=/api` |
 | F-06 | Playwright E2E sous `frontend/e2e/` | § 3.8 | `dx_base_check_frontend_e2e_in_e2e_dir` | `find frontend/e2e` | A_VERIFIER | Audit à compléter |
 | F-07 | E2E absent du pipeline CI | § 3.8 | `dx_base_check_frontend_e2e_not_in_ci` | Lire `.gitlab-ci.yml` | A_VERIFIER | Audit à compléter |
 | F-08 | Hook pre-commit smoke E2E | § 3.8 | `dx_base_check_frontend_pre_commit_hook` | Lire package/husky/scripts | A_VERIFIER | Audit à compléter |
@@ -179,7 +179,9 @@ find . -maxdepth 3 \( -name '.kilo*' -o -name '.cursor*' -o -name '.claude*' -o 
 # Violations connues
 rg "create_all|db.create_all|SQLModel.metadata.create_all" apis
 rg "migrate-dev|migrate-staging|migrate-prod|allow_failure|infrastructure/ci-templates|ref: main" .gitlab-ci.yml
-rg "apiRoutes\.apis|backend-api" deploy/helm/gateway-chart deploy/helm/values frontend/src/app
+find deploy -maxdepth 2 \( -name helm -o -name scripts \) -print
+rg "APIRouter\\(prefix=\"/api/v1|@router\\.(get|post|put|delete|patch)\\(\"/api/v1" apis/exposed/*-b4f-api/app/presentation/routes
+find apis -mindepth 2 -maxdepth 2 \( -name pyproject.toml -o -name setup.py \) -print
 
 # Matrice / rapport
 # Utiliser dx_master_check pour produire le rapport final au format § 9.

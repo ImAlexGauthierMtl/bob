@@ -8,7 +8,7 @@ and use AI services directly. For now, kept as a placeholder.
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from app.middleware.auth import get_current_user
 
-router = APIRouter(prefix="/api/v1/organizations")
+router = APIRouter(prefix="/organizations")
 
 
 @router.post("/{org_id}/enrich")

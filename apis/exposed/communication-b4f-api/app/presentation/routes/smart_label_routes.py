@@ -11,7 +11,7 @@ from app.presentation.schemas.smart_label_schemas import (
     SmartLabelListResponse,
 )
 
-router = APIRouter(prefix="/api/v1/inbox/labels")
+router = APIRouter(prefix="/inbox/labels")
 
 
 @router.post("", response_model=SmartLabelResponse, status_code=status.HTTP_201_CREATED)

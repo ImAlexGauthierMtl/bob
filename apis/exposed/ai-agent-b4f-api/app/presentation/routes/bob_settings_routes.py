@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request
 from app.middleware.auth import get_current_user
 from app.infrastructure.clients.agent_client import bob_settings_client
 
-router = APIRouter(prefix="/api/v1/bob/settings")
+router = APIRouter(prefix="/bob/settings")
 
 
 def _fh(request: Request) -> dict:

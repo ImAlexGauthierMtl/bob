@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from app.infrastructure.clients.platform_clients import workflow_client
 from app.middleware.auth import get_current_user
 
-router = APIRouter(prefix="/api/v1/workflows")
+router = APIRouter(prefix="/workflows")
 
 
 # ── Workflow CRUD ─────────────────────────────────

@@ -3,6 +3,7 @@ import sys
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool, text
 from alembic import context
+from shared.config import build_database_url_from_env
 
 # Add parent paths for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -14,7 +15,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Override sqlalchemy.url from environment
-database_url = os.environ.get("DATABASE_URL", "")
+database_url = os.environ.get("DATABASE_URL", "") or build_database_url_from_env() or ""
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 

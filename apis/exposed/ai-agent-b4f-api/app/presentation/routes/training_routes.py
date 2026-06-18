@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request
 from app.middleware.auth import get_current_user
 from app.infrastructure.clients.agent_client import training_client
 
-router = APIRouter(prefix="/api/v1/training")
+router = APIRouter(prefix="/training")
 
 
 def _fh(request: Request) -> dict:

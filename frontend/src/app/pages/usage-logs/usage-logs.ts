@@ -107,7 +107,7 @@ export class UsageLogsComponent implements OnInit {
 
     loadLogs(): void {
         this.isLoading = true;
-        let url = `${environment.apiUrl}/admin/usage?skip=${this.logOffset}&limit=${this.logLimit}`;
+        let url = `${environment.platformApiUrl}/admin/usage?skip=${this.logOffset}&limit=${this.logLimit}`;
         if (this.filterService) url += `&service_type=${this.filterService}`;
         if (this.filterTenant) url += `&tenant_id=${this.filterTenant}`;
 
@@ -128,7 +128,7 @@ export class UsageLogsComponent implements OnInit {
 
     loadIntents(): void {
         this.isLoading = true;
-        let url = `${environment.apiUrl}/admin/usage/by-intent?skip=${this.intentOffset}&limit=${this.intentLimit}`;
+        let url = `${environment.platformApiUrl}/admin/usage/by-intent?skip=${this.intentOffset}&limit=${this.intentLimit}`;
         if (this.filterTenant) url += `&tenant_id=${this.filterTenant}`;
 
         this.http.get<IntentListResponse>(url).subscribe({
@@ -153,7 +153,7 @@ export class UsageLogsComponent implements OnInit {
         this.drawerItems = [];
 
         this.http.get<UsageListResponse>(
-            `${environment.apiUrl}/admin/usage/by-intent/${intent.correlation_id}`
+            `${environment.platformApiUrl}/admin/usage/by-intent/${intent.correlation_id}`
         ).subscribe({
             next: (res) => {
                 this.drawerItems = res.items;

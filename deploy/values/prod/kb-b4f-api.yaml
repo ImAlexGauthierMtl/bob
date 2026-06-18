@@ -1,0 +1,23 @@
+apiName: kb-b4f-api
+apiTier: exposed
+replicaCount: 1
+service:
+  targetPort: 8006
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+config:
+  ENVIRONMENT: production
+  LOG_LEVEL: WARNING
+  LOG_FORMAT: json
+  PORT: '8006'
+  API_PORT: '8006'
+secretRefs:
+- name: b4f-runtime-secrets
+initContainers:
+  migrate:
+    enabled: false

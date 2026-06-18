@@ -8,7 +8,7 @@ from app.presentation.schemas.role_schemas import (
     PermissionResponse, AssignPermissionsRequest, AssignRoleRequest, UserRoleResponse,
 )
 
-router = APIRouter(prefix="/api/v1/roles")
+router = APIRouter(prefix="/roles")
 
 @router.get("/permissions", response_model=list[PermissionResponse])
 async def list_permissions(request: Request, current_user: dict = Depends(get_current_user)):

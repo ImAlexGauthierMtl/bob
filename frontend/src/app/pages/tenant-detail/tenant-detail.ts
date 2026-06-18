@@ -117,7 +117,7 @@ export class TenantDetailComponent implements OnInit {
         if (!this.tenant) return;
         this.logsLoading = true;
 
-        let url = `${environment.apiUrl}/admin/usage?tenant_id=${this.tenant.id}&skip=${this.logOffset}&limit=${this.logLimit}`;
+        let url = `${environment.platformApiUrl}/admin/usage?tenant_id=${this.tenant.id}&skip=${this.logOffset}&limit=${this.logLimit}`;
         if (this.logFilterService) {
             url += `&service_type=${this.logFilterService}`;
         }

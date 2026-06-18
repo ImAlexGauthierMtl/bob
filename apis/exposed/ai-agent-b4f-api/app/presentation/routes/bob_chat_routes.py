@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from app.middleware.auth import get_current_user
 
-router = APIRouter(prefix="/api/v1/bob")
+router = APIRouter(prefix="/bob")
 
 
 # ── Request / Response schemas ───────────────────────────────────────

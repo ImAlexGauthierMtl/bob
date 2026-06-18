@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from app.infrastructure.clients.kb_client import kb_client
 from app.middleware.auth import get_current_user
 
-router = APIRouter(prefix="/api/v1/kb")
+router = APIRouter(prefix="/kb")
 
 
 # ── Categories ───────────────────────────────────────

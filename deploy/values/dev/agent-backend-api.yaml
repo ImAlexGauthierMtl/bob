@@ -1,0 +1,27 @@
+apiName: agent-backend-api
+apiTier: internal
+replicaCount: 1
+service:
+  targetPort: 9008
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+config:
+  ENVIRONMENT: development
+  LOG_LEVEL: DEBUG
+  LOG_FORMAT: json
+  PORT: '9008'
+  API_PORT: '9008'
+secretRefs:
+- name: backend-runtime-secrets
+initContainers:
+  migrate:
+    enabled: true
+externalDependencies:
+- postgres
+- redis
+backends: []

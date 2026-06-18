@@ -115,6 +115,10 @@ But: Harbor devient la registry primaire, avec robot accounts, scan et signature
 - Retirer toute dépendance à `CI_REGISTRY_*` et `DEPLOY_TOKEN_*`.
 - Vérifier `imagePullSecrets`, ServiceAccount et provisionnement par environnement.
 - Confirmer auto-scan, auto-sign Cosign, retention et allow-list CVE côté repo partagé.
+- Préparer le prérequis plateforme CDE: créer le projet Harbor 1:1, créer le robot account `robot$<projet>+ci`, puis créer les 4 variables GitLab globales sans scope d'environnement.
+- Relancer la pipeline MR après création des variables: les builds Kaniko doivent passer, puis les jobs `verify:<api>` doivent réellement valider Harbor/Cosign selon le mode strict de la version de template retenue.
+
+Constat live MR !29: le pipeline enfant `18933` échoue avant tout build car les variables `HARBOR_URL`, `HARBOR_PROJECT`, `HARBOR_ROBOT_USER` et `HARBOR_ROBOT_TOKEN` ne sont pas disponibles dans CDE. Le repo ne doit pas contenir ces secrets; la correction appartient aux variables CI/CD GitLab et à Harbor.
 
 Skills utiles: `dx_intermediate_check_registry_to_k8s`, `dx_base_check_registry_harbor_primary`, `dx_base_check_registry_robot_account`, `dx_base_check_registry_imagepullsecrets`, `dx_base_check_cicd_kaniko_image_harbor`.
 

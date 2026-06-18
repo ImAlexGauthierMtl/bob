@@ -1,0 +1,23 @@
+apiName: platform-b4f-api
+apiTier: exposed
+replicaCount: 1
+service:
+  targetPort: 8005
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 300m
+    memory: 384Mi
+config:
+  ENVIRONMENT: staging
+  LOG_LEVEL: INFO
+  LOG_FORMAT: json
+  PORT: '8005'
+  API_PORT: '8005'
+secretRefs:
+- name: b4f-runtime-secrets
+initContainers:
+  migrate:
+    enabled: false

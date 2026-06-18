@@ -179,7 +179,13 @@ def create_event_bus(
     """
     backend = backend or os.environ.get("EVENT_BUS_BACKEND", "memory")
     if backend == EventBusBackend.REDIS:
-        url = redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        url = (
+            redis_url
+            or os.environ.get("EVENT_BUS_URL")
+            or os.environ.get("REDIS_URL")
+            or os.environ.get("CACHE_REDIS_URL")
+            or "redis://localhost:6379/0"
+        )
         group = consumer_group or os.environ.get("EVENT_BUS_CONSUMER_GROUP", "default")
         return RedisEventBus(redis_url=url, consumer_group=group)
     return InMemoryEventBus()

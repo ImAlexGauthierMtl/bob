@@ -72,7 +72,7 @@ export class SettingsBobComponent implements OnInit {
     isSaving = false;
     saveMessage = '';
 
-    private apiUrl = `${environment.apiUrl}/bob/settings`;
+    private apiUrl = `${environment.aiAgentApiUrl}/bob/settings`;
 
     ngOnInit(): void {
         this.loadSettings();

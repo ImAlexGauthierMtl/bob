@@ -1,11 +1,11 @@
 export const environment = {
     production: true,
-    apiUrl: '/api/v1',
-    authApiUrl: '/api/v1',
-    crmApiUrl: '/api/v1',
-    aiAgentApiUrl: '/api/v1',
-    communicationApiUrl: '/api/v1',
-    platformApiUrl: '/api/v1',
-    kbApiUrl: '/api/v1',
+    apiUrl: '/api/auth/v1',
+    authApiUrl: '/api/auth/v1',
+    crmApiUrl: '/api/crm/v1',
+    aiAgentApiUrl: '/api/ai-agent/v1',
+    communicationApiUrl: '/api/communication/v1',
+    platformApiUrl: '/api/platform/v1',
+    kbApiUrl: '/api/kb/v1',
     wsUrl: '',
 };

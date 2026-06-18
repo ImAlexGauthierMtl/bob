@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Request
 from app.middleware.auth import get_current_user
 from app.infrastructure.clients.agent_client import capability_client
 
-router = APIRouter(prefix="/api/v1/capabilities")
+router = APIRouter(prefix="/capabilities")
 
 
 def _fh(request: Request) -> dict:

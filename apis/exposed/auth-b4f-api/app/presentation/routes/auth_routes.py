@@ -14,7 +14,7 @@ from app.presentation.schemas.auth_schemas import (
     RefreshTokenRequest, UserResponse, SetActiveOrgRequest,
 )
 
-router = APIRouter(prefix="/api/v1/auth")
+router = APIRouter(prefix="/auth")
 security = HTTPBearer()
 rate_limit_storage: dict[str, list[datetime]] = {}
 

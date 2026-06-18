@@ -6,7 +6,7 @@ from app.presentation.schemas.tenant_schemas import TenantCreate, TenantUpdate, 
 from shared.infrastructure import get_logger
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/api/v1/admin/tenants")
+router = APIRouter(prefix="/admin/tenants")
 
 async def require_super_admin(request: Request, current_user: dict = Depends(get_current_user)):
     user_data = await user_client.get_by_id(current_user["user_id"], forward_headers=request.headers)

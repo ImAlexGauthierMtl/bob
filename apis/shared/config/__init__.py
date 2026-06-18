@@ -3,8 +3,34 @@
 import os
 from functools import lru_cache
 from typing import Optional, List
+from urllib.parse import quote_plus
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import model_validator
+
+
+def build_database_url_from_env() -> Optional[str]:
+    """Build DATABASE_URL from canonical CI/CD DB variables when needed."""
+    explicit_url = os.environ.get("DATABASE_URL", "").strip()
+    if explicit_url:
+        return explicit_url
+
+    host = os.environ.get("DB_HOST", "").strip()
+    username = os.environ.get("DB_USERNAME", "").strip()
+    password = os.environ.get("DB_PASSWORD", "").strip()
+    database = os.environ.get("DB_DATABASE", "").strip()
+    if not all([host, username, password, database]):
+        return None
+
+    driver = os.environ.get("DATABASE_DRIVER", "postgresql+psycopg2").strip()
+    port = os.environ.get("DB_PORT", "5432").strip()
+    sslmode = os.environ.get("DATABASE_SSLMODE", "").strip()
+    url = (
+        f"{driver}://{quote_plus(username)}:{quote_plus(password)}"
+        f"@{host}:{port}/{quote_plus(database)}"
+    )
+    if sslmode:
+        url = f"{url}?sslmode={quote_plus(sslmode)}"
+    return url
 
 
 class Settings(BaseSettings):
@@ -73,6 +99,12 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
         """Enforce strict security constraints in non-development environments."""
+        if not self.database_url:
+            self.database_url = build_database_url_from_env()
+
+        if not self.jwt_secret_key:
+            self.jwt_secret_key = os.environ.get("JWT_SECRET", "")
+
         # Fallback: if JWT_SECRET_KEY is empty but SECRET_KEY is set, use it.
         # Many deployments use a single SECRET_KEY env var.
         if not self.jwt_secret_key and self.secret_key:

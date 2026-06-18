@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from app.infrastructure.clients.crm_clients import opportunity_client
 from app.middleware.auth import get_current_user
 
-router = APIRouter(prefix="/api/v1/quotes")
+router = APIRouter(prefix="/quotes")
 
 
 @router.get("")

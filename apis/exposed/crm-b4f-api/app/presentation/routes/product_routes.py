@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from app.infrastructure.clients.crm_clients import product_client
 from app.middleware.auth import get_current_user
 
-router = APIRouter(prefix="/api/v1/products")
+router = APIRouter(prefix="/products")
 
 
 @router.get("")

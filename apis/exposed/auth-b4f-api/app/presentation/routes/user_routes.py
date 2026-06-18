@@ -4,7 +4,7 @@ from app.presentation.routes.auth_routes import get_current_user
 from app.infrastructure.clients.user_client import user_client
 from app.presentation.schemas.user_schemas import UserUpdateRequest, UserCreateByAdminRequest, UserResponse, UserListResponse
 
-router = APIRouter(prefix="/api/v1/users")
+router = APIRouter(prefix="/users")
 
 @router.put("/me", response_model=UserResponse)
 async def update_my_profile(data: UserUpdateRequest, request: Request, current_user: dict = Depends(get_current_user)):

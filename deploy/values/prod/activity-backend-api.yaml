@@ -1,0 +1,27 @@
+apiName: activity-backend-api
+apiTier: internal
+replicaCount: 1
+service:
+  targetPort: 9005
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+config:
+  ENVIRONMENT: production
+  LOG_LEVEL: WARNING
+  LOG_FORMAT: json
+  PORT: '9005'
+  API_PORT: '9005'
+secretRefs:
+- name: backend-runtime-secrets
+initContainers:
+  migrate:
+    enabled: true
+externalDependencies:
+- postgres
+- redis
+backends: []
