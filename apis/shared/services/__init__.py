@@ -8,7 +8,11 @@ import time
 
 import httpx
 
-from ..infrastructure.logging import get_logger
+from ..infrastructure.logging import (
+    get_current_request_id,
+    get_current_traceparent,
+    get_logger,
+)
 
 logger = get_logger(__name__)
 
@@ -52,7 +56,13 @@ class CircuitBreaker:
         return self.state == CircuitState.OPEN
 
 
-FORWARDED_HEADERS = ["authorization", "x-tenant-id", "x-request-id", "x-correlation-id"]
+FORWARDED_HEADERS = [
+    "authorization",
+    "x-tenant-id",
+    "x-request-id",
+    "x-correlation-id",
+    "traceparent",
+]
 
 
 class HTTPClient:
@@ -91,6 +101,9 @@ class HTTPClient:
                     result[key] = value
         if headers:
             result.update(headers)
+        result.setdefault("traceparent", get_current_traceparent() or "")
+        result.setdefault("x-request-id", get_current_request_id() or "")
+        result = {key: value for key, value in result.items() if value}
         return result
 
     async def _request(

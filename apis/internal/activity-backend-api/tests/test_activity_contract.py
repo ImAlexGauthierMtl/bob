@@ -5,6 +5,8 @@ import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
 from shared.database import connection as shared_db_connection
+from shared.infrastructure import bind_trace_context, clear_trace_context
+from shared.services import HTTPClient
 
 import main
 from app.domain.entities.activity import Activity, ActivityPriority, ActivityStatus, ActivityType
@@ -187,6 +189,15 @@ def test_monitoring_endpoints(client):
     assert "cde_api_info" in client.get("/metrics").text
 
 
+def test_request_middleware_returns_and_logs_trace_context(client):
+    traceparent = "00-1234567890abcdef1234567890abcdef-1234567890abcdef-01"
+    response = client.get("/health", headers={"traceparent": traceparent, "x-request-id": "req-123"})
+
+    assert response.status_code == 200
+    assert response.headers["traceparent"] == traceparent
+    assert response.headers["x-request-id"] == "req-123"
+
+
 def test_activity_crud_routes(client):
     created = client.post(
         "/api/v1/activities",
@@ -229,10 +240,39 @@ async def test_publishers_emit_domain_events(monkeypatch):
         published.append(event)
 
     monkeypatch.setattr(publishers.event_bus, "publish", fake_publish)
-    await publishers.publish_activity_created("activity-1", {"subject": "Follow up"})
-    await publishers.publish_activity_updated("activity-1", {"subject": "Updated"})
+    bind_trace_context(
+        "1234567890abcdef1234567890abcdef",
+        "00-1234567890abcdef1234567890abcdef-1234567890abcdef-01",
+        "req-123",
+    )
+    try:
+        await publishers.publish_activity_created("activity-1", {"subject": "Follow up"})
+        await publishers.publish_activity_updated("activity-1", {"subject": "Updated"})
+    finally:
+        clear_trace_context()
     assert [event.event_type for event in published] == ["activity.created", "activity.updated"]
     assert [event.payload["entity_id"] for event in published] == ["activity-1", "activity-1"]
+    assert [event.trace_id for event in published] == [
+        "1234567890abcdef1234567890abcdef",
+        "1234567890abcdef1234567890abcdef",
+    ]
+    assert published[0].to_dict()["trace_id"] == "1234567890abcdef1234567890abcdef"
+
+
+def test_shared_http_client_forwards_trace_context():
+    client = HTTPClient("http://activity-backend-api:9005")
+    bind_trace_context(
+        "1234567890abcdef1234567890abcdef",
+        "00-1234567890abcdef1234567890abcdef-1234567890abcdef-01",
+        "req-123",
+    )
+    try:
+        headers = client._build_headers()
+    finally:
+        clear_trace_context()
+
+    assert headers["traceparent"] == "00-1234567890abcdef1234567890abcdef-1234567890abcdef-01"
+    assert headers["x-request-id"] == "req-123"
 
 
 def test_repository_methods_cover_persistence_paths():

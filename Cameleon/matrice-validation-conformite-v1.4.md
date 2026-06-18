@@ -29,7 +29,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | M-05 | § 5, § 8.4 | Kubernetes et gateway | `dx_intermediate_check_k8s_config` | Gateway unique, Backends internes, initContainer migrate, Lease RBAC | OK | critique |
 | M-06 | § 6, § 8.5 | Variables d'environnement | `dx_intermediate_check_env_vars` | Variables scopées GitLab, pas de préfixes DEV/STAGING/PROD, `.env.example` | A_VERIFIER | critique |
 | M-07 | § 7, § 8.6 | Harbor registry | `dx_intermediate_check_registry_to_k8s` | Harbor robot, imagePullSecrets, Cosign, absence `CI_REGISTRY_*` | VIOLATION | critique |
-| M-08 | § 5.8-5.10, § 8.8 | Observabilité et probes | `dx_intermediate_check_k8s_config` | `/liveness`, `/readiness`, `/startup`, `/health`, `/metrics`, logs JSON, trace_id | A_VERIFIER | critique |
+| M-08 | § 5.8-5.10, § 8.8 | Observabilité et probes | `dx_intermediate_check_k8s_config` | `/liveness`, `/readiness`, `/startup`, `/health`, `/metrics`, logs JSON, trace_id | OK | critique |
 | M-09 | § 10, § 11 | Conventions et dev local | `dx_intermediate_check_local_dev` | Wrappers racine, scripts par API, compose postgres/pgbouncer/redis/alloy | A_VERIFIER | à corriger |
 | M-10 | § 12 | Clean Architecture API | `dx_intermediate_check_clean_archi_apis` | `domain/application/infrastructure/presentation`, import-linter, tests par couche | A_VERIFIER | à corriger |
 | M-11 | § 9 | Rapport final | `dx_master_check` | Rapport markdown avec violations, résumé et variables CI/CD | A_VERIFIER | critique |
@@ -131,11 +131,11 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 
 | ID | Règle | Section | Skill | Méthode de validation | Statut initial | Preuve actuelle / à collecter |
 |---|---|---:|---|---|---|---|
-| O-01 | Logs JSON stdout/stderr | § 5.8 | `dx_base_check_k8s_logs_stdout_json` | Lire logging shared | A_VERIFIER | Audit à compléter |
+| O-01 | Logs JSON stdout/stderr | § 5.8 | `dx_base_check_k8s_logs_stdout_json` | Lire logging shared | OK | `shared.infrastructure.logging.configure_logging` utilise `structlog.processors.JSONRenderer()` par défaut, écrit sur `sys.stdout`, merge les contextvars et les APIs appellent `configure_logging(settings.log_level, settings.log_format)` |
 | O-02 | `/metrics` sur chaque API | § 5.8, § 5.10 | `dx_base_check_k8s_metrics_endpoint` | Lire routes / appeler local | OK | Toutes les APIs incluent `monitoring_router`; test direct FastAPI confirme `/metrics` en Prometheus text format |
 | O-03 | OTel vers Alloy | § 5.8 | `dx_base_check_k8s_observability_alloy_otlp` | Lire env/compose/chart | OK | `docker compose --env-file .env.example config` expose `alloy`, `OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4317`; l'image `grafana/alloy:v1.5.1` démarre avec `observability/alloy/config.alloy` |
-| O-04 | Propagation `traceparent` | § 5.9 | `dx_base_check_k8s_traceparent_propagation` | Lire HTTP client/middleware | A_VERIFIER | Audit à compléter |
-| O-05 | `trace_id` dans events Redis | § 2.4, § 5.9 | `dx_base_check_k8s_trace_id_in_events` | Lire schemas event bus | A_VERIFIER | Audit à compléter |
+| O-04 | Propagation `traceparent` | § 5.9 | `dx_base_check_k8s_traceparent_propagation` | Lire HTTP client/middleware | OK | `RequestLoggingMiddleware` extrait ou génère `traceparent`, lie `trace_id/request_id` aux logs, renvoie les headers; `shared.services.HTTPClient` propage `traceparent` et `x-request-id`; test `activity-backend-api` OK |
+| O-05 | `trace_id` dans events Redis | § 2.4, § 5.9 | `dx_base_check_k8s_trace_id_in_events` | Lire schemas event bus | OK | `shared.event_bus.Event` porte `trace_id`, le sérialise dans `to_dict()`/`from_dict()`, et le remplit depuis le contexte courant; test publisher `activity-backend-api` OK |
 | O-06 | `/health` liste dépendances | § 5.10 | `dx_base_check_k8s_health_endpoints` | Lire routes / appeler local | OK | `monitoring.py` retourne `dependencies` avec `database`, `redis`, `otel`; test direct FastAPI confirme le champ dans `/health` |
 
 ### 9. Développement local et conventions

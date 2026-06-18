@@ -12,7 +12,7 @@ import json
 import os
 import uuid
 
-from ..infrastructure.logging import get_logger
+from ..infrastructure.logging import get_current_trace_id, get_logger
 
 logger = get_logger(__name__)
 
@@ -26,6 +26,7 @@ class Event:
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     source: str = ""
+    trace_id: str = field(default_factory=lambda: get_current_trace_id() or "")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -34,6 +35,7 @@ class Event:
             "payload": self.payload,
             "timestamp": self.timestamp,
             "source": self.source,
+            "trace_id": self.trace_id,
         }
 
     @classmethod
@@ -44,6 +46,7 @@ class Event:
             payload=data.get("payload", {}),
             timestamp=data.get("timestamp", datetime.now(timezone.utc).isoformat()),
             source=data.get("source", ""),
+            trace_id=data.get("trace_id", ""),
         )
 
 
