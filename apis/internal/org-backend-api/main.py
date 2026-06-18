@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from shared.config import get_settings
 from shared.infrastructure import configure_logging, get_logger, setup_cors, RequestLoggingMiddleware, monitoring_router
-from shared.database import Base
 from shared.event_bus import event_bus
 
 settings = get_settings("org-backend")
@@ -14,9 +13,8 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.domain.entities import organization, department  # noqa: F401
-    from app.infrastructure.database import init as db_init, get_engine
+    from app.infrastructure.database import init as db_init
     db_init("org-backend")
-    Base.metadata.create_all(bind=get_engine())
     if hasattr(event_bus, 'start_listening'):
         await event_bus.start_listening()
     logger.info("org_backend_started", port=9003)

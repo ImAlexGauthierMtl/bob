@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from shared.config import get_settings
 from shared.infrastructure import configure_logging, get_logger, setup_cors, RequestLoggingMiddleware, monitoring_router
-from shared.database import Base
 from shared.event_bus import event_bus
 
 settings = get_settings("agent-backend")
@@ -21,11 +20,8 @@ async def lifespan(app: FastAPI):
         bcc_entities, bob_settings, capability, client_map,
         training_models, department,
     )
-    from app.infrastructure.database import init as db_init, get_engine
+    from app.infrastructure.database import init as db_init
     db_init("agent-backend")
-    engine = get_engine()
-    Base.metadata.create_all(bind=engine)
-    logger.info("agent_backend_database_tables_created")
 
     from app.infrastructure.seed_org import seed_default_organization
     from shared.database import create_session_factory

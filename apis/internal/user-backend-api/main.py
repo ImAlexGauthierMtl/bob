@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from shared.config import get_settings
 from shared.infrastructure import configure_logging, get_logger, setup_cors, RequestLoggingMiddleware, monitoring_router
-from shared.database import Base
 from shared.event_bus import event_bus
 
 settings = get_settings("user-backend")
@@ -17,11 +16,8 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.domain.entities import user, tenant, role  # noqa: F401
-    from app.infrastructure.database import init as db_init, get_engine, get_session_factory
+    from app.infrastructure.database import init as db_init, get_session_factory
     db_init("user-backend")
-    engine = get_engine()
-    Base.metadata.create_all(bind=engine)
-    logger.info("database_tables_created")
 
     SessionLocal = get_session_factory()
     db = SessionLocal()
