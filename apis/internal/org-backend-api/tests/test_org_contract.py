@@ -12,6 +12,7 @@ from app.infrastructure import database
 from app.infrastructure.persistence.department_repository import DepartmentRepository
 from app.infrastructure.persistence.organization_repository import OrganizationRepository
 from app.middleware.auth import get_current_user, settings
+from app.presentation import deps as org_deps
 from app.presentation.routes import department_routes, organization_routes
 from app.presentation.schemas import department_schemas, organization_schemas
 
@@ -231,15 +232,14 @@ def client(monkeypatch, repos):
     async def noop_publish(*args, **kwargs):
         return None
 
-    monkeypatch.setattr(organization_routes, "OrganizationRepository", lambda db: org_repo)
-    monkeypatch.setattr(department_routes, "DepartmentRepository", lambda db: dept_repo)
-    monkeypatch.setattr(organization_routes, "publish_org_created", noop_publish)
-    monkeypatch.setattr(organization_routes, "publish_org_updated", noop_publish)
-    monkeypatch.setattr(organization_routes, "publish_org_deleted", noop_publish)
+    monkeypatch.setattr(org_deps, "OrganizationRepository", lambda db: org_repo)
+    monkeypatch.setattr(org_deps, "DepartmentRepository", lambda db: dept_repo)
+    monkeypatch.setattr(org_deps, "publish_org_created", noop_publish)
+    monkeypatch.setattr(org_deps, "publish_org_updated", noop_publish)
+    monkeypatch.setattr(org_deps, "publish_org_deleted", noop_publish)
     main.app.dependency_overrides[organization_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[organization_routes.get_db] = lambda: FakeDB()
+    main.app.dependency_overrides[org_deps.get_db] = lambda: FakeDB()
     main.app.dependency_overrides[department_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[department_routes.get_db] = lambda: FakeDB()
     with TestClient(main.app) as test_client:
         yield test_client
     main.app.dependency_overrides.clear()
