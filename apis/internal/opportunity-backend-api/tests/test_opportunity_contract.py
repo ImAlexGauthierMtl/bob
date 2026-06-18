@@ -13,6 +13,7 @@ from app.infrastructure import database
 from app.infrastructure.persistence.opportunity_repository import OpportunityRepository
 from app.infrastructure.persistence.quote_repository import QuoteRepository
 from app.middleware.auth import get_current_user, settings
+from app.presentation import deps as opportunity_deps
 from app.presentation.routes import opportunity_routes, quote_routes
 from app.presentation.schemas import opportunity_schemas, quote_schemas
 
@@ -288,14 +289,13 @@ def client(monkeypatch, repos):
     async def noop_publish(*args, **kwargs):
         return None
 
-    monkeypatch.setattr(opportunity_routes, "OpportunityRepository", lambda db: opp_repo)
-    monkeypatch.setattr(quote_routes, "QuoteRepository", lambda db: quote_repo)
-    monkeypatch.setattr(opportunity_routes, "publish_opportunity_created", noop_publish)
-    monkeypatch.setattr(opportunity_routes, "publish_opportunity_updated", noop_publish)
+    monkeypatch.setattr(opportunity_deps, "OpportunityRepository", lambda db: opp_repo)
+    monkeypatch.setattr(opportunity_deps, "QuoteRepository", lambda db: quote_repo)
+    monkeypatch.setattr(opportunity_deps, "publish_opportunity_created", noop_publish)
+    monkeypatch.setattr(opportunity_deps, "publish_opportunity_updated", noop_publish)
     main.app.dependency_overrides[opportunity_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[opportunity_routes.get_db] = lambda: FakeDB()
+    main.app.dependency_overrides[opportunity_deps.get_db] = lambda: FakeDB()
     main.app.dependency_overrides[quote_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[quote_routes.get_db] = lambda: FakeDB()
     with TestClient(main.app) as test_client:
         yield test_client
     main.app.dependency_overrides.clear()

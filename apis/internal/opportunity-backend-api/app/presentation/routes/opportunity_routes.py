@@ -1,12 +1,9 @@
-"""Opportunity CRUD routes — pure storage, no business logic."""
+"""Opportunity HTTP routes."""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
-from app.infrastructure.database import get_db
+from app.application.use_cases.opportunity_use_cases import OpportunityUseCases
+from app.domain.exceptions import OpportunityLineItemNotFoundError, OpportunityNotFoundError
 from app.middleware.auth import get_current_user
-from app.infrastructure.persistence.opportunity_repository import OpportunityRepository
-from app.infrastructure.persistence.models.opportunity import Opportunity
-from app.infrastructure.persistence.models.opportunity_product import OpportunityProduct
-from app.events.publishers import publish_opportunity_created, publish_opportunity_updated
+from app.presentation.deps import get_opportunity_use_cases
 from app.presentation.schemas.opportunity_schemas import (
     OpportunityCreate, OpportunityUpdate, OpportunityResponse, OpportunityListResponse,
     OpportunityProductCreate, OpportunityProductResponse,
@@ -19,42 +16,43 @@ router = APIRouter(prefix="/api/v1/opportunities")
 async def list_opportunities(
     skip: int = 0, limit: int = 50,
     organization_id: str = Query(None), stage: str = Query(None),
-    user: dict = Depends(get_current_user), db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+    use_cases: OpportunityUseCases = Depends(get_opportunity_use_cases),
 ):
-    repo = OpportunityRepository(db)
-    items = repo.list_all(user["tenant_id"], skip, limit, organization_id, stage)
-    total = repo.count(user["tenant_id"], organization_id)
+    result = await use_cases.list_opportunities(
+        user["tenant_id"],
+        skip,
+        limit,
+        organization_id,
+        stage,
+    )
     return OpportunityListResponse(
-        items=[OpportunityResponse.model_validate(o) for o in items],
-        total=total, skip=skip, limit=limit,
+        items=[OpportunityResponse.model_validate(opp) for opp in result.items],
+        total=result.total,
+        skip=result.skip,
+        limit=result.limit,
     )
 
 
 @router.post("", response_model=OpportunityResponse, status_code=status.HTTP_201_CREATED)
 async def create_opportunity(
     data: OpportunityCreate,
-    user: dict = Depends(get_current_user), db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+    use_cases: OpportunityUseCases = Depends(get_opportunity_use_cases),
 ):
-    repo = OpportunityRepository(db)
-    opp = Opportunity(
-        **data.model_dump(),
-        tenant_id=user["tenant_id"],
-        owner_id=user["user_id"],
-        created_by=user["email"],
-    )
-    created = repo.create(opp)
-    await publish_opportunity_created(created.id, {"name": created.name, "tenant_id": created.tenant_id})
+    created = await use_cases.create_opportunity(data.model_dump(), user)
     return OpportunityResponse.model_validate(created)
 
 
 @router.get("/{opp_id}", response_model=OpportunityResponse)
 async def get_opportunity(
     opp_id: str,
-    user: dict = Depends(get_current_user), db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+    use_cases: OpportunityUseCases = Depends(get_opportunity_use_cases),
 ):
-    repo = OpportunityRepository(db)
-    opp = repo.get_by_id(opp_id, user["tenant_id"])
-    if not opp:
+    try:
+        opp = await use_cases.get_opportunity(opp_id, user["tenant_id"])
+    except OpportunityNotFoundError:
         raise HTTPException(status_code=404, detail="Opportunity not found")
     return OpportunityResponse.model_validate(opp)
 
@@ -62,63 +60,63 @@ async def get_opportunity(
 @router.patch("/{opp_id}", response_model=OpportunityResponse)
 async def update_opportunity(
     opp_id: str, data: OpportunityUpdate,
-    user: dict = Depends(get_current_user), db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+    use_cases: OpportunityUseCases = Depends(get_opportunity_use_cases),
 ):
-    repo = OpportunityRepository(db)
-    opp = repo.get_by_id(opp_id, user["tenant_id"])
-    if not opp:
+    try:
+        updated = await use_cases.update_opportunity(
+            opp_id,
+            data.model_dump(exclude_unset=True),
+            user,
+        )
+    except OpportunityNotFoundError:
         raise HTTPException(status_code=404, detail="Opportunity not found")
-    updates = data.model_dump(exclude_unset=True)
-    for k, v in updates.items():
-        setattr(opp, k, v)
-    opp.updated_by = user["email"]
-    updated = repo.update(opp)
-    await publish_opportunity_updated(updated.id, {"fields": list(updates.keys())})
     return OpportunityResponse.model_validate(updated)
 
 
 @router.delete("/{opp_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_opportunity(
     opp_id: str,
-    user: dict = Depends(get_current_user), db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+    use_cases: OpportunityUseCases = Depends(get_opportunity_use_cases),
 ):
-    repo = OpportunityRepository(db)
-    opp = repo.get_by_id(opp_id, user["tenant_id"])
-    if not opp:
+    try:
+        await use_cases.delete_opportunity(opp_id, user)
+    except OpportunityNotFoundError:
         raise HTTPException(status_code=404, detail="Opportunity not found")
-    repo.soft_delete(opp, user["email"])
 
 
 # ── Line items (OpportunityProduct) ──────────────────
 @router.get("/{opp_id}/products", response_model=list[OpportunityProductResponse])
 async def list_opp_products(
     opp_id: str,
-    user: dict = Depends(get_current_user), db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+    use_cases: OpportunityUseCases = Depends(get_opportunity_use_cases),
 ):
-    repo = OpportunityRepository(db)
-    return [OpportunityProductResponse.model_validate(lp) for lp in repo.list_products(opp_id, user["tenant_id"])]
+    lines = await use_cases.list_products(opp_id, user["tenant_id"])
+    return [OpportunityProductResponse.model_validate(line) for line in lines]
 
 
 @router.post("/{opp_id}/products", response_model=OpportunityProductResponse, status_code=status.HTTP_201_CREATED)
 async def add_opp_product(
     opp_id: str, data: OpportunityProductCreate,
-    user: dict = Depends(get_current_user), db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+    use_cases: OpportunityUseCases = Depends(get_opportunity_use_cases),
 ):
-    repo = OpportunityRepository(db)
-    opp = repo.get_by_id(opp_id, user["tenant_id"])
-    if not opp:
+    try:
+        line = await use_cases.add_product(opp_id, data.model_dump(), user)
+    except OpportunityNotFoundError:
         raise HTTPException(status_code=404, detail="Opportunity not found")
-    line = OpportunityProduct(opportunity_id=opp_id, tenant_id=user["tenant_id"], **data.model_dump())
-    return OpportunityProductResponse.model_validate(repo.add_product(line))
+    return OpportunityProductResponse.model_validate(line)
 
 
 @router.delete("/{opp_id}/products/{line_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_opp_product(
     opp_id: str, line_id: str,
-    user: dict = Depends(get_current_user), db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user),
+    use_cases: OpportunityUseCases = Depends(get_opportunity_use_cases),
 ):
-    repo = OpportunityRepository(db)
-    line = repo.get_product_line(line_id, user["tenant_id"])
-    if not line:
+    try:
+        await use_cases.remove_product(line_id, user["tenant_id"])
+    except OpportunityLineItemNotFoundError:
         raise HTTPException(status_code=404, detail="Line item not found")
-    repo.remove_product(line)
