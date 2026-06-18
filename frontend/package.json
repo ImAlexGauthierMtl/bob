@@ -6,7 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "e2e": "playwright test"
   },
   "private": true,
   "packageManager": "npm@11.6.2",
@@ -18,6 +19,9 @@
     "@angular/forms": "^21.2.0",
     "@angular/platform-browser": "^21.2.0",
     "@angular/router": "^21.2.0",
+    "@ngrx/effects": "^21.1.1",
+    "@ngrx/store": "^21.1.1",
+    "@ngrx/store-devtools": "^21.1.1",
     "@pipecat-ai/client-js": "^1.6.0",
     "@pipecat-ai/websocket-transport": "^1.6.0",
     "marked": "^17.0.4",

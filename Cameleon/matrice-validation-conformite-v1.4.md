@@ -121,14 +121,14 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 
 | ID | Règle | Section | Skill | Méthode de validation | Statut initial | Preuve actuelle / à collecter |
 |---|---|---:|---|---|---|---|
-| F-01 | Un service Angular par B4F | § 3.1 | `cde-check-frontend-ngrx` | Mapper services vers B4F | A_VERIFIER | Plusieurs `shared/services` présents |
-| F-02 | Un feature NGRX par B4F | § 3.1 | `cde-check-frontend-ngrx` | Chercher `store/<feature>` | VIOLATION | Store feature absent ou incomplet |
-| F-03 | Aucun HTTP hors Effects | § 3.1-3.6 | `cde-check-frontend-ngrx` | Recherche `HttpClient`/services dans components | A_VERIFIER | Audit à compléter |
-| F-04 | Templates utilisent `| async` | § 3.1 | `cde-check-frontend-ngrx` | Lire templates critiques | A_VERIFIER | Audit à compléter |
+| F-01 | Un service Angular par B4F | § 3.1 | `cde-check-frontend-ngrx` | Mapper services vers B4F | OK | Audit `Cameleon/audit-frontend-ngrx-v1.4.md`: services B4F ajoutés pour les compositions CRM, KB, Communication et Platform; services legacy par entité conservés comme support |
+| F-02 | Un feature NGRX par B4F | § 3.1 | `cde-check-frontend-ngrx` | Chercher `store/<feature>` | OK | `frontend/src/app/store/{auth,crm,communication,ai-agent,platform,kb}` + `provideStore/provideEffects`; `npm run build` OK |
+| F-03 | Aucun HTTP hors Effects | § 3.1-3.6 | `cde-check-frontend-ngrx` | Recherche `HttpClient`/services dans components | VIOLATION | Les nouvelles compositions B4F passent par Effects, mais `rg "HttpClient|\\.subscribe\\(" frontend/src/app -g '*.ts'` montre encore des composants/pages legacy hors Effects |
+| F-04 | Templates utilisent `| async` | § 3.1 | `cde-check-frontend-ngrx` | Lire templates critiques | VIOLATION | Migration legacy incomplete: plusieurs pages gardent des subscriptions/signals locaux; voir `Cameleon/audit-frontend-ngrx-v1.4.md` |
 | F-05 | API base URL = `/api` | § 5.12 | `cde-check-frontend-ngrx` | Lire environments | OK | Production utilise `/api/<b4f>/v1` et le frontend chart injecte `API_BASE_URL=/api` |
-| F-06 | Playwright E2E sous `frontend/e2e/` | § 3.8 | `cde-check-frontend-ngrx` | `find frontend/e2e` | A_VERIFIER | Audit à compléter |
+| F-06 | Playwright E2E sous `frontend/e2e/` | § 3.8 | `cde-check-frontend-ngrx` | `find frontend/e2e` | OK | `frontend/e2e/smoke.spec.ts`, `frontend/playwright.config.ts`; `./run_frontend_e2e.sh --project=chromium` OK, 1 passed |
 | F-07 | E2E absent du pipeline CI | § 3.8 | `cde-master-validation` | Hors périmètre actif | SKIP_CI_CD | Validation pipeline exclue; E2E à garder local-only dans cette passe |
-| F-08 | Hook pre-commit smoke E2E | § 3.8 | `cde-check-frontend-ngrx` | Lire package/husky/scripts | A_VERIFIER | Audit à compléter |
+| F-08 | Hook pre-commit smoke E2E | § 3.8 | `cde-check-frontend-ngrx` | Lire package/husky/scripts | OK | `frontend/.husky/pre-commit` lance `npm run e2e -- --project=chromium`; wrapper racine `run_frontend_e2e.sh` validé |
 
 ### 8. Observabilité
 

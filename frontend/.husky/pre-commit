@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+set -eu
+
+npm run e2e -- --project=chromium
