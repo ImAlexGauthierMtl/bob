@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contact-backend-api"
+version = "0.1.0"
+description = "Contact Backend API for Croo Digital Experience"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.0",
+  "pydantic-settings>=2.0",
+  "sqlalchemy>=2.0",
+  "psycopg2-binary>=2.9",
+  "psycopg[binary]>=3.1",
+  "python-jose[cryptography]>=3.3",
+  "structlog>=23.0",
+  "httpx>=0.24",
+  "redis[hiredis]>=5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "pytest-cov>=5.0",
+  "import-linter>=2.0",
+]
+
+[tool.setuptools]
+packages = ["contact_backend_api"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "../.."]
+asyncio_mode = "auto"
