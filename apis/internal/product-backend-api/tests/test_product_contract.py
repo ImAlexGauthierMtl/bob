@@ -10,6 +10,7 @@ from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.product_repository import ProductRepository
 from app.middleware.auth import get_current_user, settings
+from app.presentation import deps as product_deps
 from app.presentation.routes import product_routes
 from app.presentation.schemas import product_schemas
 
@@ -158,11 +159,11 @@ def client(monkeypatch, repo):
     async def noop_publish(*args, **kwargs):
         return None
 
-    monkeypatch.setattr(product_routes, "ProductRepository", lambda db: repo)
-    monkeypatch.setattr(product_routes, "publish_product_created", noop_publish)
-    monkeypatch.setattr(product_routes, "publish_product_updated", noop_publish)
+    monkeypatch.setattr(product_deps, "ProductRepository", lambda db: repo)
+    monkeypatch.setattr(product_deps, "publish_product_created", noop_publish)
+    monkeypatch.setattr(product_deps, "publish_product_updated", noop_publish)
     main.app.dependency_overrides[product_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[product_routes.get_db] = lambda: FakeDB()
+    main.app.dependency_overrides[product_deps.get_db] = lambda: FakeDB()
     with TestClient(main.app) as test_client:
         yield test_client
     main.app.dependency_overrides.clear()
