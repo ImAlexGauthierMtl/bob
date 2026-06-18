@@ -2,11 +2,11 @@
 
 Admin authorization is enforced BOTH at the B4F layer (communication-b4f-api)
 and here via `require_admin` for defense in depth. Mutating routes (POST,
-PATCH, DELETE) re-fetch the user's role from user~backend-api before allowing
-the operation.
+PATCH, DELETE) require signed admin claims in the JWT so this Backend never
+calls another Backend over HTTP.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.infrastructure.database import get_db
@@ -35,7 +35,6 @@ async def list_settings(
 
 @router.post("", response_model=IntegrationSettingResponse, status_code=status.HTTP_201_CREATED)
 async def create_or_update_setting(
-    request: Request,
     data: IntegrationSettingCreate,
     current_user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
@@ -48,7 +47,6 @@ async def create_or_update_setting(
 
 @router.patch("/{integration_key}", response_model=IntegrationSettingResponse)
 async def update_setting(
-    request: Request,
     integration_key: str,
     data: IntegrationSettingUpdate,
     current_user: dict = Depends(require_admin),
@@ -70,7 +68,6 @@ async def update_setting(
 
 @router.delete("/{integration_key}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_setting(
-    request: Request,
     integration_key: str,
     current_user: dict = Depends(require_admin),
     db: Session = Depends(get_db),

@@ -118,6 +118,8 @@ async def login(credentials: UserLoginRequest, request: Request):
         "email": user_data["email"],
         "tenant_id": user_data.get("tenant_id"),
         "active_organization_id": user_data.get("active_organization_id"),
+        "role": user_data.get("role"),
+        "is_super_admin": bool(user_data.get("is_super_admin")),
     })
     refresh_token = create_refresh_token(data={"sub": user_data["id"]})
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
@@ -136,6 +138,8 @@ async def refresh(token_data: RefreshTokenRequest, request: Request):
         "email": user_data["email"],
         "tenant_id": user_data.get("tenant_id"),
         "active_organization_id": user_data.get("active_organization_id"),
+        "role": user_data.get("role"),
+        "is_super_admin": bool(user_data.get("is_super_admin")),
     })
     refresh_token = create_refresh_token(data={"sub": user_data["id"]})
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)

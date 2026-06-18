@@ -277,6 +277,9 @@ def test_auth_register_login_refresh_and_profile(client, auth_headers):
     tokens = login.json()
     assert tokens["access_token"]
     assert tokens["refresh_token"]
+    access_payload = auth_routes.verify_token(tokens["access_token"])
+    assert access_payload["role"] == "admin"
+    assert access_payload["is_super_admin"] is True
 
     failed_login = client.post("/auth/login", json={"email": "user@example.com", "password": "wrong-password"})
     assert failed_login.status_code == 401
@@ -284,6 +287,9 @@ def test_auth_register_login_refresh_and_profile(client, auth_headers):
     refreshed = client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
     assert refreshed.status_code == 200
     assert refreshed.json()["token_type"] == "bearer"
+    refreshed_payload = auth_routes.verify_token(refreshed.json()["access_token"])
+    assert refreshed_payload["role"] == "admin"
+    assert refreshed_payload["is_super_admin"] is True
 
     me = client.get("/auth/me", headers=auth_headers)
     assert me.status_code == 200

@@ -1,9 +1,8 @@
-"""JWT auth for backend API — validates tokens from B4F layer."""
-from fastapi import Depends, HTTPException, Request, status
+"""JWT auth for backend API — validates signed claims from the B4F layer."""
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from shared.config import get_settings
-from shared.services import create_service_client
 
 settings = get_settings("email-backend")
 security = HTTPBearer()
@@ -20,35 +19,15 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         "user_id": user_id,
         "email": payload.get("email"),
         "tenant_id": payload.get("tenant_id", "default"),
+        "role": (payload.get("role") or "").lower(),
+        "is_super_admin": bool(payload.get("is_super_admin")),
     }
 
 
-async def _fetch_user_profile(user_id: str, forward_headers) -> dict:
-    """Fetch the authoritative user record from user~backend-api."""
-    client = create_service_client("user~backend-api")
-    try:
-        resp = await client.get(f"/api/v1/users/{user_id}", forward_headers=forward_headers)
-        if resp.status_code != 200:
-            return {}
-        return resp.json() or {}
-    except Exception:
-        return {}
-
-
 async def require_admin(
-    request: Request,
     current_user: dict = Depends(get_current_user),
 ) -> dict:
-    """Guard a route so only tenant admins and super-admins can call it.
-
-    Re-fetches the user record from user~backend-api because role / super-admin
-    flags are not carried in the JWT (JWT only contains: sub, email, tenant_id,
-    active_organization_id, type, exp).
-    """
-    user_data = await _fetch_user_profile(current_user["user_id"], request.headers)
-    is_super = bool(user_data.get("is_super_admin"))
-    role = (user_data.get("role") or "").lower()
-    if not is_super and role not in {"admin", "super_admin"}:
+    """Guard a route using signed admin claims, without Backend-to-Backend HTTP."""
+    if not current_user["is_super_admin"] and current_user["role"] not in {"admin", "super_admin"}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-    # Enrich current_user for downstream handlers
-    return {**current_user, "is_super_admin": is_super, "role": role}
+    return current_user

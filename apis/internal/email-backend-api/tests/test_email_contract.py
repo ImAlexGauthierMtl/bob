@@ -35,7 +35,7 @@ from app.presentation.routes import (
 from app.presentation.schemas import integration_settings_schemas, membrane_schemas, ms365_schemas, smart_label_schemas
 
 
-USER = {"user_id": "user-1", "email": "email@example.com", "tenant_id": "tenant-1"}
+USER = {"user_id": "user-1", "email": "email@example.com", "tenant_id": "tenant-1", "role": "", "is_super_admin": False}
 ADMIN = {**USER, "role": "admin", "is_super_admin": False}
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
@@ -636,20 +636,12 @@ def test_auth_dependency_accepts_and_rejects_tokens(auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_require_admin_fetches_authoritative_user(monkeypatch):
-    async def admin_profile(user_id, headers):
-        return {"role": "admin", "is_super_admin": False}
+async def test_require_admin_uses_signed_claims_without_backend_http():
+    assert (await auth.require_admin(ADMIN))["role"] == "admin"
+    assert (await auth.require_admin({**USER, "is_super_admin": True}))["is_super_admin"] is True
 
-    monkeypatch.setattr(auth, "_fetch_user_profile", admin_profile)
-    request = SimpleNamespace(headers={"authorization": "Bearer token"})
-    assert (await auth.require_admin(request, USER))["role"] == "admin"
-
-    async def member_profile(user_id, headers):
-        return {"role": "member", "is_super_admin": False}
-
-    monkeypatch.setattr(auth, "_fetch_user_profile", member_profile)
     with pytest.raises(HTTPException) as denied:
-        await auth.require_admin(request, USER)
+        await auth.require_admin({**USER, "role": "member"})
     assert denied.value.status_code == 403
 
 
