@@ -71,7 +71,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | DB-03 | Première migration crée le schéma du service | § 2.7.2, § 2.7.5 | `dx_base_check_alembic_first_revision_creates_schema` | Lire première révision par backend | A_VERIFIER | Audit à compléter |
 | DB-04 | Downgrade non vide | § 2.7.5 | `dx_base_check_alembic_downgrade_not_empty` | `rg "def downgrade|pass|NotImplementedError"` | A_VERIFIER | Fonctions présentes, contenu à valider |
 | DB-05 | Downgrade symétrique | § 2.7.5 | `dx_base_check_alembic_downgrade_symmetric` | Comparer opérations upgrade/downgrade | A_VERIFIER | Audit manuel requis |
-| DB-06 | CI teste downgrade puis upgrade | § 2.7.5, § 4.9 | `dx_base_check_alembic_ci_tests_downgrade` | Lire `.gitlab-ci.yml` / template child | VIOLATION | Non présent dans CI actuelle |
+| DB-06 | CI teste downgrade puis upgrade | § 2.7.5, § 4.9 | `dx_base_check_alembic_ci_tests_downgrade` | Lire `.gitlab-ci.yml` / template child | OK | Les 11 `apis/internal/*-backend-api/run_tests.sh` exécutent `alembic upgrade head`, `alembic downgrade -1`, puis `alembic upgrade head`; le child pipeline appelle `run_tests.sh` quand présent |
 | DB-07 | InitContainer exécute `scripts/migrate_with_lease.py` | § 2.7.5 | `dx_base_check_api_migration_initcontainer` | Lire deployment chart/values | VIOLATION | InitContainer absent |
 | DB-08 | Lease Kubernetes et RBAC présents | § 2.7.5 | `dx_base_check_api_migration_lease` | Chercher `coordination.k8s.io`, `leases` | VIOLATION | RBAC absent |
 | DB-09 | Pool SQLAlchemy compatible PgBouncer | § 2.7.3-2.7.4 | `dx_base_check_api_db_pool_size` | Lire `apis/shared/database` | A_VERIFIER | Audit à compléter |
@@ -85,7 +85,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | CI-03 | Parent/child et 5 stages seulement | § 4.2 | `dx_base_check_cicd_five_stages_only` | Lire `stages:` | VIOLATION | Stages multiples dont migrate/rollback par env |
 | CI-04 | Aucun stage de migration | § 4.2, § 4.12 | `dx_base_check_cicd_no_migration_stage` | Chercher `migrate-` | VIOLATION | `migrate-dev/staging/prod` présents |
 | CI-05 | Aucun `allow_failure: true` | § 4.9 | `dx_base_check_cicd_no_allow_failure` | `rg "allow_failure"` | VIOLATION | Frontend test en allow_failure |
-| CI-06 | Couverture 85 %, JUnit, Cobertura | § 4.9 | `dx_base_check_cicd_coverage_85_percent` | Lire jobs test | VIOLATION | Seuil non enforced |
+| CI-06 | Couverture 85 %, JUnit, Cobertura | § 4.9 | `dx_base_check_cicd_coverage_85_percent` | Lire jobs test | VIOLATION | Les 11 scripts backend imposent `--cov-fail-under=85`, `coverage.xml` et `junit.xml`; les B4F et la CI globale restent à aligner |
 | CI-07 | Kaniko + Harbor, pas Docker-in-Docker | § 4.10 | `dx_base_check_cicd_kaniko_build` | Lire build jobs | A_VERIFIER | Kaniko présent mais repo include legacy |
 | CI-08 | Job `verify:<api>` Harbor/Cosign | § 4.10 | `dx_base_check_cicd_verify_job` | Lire child pipeline/template | VIOLATION | Non visible dans CI actuelle |
 | CI-09 | Pas de déploiement auto staging/prod | § 4.3 | `dx_base_check_cicd_no_auto_deploy_staging_prod` | Lire rules deploy staging/prod | A_VERIFIER | Audit à compléter |
@@ -143,7 +143,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | ID | Règle | Section | Skill | Méthode de validation | Statut initial | Preuve actuelle / à collecter |
 |---|---|---:|---|---|---|---|
 | L-01 | Wrappers racine présents | § 11.1 | `dx_base_check_local_dev_root_wrappers` | `ls run_* migrate_all_apis.sh` | A_VERIFIER | Certains scripts présents à vérifier |
-| L-02 | Scripts par API uniformes | § 11.2 | `dx_base_check_local_dev_per_api_scripts` | `find apis -name run_api.sh -o -name run_tests.sh` | A_VERIFIER | Audit à compléter |
+| L-02 | Scripts par API uniformes | § 11.2 | `dx_base_check_local_dev_per_api_scripts` | `find apis -name run_api.sh -o -name run_tests.sh` | A_VERIFIER | Les 11 scripts backend `run_tests.sh` sont uniformisés; les scripts B4F restent à aligner |
 | L-03 | B4F sans `migrate.sh` | § 11.2 | `dx_base_check_apis_uniform_scripts` | `find apis/exposed -name migrate.sh` | A_VERIFIER | Audit à compléter |
 | L-04 | Compose postgres + pgbouncer + redis + alloy | § 11.3 | `dx_base_check_local_dev_docker_compose` | Lire `docker-compose.yml` | VIOLATION | PgBouncer/Alloy à confirmer/ajouter |
 | L-05 | `.env.example` à jour | § 11.4 | `dx_base_check_local_dev_env_example` | `[ -f .env.example ]` + variables | A_VERIFIER | Audit à compléter |
