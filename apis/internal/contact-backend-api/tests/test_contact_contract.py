@@ -10,6 +10,7 @@ from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.contact_repository import ContactRepository
 from app.middleware.auth import get_current_user, settings
+from app.presentation import deps as contact_deps
 from app.presentation.routes import contact_routes
 from app.presentation.schemas import contact_schemas
 
@@ -165,12 +166,12 @@ def client(monkeypatch, repo):
     async def noop_publish(*args, **kwargs):
         return None
 
-    monkeypatch.setattr(contact_routes, "ContactRepository", lambda db: repo)
-    monkeypatch.setattr(contact_routes, "publish_contact_created", noop_publish)
-    monkeypatch.setattr(contact_routes, "publish_contact_updated", noop_publish)
-    monkeypatch.setattr(contact_routes, "publish_contact_deleted", noop_publish)
+    monkeypatch.setattr(contact_deps, "ContactRepository", lambda db: repo)
+    monkeypatch.setattr(contact_deps, "publish_contact_created", noop_publish)
+    monkeypatch.setattr(contact_deps, "publish_contact_updated", noop_publish)
+    monkeypatch.setattr(contact_deps, "publish_contact_deleted", noop_publish)
     main.app.dependency_overrides[contact_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[contact_routes.get_db] = lambda: FakeDB()
+    main.app.dependency_overrides[contact_deps.get_db] = lambda: FakeDB()
     with TestClient(main.app) as test_client:
         yield test_client
     main.app.dependency_overrides.clear()

@@ -117,6 +117,7 @@ Preuves:
 - `membrane_tenant_key_service.py` retire une dependance `application -> presentation` dans `email-backend-api`.
 - `activity-backend-api` a une extraction verticale: les routes appellent `ActivityUseCases`, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
 - `product-backend-api` a une extraction verticale équivalente: les routes appellent `ProductUseCases`, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
+- `contact-backend-api` a une extraction verticale équivalente: les routes appellent `ContactUseCases`, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
 - Les modèles SQLAlchemy résident maintenant dans `app/infrastructure/persistence/models`; `app/domain` ne contient plus de dépendance SQLAlchemy/Pydantic détectée.
 - La violation restante de M-10 est limitée à CA-04: certaines routes contiennent encore de la logique métier ou persistence directe.
 - Le test contractuel email passe, mais `email-backend-api/run_tests.sh` reste bloque localement avant pytest sur un `DATABASE_URL` de migration avec driver placeholder.
