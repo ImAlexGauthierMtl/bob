@@ -19,6 +19,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         "user_id": user_id,
         "email": payload.get("email"),
         "tenant_id": payload.get("tenant_id", "default"),
+        "active_organization_id": payload.get("active_organization_id"),
         "role": (payload.get("role") or "").lower(),
         "is_super_admin": bool(payload.get("is_super_admin")),
     }
@@ -30,4 +31,13 @@ async def require_admin(
     """Guard a route using signed admin claims, without Backend-to-Backend HTTP."""
     if not current_user["is_super_admin"] and current_user["role"] not in {"admin", "super_admin"}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return current_user
+
+
+async def require_super_admin(
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Guard a route using signed super-admin claims."""
+    if not current_user["is_super_admin"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super administrator access required")
     return current_user

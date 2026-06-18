@@ -1,6 +1,6 @@
-"""Email Backend API — CRUD for MS365 connections, synced emails, events, contacts, smart labels.
+"""Email Backend API — storage and provider integrations for email data.
 
-Pure storage layer — no business logic. Port: 9007.
+Port: 9007.
 """
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -52,3 +52,8 @@ app.include_router(integration_settings_router, tags=["integration-settings"])
 
 from app.presentation.routes.membrane_routes import router as membrane_router
 app.include_router(membrane_router, tags=["membrane"])
+
+from app.presentation.routes.provider_ms365_routes import router as provider_ms365_router
+from app.presentation.routes.provider_membrane_routes import router as provider_membrane_router
+app.include_router(provider_ms365_router, tags=["provider-ms365"])
+app.include_router(provider_membrane_router, tags=["provider-membrane"])

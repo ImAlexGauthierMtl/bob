@@ -22,7 +22,7 @@ _settings = None
 def _get_settings():
     global _settings
     if _settings is None:
-        _settings = get_settings("communication")
+        _settings = get_settings("email-backend")
     return _settings
 
 

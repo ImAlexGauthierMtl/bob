@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
 from pydantic import BaseModel, Field
 
 from app.middleware.auth import get_current_user
-from app.agents.event_bus import event_bus
+from app.infrastructure.workflow_event_bus import event_bus
 from shared.config import get_settings
 settings = get_settings("communication")
 

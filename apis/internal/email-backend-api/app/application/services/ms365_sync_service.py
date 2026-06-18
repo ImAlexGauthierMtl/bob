@@ -5,7 +5,7 @@ from typing import Union, Dict, Any, Optional
 
 import structlog
 
-from app.infrastructure.clients.email_client import connection_client, email_crud_client, event_crud_client
+from app.infrastructure.clients_email_backend import connection_client, email_crud_client, event_crud_client
 
 logger = structlog.get_logger(__name__)
 
