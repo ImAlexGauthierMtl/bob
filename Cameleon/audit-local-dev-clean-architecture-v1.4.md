@@ -39,32 +39,33 @@ La Clean Architecture stricte n'est pas encore conforme:
 
 | Contrôle | Statut | Preuve |
 |---|---|---|
-| Quatre couches uniformes par API | VIOLATION | 16 API sur 17 ont au moins une couche manquante; `auth-b4f-api` manque `domain` et `application`; 10 backends internes manquent `application`; les B4F non-auth manquent `domain` |
+| Quatre couches uniformes par API | OK | Les 17 APIs ont maintenant les couches `domain`, `application`, `infrastructure` et `presentation`; les couches ajoutees sont des packages vides servant de garde-fou avant les refactors verticaux |
 | `domain/` sans framework | VIOLATION | 30 fichiers `app/domain/entities/*.py` importent SQLAlchemy ou déclarent `Column`/`relationship` |
-| `application/` sans framework | OK | scan `application/` pour FastAPI, Pydantic, SQLAlchemy, `Column`, `relationship`: aucun résultat |
+| `application/` sans framework | OK | scan `application/` pour FastAPI, SQLAlchemy, httpx, redis, pydantic_settings et import `app.presentation`: aucun résultat direct |
 | Routes minces | VIOLATION | exemples: `provider_membrane_routes.py` fait 1198 lignes, `training_routes.py` 239 lignes, `auth_routes.py` porte token/rate-limit/session |
 | Entités métier pures | VIOLATION | les entités de domaine dérivent indirectement du modèle SQLAlchemy via `Base` et déclarent leurs colonnes ORM |
-| Contrats import-linter | VIOLATION | `import-linter` est dépendance dans les `pyproject.toml`, mais aucune configuration `[tool.importlinter]` ou contrat équivalent n'existe |
+| Contrats import-linter | OK | Les 17 `pyproject.toml` configurent 2 contrats progressifs; `lint-imports --config pyproject.toml --no-cache` passe sur les 17 APIs, 34 contrats gardes, 0 brise |
 
-## API avec couches manquantes
+## API avec quatre couches
 
 ```text
-apis/exposed/ai-agent-b4f-api missing: domain
-apis/exposed/auth-b4f-api missing: domain application
-apis/exposed/communication-b4f-api missing: domain
-apis/exposed/crm-b4f-api missing: domain
-apis/exposed/kb-b4f-api missing: domain
-apis/exposed/platform-b4f-api missing: domain
-apis/internal/activity-backend-api missing: application
-apis/internal/agent-backend-api missing: application
-apis/internal/contact-backend-api missing: application
-apis/internal/kb-backend-api missing: application
-apis/internal/opportunity-backend-api missing: application
-apis/internal/org-backend-api missing: application
-apis/internal/product-backend-api missing: application
-apis/internal/usage-backend-api missing: application
-apis/internal/user-backend-api missing: application
-apis/internal/workflow-backend-api missing: application
+apis/exposed/ai-agent-b4f-api: domain application infrastructure presentation
+apis/exposed/auth-b4f-api: domain application infrastructure presentation
+apis/exposed/communication-b4f-api: domain application infrastructure presentation
+apis/exposed/crm-b4f-api: domain application infrastructure presentation
+apis/exposed/kb-b4f-api: domain application infrastructure presentation
+apis/exposed/platform-b4f-api: domain application infrastructure presentation
+apis/internal/activity-backend-api: domain application infrastructure presentation
+apis/internal/agent-backend-api: domain application infrastructure presentation
+apis/internal/contact-backend-api: domain application infrastructure presentation
+apis/internal/email-backend-api: domain application infrastructure presentation
+apis/internal/kb-backend-api: domain application infrastructure presentation
+apis/internal/opportunity-backend-api: domain application infrastructure presentation
+apis/internal/org-backend-api: domain application infrastructure presentation
+apis/internal/product-backend-api: domain application infrastructure presentation
+apis/internal/usage-backend-api: domain application infrastructure presentation
+apis/internal/user-backend-api: domain application infrastructure presentation
+apis/internal/workflow-backend-api: domain application infrastructure presentation
 ```
 
 ## Fichiers d'entités ORM dans `domain/`

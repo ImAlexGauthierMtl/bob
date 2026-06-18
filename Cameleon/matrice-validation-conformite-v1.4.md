@@ -157,12 +157,12 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 
 | ID | Règle | Section | Skill | Méthode de validation | Statut initial | Preuve actuelle / à collecter |
 |---|---|---:|---|---|---|---|
-| CA-01 | APIs en 4 couches uniformes | § 12.2 | `cde-check-clean-architecture` | `find apis -maxdepth` + import graph | VIOLATION | Audit `Cameleon/audit-local-dev-clean-architecture-v1.4.md`: 16 API sur 17 ont au moins une couche manquante; B4F sans `domain`, `auth-b4f-api` sans `application`, backends internes sans `application` sauf `email-backend-api` |
+| CA-01 | APIs en 4 couches uniformes | § 12.2 | `cde-check-clean-architecture` | `find apis -maxdepth` + import graph | OK | Les 17 APIs ont `domain/application/infrastructure/presentation`; les couches ajoutees sont des packages vides pour garde-fous avant extraction verticale |
 | CA-02 | `domain/` sans framework | § 12.3 | `cde-check-clean-architecture` | Recherche imports FastAPI/SQLAlchemy/Pydantic dans domain | VIOLATION | 30 fichiers `app/domain/entities/*.py` importent SQLAlchemy ou déclarent `Column`/`relationship` |
-| CA-03 | `application/` sans framework | § 12.3 | `cde-check-clean-architecture` | Recherche imports FastAPI/SQLAlchemy/Pydantic dans application | OK | Scan `apis/*/*/app/application` pour FastAPI, Pydantic, SQLAlchemy, `Column`, `relationship`: aucun résultat |
+| CA-03 | `application/` sans framework | § 12.3 | `cde-check-clean-architecture` | Recherche imports FastAPI/SQLAlchemy/Pydantic dans application | OK | Scan direct `apis/*/*/app/application` pour FastAPI, SQLAlchemy, httpx, redis, pydantic_settings et `app.presentation`: aucun résultat; helper Membrane tenant-key extrait hors route |
 | CA-04 | Routes sans logique métier | § 12.3 | `cde-check-clean-architecture` | Lire routes longues/complexes | VIOLATION | Plusieurs routes contiennent persistence/logique métier; exemples: `provider_membrane_routes.py` 1198 lignes, `training_routes.py` 239 lignes, `auth_routes.py` porte token/rate-limit/session |
 | CA-05 | Entités métier ne dérivent pas de SQLAlchemy/Pydantic | § 12.3 | `cde-check-clean-architecture` | Recherche `Base`, `BaseModel` dans domain entities | VIOLATION | Les entités de domaine sont des modèles ORM SQLAlchemy dans `app/domain/entities`, donc non pures |
-| CA-06 | Import-linter configuré | § 12.3 | `cde-check-clean-architecture` | Lire config test/lint | VIOLATION | `import-linter` est listé en dépendance, mais aucun contrat `[tool.importlinter]`/`[importlinter]` n'est configuré |
+| CA-06 | Import-linter configuré | § 12.3 | `cde-check-clean-architecture` | Lire config test/lint | OK | Les 17 `pyproject.toml` contiennent 2 contrats import-linter progressifs; `lint-imports --config pyproject.toml --no-cache` passe sur les 17 APIs, 34 contrats gardes, 0 brise |
 
 ## Commandes de validation recommandées
 

@@ -16,6 +16,7 @@ from app.infrastructure.external.membrane_service import (
     MembraneClient,
 )
 from app.infrastructure.clients_email_backend import membrane_crud_client
+from app.application.services.membrane_tenant_key_service import build_tenant_key, default_scope_for
 
 logger = structlog.get_logger(__name__)
 
@@ -88,10 +89,9 @@ async def sync_membrane_emails(
     -------
     dict with `synced` count and optional `errors` list.
     """
-    from app.presentation.routes.provider_membrane_routes import _build_tenant_key, _default_scope_for
-    tenant_key = _build_tenant_key(
+    tenant_key = build_tenant_key(
         user.get("tenant_id", "default"),
-        _default_scope_for(local_connection.get("integration_key", "")),
+        default_scope_for(local_connection.get("integration_key", "")),
         user["user_id"],
         user.get("active_organization_id"),
     )

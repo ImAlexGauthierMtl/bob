@@ -110,10 +110,12 @@ Preuves:
 VIOLATION à corriger: la séparation stricte des couches n'est pas encore complète.
 
 Preuves:
-- Plusieurs APIs n'ont pas encore les 4 couches uniformes `domain/application/infrastructure/presentation`.
+- Les 17 APIs ont maintenant les 4 couches uniformes `domain/application/infrastructure/presentation`.
+- Les 17 `pyproject.toml` ont 2 contrats import-linter progressifs; validation locale: 34 contrats gardes, 0 brise.
+- `membrane_tenant_key_service.py` retire une dependance `application -> presentation` dans `email-backend-api`.
 - Les entités de domaine sont encore des modèles SQLAlchemy dans plusieurs Backends.
 - Certaines routes contiennent encore de la logique métier.
-- Aucun contrat import-linter n'est encore configuré.
+- Le test contractuel email passe, mais `email-backend-api/run_tests.sh` reste bloque localement avant pytest sur un `DATABASE_URL` de migration avec driver placeholder.
 
 ### Repo cicd-templates
 

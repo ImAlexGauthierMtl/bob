@@ -32,6 +32,10 @@ from app.infrastructure.external.membrane_service import (
     build_connect_url,
 )
 from app.infrastructure.clients_email_backend import integration_settings_client
+from app.application.services.membrane_tenant_key_service import (
+    build_tenant_key as _build_tenant_key,
+    default_scope_for as _default_scope_for,
+)
 from app.presentation.schemas.provider_membrane_schemas import (
     MembraneTokenRequest,
     MembraneTokenResponse,
@@ -80,37 +84,6 @@ _WELL_KNOWN_CONNECTORS = {
 #          Box, Google-Sheets)                   → per-user
 #   Messaging (Slack, Mailchimp, Quickbooks,
 #              Xero, Stripe)                     → per-user
-
-# Default scope heuristics by integration key (lowercase).
-_SCOPE_PER_ORG = {
-    "hubspot", "salesforce", "pipedrive", "zoho-crm", "dynamics-crm",
-    "attio", "monday", "jira", "confluence",
-}
-
-
-def _build_tenant_key(tenant_id: str, scope: str, user_id: str, org_id: Optional[str]) -> str:
-    """Build a namespaced tenantKey for Membrane.
-
-    Always prefixes with `t:{tenant_id}` to guarantee isolation between
-    CDE tenants in a shared Membrane workspace.
-    """
-    tenant_id = tenant_id or "default"
-    if scope == "per-tenant":
-        return f"t:{tenant_id}"
-    if scope == "per-organization":
-        target = org_id or user_id  # fallback to user if no active org
-        return f"t:{tenant_id}:o:{target}" if org_id else f"t:{tenant_id}:u:{user_id}"
-    # per-user (default)
-    return f"t:{tenant_id}:u:{user_id}"
-
-
-def _default_scope_for(integration_key: str) -> str:
-    """Return the default scope_mode for an integration when no admin
-    setting is configured."""
-    if integration_key.lower() in _SCOPE_PER_ORG:
-        return "per-organization"
-    return "per-user"
-
 
 async def _resolve_tenant_key(
     user: dict,

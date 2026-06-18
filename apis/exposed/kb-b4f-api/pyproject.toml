@@ -32,3 +32,31 @@ packages = ["kb_b4f_api"]
 testpaths = ["tests"]
 pythonpath = [".", "../.."]
 asyncio_mode = "auto"
+
+
+[tool.importlinter]
+root_package = "app"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "domain application infrastructure do not import presentation"
+type = "forbidden"
+source_modules = [
+  "app.domain",
+  "app.application",
+  "app.infrastructure",
+]
+forbidden_modules = ["app.presentation"]
+
+[[tool.importlinter.contracts]]
+name = "application avoids framework dependencies"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["app.application"]
+forbidden_modules = [
+  "fastapi",
+  "sqlalchemy",
+  "httpx",
+  "redis",
+  "pydantic_settings",
+]
