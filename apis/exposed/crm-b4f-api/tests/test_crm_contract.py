@@ -15,6 +15,7 @@ from app.presentation.schemas import crm_schemas
 from app.presentation.routes import (
     activity_routes,
     contact_routes,
+    dashboard_routes,
     department_routes,
     opportunity_routes,
     organization_routes,
@@ -174,6 +175,11 @@ def client(monkeypatch):
     monkeypatch.setattr(quote_routes, "opportunity_client", opportunity)
     monkeypatch.setattr(activity_routes, "activity_client", activity)
     monkeypatch.setattr(product_routes, "product_client", product)
+    monkeypatch.setattr(
+        dashboard_routes,
+        "dashboard_service",
+        dashboard_routes.CRMDashboardService(contact, org, opportunity, activity, product),
+    )
 
     with TestClient(main.app) as test_client:
         yield test_client
@@ -205,6 +211,22 @@ def test_contact_routes(client, auth_headers):
     assert client.get("/contacts/missing", headers=auth_headers).status_code == 404
     assert client.patch("/contacts/contact-1", json={"status": "INACTIVE"}, headers=auth_headers).json()["status"] == "INACTIVE"
     assert client.delete("/contacts/contact-1", headers=auth_headers).status_code == 204
+
+
+def test_dashboard_summary_composes_crm_backends(client, auth_headers):
+    response = client.get("/dashboard/summary", headers=auth_headers)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tenant_id"] == "tenant-1"
+    assert payload["totals"] == {
+        "contacts": 1,
+        "organizations": 1,
+        "open_opportunities": 1,
+        "pending_activities": 1,
+        "products": 1,
+    }
+    assert payload["highlights"]["contacts"][0]["kind"] == "contact"
+    assert {action["type"] for action in payload["next_actions"]} == {"review_pipeline", "follow_up"}
 
 
 def test_organization_and_department_routes(client, auth_headers):
@@ -363,6 +385,7 @@ def test_python_package_contract_loads_runtime_components():
     )
     assert contract.load_app() is main.app
     assert contract.load_runtime_routes() == (
+        dashboard_routes,
         contact_routes,
         organization_routes,
         opportunity_routes,

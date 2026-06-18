@@ -23,7 +23,9 @@ from app.presentation.routes.quote_routes import router as quote_router
 from app.presentation.routes.activity_routes import router as activity_router
 from app.presentation.routes.product_routes import router as product_router
 from app.presentation.routes.department_routes import router as dept_router
+from app.presentation.routes.dashboard_routes import router as dashboard_router
 
+app.include_router(dashboard_router, tags=["dashboard"])
 app.include_router(contact_router, tags=["contacts"])
 app.include_router(org_router, tags=["organizations"])
 app.include_router(opp_router, tags=["opportunities"])

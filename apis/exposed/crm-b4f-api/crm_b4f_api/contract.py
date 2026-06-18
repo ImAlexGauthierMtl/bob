@@ -14,6 +14,7 @@ def load_app() -> Any:
 def load_runtime_routes() -> tuple[Any, ...]:
     """Load runtime CRM route modules."""
     return (
+        import_module("app.presentation.routes.dashboard_routes"),
         import_module("app.presentation.routes.contact_routes"),
         import_module("app.presentation.routes.organization_routes"),
         import_module("app.presentation.routes.opportunity_routes"),
