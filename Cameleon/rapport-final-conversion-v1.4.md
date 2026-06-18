@@ -109,7 +109,7 @@ Preuves:
 
 ### Structure interne (Clean Archi + SOLID)
 
-VIOLATION à corriger: la séparation stricte des couches n'est pas encore complète.
+OK: les routes épaisses ciblées par la conversion ont été déplacées derrière des use cases.
 
 Preuves:
 - Les 17 APIs ont maintenant les 4 couches uniformes `domain/application/infrastructure/presentation`.
@@ -124,10 +124,11 @@ Preuves:
 - `usage-backend-api` a une extraction verticale équivalente: la route Usage appelle `UsageUseCases`, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
 - `kb-backend-api` a une extraction verticale équivalente: la route KB appelle `KBUseCases`, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
 - `workflow-backend-api` a une extraction verticale équivalente: la route Workflow appelle `WorkflowUseCases`, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, les requêtes de monitoring sont dans le repository, et le contrat local passe.
-- `agent-backend-api` progresse: les routes Capability, Client Map, Training et Bob Settings appellent des use cases, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe; `bcc_routes.py` reste à extraire.
-- `email-backend-api` progresse: les routes core Connection, Email, Event, Email Contact, Integration Settings, Smart Label et Membrane CRUD appellent des use cases, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe; les routes provider restent à extraire.
+- `agent-backend-api` progresse: les routes Capability, Client Map, Training, Bob Settings et BCC appellent des use cases, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
+- `email-backend-api` progresse: les routes core Connection, Email, Event, Email Contact, Integration Settings, Smart Label, Membrane CRUD, provider Pipedream et provider MS365 appellent des use cases, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
+- `auth-b4f-api` progresse: le flux login, refresh, token et session courante passe par `AuthUseCases`, avec contrat local et import-linter OK.
 - Les modèles SQLAlchemy résident maintenant dans `app/infrastructure/persistence/models`; `app/domain` ne contient plus de dépendance SQLAlchemy/Pydantic détectée.
-- La violation restante de M-10 est limitée à CA-04: certaines routes contiennent encore de la logique métier ou persistence directe.
+- M-10/CA-04 est fermé pour les routes ciblées: `provider_pipedream_routes.py`, `provider_ms365_routes.py`, `bcc_routes.py` et `auth_routes.py`.
 - Le test contractuel email passe, mais `email-backend-api/run_tests.sh` reste bloque localement avant pytest sur un `DATABASE_URL` de migration avec driver placeholder.
 
 ### Repo cicd-templates
@@ -159,13 +160,13 @@ Preuve:
 ### Résumé
 
 - Violations critiques actives: 0.
-- Violations à corriger: 2 familles principales.
+- Violations à corriger: 1 famille principale.
 - Points conformes: architecture APIs, Alembic/DB, K8s repo-local, variables, observabilité, développement local, conventions, rapport final.
 - Points exclus volontairement: CI/CD et Harbor/registry.
 
 Violations restantes:
 - `M-03`: frontend NGRX partiel, composants/pages legacy à migrer.
-- `M-10`: Clean Architecture stricte incomplète sur CA-04 seulement, routes épaisses restantes.
+- `M-10`: OK pour les routes ciblées par cette conversion; les prochains durcissements peuvent porter sur des ports plus stricts sans bloquer la conformité actuelle.
 
 ### Variables CI/CD à créer/modifier dans GitLab
 

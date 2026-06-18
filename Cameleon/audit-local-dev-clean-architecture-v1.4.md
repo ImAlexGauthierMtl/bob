@@ -15,13 +15,12 @@ Le périmètre local/dev est conforme aux règles applicables:
 - aucune référence aux anciens outils/projets exclus n'est présente dans le dépôt.
 - aucun pattern évident de secret réel suivi par Git n'a été détecté.
 
-La Clean Architecture stricte progresse, mais n'est pas encore conforme:
+La Clean Architecture stricte est conforme pour les règles locales suivies dans cette matrice:
 
 - les 17 APIs ont maintenant les quatre couches `domain`, `application`, `infrastructure`, `presentation`.
 - `activity-backend-api` possède une première extraction verticale: routes HTTP minces, dépendance FastAPI isolée dans `presentation/deps.py`, et logique CRUD/orchestration dans `application/use_cases/activity_use_cases.py`.
-- `product-backend-api`, `contact-backend-api`, `org-backend-api`, `opportunity-backend-api`, `user-backend-api`, `usage-backend-api`, `kb-backend-api`, `workflow-backend-api`, les routes Agent `capability`/`client_map`/`training`/`bob_settings`, les routes Email core et `membrane_routes.py` suivent le même pattern de routes HTTP minces avec use cases applicatifs.
+- `product-backend-api`, `contact-backend-api`, `org-backend-api`, `opportunity-backend-api`, `user-backend-api`, `usage-backend-api`, `kb-backend-api`, `workflow-backend-api`, les routes Agent `capability`/`client_map`/`training`/`bob_settings`/`bcc`, les routes Email core, `membrane_routes.py`, les providers MS365/Pipedream et le flux auth B4F suivent le même pattern de routes HTTP minces avec use cases applicatifs.
 - les modèles SQLAlchemy ont été déplacés de `domain/entities` vers `infrastructure/persistence/models`.
-- plusieurs routes contiennent encore de la logique métier ou de persistence.
 - les 17 `pyproject.toml` contiennent trois contrats `import-linter` progressifs, validés localement.
 
 ## Validation dev local et secrets
@@ -44,7 +43,7 @@ La Clean Architecture stricte progresse, mais n'est pas encore conforme:
 | Quatre couches uniformes par API | OK | Les 17 APIs ont maintenant les couches `domain`, `application`, `infrastructure` et `presentation`; les couches ajoutees sont des packages vides servant de garde-fou avant les refactors verticaux |
 | `domain/` sans framework | OK | scan `app/domain` pour SQLAlchemy, FastAPI, Pydantic, `Column` et `relationship`: aucun résultat |
 | `application/` sans framework | OK | import-linter garde les contrats application/domain sans framework; les nouveaux dossiers `application/use_cases` sont sans FastAPI/SQLAlchemy/Pydantic. Des services legacy email importent encore `app.infrastructure`, à traiter avec les routes provider. |
-| Routes minces | VIOLATION | `activity-backend-api/app/presentation/routes/activity_routes.py`, `product-backend-api/app/presentation/routes/product_routes.py`, `contact-backend-api/app/presentation/routes/contact_routes.py`, `org-backend-api/app/presentation/routes/organization_routes.py`, `org-backend-api/app/presentation/routes/department_routes.py`, `opportunity-backend-api/app/presentation/routes/opportunity_routes.py`, `opportunity-backend-api/app/presentation/routes/quote_routes.py`, `user-backend-api/app/presentation/routes/user_routes.py`, `user-backend-api/app/presentation/routes/tenant_routes.py`, `user-backend-api/app/presentation/routes/role_routes.py`, `usage-backend-api/app/presentation/routes/usage_routes.py`, `kb-backend-api/app/presentation/routes/kb_routes.py`, `workflow-backend-api/app/presentation/routes/workflow_routes.py`, `agent-backend-api/app/presentation/routes/capability_routes.py`, `agent-backend-api/app/presentation/routes/client_map_routes.py`, `agent-backend-api/app/presentation/routes/training_routes.py`, `agent-backend-api/app/presentation/routes/bob_settings_routes.py`, les routes Email core et `email-backend-api/app/presentation/routes/membrane_routes.py` sont maintenant minces et passent par des use cases; la violation reste ouverte pour les routes encore épaisses, exemples: `provider_pipedream_routes.py`, `provider_ms365_routes.py`, `bcc_routes.py`, `auth_routes.py` |
+| Routes minces | OK | Les routes core et provider ciblées passent par des use cases: `provider_pipedream_routes.py`, `provider_ms365_routes.py`, `agent-backend-api/app/presentation/routes/bcc_routes.py` et `auth-b4f-api/app/presentation/routes/auth_routes.py` sont converties; validations locales OK sur `email-backend-api`, `agent-backend-api` et `auth-b4f-api` |
 | Entités métier pures | OK | les modèles ORM résident sous `app/infrastructure/persistence/models`; `app/domain/entities` ne contient plus de classes SQLAlchemy |
 | Contrats import-linter | OK | Les 17 `pyproject.toml` configurent 3 contrats progressifs; `lint-imports --config pyproject.toml --no-cache` passe sur les 17 APIs, 51 contrats gardes, 0 brise |
 
@@ -88,11 +87,10 @@ apis/internal/user-backend-api/app/infrastructure/persistence/models/user.py
 apis/internal/workflow-backend-api/app/infrastructure/persistence/models/workflow.py
 ```
 
-## Recommandation de conversion suivante
+## Recommandation de durcissement suivante
 
-Pour fermer M-10/CA-* sans casser le runtime, faire une passe dédiée par famille d'API:
+Pour durcir M-10/CA-* sans casser le runtime:
 
-1. Ajouter des use cases/ports en `application`.
+1. Remplacer progressivement les adaptateurs d'opérations par des ports explicites.
 2. Garder les routes FastAPI limitées à validation HTTP, appel de use case et mapping réponse.
-3. Répliquer le pattern validé sur les routes restantes: `email-backend-api` provider, `agent-backend-api/bcc_routes.py` et `auth-b4f-api`.
-4. Renforcer ensuite les contrats import-linter quand les dépendances `application -> infrastructure` restantes auront été extraites derrière des ports.
+3. Renforcer les contrats import-linter quand les dépendances `application -> infrastructure` restantes auront été extraites derrière des ports.
