@@ -1,0 +1,4 @@
+interface:
+  display_name: "CDE Master Validation"
+  short_description: "Produce final Cameleon validation report"
+  default_prompt: "Use $cde-master-validation to produce the final CDE Cameleon compliance report."

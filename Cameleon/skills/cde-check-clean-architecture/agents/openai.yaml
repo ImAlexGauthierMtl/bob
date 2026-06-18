@@ -1,0 +1,4 @@
+interface:
+  display_name: "CDE Clean Architecture"
+  short_description: "Audit API layer dependency rules"
+  default_prompt: "Use $cde-check-clean-architecture to validate CDE API Clean Architecture rules."

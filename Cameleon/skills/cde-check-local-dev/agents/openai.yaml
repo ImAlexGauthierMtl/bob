@@ -1,0 +1,4 @@
+interface:
+  display_name: "CDE Local Dev"
+  short_description: "Audit local dev and repo conventions"
+  default_prompt: "Use $cde-check-local-dev to verify CDE local development conventions."

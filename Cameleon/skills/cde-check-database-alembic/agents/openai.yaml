@@ -1,0 +1,4 @@
+interface:
+  display_name: "CDE Database Alembic"
+  short_description: "Audit Alembic and DB runtime rules"
+  default_prompt: "Use $cde-check-database-alembic to validate CDE Alembic and database rules."

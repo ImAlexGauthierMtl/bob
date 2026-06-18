@@ -1,0 +1,4 @@
+interface:
+  display_name: "CDE Observability"
+  short_description: "Audit probes logs metrics and traces"
+  default_prompt: "Use $cde-check-observability to validate CDE observability rules."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "CDE API Boundaries"
+  short_description: "Audit B4F/backend API separation"
+  default_prompt: "Use $cde-check-api-boundaries to verify CDE B4F and backend API boundaries."

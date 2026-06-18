@@ -1,0 +1,4 @@
+interface:
+  display_name: "CDE K8s Gateway"
+  short_description: "Audit gateway and Kubernetes values"
+  default_prompt: "Use $cde-check-k8s-gateway to verify CDE gateway and Kubernetes values."

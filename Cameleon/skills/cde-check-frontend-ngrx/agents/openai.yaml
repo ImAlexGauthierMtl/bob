@@ -1,0 +1,4 @@
+interface:
+  display_name: "CDE Frontend NGRX"
+  short_description: "Audit Angular and NGRX structure"
+  default_prompt: "Use $cde-check-frontend-ngrx to validate CDE frontend NGRX structure."
