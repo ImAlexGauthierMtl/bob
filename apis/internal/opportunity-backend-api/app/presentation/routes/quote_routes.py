@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
 from app.infrastructure.persistence.quote_repository import QuoteRepository
-from app.domain.entities.quote import Quote
+from app.infrastructure.persistence.models.quote import Quote
 from app.presentation.schemas.quote_schemas import (
     QuoteCreate, QuoteUpdate, QuoteResponse, QuoteListResponse,
 )

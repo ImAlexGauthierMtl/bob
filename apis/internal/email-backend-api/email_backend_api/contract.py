@@ -42,14 +42,14 @@ def load_runtime_repository_classes() -> tuple[Any, ...]:
 
 def load_runtime_entity_classes() -> tuple[Any, ...]:
     """Load runtime SQLAlchemy entity classes."""
-    ms365 = import_module("app.domain.entities.ms365_connection")
-    email = import_module("app.domain.entities.synced_email")
-    event = import_module("app.domain.entities.synced_event")
-    smart_label = import_module("app.domain.entities.smart_label")
-    integration = import_module("app.domain.entities.integration_setting")
-    membrane_conn = import_module("app.domain.entities.membrane_connection")
-    membrane_email = import_module("app.domain.entities.membrane_synced_email")
-    membrane_event = import_module("app.domain.entities.membrane_synced_event")
+    ms365 = import_module("app.infrastructure.persistence.models.ms365_connection")
+    email = import_module("app.infrastructure.persistence.models.synced_email")
+    event = import_module("app.infrastructure.persistence.models.synced_event")
+    smart_label = import_module("app.infrastructure.persistence.models.smart_label")
+    integration = import_module("app.infrastructure.persistence.models.integration_setting")
+    membrane_conn = import_module("app.infrastructure.persistence.models.membrane_connection")
+    membrane_email = import_module("app.infrastructure.persistence.models.membrane_synced_email")
+    membrane_event = import_module("app.infrastructure.persistence.models.membrane_synced_event")
     return (
         ms365.MS365Connection,
         email.SyncedEmail,

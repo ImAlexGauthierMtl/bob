@@ -7,14 +7,14 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 import main
-from app.domain.entities.integration_setting import IntegrationSetting
-from app.domain.entities.membrane_connection import MembraneConnection
-from app.domain.entities.membrane_synced_email import MembraneSyncedEmail
-from app.domain.entities.membrane_synced_event import MembraneSyncedEvent
-from app.domain.entities.ms365_connection import MS365Connection
-from app.domain.entities.smart_label import SmartLabel
-from app.domain.entities.synced_email import SyncedEmail
-from app.domain.entities.synced_event import SyncedEvent
+from app.infrastructure.persistence.models.integration_setting import IntegrationSetting
+from app.infrastructure.persistence.models.membrane_connection import MembraneConnection
+from app.infrastructure.persistence.models.membrane_synced_email import MembraneSyncedEmail
+from app.infrastructure.persistence.models.membrane_synced_event import MembraneSyncedEvent
+from app.infrastructure.persistence.models.ms365_connection import MS365Connection
+from app.infrastructure.persistence.models.smart_label import SmartLabel
+from app.infrastructure.persistence.models.synced_email import SyncedEmail
+from app.infrastructure.persistence.models.synced_event import SyncedEvent
 from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.integration_settings_repository import IntegrationSettingsRepository

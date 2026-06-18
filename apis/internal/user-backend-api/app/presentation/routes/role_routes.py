@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
 from app.infrastructure.persistence.role_repository import RoleRepository
-from app.domain.entities.role import Role
+from app.infrastructure.persistence.models.role import Role
 from app.presentation.schemas.role_schemas import (
     RoleCreateRequest, RoleUpdateRequest, RoleResponse, RoleListResponse,
     PermissionResponse, AssignPermissionsRequest, AssignRoleRequest, UserRoleResponse,

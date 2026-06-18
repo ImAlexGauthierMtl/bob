@@ -4,7 +4,7 @@ from typing import Optional, List
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import exc
 
-from app.domain.entities.smart_label import SmartLabel
+from app.infrastructure.persistence.models.smart_label import SmartLabel
 
 
 class SmartLabelRepository:

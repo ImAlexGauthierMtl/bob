@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
 from app.infrastructure.persistence.department_repository import DepartmentRepository
-from app.domain.entities.department import Department
+from app.infrastructure.persistence.models.department import Department
 from app.presentation.schemas.department_schemas import (
     DepartmentCreate, DepartmentUpdate, DepartmentResponse,
 )

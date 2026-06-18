@@ -59,7 +59,7 @@ async def get_connection_by_user(
         conn = repo.get_connection_by_user_integration(user_id, integration_key, current_user["tenant_id"])
     else:
         # Return first active connection (simplification for single-integration users)
-        from app.domain.entities.membrane_connection import MembraneConnection as MC
+        from app.infrastructure.persistence.models.membrane_connection import MembraneConnection as MC
         conn = db.query(MC).filter(
             MC.user_id == user_id, MC.tenant_id == current_user["tenant_id"],
             MC.is_deleted == False,
@@ -76,7 +76,7 @@ async def get_connection(
     db: Session = Depends(get_db),
 ):
     repo = MembraneRepository(db)
-    from app.domain.entities.membrane_connection import MembraneConnection as MC
+    from app.infrastructure.persistence.models.membrane_connection import MembraneConnection as MC
     conn = db.query(MC).filter(
         MC.id == connection_id, MC.tenant_id == current_user["tenant_id"], MC.is_deleted == False,
     ).first()
@@ -93,7 +93,7 @@ async def update_connection(
     db: Session = Depends(get_db),
 ):
     repo = MembraneRepository(db)
-    from app.domain.entities.membrane_connection import MembraneConnection as MC
+    from app.infrastructure.persistence.models.membrane_connection import MembraneConnection as MC
     conn = db.query(MC).filter(
         MC.id == connection_id, MC.tenant_id == current_user["tenant_id"], MC.is_deleted == False,
     ).first()
@@ -110,7 +110,7 @@ async def delete_connection(
     db: Session = Depends(get_db),
 ):
     repo = MembraneRepository(db)
-    from app.domain.entities.membrane_connection import MembraneConnection as MC
+    from app.infrastructure.persistence.models.membrane_connection import MembraneConnection as MC
     conn = db.query(MC).filter(
         MC.id == connection_id, MC.tenant_id == current_user["tenant_id"], MC.is_deleted == False,
     ).first()

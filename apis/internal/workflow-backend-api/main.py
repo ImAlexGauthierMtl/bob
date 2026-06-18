@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.domain.entities import workflow, workflow_execution  # noqa: F401
+    from app.infrastructure.persistence.models import workflow, workflow_execution  # noqa: F401
     from app.infrastructure.database import init as db_init
     db_init("workflow-backend")
     if hasattr(event_bus, 'start_listening'):

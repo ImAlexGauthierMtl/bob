@@ -12,7 +12,7 @@ from sqlalchemy import (
     Date, JSON, Enum as SAEnum, func,
 )
 
-from app.domain.entities.base import Base, TenantMixin, generate_uuid
+from app.infrastructure.persistence.models.base import Base, TenantMixin, generate_uuid
 
 
 class ServiceType(str, enum.Enum):

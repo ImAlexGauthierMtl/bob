@@ -3,8 +3,8 @@
 from shared.infrastructure import get_logger
 from sqlalchemy.orm import Session
 
-from app.domain.entities.role import Role, Permission, RolePermission, UserRole
-from app.domain.entities.user import User
+from app.infrastructure.persistence.models.role import Role, Permission, RolePermission, UserRole
+from app.infrastructure.persistence.models.user import User
 from app.infrastructure.persistence.role_repository import RoleRepository
 
 logger = get_logger(__name__)

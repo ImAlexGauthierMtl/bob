@@ -24,5 +24,5 @@ def load_runtime_repository_classes() -> tuple[Any, ...]:
 
 def load_runtime_entity_classes() -> tuple[Any, ...]:
     """Load runtime SQLAlchemy entity classes."""
-    module = import_module("app.domain.entities.kb_article")
+    module = import_module("app.infrastructure.persistence.models.kb_article")
     return (module.KBArticle, module.KBCategory, module.ArticleVisibility)

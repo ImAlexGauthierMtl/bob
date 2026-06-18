@@ -4,7 +4,7 @@ from typing import Optional, List
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from app.domain.entities.user import User
+from app.infrastructure.persistence.models.user import User
 
 
 class UserRepository:

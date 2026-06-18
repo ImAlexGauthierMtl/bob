@@ -3,7 +3,7 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
 
-from app.domain.entities.role import Role, Permission, RolePermission, UserRole
+from app.infrastructure.persistence.models.role import Role, Permission, RolePermission, UserRole
 
 
 class RoleRepository:

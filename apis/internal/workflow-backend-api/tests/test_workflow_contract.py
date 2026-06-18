@@ -6,8 +6,8 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 import main
-from app.domain.entities.workflow import Workflow, WorkflowStep
-from app.domain.entities.workflow_execution import WorkflowExecution, WorkflowStepExecution
+from app.infrastructure.persistence.models.workflow import Workflow, WorkflowStep
+from app.infrastructure.persistence.models.workflow_execution import WorkflowExecution, WorkflowStepExecution
 from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.workflow_repository import WorkflowRepository

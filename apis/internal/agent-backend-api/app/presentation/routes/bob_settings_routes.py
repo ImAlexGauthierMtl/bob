@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from app.middleware.auth import get_current_user
 from app.infrastructure.database import get_session_factory
-from app.domain.entities.bob_settings import BobUserSettings
+from app.infrastructure.persistence.models.bob_settings import BobUserSettings
 
 logger = structlog.get_logger(__name__)
 

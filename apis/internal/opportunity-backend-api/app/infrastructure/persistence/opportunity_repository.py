@@ -1,8 +1,8 @@
 """Opportunity repository — data access layer."""
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from app.domain.entities.opportunity import Opportunity
-from app.domain.entities.opportunity_product import OpportunityProduct
+from app.infrastructure.persistence.models.opportunity import Opportunity
+from app.infrastructure.persistence.models.opportunity_product import OpportunityProduct
 
 
 class OpportunityRepository:

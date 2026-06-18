@@ -1,7 +1,7 @@
 """Product repository — data access layer."""
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from app.domain.entities.product import Product
+from app.infrastructure.persistence.models.product import Product
 
 
 class ProductRepository:

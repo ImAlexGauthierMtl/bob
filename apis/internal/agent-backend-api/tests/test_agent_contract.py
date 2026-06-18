@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 import main
-from app.domain.entities.bcc_entities import (
+from app.infrastructure.persistence.models.bcc_entities import (
     BccCareer,
     BccDepartment,
     BccDomain,
@@ -29,11 +29,11 @@ from app.domain.entities.bcc_entities import (
     BccTaskTemplate,
     BccTeam,
 )
-from app.domain.entities.bob_settings import BobUserSettings
-from app.domain.entities.capability import CapabilityDefinition, DeptCapability, UserCapability
-from app.domain.entities.client_map import ClientMap, GoldenNote, InteractionType
-from app.domain.entities.department import UserDepartment
-from app.domain.entities.training_models import TrainingMissingElement, TrainingNote, TrainingSession
+from app.infrastructure.persistence.models.bob_settings import BobUserSettings
+from app.infrastructure.persistence.models.capability import CapabilityDefinition, DeptCapability, UserCapability
+from app.infrastructure.persistence.models.client_map import ClientMap, GoldenNote, InteractionType
+from app.infrastructure.persistence.models.department import UserDepartment
+from app.infrastructure.persistence.models.training_models import TrainingMissingElement, TrainingNote, TrainingSession
 from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.client_map_repository import ClientMapRepository, compute_meddpicc_score

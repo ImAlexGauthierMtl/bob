@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 import main
-from app.domain.entities.kb_article import ArticleVisibility, KBArticle, KBCategory
+from app.infrastructure.persistence.models.kb_article import ArticleVisibility, KBArticle, KBCategory
 from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.kb_repository import KBRepository

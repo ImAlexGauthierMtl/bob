@@ -6,9 +6,9 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
-from app.domain.entities.membrane_connection import MembraneConnection
-from app.domain.entities.membrane_synced_email import MembraneSyncedEmail
-from app.domain.entities.membrane_synced_event import MembraneSyncedEvent
+from app.infrastructure.persistence.models.membrane_connection import MembraneConnection
+from app.infrastructure.persistence.models.membrane_synced_email import MembraneSyncedEmail
+from app.infrastructure.persistence.models.membrane_synced_event import MembraneSyncedEvent
 
 
 class MembraneRepository:

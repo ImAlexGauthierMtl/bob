@@ -20,16 +20,16 @@ if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 
 # Import models for autogenerate
-from app.domain.entities.base import Base
-import app.domain.entities.email_contact  # noqa: F401
-import app.domain.entities.integration_setting  # noqa: F401
-import app.domain.entities.ms365_connection  # noqa: F401
-import app.domain.entities.smart_label  # noqa: F401
-import app.domain.entities.synced_email  # noqa: F401
-import app.domain.entities.synced_event  # noqa: F401
-import app.domain.entities.membrane_connection  # noqa: F401
-import app.domain.entities.membrane_synced_email  # noqa: F401
-import app.domain.entities.membrane_synced_event  # noqa: F401
+from app.infrastructure.persistence.models.base import Base
+import app.infrastructure.persistence.models.email_contact  # noqa: F401
+import app.infrastructure.persistence.models.integration_setting  # noqa: F401
+import app.infrastructure.persistence.models.ms365_connection  # noqa: F401
+import app.infrastructure.persistence.models.smart_label  # noqa: F401
+import app.infrastructure.persistence.models.synced_email  # noqa: F401
+import app.infrastructure.persistence.models.synced_event  # noqa: F401
+import app.infrastructure.persistence.models.membrane_connection  # noqa: F401
+import app.infrastructure.persistence.models.membrane_synced_email  # noqa: F401
+import app.infrastructure.persistence.models.membrane_synced_event  # noqa: F401
 target_metadata = Base.metadata
 
 # Schema name derived from API_NAME env var (injected by Helm) with a

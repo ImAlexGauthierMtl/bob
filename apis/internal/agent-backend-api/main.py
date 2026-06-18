@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.domain.entities import (  # noqa: F401
+    from app.infrastructure.persistence.models import (  # noqa: F401
         bcc_entities, bob_settings, capability, client_map,
         training_models, department,
     )

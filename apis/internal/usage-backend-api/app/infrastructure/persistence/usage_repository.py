@@ -7,7 +7,7 @@ from decimal import Decimal
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from app.domain.entities.usage_transaction import UsageTransaction, CostRateCard
+from app.infrastructure.persistence.models.usage_transaction import UsageTransaction, CostRateCard
 
 
 class UsageRepository:

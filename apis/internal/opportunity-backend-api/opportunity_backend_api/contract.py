@@ -28,9 +28,9 @@ def load_runtime_repository_classes() -> tuple[Any, ...]:
 
 def load_runtime_entity_classes() -> tuple[Any, ...]:
     """Load runtime SQLAlchemy entity classes."""
-    opportunities = import_module("app.domain.entities.opportunity")
-    opportunity_products = import_module("app.domain.entities.opportunity_product")
-    quotes = import_module("app.domain.entities.quote")
+    opportunities = import_module("app.infrastructure.persistence.models.opportunity")
+    opportunity_products = import_module("app.infrastructure.persistence.models.opportunity_product")
+    quotes = import_module("app.infrastructure.persistence.models.quote")
     return (
         opportunities.Opportunity,
         opportunities.OpportunityStage,

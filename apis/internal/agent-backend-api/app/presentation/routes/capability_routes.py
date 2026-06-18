@@ -6,8 +6,8 @@ from sqlalchemy import text
 
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
-from app.domain.entities.capability import CapabilityDefinition, UserCapability, DeptCapability
-from app.domain.entities.department import UserDepartment
+from app.infrastructure.persistence.models.capability import CapabilityDefinition, UserCapability, DeptCapability
+from app.infrastructure.persistence.models.department import UserDepartment
 from app.presentation.schemas.capability_schemas import (
     CapabilityDefinitionResponse,
     UserCapabilityAssign,

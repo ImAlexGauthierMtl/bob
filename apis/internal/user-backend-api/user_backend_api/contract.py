@@ -30,9 +30,9 @@ def load_runtime_repository_classes() -> tuple[Any, ...]:
 
 def load_runtime_entity_classes() -> tuple[Any, ...]:
     """Load runtime SQLAlchemy entity classes."""
-    users = import_module("app.domain.entities.user")
-    tenants = import_module("app.domain.entities.tenant")
-    roles = import_module("app.domain.entities.role")
+    users = import_module("app.infrastructure.persistence.models.user")
+    tenants = import_module("app.infrastructure.persistence.models.tenant")
+    roles = import_module("app.infrastructure.persistence.models.role")
     return (
         users.User,
         tenants.Tenant,

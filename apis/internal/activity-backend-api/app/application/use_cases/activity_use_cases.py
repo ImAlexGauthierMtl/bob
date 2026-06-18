@@ -2,18 +2,19 @@
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Optional, Protocol
 
-from app.domain.entities.activity import Activity
 from app.domain.exceptions import ActivityNotFoundError
 
 
+ActivityEntity = Any
+ActivityFactory = Callable[..., ActivityEntity]
 ActivityPublisher = Callable[[str, dict[str, Any]], Awaitable[None]]
 
 
 class ActivityRepositoryPort(Protocol):
-    def create(self, activity: Activity) -> Activity:
+    def create(self, activity: ActivityEntity) -> ActivityEntity:
         ...
 
-    def get_by_id(self, activity_id: str, tenant_id: str) -> Optional[Activity]:
+    def get_by_id(self, activity_id: str, tenant_id: str) -> Optional[ActivityEntity]:
         ...
 
     def list_all(
@@ -22,27 +23,27 @@ class ActivityRepositoryPort(Protocol):
         skip: int = 0,
         limit: int = 50,
         status: Optional[str] = None,
-    ) -> list[Activity]:
+    ) -> list[ActivityEntity]:
         ...
 
     def count(self, tenant_id: str, status: Optional[str] = None) -> int:
         ...
 
-    def update(self, activity: Activity) -> Activity:
+    def update(self, activity: ActivityEntity) -> ActivityEntity:
         ...
 
     def soft_delete(
         self,
-        activity: Activity,
+        activity: ActivityEntity,
         deleted_by: str,
         reason: Optional[str] = None,
-    ) -> Activity:
+    ) -> ActivityEntity:
         ...
 
 
 @dataclass(frozen=True)
 class ActivityListResult:
-    items: list[Activity]
+    items: list[ActivityEntity]
     total: int
     skip: int
     limit: int
@@ -52,10 +53,12 @@ class ActivityUseCases:
     def __init__(
         self,
         repo: ActivityRepositoryPort,
+        create_activity_entity: ActivityFactory,
         publish_created: ActivityPublisher,
         publish_updated: ActivityPublisher,
     ) -> None:
         self.repo = repo
+        self.create_activity_entity = create_activity_entity
         self.publish_created = publish_created
         self.publish_updated = publish_updated
 
@@ -73,8 +76,8 @@ class ActivityUseCases:
             limit=limit,
         )
 
-    async def create_activity(self, data: dict[str, Any], user: dict[str, Any]) -> Activity:
-        activity = Activity(
+    async def create_activity(self, data: dict[str, Any], user: dict[str, Any]) -> ActivityEntity:
+        activity = self.create_activity_entity(
             subject=data["subject"],
             description=data.get("description"),
             activity_type=data.get("activity_type"),
@@ -96,7 +99,7 @@ class ActivityUseCases:
         )
         return created
 
-    async def get_activity(self, activity_id: str, tenant_id: str) -> Activity:
+    async def get_activity(self, activity_id: str, tenant_id: str) -> ActivityEntity:
         activity = self.repo.get_by_id(activity_id, tenant_id)
         if not activity:
             raise ActivityNotFoundError
@@ -107,7 +110,7 @@ class ActivityUseCases:
         activity_id: str,
         updates: dict[str, Any],
         user: dict[str, Any],
-    ) -> Activity:
+    ) -> ActivityEntity:
         activity = await self.get_activity(activity_id, user["tenant_id"])
         for key, value in updates.items():
             setattr(activity, key, value)

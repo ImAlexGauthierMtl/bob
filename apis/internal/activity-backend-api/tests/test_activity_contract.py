@@ -9,7 +9,7 @@ from shared.infrastructure import bind_trace_context, clear_trace_context
 from shared.services import HTTPClient
 
 import main
-from app.domain.entities.activity import Activity, ActivityPriority, ActivityStatus, ActivityType
+from app.infrastructure.persistence.models.activity import Activity, ActivityPriority, ActivityStatus, ActivityType
 from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.activity_repository import ActivityRepository

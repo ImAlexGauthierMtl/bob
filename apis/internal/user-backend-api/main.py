@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.domain.entities import user, tenant, role  # noqa: F401
+    from app.infrastructure.persistence.models import user, tenant, role  # noqa: F401
     from app.infrastructure.database import init as db_init, get_session_factory
     db_init("user-backend")
 

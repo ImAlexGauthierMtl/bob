@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 import main
-from app.domain.entities.contact import Contact, ContactStatus
+from app.infrastructure.persistence.models.contact import Contact, ContactStatus
 from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.contact_repository import ContactRepository

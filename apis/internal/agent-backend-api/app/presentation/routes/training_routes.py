@@ -11,7 +11,7 @@ import structlog
 
 from app.middleware.auth import get_current_user
 from app.infrastructure.database import get_session_factory
-from app.domain.entities.training_models import (
+from app.infrastructure.persistence.models.training_models import (
     TrainingSession,
     TrainingNote,
     TrainingMissingElement,

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
 from app.infrastructure.persistence.contact_repository import ContactRepository
-from app.domain.entities.contact import Contact
+from app.infrastructure.persistence.models.contact import Contact
 from app.events.publishers import publish_contact_created, publish_contact_updated, publish_contact_deleted
 from app.presentation.schemas.contact_schemas import (
     ContactCreate, ContactUpdate, ContactResponse, ContactListResponse,

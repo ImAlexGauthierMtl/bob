@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
 from app.infrastructure.persistence.user_repository import UserRepository
-from app.domain.entities.user import User
-from app.domain.entities.role import UserRole
+from app.infrastructure.persistence.models.user import User
+from app.infrastructure.persistence.models.role import UserRole
 from app.infrastructure.persistence.role_repository import RoleRepository
 from app.events.publishers import publish_user_created, publish_user_updated, publish_user_deleted
 from app.presentation.schemas.user_schemas import (

@@ -20,9 +20,9 @@ if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 
 # Import models for autogenerate
-from app.domain.entities.base import Base
-import app.domain.entities.department  # noqa: F401
-import app.domain.entities.organization  # noqa: F401
+from app.infrastructure.persistence.models.base import Base
+import app.infrastructure.persistence.models.department  # noqa: F401
+import app.infrastructure.persistence.models.organization  # noqa: F401
 target_metadata = Base.metadata
 
 # Schema name derived from API_NAME env var (injected by Helm) with a

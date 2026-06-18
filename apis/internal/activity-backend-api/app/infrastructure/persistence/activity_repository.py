@@ -2,7 +2,7 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from sqlalchemy import cast, String
-from app.domain.entities.activity import Activity
+from app.infrastructure.persistence.models.activity import Activity
 
 
 class ActivityRepository:

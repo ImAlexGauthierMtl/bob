@@ -5,7 +5,7 @@ from typing import Optional, List, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from app.domain.entities.tenant import Tenant
+from app.infrastructure.persistence.models.tenant import Tenant
 from shared.infrastructure import get_logger
 
 logger = get_logger(__name__)

@@ -3,8 +3,8 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
 
-from app.domain.entities.workflow import Workflow, WorkflowStep
-from app.domain.entities.workflow_execution import WorkflowExecution, WorkflowStepExecution
+from app.infrastructure.persistence.models.workflow import Workflow, WorkflowStep
+from app.infrastructure.persistence.models.workflow_execution import WorkflowExecution, WorkflowStepExecution
 
 
 class WorkflowRepository:

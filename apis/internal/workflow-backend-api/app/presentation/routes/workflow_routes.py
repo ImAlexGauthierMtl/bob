@@ -7,8 +7,8 @@ from sqlalchemy import func
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
 from app.infrastructure.persistence.workflow_repository import WorkflowRepository
-from app.domain.entities.workflow import Workflow, WorkflowStep
-from app.domain.entities.workflow_execution import WorkflowExecution, WorkflowStepExecution
+from app.infrastructure.persistence.models.workflow import Workflow, WorkflowStep
+from app.infrastructure.persistence.models.workflow_execution import WorkflowExecution, WorkflowStepExecution
 from app.events.publishers import publish_workflow_created, publish_workflow_updated, publish_workflow_deleted, publish_workflow_executed
 from app.presentation.schemas.workflow_schemas import (
     WorkflowCreate, WorkflowUpdate, WorkflowResponse, WorkflowListResponse,

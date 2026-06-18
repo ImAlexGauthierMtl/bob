@@ -1,7 +1,7 @@
 """Contact repository — data access layer."""
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from app.domain.entities.contact import Contact
+from app.infrastructure.persistence.models.contact import Contact
 
 
 class ContactRepository:

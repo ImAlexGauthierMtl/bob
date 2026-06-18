@@ -1,7 +1,7 @@
 """Tenant entity."""
 import enum
 from sqlalchemy import Column, String, Text, Integer, DateTime, JSON, Enum as SAEnum
-from app.domain.entities.base import Base, AuditMixin, SoftDeleteMixin, generate_uuid
+from app.infrastructure.persistence.models.base import Base, AuditMixin, SoftDeleteMixin, generate_uuid
 
 class TenantStatus(str, enum.Enum):
     TRIAL = "TRIAL"

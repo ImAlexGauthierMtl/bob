@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
 from app.infrastructure.persistence.smart_label_repository import SmartLabelRepository
-from app.domain.entities.smart_label import SmartLabel
+from app.infrastructure.persistence.models.smart_label import SmartLabel
 from app.presentation.schemas.smart_label_schemas import (
     SmartLabelCreate,
     SmartLabelUpdate,

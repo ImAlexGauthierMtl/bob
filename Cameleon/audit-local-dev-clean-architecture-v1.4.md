@@ -19,9 +19,9 @@ La Clean Architecture stricte progresse, mais n'est pas encore conforme:
 
 - les 17 APIs ont maintenant les quatre couches `domain`, `application`, `infrastructure`, `presentation`.
 - `activity-backend-api` possède une première extraction verticale: routes HTTP minces, dépendance FastAPI isolée dans `presentation/deps.py`, et logique CRUD/orchestration dans `application/use_cases/activity_use_cases.py`.
-- 30 fichiers d'entités de domaine importent SQLAlchemy ou déclarent des `Column`/`relationship`.
+- les modèles SQLAlchemy ont été déplacés de `domain/entities` vers `infrastructure/persistence/models`.
 - plusieurs routes contiennent encore de la logique métier ou de persistence.
-- les 17 `pyproject.toml` contiennent des contrats `import-linter` progressifs, validés localement.
+- les 17 `pyproject.toml` contiennent trois contrats `import-linter` progressifs, validés localement.
 
 ## Validation dev local et secrets
 
@@ -41,11 +41,11 @@ La Clean Architecture stricte progresse, mais n'est pas encore conforme:
 | Contrôle | Statut | Preuve |
 |---|---|---|
 | Quatre couches uniformes par API | OK | Les 17 APIs ont maintenant les couches `domain`, `application`, `infrastructure` et `presentation`; les couches ajoutees sont des packages vides servant de garde-fou avant les refactors verticaux |
-| `domain/` sans framework | VIOLATION | 30 fichiers `app/domain/entities/*.py` importent SQLAlchemy ou déclarent `Column`/`relationship` |
+| `domain/` sans framework | OK | scan `app/domain` pour SQLAlchemy, FastAPI, Pydantic, `Column` et `relationship`: aucun résultat |
 | `application/` sans framework | OK | scan `application/` pour FastAPI, SQLAlchemy, httpx, redis, pydantic_settings et import `app.presentation`: aucun résultat direct |
 | Routes minces | VIOLATION | `activity-backend-api/app/presentation/routes/activity_routes.py` est maintenant mince et passe par `ActivityUseCases`; la violation reste ouverte pour les routes encore épaisses, exemples: `provider_membrane_routes.py`, `training_routes.py`, `auth_routes.py` |
-| Entités métier pures | VIOLATION | les entités de domaine dérivent indirectement du modèle SQLAlchemy via `Base` et déclarent leurs colonnes ORM |
-| Contrats import-linter | OK | Les 17 `pyproject.toml` configurent 2 contrats progressifs; `lint-imports --config pyproject.toml --no-cache` passe sur les 17 APIs, 34 contrats gardes, 0 brise |
+| Entités métier pures | OK | les modèles ORM résident sous `app/infrastructure/persistence/models`; `app/domain/entities` ne contient plus de classes SQLAlchemy |
+| Contrats import-linter | OK | Les 17 `pyproject.toml` configurent 3 contrats progressifs; `lint-imports --config pyproject.toml --no-cache` passe sur les 17 APIs, 51 contrats gardes, 0 brise |
 
 ## API avec quatre couches
 
@@ -69,31 +69,29 @@ apis/internal/user-backend-api: domain application infrastructure presentation
 apis/internal/workflow-backend-api: domain application infrastructure presentation
 ```
 
-## Fichiers d'entités ORM dans `domain/`
+## Modèles ORM déplacés vers `infrastructure/`
 
 Exemples représentatifs:
 
 ```text
-apis/internal/activity-backend-api/app/domain/entities/activity.py
-apis/internal/agent-backend-api/app/domain/entities/capability.py
-apis/internal/contact-backend-api/app/domain/entities/contact.py
-apis/internal/email-backend-api/app/domain/entities/ms365_connection.py
-apis/internal/kb-backend-api/app/domain/entities/kb_article.py
-apis/internal/opportunity-backend-api/app/domain/entities/opportunity.py
-apis/internal/org-backend-api/app/domain/entities/organization.py
-apis/internal/product-backend-api/app/domain/entities/product.py
-apis/internal/usage-backend-api/app/domain/entities/usage_transaction.py
-apis/internal/user-backend-api/app/domain/entities/user.py
-apis/internal/workflow-backend-api/app/domain/entities/workflow.py
+apis/internal/activity-backend-api/app/infrastructure/persistence/models/activity.py
+apis/internal/agent-backend-api/app/infrastructure/persistence/models/capability.py
+apis/internal/contact-backend-api/app/infrastructure/persistence/models/contact.py
+apis/internal/email-backend-api/app/infrastructure/persistence/models/ms365_connection.py
+apis/internal/kb-backend-api/app/infrastructure/persistence/models/kb_article.py
+apis/internal/opportunity-backend-api/app/infrastructure/persistence/models/opportunity.py
+apis/internal/org-backend-api/app/infrastructure/persistence/models/organization.py
+apis/internal/product-backend-api/app/infrastructure/persistence/models/product.py
+apis/internal/usage-backend-api/app/infrastructure/persistence/models/usage_transaction.py
+apis/internal/user-backend-api/app/infrastructure/persistence/models/user.py
+apis/internal/workflow-backend-api/app/infrastructure/persistence/models/workflow.py
 ```
 
 ## Recommandation de conversion suivante
 
 Pour fermer M-10/CA-* sans casser le runtime, faire une passe dédiée par famille d'API:
 
-1. Créer des modèles domaine purs (`dataclass` ou classes Python sans ORM).
-2. Déplacer les modèles SQLAlchemy vers `infrastructure/persistence/models`.
-3. Ajouter des repositories/ports en `application`.
-4. Garder les routes FastAPI limitées à validation HTTP, appel de use case et mapping réponse.
-5. Ajouter des contrats import-linter par API avant de déplacer tout le code.
-6. Répliquer le pattern validé sur `activity-backend-api` vers `contact-backend-api`, `org-backend-api`, `opportunity-backend-api` et les routes longues `email-backend-api`.
+1. Ajouter des use cases/ports en `application`.
+2. Garder les routes FastAPI limitées à validation HTTP, appel de use case et mapping réponse.
+3. Répliquer le pattern validé sur `activity-backend-api` vers `contact-backend-api`, `org-backend-api`, `opportunity-backend-api` et les routes longues `email-backend-api`.
+4. Renforcer ensuite les contrats import-linter quand les dépendances `application -> infrastructure` restantes auront été extraites derrière des ports.

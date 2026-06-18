@@ -6,7 +6,7 @@ Workflows operate at 4 levels: system | company | department | user.
 
 from sqlalchemy import Column, String, Text, Boolean, Integer, ForeignKey, JSON
 
-from app.domain.entities.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
+from app.infrastructure.persistence.models.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
 
 
 class Workflow(Base, TenantMixin, AuditMixin, SoftDeleteMixin):

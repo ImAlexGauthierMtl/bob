@@ -24,7 +24,7 @@ def load_runtime_repository_classes() -> tuple[Any, ...]:
 
 def load_runtime_entity_classes() -> tuple[Any, ...]:
     """Load runtime SQLAlchemy entity classes."""
-    usage = import_module("app.domain.entities.usage_transaction")
+    usage = import_module("app.infrastructure.persistence.models.usage_transaction")
     return (
         usage.UsageTransaction,
         usage.CostRateCard,

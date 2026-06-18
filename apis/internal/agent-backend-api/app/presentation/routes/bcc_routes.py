@@ -12,7 +12,7 @@ import structlog
 
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
-from app.domain.entities.bcc_entities import (
+from app.infrastructure.persistence.models.bcc_entities import (
     BccRole, BccSkill, BccTask, BccTaskStep, BccResource, BccMilestone,
     BccOrganization, BccOrgProfile, BccDepartment, BccTeam,
     BccIndustry, BccCareer, BccSkillTemplate, BccTaskTemplate,

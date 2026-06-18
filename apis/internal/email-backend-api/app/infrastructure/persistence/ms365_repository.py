@@ -6,10 +6,10 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
-from app.domain.entities.ms365_connection import MS365Connection
-from app.domain.entities.synced_email import SyncedEmail
-from app.domain.entities.synced_event import SyncedEvent
-from app.domain.entities.email_contact import email_contacts
+from app.infrastructure.persistence.models.ms365_connection import MS365Connection
+from app.infrastructure.persistence.models.synced_email import SyncedEmail
+from app.infrastructure.persistence.models.synced_event import SyncedEvent
+from app.infrastructure.persistence.models.email_contact import email_contacts
 
 
 class MS365Repository:

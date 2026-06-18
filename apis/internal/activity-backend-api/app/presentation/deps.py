@@ -6,11 +6,13 @@ from app.application.use_cases.activity_use_cases import ActivityUseCases
 from app.events.publishers import publish_activity_created, publish_activity_updated
 from app.infrastructure.database import get_db
 from app.infrastructure.persistence.activity_repository import ActivityRepository
+from app.infrastructure.persistence.models.activity import Activity
 
 
 def get_activity_use_cases(db: Session = Depends(get_db)) -> ActivityUseCases:
     return ActivityUseCases(
         repo=ActivityRepository(db),
+        create_activity_entity=Activity,
         publish_created=publish_activity_created,
         publish_updated=publish_activity_updated,
     )

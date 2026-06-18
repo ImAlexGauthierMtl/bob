@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
 from app.infrastructure.persistence.organization_repository import OrganizationRepository
-from app.domain.entities.organization import Organization
+from app.infrastructure.persistence.models.organization import Organization
 from app.events.publishers import publish_org_created, publish_org_updated, publish_org_deleted
 from app.presentation.schemas.organization_schemas import (
     OrganizationCreate, OrganizationUpdate, OrganizationResponse, OrganizationListResponse,

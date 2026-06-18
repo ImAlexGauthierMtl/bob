@@ -1,7 +1,7 @@
 """Organization repository — data access layer."""
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from app.domain.entities.organization import Organization
+from app.infrastructure.persistence.models.organization import Organization
 
 
 class OrganizationRepository:

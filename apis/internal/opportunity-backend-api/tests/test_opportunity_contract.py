@@ -5,9 +5,9 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 import main
-from app.domain.entities.opportunity import Opportunity, OpportunityPriority, OpportunityStage
-from app.domain.entities.opportunity_product import OpportunityProduct
-from app.domain.entities.quote import Quote, QuoteStatus
+from app.infrastructure.persistence.models.opportunity import Opportunity, OpportunityPriority, OpportunityStage
+from app.infrastructure.persistence.models.opportunity_product import OpportunityProduct
+from app.infrastructure.persistence.models.quote import Quote, QuoteStatus
 from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.opportunity_repository import OpportunityRepository

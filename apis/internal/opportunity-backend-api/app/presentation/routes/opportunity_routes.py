@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
 from app.infrastructure.persistence.opportunity_repository import OpportunityRepository
-from app.domain.entities.opportunity import Opportunity
-from app.domain.entities.opportunity_product import OpportunityProduct
+from app.infrastructure.persistence.models.opportunity import Opportunity
+from app.infrastructure.persistence.models.opportunity_product import OpportunityProduct
 from app.events.publishers import publish_opportunity_created, publish_opportunity_updated
 from app.presentation.schemas.opportunity_schemas import (
     OpportunityCreate, OpportunityUpdate, OpportunityResponse, OpportunityListResponse,

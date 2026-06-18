@@ -5,8 +5,8 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 import main
-from app.domain.entities.department import Department, UserDepartment
-from app.domain.entities.organization import Organization, OrganizationStatus, OrganizationType
+from app.infrastructure.persistence.models.department import Department, UserDepartment
+from app.infrastructure.persistence.models.organization import Organization, OrganizationStatus, OrganizationType
 from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.department_repository import DepartmentRepository

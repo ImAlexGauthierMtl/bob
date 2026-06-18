@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
 from app.infrastructure.persistence.usage_repository import UsageRepository
-from app.domain.entities.usage_transaction import UsageTransaction, CostRateCard
+from app.infrastructure.persistence.models.usage_transaction import UsageTransaction, CostRateCard
 from app.events.publishers import publish_usage_recorded
 from app.presentation.schemas.usage_schemas import (
     UsageTransactionCreate, UsageTransactionResponse, UsageListResponse,

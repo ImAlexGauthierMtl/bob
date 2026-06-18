@@ -4,7 +4,7 @@ from typing import Optional, List
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 
-from app.domain.entities.kb_article import KBArticle, KBCategory, ArticleVisibility
+from app.infrastructure.persistence.models.kb_article import KBArticle, KBCategory, ArticleVisibility
 
 
 class KBRepository:

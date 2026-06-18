@@ -2,7 +2,7 @@
 from shared.infrastructure import get_logger
 from shared.config import get_settings
 from sqlalchemy.orm import Session
-from app.domain.entities.user import User
+from app.infrastructure.persistence.models.user import User
 from app.infrastructure.persistence.user_repository import UserRepository
 
 logger = get_logger(__name__)

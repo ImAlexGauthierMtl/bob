@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 import main
-from app.domain.entities.product import BillingCycle, BillingUnit, LicenseType, Product, ProductCategory
+from app.infrastructure.persistence.models.product import BillingCycle, BillingUnit, LicenseType, Product, ProductCategory
 from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.product_repository import ProductRepository

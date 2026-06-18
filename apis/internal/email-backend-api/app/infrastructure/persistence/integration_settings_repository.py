@@ -3,7 +3,7 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
 
-from app.domain.entities.integration_setting import IntegrationSetting
+from app.infrastructure.persistence.models.integration_setting import IntegrationSetting
 
 
 class IntegrationSettingsRepository:

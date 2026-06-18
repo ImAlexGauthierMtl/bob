@@ -6,9 +6,9 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 import main
-from app.domain.entities.role import Permission, Role, RolePermission, UserRole
-from app.domain.entities.tenant import Tenant, TenantPlan, TenantStatus
-from app.domain.entities.user import User
+from app.infrastructure.persistence.models.role import Permission, Role, RolePermission, UserRole
+from app.infrastructure.persistence.models.tenant import Tenant, TenantPlan, TenantStatus
+from app.infrastructure.persistence.models.user import User
 from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.role_repository import RoleRepository

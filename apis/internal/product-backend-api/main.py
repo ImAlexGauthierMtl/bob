@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.domain.entities import product  # noqa: F401
+    from app.infrastructure.persistence.models import product  # noqa: F401
     from app.infrastructure.database import init as db_init
     db_init("product-backend")
     if hasattr(event_bus, 'start_listening'):

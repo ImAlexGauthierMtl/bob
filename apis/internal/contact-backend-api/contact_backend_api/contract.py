@@ -24,5 +24,5 @@ def load_runtime_repository_classes() -> tuple[Any, ...]:
 
 def load_runtime_entity_classes() -> tuple[Any, ...]:
     """Load runtime SQLAlchemy entity classes."""
-    contact = import_module("app.domain.entities.contact")
+    contact = import_module("app.infrastructure.persistence.models.contact")
     return (contact.Contact, contact.ContactStatus)

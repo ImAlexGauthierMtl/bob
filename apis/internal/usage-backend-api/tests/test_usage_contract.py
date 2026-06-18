@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 import main
-from app.domain.entities.usage_transaction import (
+from app.infrastructure.persistence.models.usage_transaction import (
     BillingCategory,
     CostRateCard,
     RateUnitType,

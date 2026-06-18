@@ -5,7 +5,7 @@ Tracks every execution of a workflow and each step within it.
 
 from sqlalchemy import Column, String, Text, Integer, Float, ForeignKey, JSON, DateTime, func
 
-from app.domain.entities.base import Base, TenantMixin, generate_uuid
+from app.infrastructure.persistence.models.base import Base, TenantMixin, generate_uuid
 
 
 class WorkflowExecution(Base, TenantMixin):

@@ -1,7 +1,7 @@
 """Quote repository — data access layer."""
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from app.domain.entities.quote import Quote
+from app.infrastructure.persistence.models.quote import Quote
 
 
 class QuoteRepository:

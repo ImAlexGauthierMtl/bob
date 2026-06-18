@@ -1,7 +1,7 @@
 """RBAC entities."""
 from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
-from app.domain.entities.base import Base, TenantMixin, AuditMixin, generate_uuid
+from app.infrastructure.persistence.models.base import Base, TenantMixin, AuditMixin, generate_uuid
 
 class Permission(Base):
     __tablename__ = "permissions"

@@ -4,7 +4,7 @@ import structlog
 from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 
-from app.domain.entities.client_map import ClientMap, GoldenNote
+from app.infrastructure.persistence.models.client_map import ClientMap, GoldenNote
 from shared.database import generate_uuid
 
 logger = structlog.get_logger(__name__)

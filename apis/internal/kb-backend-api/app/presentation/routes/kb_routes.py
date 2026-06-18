@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
-from app.domain.entities.kb_article import KBArticle, KBCategory
+from app.infrastructure.persistence.models.kb_article import KBArticle, KBCategory
 from app.infrastructure.persistence.kb_repository import KBRepository
 from app.events.publishers import publish_article_created, publish_article_updated, publish_article_deleted
 from app.presentation.schemas.kb_schemas import (

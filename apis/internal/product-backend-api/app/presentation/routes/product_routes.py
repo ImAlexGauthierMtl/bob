@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.middleware.auth import get_current_user
 from app.infrastructure.persistence.product_repository import ProductRepository
-from app.domain.entities.product import Product
+from app.infrastructure.persistence.models.product import Product
 from app.events.publishers import publish_product_created, publish_product_updated
 from app.presentation.schemas.product_schemas import (
     ProductCreate, ProductUpdate, ProductResponse, ProductListResponse,

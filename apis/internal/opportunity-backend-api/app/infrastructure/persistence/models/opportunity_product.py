@@ -1,7 +1,7 @@
 """OpportunityProduct entity."""
 from sqlalchemy import Column, String, Integer, Numeric, Text, ForeignKey
 from sqlalchemy.orm import relationship
-from app.domain.entities.base import Base, TenantMixin, AuditMixin, generate_uuid
+from app.infrastructure.persistence.models.base import Base, TenantMixin, AuditMixin, generate_uuid
 
 
 class OpportunityProduct(Base, TenantMixin, AuditMixin):

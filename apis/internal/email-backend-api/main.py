@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.domain.entities import (
+    from app.infrastructure.persistence.models import (
         ms365_connection, synced_email, synced_event,
         email_contact, smart_label, integration_setting,
         membrane_connection, membrane_synced_email, membrane_synced_event,

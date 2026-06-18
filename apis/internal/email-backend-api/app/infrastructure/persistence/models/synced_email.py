@@ -4,7 +4,7 @@ from sqlalchemy import Column, String, Text, DateTime, Boolean, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 
 from shared.database import Base, TenantMixin, AuditMixin, generate_uuid
-from app.domain.entities.email_contact import email_contacts
+from app.infrastructure.persistence.models.email_contact import email_contacts
 
 
 class SyncedEmail(Base, TenantMixin, AuditMixin):

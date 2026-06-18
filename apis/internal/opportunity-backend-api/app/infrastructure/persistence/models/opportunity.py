@@ -2,7 +2,7 @@
 import enum
 from sqlalchemy import Column, String, Text, Enum as SAEnum, Float, Date
 from sqlalchemy.orm import relationship
-from app.domain.entities.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
+from app.infrastructure.persistence.models.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
 
 
 class OpportunityStage(str, enum.Enum):

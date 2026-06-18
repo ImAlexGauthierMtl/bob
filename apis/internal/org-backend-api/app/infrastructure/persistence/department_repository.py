@@ -1,7 +1,7 @@
 """Department repository — data access layer."""
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from app.domain.entities.department import Department
+from app.infrastructure.persistence.models.department import Department
 
 
 class DepartmentRepository:

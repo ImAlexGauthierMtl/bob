@@ -66,3 +66,17 @@ forbidden_modules = [
   "redis",
   "pydantic_settings",
 ]
+
+[[tool.importlinter.contracts]]
+name = "domain avoids framework dependencies"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["app.domain"]
+forbidden_modules = [
+  "fastapi",
+  "sqlalchemy",
+  "pydantic",
+  "pydantic_settings",
+  "httpx",
+  "redis",
+]

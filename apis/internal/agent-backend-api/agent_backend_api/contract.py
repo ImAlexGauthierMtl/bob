@@ -30,11 +30,11 @@ def load_runtime_repository_classes() -> tuple[Any, ...]:
 
 def load_runtime_entity_classes() -> tuple[Any, ...]:
     """Load runtime SQLAlchemy entity classes."""
-    bcc = import_module("app.domain.entities.bcc_entities")
-    bob = import_module("app.domain.entities.bob_settings")
-    capability = import_module("app.domain.entities.capability")
-    client_map = import_module("app.domain.entities.client_map")
-    training = import_module("app.domain.entities.training_models")
+    bcc = import_module("app.infrastructure.persistence.models.bcc_entities")
+    bob = import_module("app.infrastructure.persistence.models.bob_settings")
+    capability = import_module("app.infrastructure.persistence.models.capability")
+    client_map = import_module("app.infrastructure.persistence.models.client_map")
+    training = import_module("app.infrastructure.persistence.models.training_models")
     return (
         bcc.BccOrganization,
         bcc.BccDepartment,

@@ -1,7 +1,7 @@
 """Product entity."""
 import enum
 from sqlalchemy import Column, String, Text, Enum as SAEnum, Numeric, Boolean, Integer
-from app.domain.entities.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
+from app.infrastructure.persistence.models.base import Base, TenantMixin, AuditMixin, SoftDeleteMixin, generate_uuid
 
 
 class ProductCategory(str, enum.Enum):

@@ -1,7 +1,7 @@
 """Seed script — ensures a default BCC organization exists for the master tenant."""
 from sqlalchemy.orm import Session
 from shared.infrastructure import get_logger
-from app.domain.entities.bcc_entities import BccOrganization, BccOrgProfile
+from app.infrastructure.persistence.models.bcc_entities import BccOrganization, BccOrgProfile
 
 logger = get_logger(__name__)
 
