@@ -38,6 +38,7 @@ from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.client_map_repository import ClientMapRepository, compute_meddpicc_score
 from app.middleware.auth import get_current_user, settings
+from app.presentation import deps as agent_deps
 from app.presentation.routes import (
     bcc_routes,
     bob_settings_routes,
@@ -509,6 +510,9 @@ class FakeClientMapRepository:
         self.note = make_golden_note()
         self.client_map.golden_notes = [self.note]
 
+    def contact_exists(self, contact_id, tenant_id):
+        return contact_id == "contact-1" and tenant_id == "tenant-1"
+
     def get_by_contact_id(self, contact_id, tenant_id):
         return self.client_map if contact_id == "contact-1" and tenant_id == "tenant-1" else None
 
@@ -548,18 +552,16 @@ def fake_db():
 @pytest.fixture()
 def client(monkeypatch, fake_db):
     repository = FakeClientMapRepository(fake_db)
-    monkeypatch.setattr(client_map_routes, "ClientMapRepository", lambda db: repository)
+    monkeypatch.setattr(agent_deps, "ClientMapRepository", lambda db: repository)
     monkeypatch.setattr(bob_settings_routes.BobUserSettings, "get_or_create", lambda db, user_id: fake_db.bob_settings)
     main.app.dependency_overrides[bcc_routes.get_current_user] = lambda: USER
     main.app.dependency_overrides[bcc_routes.get_db] = lambda: fake_db
     main.app.dependency_overrides[bob_settings_routes.get_current_user] = lambda: USER
     main.app.dependency_overrides[bob_settings_routes._get_db] = lambda: fake_db
     main.app.dependency_overrides[capability_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[capability_routes.get_db] = lambda: fake_db
+    main.app.dependency_overrides[agent_deps.get_db] = lambda: fake_db
     main.app.dependency_overrides[client_map_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[client_map_routes.get_db] = lambda: fake_db
     main.app.dependency_overrides[training_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[training_routes.get_db] = lambda: fake_db
     test_client = TestClient(main.app)
     yield test_client
     test_client.close()

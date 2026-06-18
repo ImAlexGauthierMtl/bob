@@ -1,6 +1,7 @@
 """Repository for Client Map 360° — CRUD + MEDDPICC score calculation."""
 
 import structlog
+from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 
@@ -82,6 +83,13 @@ class ClientMapRepository:
 
     def __init__(self, db: Session):
         self.db = db
+
+    def contact_exists(self, contact_id: str, tenant_id: str) -> bool:
+        result = self.db.execute(
+            text("SELECT id FROM contacts WHERE id = :id AND tenant_id = :tid AND deleted_at IS NULL"),
+            {"id": contact_id, "tid": tenant_id},
+        ).first()
+        return bool(result)
 
     def get_by_contact_id(self, contact_id: str, tenant_id: str) -> Optional[ClientMap]:
         """Get client map by contact_id with eager-loaded children."""
