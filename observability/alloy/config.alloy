@@ -1,0 +1,32 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+otelcol.receiver.otlp "local" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    metrics = [otelcol.processor.batch.local.input]
+    logs    = [otelcol.processor.batch.local.input]
+    traces  = [otelcol.processor.batch.local.input]
+  }
+}
+
+otelcol.processor.batch "local" {
+  output {
+    metrics = [otelcol.exporter.debug.local.input]
+    logs    = [otelcol.exporter.debug.local.input]
+    traces  = [otelcol.exporter.debug.local.input]
+  }
+}
+
+otelcol.exporter.debug "local" {
+  verbosity = "basic"
+}

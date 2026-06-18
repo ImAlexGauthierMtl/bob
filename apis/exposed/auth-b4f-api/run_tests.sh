@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
@@ -16,5 +16,10 @@ pip install -q pytest pytest-cov pytest-asyncio httpx
 
 export PYTHONPATH="${SCRIPT_DIR}/../..:${SCRIPT_DIR}/../../apis:${PYTHONPATH:-}"
 
-echo "Running tests for $(basename $SCRIPT_DIR)..."
-python -m pytest tests/ -v --tb=short --junitxml=test-results.xml || echo "No tests found or tests failed"
+echo "[test] pytest for $(basename "$SCRIPT_DIR")"
+python -m pytest tests/ -v --tb=short \
+  --cov=app \
+  --cov-fail-under=85 \
+  --cov-report=term \
+  --cov-report=xml:coverage.xml \
+  --junitxml=junit.xml

@@ -30,7 +30,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | M-06 | § 6, § 8.5 | Variables d'environnement | `dx_intermediate_check_env_vars` | Variables scopées GitLab, pas de préfixes DEV/STAGING/PROD, `.env.example` | A_VERIFIER | critique |
 | M-07 | § 7, § 8.6 | Harbor registry | `dx_intermediate_check_registry_to_k8s` | Harbor robot, imagePullSecrets, Cosign, absence `CI_REGISTRY_*` | VIOLATION | critique |
 | M-08 | § 5.8-5.10, § 8.8 | Observabilité et probes | `dx_intermediate_check_k8s_config` | `/liveness`, `/readiness`, `/startup`, `/health`, `/metrics`, logs JSON, trace_id | A_VERIFIER | critique |
-| M-09 | § 10, § 11 | Conventions et dev local | `dx_intermediate_check_local_dev` | Wrappers racine, scripts par API, compose postgres/pgbouncer/redis/alloy | VIOLATION | à corriger |
+| M-09 | § 10, § 11 | Conventions et dev local | `dx_intermediate_check_local_dev` | Wrappers racine, scripts par API, compose postgres/pgbouncer/redis/alloy | A_VERIFIER | à corriger |
 | M-10 | § 12 | Clean Architecture API | `dx_intermediate_check_clean_archi_apis` | `domain/application/infrastructure/presentation`, import-linter, tests par couche | A_VERIFIER | à corriger |
 | M-11 | § 9 | Rapport final | `dx_master_check` | Rapport markdown avec violations, résumé et variables CI/CD | A_VERIFIER | critique |
 
@@ -133,7 +133,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 |---|---|---:|---|---|---|---|
 | O-01 | Logs JSON stdout/stderr | § 5.8 | `dx_base_check_k8s_logs_stdout_json` | Lire logging shared | A_VERIFIER | Audit à compléter |
 | O-02 | `/metrics` sur chaque API | § 5.8, § 5.10 | `dx_base_check_k8s_metrics_endpoint` | Lire routes / appeler local | A_VERIFIER | Audit à compléter |
-| O-03 | OTel vers Alloy | § 5.8 | `dx_base_check_k8s_observability_alloy_otlp` | Lire env/compose/chart | A_VERIFIER | Compose à compléter avec Alloy |
+| O-03 | OTel vers Alloy | § 5.8 | `dx_base_check_k8s_observability_alloy_otlp` | Lire env/compose/chart | OK | `docker compose --env-file .env.example config` expose `alloy`, `OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4317`; l'image `grafana/alloy:v1.5.1` démarre avec `observability/alloy/config.alloy` |
 | O-04 | Propagation `traceparent` | § 5.9 | `dx_base_check_k8s_traceparent_propagation` | Lire HTTP client/middleware | A_VERIFIER | Audit à compléter |
 | O-05 | `trace_id` dans events Redis | § 2.4, § 5.9 | `dx_base_check_k8s_trace_id_in_events` | Lire schemas event bus | A_VERIFIER | Audit à compléter |
 | O-06 | `/health` liste dépendances | § 5.10 | `dx_base_check_k8s_health_endpoints` | Lire routes / appeler local | A_VERIFIER | Audit à compléter |
@@ -142,11 +142,11 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 
 | ID | Règle | Section | Skill | Méthode de validation | Statut initial | Preuve actuelle / à collecter |
 |---|---|---:|---|---|---|---|
-| L-01 | Wrappers racine présents | § 11.1 | `dx_base_check_local_dev_root_wrappers` | `ls run_* migrate_all_apis.sh` | A_VERIFIER | Certains scripts présents à vérifier |
-| L-02 | Scripts par API uniformes | § 11.2 | `dx_base_check_local_dev_per_api_scripts` | `find apis -name run_api.sh -o -name run_tests.sh` | A_VERIFIER | Les 11 scripts backend `run_tests.sh` sont uniformisés; les scripts B4F restent à aligner |
-| L-03 | B4F sans `migrate.sh` | § 11.2 | `dx_base_check_apis_uniform_scripts` | `find apis/exposed -name migrate.sh` | A_VERIFIER | Audit à compléter |
-| L-04 | Compose postgres + pgbouncer + redis + alloy | § 11.3 | `dx_base_check_local_dev_docker_compose` | Lire `docker-compose.yml` | VIOLATION | PgBouncer/Alloy à confirmer/ajouter |
-| L-05 | `.env.example` à jour | § 11.4 | `dx_base_check_local_dev_env_example` | `[ -f .env.example ]` + variables | A_VERIFIER | Audit à compléter |
+| L-01 | Wrappers racine présents | § 11.1 | `dx_base_check_local_dev_root_wrappers` | `ls run_* migrate_all_apis.sh` | OK | Wrappers exécutables: `run_all_apis.sh`, `migrate_all_apis.sh`, `run_all_apis_tests.sh`, `run_all_tests.sh`, `run_frontend.sh`, `run_frontend_tests.sh`, `run_frontend_e2e.sh` |
+| L-02 | Scripts par API uniformes | § 11.2 | `dx_base_check_local_dev_per_api_scripts` | `find apis -name run_api.sh -o -name run_tests.sh` | OK | 17 APIs ont `run_api.sh` + `run_tests.sh`; 11 Backends ont `migrate.sh`; B4F `run_tests.sh` produit `junit.xml` + `coverage.xml` avec seuil 85 % |
+| L-03 | B4F sans `migrate.sh` | § 11.2 | `dx_base_check_apis_uniform_scripts` | `find apis/exposed -name migrate.sh` | OK | `find apis/exposed -name migrate.sh` retourne 0 fichier |
+| L-04 | Compose postgres + pgbouncer + redis + alloy | § 11.3 | `dx_base_check_local_dev_docker_compose` | Lire `docker-compose.yml` | OK | `docker compose --env-file .env.example config --quiet` passe; services `database`, `pgbouncer`, `redis`, `alloy` présents; PgBouncer en `transaction` |
+| L-05 | `.env.example` à jour | § 11.4 | `dx_base_check_local_dev_env_example` | `[ -f .env.example ]` + variables | OK | Variables globales `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`, `DATABASE_SSLMODE`, `REDIS_URL`, `OTEL_EXPORTER_OTLP_ENDPOINT`; ports préfixés par API |
 | L-06 | Docs sous `/docs` | § 10.1 | `dx_base_check_conventions_repo_structure` | Chercher docs hors racine autorisée | A_VERIFIER | `Cameleon/` est plan de travail, décider destination finale |
 | L-07 | Pas de données client réelles | § 10.2 | `dx_base_check_env_vars_no_secret_in_repo` | Scan secrets/data | A_VERIFIER | Audit à compléter |
 

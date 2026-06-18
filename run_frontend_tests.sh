@@ -2,4 +2,5 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-exec "$SCRIPT_DIR/run_all_apis_tests.sh" "$@"
+cd "$SCRIPT_DIR/frontend"
+exec npm test -- --watch=false --code-coverage "$@"

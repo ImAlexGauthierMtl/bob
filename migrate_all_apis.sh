@@ -1,29 +1,27 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APIS_DIR="$SCRIPT_DIR/apis"
+filter="${1:-}"
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
+export PYTHONPATH="$APIS_DIR:${PYTHONPATH:-}"
 
-echo -e "${GREEN}🗄️  Running migrations for all backend APIs...${NC}"
-
-export PYTHONPATH="$APIS_DIR:$PYTHONPATH"
-
-# Only backend APIs (internal/) have migrations
-for api_dir in "$APIS_DIR/internal"/*/; do
-  api_name=$(basename "$api_dir")
-  [[ "$api_name" == "shared" || "$api_name" == "__pycache__" ]] && continue
-
-  echo -e "${YELLOW}  → Migrating $api_name${NC}"
-
-  if [[ -f "$api_dir/migrate.sh" ]]; then
-    bash "$api_dir/migrate.sh"
-  elif [[ -d "$api_dir/alembic" ]]; then
-    (cd "$api_dir" && alembic upgrade head)
-  else
-    echo "    No migration mechanism found, skipping."
+count=0
+for api_dir in "$APIS_DIR/internal"/*-backend-api/; do
+  [ -d "$api_dir" ] || continue
+  api_name="$(basename "$api_dir")"
+  if [ -n "$filter" ] && [ "$api_name" != "$filter" ]; then
+    continue
   fi
+  if [ ! -x "$api_dir/migrate.sh" ]; then
+    printf '[skip] %s missing migrate.sh\n' "$api_name"
+    continue
+  fi
+  printf '[migrate] %s\n' "$api_name"
+  (cd "$api_dir" && ./migrate.sh)
+  count=$((count + 1))
 done
 
-echo -e "${GREEN}✅ All migrations complete${NC}"
+printf '[migrate] completed=%s\n' "$count"
+[ "$count" -gt 0 ] || exit 1
