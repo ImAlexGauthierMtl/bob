@@ -12,6 +12,7 @@ from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.workflow_repository import WorkflowRepository
 from app.middleware.auth import get_current_user, settings
+from app.presentation import deps as workflow_deps
 from app.presentation.routes import workflow_routes
 from app.presentation.schemas import workflow_schemas
 
@@ -210,6 +211,26 @@ class FakeWorkflowRepository:
     def get_step_executions(self, execution_id):
         return self.step_executions.get(execution_id, [])
 
+    def get_monitoring_stats(self, tenant_id):
+        workflows = self.list_all(tenant_id, skip=0, limit=500)
+        return {
+            "total_executions": 4,
+            "completed": 2,
+            "failed": 1,
+            "running": 1,
+            "pending_approval": 0,
+            "avg_duration_ms": 18.2,
+            "success_rate": 50.0,
+            "total_workflows": len(workflows),
+            "active_workflows": sum(1 for wf in workflows if wf.is_active),
+        }
+
+    def list_recent_executions(self, tenant_id, limit=20, status_filter=None):
+        items = [make_execution("exe-recent", status="completed", completed_at=NOW, duration_ms=25)]
+        if status_filter:
+            items = [item for item in items if item.status == status_filter]
+        return items[:limit]
+
 
 class FakeStatsQuery:
     def filter(self, *args):
@@ -301,7 +322,8 @@ class RepositorySession(FakeDB):
         self.execution = make_execution()
         self.step_execution = make_step_execution()
 
-    def query(self, entity):
+    def query(self, *entities):
+        entity = entities[0] if entities else None
         if entity is Workflow:
             return FakeQuery(self.workflow, [self.workflow], 1)
         if entity is WorkflowStep:
@@ -310,7 +332,7 @@ class RepositorySession(FakeDB):
             return FakeQuery(self.execution, [self.execution], 1)
         if entity is WorkflowStepExecution:
             return FakeQuery(self.step_execution, [self.step_execution], 1)
-        return FakeQuery()
+        return FakeStatsQuery()
 
 
 @pytest.fixture()
@@ -323,14 +345,14 @@ def client(monkeypatch, repo):
     async def noop_publish(*args, **kwargs):
         return None
 
-    monkeypatch.setattr(workflow_routes, "WorkflowRepository", lambda db: repo)
+    monkeypatch.setattr(workflow_deps, "WorkflowRepository", lambda db: repo)
     monkeypatch.setattr(publishers.event_bus, "publish", noop_publish)
-    monkeypatch.setattr(workflow_routes, "publish_workflow_created", noop_publish)
-    monkeypatch.setattr(workflow_routes, "publish_workflow_updated", noop_publish)
-    monkeypatch.setattr(workflow_routes, "publish_workflow_deleted", noop_publish)
-    monkeypatch.setattr(workflow_routes, "publish_workflow_executed", noop_publish)
+    monkeypatch.setattr(workflow_deps, "publish_workflow_created", noop_publish)
+    monkeypatch.setattr(workflow_deps, "publish_workflow_updated", noop_publish)
+    monkeypatch.setattr(workflow_deps, "publish_workflow_deleted", noop_publish)
+    monkeypatch.setattr(workflow_deps, "publish_workflow_executed", noop_publish)
     main.app.dependency_overrides[workflow_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[workflow_routes.get_db] = lambda: FakeDB()
+    main.app.dependency_overrides[workflow_deps.get_db] = lambda: FakeDB()
     with TestClient(main.app) as test_client:
         yield test_client
     main.app.dependency_overrides.clear()
@@ -466,6 +488,8 @@ def test_repository_methods_cover_persistence_paths():
     assert repository.create_step_execution(make_step_execution("step-exe-new")).id == "step-exe-new"
     assert repository.update_step_execution(session.step_execution).id == "step-exe-1"
     assert repository.get_step_executions("exe-1")[0].id == "step-exe-1"
+    assert repository.get_monitoring_stats("tenant-1")["success_rate"] == 50.0
+    assert repository.list_recent_executions("tenant-1")[0].id == "exe-1"
     assert session.commits >= 1
 
 

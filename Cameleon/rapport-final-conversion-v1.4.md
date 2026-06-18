@@ -123,6 +123,7 @@ Preuves:
 - `user-backend-api` a une extraction verticale équivalente: les routes User, Tenant et Role appellent des use cases, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
 - `usage-backend-api` a une extraction verticale équivalente: la route Usage appelle `UsageUseCases`, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
 - `kb-backend-api` a une extraction verticale équivalente: la route KB appelle `KBUseCases`, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
+- `workflow-backend-api` a une extraction verticale équivalente: la route Workflow appelle `WorkflowUseCases`, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, les requêtes de monitoring sont dans le repository, et le contrat local passe.
 - `agent-backend-api` progresse: les routes Capability, Client Map et Training appellent des use cases, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe; `bcc_routes.py` et `bob_settings_routes.py` restent à extraire.
 - Les modèles SQLAlchemy résident maintenant dans `app/infrastructure/persistence/models`; `app/domain` ne contient plus de dépendance SQLAlchemy/Pydantic détectée.
 - La violation restante de M-10 est limitée à CA-04: certaines routes contiennent encore de la logique métier ou persistence directe.

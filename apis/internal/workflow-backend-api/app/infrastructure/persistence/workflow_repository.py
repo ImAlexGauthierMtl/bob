@@ -1,6 +1,7 @@
 """Workflow repository — data access layer."""
 
 from typing import Optional, List
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.infrastructure.persistence.models.workflow import Workflow, WorkflowStep
@@ -145,3 +146,43 @@ class WorkflowRepository:
         return self.db.query(WorkflowStepExecution).filter(
             WorkflowStepExecution.execution_id == execution_id,
         ).order_by(WorkflowStepExecution.started_at).all()
+
+    # ── Monitoring ────────────────────────────
+
+    def get_monitoring_stats(self, tenant_id: str) -> dict:
+        stats = self.db.query(
+            func.count(WorkflowExecution.id).label("total"),
+            func.count(WorkflowExecution.id).filter(WorkflowExecution.status == "completed").label("completed"),
+            func.count(WorkflowExecution.id).filter(WorkflowExecution.status == "failed").label("failed"),
+            func.count(WorkflowExecution.id).filter(WorkflowExecution.status == "running").label("running"),
+            func.count(WorkflowExecution.id).filter(WorkflowExecution.status == "pending_approval").label("pending"),
+            func.avg(WorkflowExecution.duration_ms).label("avg_duration_ms"),
+        ).filter(WorkflowExecution.tenant_id == tenant_id).first()
+
+        workflows = self.list_all(tenant_id, skip=0, limit=500)
+        active_count = sum(1 for wf in workflows if wf.is_active)
+
+        return {
+            "total_executions": stats.total or 0,
+            "completed": stats.completed or 0,
+            "failed": stats.failed or 0,
+            "running": stats.running or 0,
+            "pending_approval": stats.pending or 0,
+            "avg_duration_ms": round(stats.avg_duration_ms, 1) if stats.avg_duration_ms else 0,
+            "success_rate": round((stats.completed / stats.total) * 100, 1) if stats.total else 0,
+            "total_workflows": len(workflows),
+            "active_workflows": active_count,
+        }
+
+    def list_recent_executions(
+        self,
+        tenant_id: str,
+        limit: int = 20,
+        status_filter: Optional[str] = None,
+    ) -> List[WorkflowExecution]:
+        query = self.db.query(WorkflowExecution).filter(
+            WorkflowExecution.tenant_id == tenant_id,
+        )
+        if status_filter:
+            query = query.filter(WorkflowExecution.status == status_filter)
+        return query.order_by(WorkflowExecution.started_at.desc()).limit(limit).all()
