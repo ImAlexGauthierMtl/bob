@@ -9,6 +9,26 @@ from ..config import get_settings
 
 _engines = {}
 _session_factories = {}
+MAX_POOL_SIZE = 5
+DEFAULT_POOL_SIZE = 3
+DEFAULT_MAX_OVERFLOW = 5
+
+
+def _bounded_int_from_env(name: str, default: int, minimum: int, maximum: int) -> int:
+    try:
+        value = int(os.environ.get(name, str(default)))
+    except ValueError:
+        value = default
+    return max(minimum, min(value, maximum))
+
+
+def _connect_args_for_database_url(database_url: str) -> dict:
+    connect_args = {}
+    if "sqlite" in database_url:
+        connect_args["check_same_thread"] = False
+    if database_url.startswith("postgresql+psycopg://"):
+        connect_args["prepare_threshold"] = None
+    return connect_args
 
 
 def create_db_engine(api_name: Optional[str] = None):
@@ -20,12 +40,13 @@ def create_db_engine(api_name: Optional[str] = None):
         if not database_url:
             raise ValueError(f"DATABASE_URL not configured for {api_name or 'default'}")
 
-        connect_args = {}
-        if "sqlite" in database_url:
-            connect_args["check_same_thread"] = False
-
-        pool_size = int(os.environ.get("DB_POOL_SIZE", "3"))
-        max_overflow = int(os.environ.get("DB_MAX_OVERFLOW", "5"))
+        connect_args = _connect_args_for_database_url(database_url)
+        pool_size = _bounded_int_from_env(
+            "DB_POOL_SIZE", DEFAULT_POOL_SIZE, 1, MAX_POOL_SIZE
+        )
+        max_overflow = _bounded_int_from_env(
+            "DB_MAX_OVERFLOW", DEFAULT_MAX_OVERFLOW, 0, MAX_POOL_SIZE
+        )
 
         _engines[cache_key] = create_engine(
             database_url,

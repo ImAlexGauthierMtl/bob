@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
+from shared.database import connection as shared_db_connection
 
 import main
 from app.domain.entities.activity import Activity, ActivityPriority, ActivityStatus, ActivityType
@@ -260,6 +262,45 @@ def test_database_facade_and_schema_contracts(monkeypatch):
     response = activity_schemas.ActivityResponse.model_validate(make_activity())
     assert response.id == "activity-1"
     assert activity_schemas.ActivityListResponse(items=[response], total=1, skip=0, limit=50).total == 1
+
+
+def test_shared_database_engine_uses_pgbouncer_safe_options(monkeypatch):
+    captured = {}
+
+    def fake_create_engine(database_url, **kwargs):
+        captured["database_url"] = database_url
+        captured["kwargs"] = kwargs
+        return "engine"
+
+    shared_db_connection._engines.clear()
+    shared_db_connection._session_factories.clear()
+    monkeypatch.setattr(shared_db_connection, "create_engine", fake_create_engine)
+    monkeypatch.setattr(
+        shared_db_connection,
+        "get_settings",
+        lambda api_name: SimpleNamespace(
+            database_url="postgresql+psycopg://user:pass@pgbouncer:5432/app"
+        ),
+    )
+    monkeypatch.setenv("DB_POOL_SIZE", "99")
+    monkeypatch.setenv("DB_MAX_OVERFLOW", "99")
+
+    assert shared_db_connection.create_db_engine("activity-backend-api") == "engine"
+    assert captured["kwargs"]["pool_size"] == 5
+    assert captured["kwargs"]["max_overflow"] == 5
+    assert captured["kwargs"]["pool_pre_ping"] is True
+    assert captured["kwargs"]["pool_recycle"] == 300
+    assert captured["kwargs"]["connect_args"] == {"prepare_threshold": None}
+    assert shared_db_connection._connect_args_for_database_url(
+        "postgresql+psycopg2://user:pass@pgbouncer:5432/app"
+    ) == {}
+    assert shared_db_connection._connect_args_for_database_url("sqlite:///local.db") == {
+        "check_same_thread": False
+    }
+    monkeypatch.setenv("DB_POOL_SIZE", "-10")
+    monkeypatch.setenv("DB_MAX_OVERFLOW", "not-an-int")
+    assert shared_db_connection._bounded_int_from_env("DB_POOL_SIZE", 3, 1, 5) == 1
+    assert shared_db_connection._bounded_int_from_env("DB_MAX_OVERFLOW", 5, 0, 5) == 5
 
 
 def test_python_package_contract_loads_runtime_components():

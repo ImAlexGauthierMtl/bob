@@ -74,7 +74,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | DB-06 | CI teste downgrade puis upgrade | § 2.7.5, § 4.9 | `dx_base_check_alembic_ci_tests_downgrade` | Lire `.gitlab-ci.yml` / template child | VIOLATION | Preuve locale manuelle OK sur `email-backend-api` et `activity-backend-api`, mais après bascule au template partagé `templates/child/stages/test.yml` ne lance pas `run_tests.sh`; APIs CDE non packagées donc tests Python skippés |
 | DB-07 | InitContainer exécute `scripts/migrate_with_lease.py` | § 2.7.5 | `dx_base_check_api_migration_initcontainer` | Lire deployment chart/values | OK | `deploy/values/*/*-backend-api.yaml` active `initContainers.migrate.enabled`; chart partagé `api-chart` lance `/app/scripts/migrate_with_lease.py` |
 | DB-08 | Lease Kubernetes et RBAC présents | § 2.7.5 | `dx_base_check_api_migration_lease` | Chercher `coordination.k8s.io`, `leases` | OK | Chart partagé `api-chart/templates/migration-lease-rbac.yaml` fournit Lease/RBAC; les backends activent l'initContainer |
-| DB-09 | Pool SQLAlchemy compatible PgBouncer | § 2.7.3-2.7.4 | `dx_base_check_api_db_pool_size` | Lire `apis/shared/database` | A_VERIFIER | Audit à compléter |
+| DB-09 | Pool SQLAlchemy compatible PgBouncer | § 2.7.3-2.7.4 | `dx_base_check_api_db_pool_size` | Lire `apis/shared/database` | OK | `apis/shared/database/connection.py` borne `DB_POOL_SIZE` et `DB_MAX_OVERFLOW` à 5, garde `pool_pre_ping=True`, `pool_recycle=300`, et ajoute `connect_args={"prepare_threshold": None}` pour `postgresql+psycopg`; test local `activity-backend-api/tests/test_activity_contract.py` OK (`8 passed`) |
 
 ### 4. CI/CD
 
