@@ -4,6 +4,7 @@ from uuid import uuid4
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from app.application.use_cases.bcc_use_cases import BccUseCases
 from app.application.use_cases.bob_settings_use_cases import BobSettingsUseCases
 from app.application.use_cases.capability_use_cases import CapabilityUseCases
 from app.application.use_cases.client_map_use_cases import ClientMapUseCases
@@ -14,6 +15,11 @@ from app.infrastructure.persistence.capability_repository import CapabilityRepos
 from app.infrastructure.persistence.client_map_repository import ClientMapRepository
 from app.infrastructure.persistence.models.training_models import TrainingMissingElement, TrainingNote, TrainingSession
 from app.infrastructure.persistence.training_repository import TrainingRepository
+from app.presentation.bcc_operations import BccOperations
+
+
+def get_bcc_use_cases(db: Session = Depends(get_db)) -> BccUseCases:
+    return BccUseCases(operations=BccOperations(db))
 
 
 def get_capability_use_cases(db: Session = Depends(get_db)) -> CapabilityUseCases:
