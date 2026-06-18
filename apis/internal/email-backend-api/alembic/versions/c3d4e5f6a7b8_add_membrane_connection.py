@@ -114,6 +114,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute('DROP TABLE IF EXISTS membrane_synced_events CASCADE')
-    op.execute('DROP TABLE IF EXISTS membrane_synced_emails CASCADE')
-    op.execute('DROP TABLE IF EXISTS membrane_connections CASCADE')
+    op.drop_table('membrane_synced_events')
+    op.drop_table('membrane_synced_emails')
+    op.drop_table('membrane_connections')

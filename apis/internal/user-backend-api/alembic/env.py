@@ -43,11 +43,11 @@ def run_migrations_offline():
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        version_table_schema=SCHEMA_NAME,
+        version_table=f"{SCHEMA_NAME}_alembic_version",
+        version_table_schema="public",
         include_schemas=True,
     )
     with context.begin_transaction():
-        context.execute(f"CREATE SCHEMA IF NOT EXISTS \"{SCHEMA_NAME}\"")
         context.execute(f'SET search_path TO "{SCHEMA_NAME}"')
         context.run_migrations()
 
@@ -59,14 +59,14 @@ def run_migrations_online():
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS \"{SCHEMA_NAME}\""))
         connection.execute(text(f'SET search_path TO "{SCHEMA_NAME}"'))
         connection.commit()
         
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            version_table_schema=SCHEMA_NAME,
+            version_table=f"{SCHEMA_NAME}_alembic_version",
+            version_table_schema="public",
             include_schemas=True,
         )
         with context.begin_transaction():
