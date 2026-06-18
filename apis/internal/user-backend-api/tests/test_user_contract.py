@@ -15,6 +15,7 @@ from app.infrastructure.persistence.role_repository import RoleRepository
 from app.infrastructure.persistence.tenant_repository import TenantRepository
 from app.infrastructure.persistence.user_repository import UserRepository
 from app.middleware.auth import get_current_user, settings
+from app.presentation import deps as user_deps
 from app.presentation.routes import role_routes, tenant_routes, user_routes
 from app.presentation.schemas import role_schemas, tenant_schemas, user_schemas
 
@@ -360,19 +361,16 @@ def client(monkeypatch, repos):
     async def noop_publish(*args, **kwargs):
         return None
 
-    monkeypatch.setattr(user_routes, "UserRepository", lambda db: user_repo)
-    monkeypatch.setattr(user_routes, "RoleRepository", lambda db: role_repo)
-    monkeypatch.setattr(user_routes.User, "hash_password", staticmethod(lambda password: HASHED_PASSWORD))
-    monkeypatch.setattr(tenant_routes, "TenantRepository", lambda db: tenant_repo)
-    monkeypatch.setattr(role_routes, "RoleRepository", lambda db: role_repo)
-    monkeypatch.setattr(user_routes, "publish_user_created", noop_publish)
-    monkeypatch.setattr(user_routes, "publish_user_updated", noop_publish)
-    monkeypatch.setattr(user_routes, "publish_user_deleted", noop_publish)
+    monkeypatch.setattr(user_deps, "UserRepository", lambda db: user_repo)
+    monkeypatch.setattr(user_deps, "TenantRepository", lambda db: tenant_repo)
+    monkeypatch.setattr(user_deps, "RoleRepository", lambda db: role_repo)
+    monkeypatch.setattr(user_deps.User, "hash_password", staticmethod(lambda password: HASHED_PASSWORD))
+    monkeypatch.setattr(user_deps, "publish_user_created", noop_publish)
+    monkeypatch.setattr(user_deps, "publish_user_updated", noop_publish)
+    monkeypatch.setattr(user_deps, "publish_user_deleted", noop_publish)
     main.app.dependency_overrides[user_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[user_routes.get_db] = lambda: FakeDB()
-    main.app.dependency_overrides[tenant_routes.get_db] = lambda: FakeDB()
+    main.app.dependency_overrides[user_deps.get_db] = lambda: FakeDB()
     main.app.dependency_overrides[role_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[role_routes.get_db] = lambda: FakeDB()
     test_client = TestClient(main.app)
     yield test_client
     test_client.close()

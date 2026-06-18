@@ -120,6 +120,7 @@ Preuves:
 - `contact-backend-api` a une extraction verticale équivalente: les routes appellent `ContactUseCases`, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
 - `org-backend-api` a une extraction verticale équivalente: les routes Organization et Department appellent des use cases, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
 - `opportunity-backend-api` a une extraction verticale équivalente: les routes Opportunity, OpportunityProduct et Quote appellent des use cases, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
+- `user-backend-api` a une extraction verticale équivalente: les routes User, Tenant et Role appellent des use cases, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
 - Les modèles SQLAlchemy résident maintenant dans `app/infrastructure/persistence/models`; `app/domain` ne contient plus de dépendance SQLAlchemy/Pydantic détectée.
 - La violation restante de M-10 est limitée à CA-04: certaines routes contiennent encore de la logique métier ou persistence directe.
 - Le test contractuel email passe, mais `email-backend-api/run_tests.sh` reste bloque localement avant pytest sur un `DATABASE_URL` de migration avec driver placeholder.

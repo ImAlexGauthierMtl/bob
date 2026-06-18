@@ -19,7 +19,7 @@ La Clean Architecture stricte progresse, mais n'est pas encore conforme:
 
 - les 17 APIs ont maintenant les quatre couches `domain`, `application`, `infrastructure`, `presentation`.
 - `activity-backend-api` possède une première extraction verticale: routes HTTP minces, dépendance FastAPI isolée dans `presentation/deps.py`, et logique CRUD/orchestration dans `application/use_cases/activity_use_cases.py`.
-- `product-backend-api`, `contact-backend-api`, `org-backend-api` et `opportunity-backend-api` suivent le même pattern de routes HTTP minces avec use cases applicatifs.
+- `product-backend-api`, `contact-backend-api`, `org-backend-api`, `opportunity-backend-api` et `user-backend-api` suivent le même pattern de routes HTTP minces avec use cases applicatifs.
 - les modèles SQLAlchemy ont été déplacés de `domain/entities` vers `infrastructure/persistence/models`.
 - plusieurs routes contiennent encore de la logique métier ou de persistence.
 - les 17 `pyproject.toml` contiennent trois contrats `import-linter` progressifs, validés localement.
@@ -44,7 +44,7 @@ La Clean Architecture stricte progresse, mais n'est pas encore conforme:
 | Quatre couches uniformes par API | OK | Les 17 APIs ont maintenant les couches `domain`, `application`, `infrastructure` et `presentation`; les couches ajoutees sont des packages vides servant de garde-fou avant les refactors verticaux |
 | `domain/` sans framework | OK | scan `app/domain` pour SQLAlchemy, FastAPI, Pydantic, `Column` et `relationship`: aucun résultat |
 | `application/` sans framework | OK | scan `application/` pour FastAPI, SQLAlchemy, httpx, redis, pydantic_settings et import `app.presentation`: aucun résultat direct |
-| Routes minces | VIOLATION | `activity-backend-api/app/presentation/routes/activity_routes.py`, `product-backend-api/app/presentation/routes/product_routes.py`, `contact-backend-api/app/presentation/routes/contact_routes.py`, `org-backend-api/app/presentation/routes/organization_routes.py`, `org-backend-api/app/presentation/routes/department_routes.py`, `opportunity-backend-api/app/presentation/routes/opportunity_routes.py` et `opportunity-backend-api/app/presentation/routes/quote_routes.py` sont maintenant minces et passent par des use cases; la violation reste ouverte pour les routes encore épaisses, exemples: `provider_membrane_routes.py`, `training_routes.py`, `auth_routes.py` |
+| Routes minces | VIOLATION | `activity-backend-api/app/presentation/routes/activity_routes.py`, `product-backend-api/app/presentation/routes/product_routes.py`, `contact-backend-api/app/presentation/routes/contact_routes.py`, `org-backend-api/app/presentation/routes/organization_routes.py`, `org-backend-api/app/presentation/routes/department_routes.py`, `opportunity-backend-api/app/presentation/routes/opportunity_routes.py`, `opportunity-backend-api/app/presentation/routes/quote_routes.py`, `user-backend-api/app/presentation/routes/user_routes.py`, `user-backend-api/app/presentation/routes/tenant_routes.py` et `user-backend-api/app/presentation/routes/role_routes.py` sont maintenant minces et passent par des use cases; la violation reste ouverte pour les routes encore épaisses, exemples: `provider_membrane_routes.py`, `training_routes.py`, `auth_routes.py` |
 | Entités métier pures | OK | les modèles ORM résident sous `app/infrastructure/persistence/models`; `app/domain/entities` ne contient plus de classes SQLAlchemy |
 | Contrats import-linter | OK | Les 17 `pyproject.toml` configurent 3 contrats progressifs; `lint-imports --config pyproject.toml --no-cache` passe sur les 17 APIs, 51 contrats gardes, 0 brise |
 
@@ -94,5 +94,5 @@ Pour fermer M-10/CA-* sans casser le runtime, faire une passe dédiée par famil
 
 1. Ajouter des use cases/ports en `application`.
 2. Garder les routes FastAPI limitées à validation HTTP, appel de use case et mapping réponse.
-3. Répliquer le pattern validé sur `activity-backend-api`, `product-backend-api`, `contact-backend-api`, `org-backend-api` et `opportunity-backend-api` vers les routes longues `email-backend-api` et `auth-b4f-api`.
+3. Répliquer le pattern validé sur `activity-backend-api`, `product-backend-api`, `contact-backend-api`, `org-backend-api`, `opportunity-backend-api` et `user-backend-api` vers les routes longues `email-backend-api`, `agent-backend-api`, `usage-backend-api` et `auth-b4f-api`.
 4. Renforcer ensuite les contrats import-linter quand les dépendances `application -> infrastructure` restantes auront été extraites derrière des ports.
