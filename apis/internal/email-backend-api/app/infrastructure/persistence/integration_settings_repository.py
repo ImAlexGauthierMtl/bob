@@ -42,7 +42,12 @@ class IntegrationSettingsRepository:
             self.db.refresh(existing)
             return existing
 
-        setting = IntegrationSetting(tenant_id=tenant_id, integration_key=integration_key, **data)
+        payload = {
+            key: value
+            for key, value in data.items()
+            if key not in {"id", "tenant_id", "integration_key", "created_at"}
+        }
+        setting = IntegrationSetting(tenant_id=tenant_id, integration_key=integration_key, **payload)
         self.db.add(setting)
         self.db.commit()
         self.db.refresh(setting)
