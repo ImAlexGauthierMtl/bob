@@ -3,11 +3,11 @@
 from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
 
-from app.infrastructure.database import get_db
+from app.application.use_cases.ms365_core_use_cases import MS365CoreUseCases
+from app.domain.exceptions import EventNotFoundError
 from app.middleware.auth import get_current_user
-from app.infrastructure.persistence.ms365_repository import MS365Repository
+from app.presentation.deps import get_ms365_core_use_cases
 from app.presentation.schemas.ms365_schemas import (
     EventUpsertRequest,
     EventUpdateRequest,
@@ -26,15 +26,13 @@ async def list_events(
     from_date: Optional[datetime] = None,
     to_date: Optional[datetime] = None,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MS365CoreUseCases = Depends(get_ms365_core_use_cases),
 ):
     """List synced calendar events for a user."""
-    repo = MS365Repository(db)
-    items = repo.list_events(user_id, current_user["tenant_id"], skip, limit, from_date, to_date)
-    total = repo.count_events(user_id, current_user["tenant_id"], from_date, to_date)
+    result = await use_cases.list_events(user_id, current_user["tenant_id"], skip, limit, from_date, to_date)
     return EventListResponse(
-        items=[EventResponse.model_validate(e) for e in items],
-        total=total, skip=skip, limit=limit,
+        items=[EventResponse.model_validate(e) for e in result.items],
+        total=result.total, skip=result.skip, limit=result.limit,
     )
 
 
@@ -43,12 +41,12 @@ async def get_event(
     event_id: str,
     user_id: str = Query(...),
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MS365CoreUseCases = Depends(get_ms365_core_use_cases),
 ):
     """Get a specific synced event."""
-    repo = MS365Repository(db)
-    event = repo.get_event_by_id(event_id, user_id, current_user["tenant_id"])
-    if not event:
+    try:
+        event = await use_cases.get_event(event_id, user_id, current_user["tenant_id"])
+    except EventNotFoundError:
         raise HTTPException(status_code=404, detail="Event not found")
     return EventResponse.model_validate(event)
 
@@ -57,11 +55,10 @@ async def get_event(
 async def upsert_event(
     data: EventUpsertRequest,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MS365CoreUseCases = Depends(get_ms365_core_use_cases),
 ):
     """Upsert (insert or update) a synced event."""
-    repo = MS365Repository(db)
-    event = repo.upsert_event(data.model_dump(), current_user["tenant_id"])
+    event = await use_cases.upsert_event(data.model_dump(), current_user["tenant_id"])
     return EventResponse.model_validate(event)
 
 
@@ -71,15 +68,18 @@ async def update_event(
     data: EventUpdateRequest,
     user_id: str = Query(...),
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MS365CoreUseCases = Depends(get_ms365_core_use_cases),
 ):
     """Update event metadata."""
-    repo = MS365Repository(db)
-    event = repo.get_event_by_id(event_id, user_id, current_user["tenant_id"])
-    if not event:
+    try:
+        updated = await use_cases.update_event(
+            event_id,
+            user_id,
+            current_user["tenant_id"],
+            data.model_dump(exclude_unset=True),
+        )
+    except EventNotFoundError:
         raise HTTPException(status_code=404, detail="Event not found")
-    updates = data.model_dump(exclude_unset=True)
-    updated = repo.update_event(event, updates)
     return EventResponse.model_validate(updated)
 
 
@@ -88,11 +88,10 @@ async def delete_event(
     event_id: str,
     user_id: str = Query(...),
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MS365CoreUseCases = Depends(get_ms365_core_use_cases),
 ):
     """Hard-delete a synced event."""
-    repo = MS365Repository(db)
-    event = repo.get_event_by_id(event_id, user_id, current_user["tenant_id"])
-    if not event:
+    try:
+        await use_cases.delete_event(event_id, user_id, current_user["tenant_id"])
+    except EventNotFoundError:
         raise HTTPException(status_code=404, detail="Event not found")
-    repo.delete_event(event)

@@ -125,6 +125,7 @@ Preuves:
 - `kb-backend-api` a une extraction verticale équivalente: la route KB appelle `KBUseCases`, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
 - `workflow-backend-api` a une extraction verticale équivalente: la route Workflow appelle `WorkflowUseCases`, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, les requêtes de monitoring sont dans le repository, et le contrat local passe.
 - `agent-backend-api` progresse: les routes Capability, Client Map, Training et Bob Settings appellent des use cases, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe; `bcc_routes.py` reste à extraire.
+- `email-backend-api` progresse: les routes core Connection, Email, Event, Email Contact, Integration Settings et Smart Label appellent des use cases, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe; les routes provider/Membrane restent à extraire.
 - Les modèles SQLAlchemy résident maintenant dans `app/infrastructure/persistence/models`; `app/domain` ne contient plus de dépendance SQLAlchemy/Pydantic détectée.
 - La violation restante de M-10 est limitée à CA-04: certaines routes contiennent encore de la logique métier ou persistence directe.
 - Le test contractuel email passe, mais `email-backend-api/run_tests.sh` reste bloque localement avant pytest sur un `DATABASE_URL` de migration avec driver placeholder.

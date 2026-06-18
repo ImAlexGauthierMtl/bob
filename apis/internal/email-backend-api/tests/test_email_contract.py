@@ -23,6 +23,7 @@ from app.infrastructure.persistence.ms365_repository import MS365Repository
 from app.infrastructure.persistence.smart_label_repository import SmartLabelRepository
 from app.middleware import auth
 from app.middleware.auth import get_current_user, settings
+from app.presentation import deps as email_deps
 from app.presentation.routes import (
     connection_routes,
     email_contact_routes,
@@ -576,13 +577,10 @@ def client(monkeypatch, fake_db):
     async def noop_publish(*args, **kwargs):
         return None
 
-    monkeypatch.setattr(connection_routes, "MS365Repository", lambda db: ms365_repo)
-    monkeypatch.setattr(email_routes, "MS365Repository", lambda db: ms365_repo)
-    monkeypatch.setattr(event_routes, "MS365Repository", lambda db: ms365_repo)
-    monkeypatch.setattr(email_contact_routes, "MS365Repository", lambda db: ms365_repo)
-    monkeypatch.setattr(email_routes, "publish_email_received", noop_publish)
-    monkeypatch.setattr(smart_label_routes, "SmartLabelRepository", lambda db: label_repo)
-    monkeypatch.setattr(integration_settings_routes, "IntegrationSettingsRepository", lambda db: settings_repo)
+    monkeypatch.setattr(email_deps, "MS365Repository", lambda db: ms365_repo)
+    monkeypatch.setattr(email_deps, "publish_email_received", noop_publish)
+    monkeypatch.setattr(email_deps, "SmartLabelRepository", lambda db: label_repo)
+    monkeypatch.setattr(email_deps, "IntegrationSettingsRepository", lambda db: settings_repo)
     monkeypatch.setattr(membrane_routes, "MembraneRepository", lambda db: membrane_repo)
 
     for module in (
@@ -595,7 +593,9 @@ def client(monkeypatch, fake_db):
         membrane_routes,
     ):
         main.app.dependency_overrides[module.get_current_user] = lambda: USER
-        main.app.dependency_overrides[module.get_db] = lambda: fake_db
+        if hasattr(module, "get_db"):
+            main.app.dependency_overrides[module.get_db] = lambda: fake_db
+    main.app.dependency_overrides[email_deps.get_db] = lambda: fake_db
     main.app.dependency_overrides[integration_settings_routes.require_admin] = lambda: ADMIN
 
     test_client = TestClient(main.app)
