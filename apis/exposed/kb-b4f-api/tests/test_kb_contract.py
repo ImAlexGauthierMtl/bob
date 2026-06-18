@@ -121,6 +121,16 @@ def test_category_routes(client):
     assert client.patch("/kb/categories/cat-1", json={"name": "Updated"}).json()["name"] == "Updated"
 
 
+def test_kb_home_composes_page_payload(client):
+    payload = client.get("/kb/home").json()
+    assert payload["user_id"] == "user-1"
+    assert payload["categories"][0]["id"] == "cat-1"
+    assert payload["recent_articles"][0]["title"] == "Welcome"
+    assert payload["popular_articles"][0]["id"] == "article-1"
+    assert payload["stats"] == {"articles": 4, "categories": 2}
+    assert payload["empty_state"]["show_create_article_hint"] is False
+
+
 def test_article_routes(client):
     listed = client.get(
         "/kb/articles",

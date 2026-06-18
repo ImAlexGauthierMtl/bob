@@ -1,10 +1,18 @@
 """KB routes — proxies to kb~backend-api."""
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from app.application.services.kb_home_service import build_kb_home
 from app.infrastructure.clients.kb_client import kb_client
 from app.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/kb")
+
+
+# ── Home composition ────────────────────────────────
+
+@router.get("/home")
+async def kb_home(request: Request, user: dict = Depends(get_current_user)):
+    return await build_kb_home(kb_client, user, forward_headers=request.headers)
 
 
 # ── Categories ───────────────────────────────────────
