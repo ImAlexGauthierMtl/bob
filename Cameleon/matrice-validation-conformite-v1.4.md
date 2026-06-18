@@ -60,7 +60,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | A-06 | B4F porte logique métier, pas proxy CRUD 1:1 | § 2.2, § 2.8 | `dx_base_check_b4f_holds_business_logic` | Lire routes B4F et clients backend | VIOLATION | Plusieurs routes documentées comme proxy |
 | A-07 | Backend possède une entité principale atomique | § 2.3 | `dx_base_check_backend_atomic_entity` | Cartographier modèles par backend | A_VERIFIER | Audit à compléter |
 | A-08 | Services externes seulement côté Backend | § 2.2-2.3 | `dx_base_check_backend_owns_infrastructure` | Recherche clients MS365/Membrane dans B4F | VIOLATION | `communication-b4f-api` contient des appels externes |
-| A-09 | Redis event bus présent | § 2.4 | `dx_base_check_api_event_bus_redis` | Vérifier `REDIS_URL`, compose, Helm, publishers/subscribers | A_VERIFIER | Redis présent dans compose, Helm à valider |
+| A-09 | Redis event bus présent | § 2.4 | `dx_base_check_api_event_bus_redis` | Vérifier `REDIS_URL`, compose, Helm, publishers/subscribers | OK | `docker-compose.yml` définit `REDIS_URL` et `EVENT_BUS_BACKEND=redis`; les 33 values backend dev/staging/prod déclarent `externalDependencies: redis`; les 11 backends importent `shared.event_bus` au démarrage et possèdent `app/events/publishers.py` |
 
 ### 3. Alembic et base de données
 
