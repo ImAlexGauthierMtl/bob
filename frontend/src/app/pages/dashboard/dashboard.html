@@ -1,54 +1,37 @@
+@if (vm$ | async; as vm) {
 <div class="page-header">
     <div class="page-header__left">
         <h2 class="page-title">Overview</h2>
-        <p class="page-subtitle">December 2024</p>
+        <p class="page-subtitle">CRM workspace</p>
     </div>
     <div class="page-header__actions">
         <div class="date-picker">
             <i class="fa-regular fa-calendar"></i>
-            <span>Last 30 days</span>
+            <span>Live summary</span>
         </div>
-        <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
+        <button class="icon-btn" type="button"><i class="fa-regular fa-bell"></i></button>
     </div>
 </div>
 
-<!-- Metrics Grid -->
+@if (vm.error) {
+<div class="state-banner state-banner--error">{{ vm.error }}</div>
+} @else if (vm.loading && !vm.data) {
+<div class="state-banner">Loading dashboard...</div>
+}
+
 <section class="metrics-grid">
+    @for (metric of vm.metrics; track metric.label) {
     <div class="metric-card">
-        <p class="metric-card__label">Total Revenue</p>
-        <p class="metric-card__value">$2.4M</p>
+        <p class="metric-card__label">{{ metric.label }}</p>
+        <p class="metric-card__value">{{ metric.value | number }}</p>
         <div class="metric-card__change">
-            <span class="metric-card__change--up">+18.2%</span>
-            <span class="metric-card__change-period">vs last month</span>
+            <span class="metric-card__change--up">Live</span>
+            <span class="metric-card__change-period">{{ metric.context }}</span>
         </div>
     </div>
-    <div class="metric-card">
-        <p class="metric-card__label">Active Customers</p>
-        <p class="metric-card__value">1,847</p>
-        <div class="metric-card__change">
-            <span class="metric-card__change--up">+12.5%</span>
-            <span class="metric-card__change-period">vs last month</span>
-        </div>
-    </div>
-    <div class="metric-card">
-        <p class="metric-card__label">Orders Processed</p>
-        <p class="metric-card__value">3,294</p>
-        <div class="metric-card__change">
-            <span class="metric-card__change--up">+8.7%</span>
-            <span class="metric-card__change-period">vs last month</span>
-        </div>
-    </div>
-    <div class="metric-card">
-        <p class="metric-card__label">Conversion Rate</p>
-        <p class="metric-card__value">24.8%</p>
-        <div class="metric-card__change">
-            <span class="metric-card__change--up">+3.2%</span>
-            <span class="metric-card__change-period">vs last month</span>
-        </div>
-    </div>
+    }
 </section>
 
-<!-- Charts Row -->
 <section class="charts-row">
     <div class="chart-card chart-card--wide">
         <div class="chart-card__header">
@@ -60,217 +43,98 @@
 
     <div class="chart-card">
         <div class="chart-card__header">
-            <h3 class="chart-card__title">Pipeline</h3>
-            <p class="chart-card__subtitle">Current sales stages</p>
+            <h3 class="chart-card__title">CRM Pipeline</h3>
+            <p class="chart-card__subtitle">Summary from crm-b4f-api</p>
         </div>
         <div class="pipeline-bars">
+            @for (item of vm.pipeline; track item.label) {
             <div class="pipeline-item">
                 <div class="pipeline-item__header">
-                    <span class="pipeline-item__name">Qualified Leads</span>
-                    <span class="pipeline-item__value">$847K</span>
+                    <span class="pipeline-item__name">{{ item.label }}</span>
+                    <span class="pipeline-item__value">{{ item.value | number }}</span>
                 </div>
                 <div class="progress-bar">
-                    <div class="progress-bar__fill" style="width: 78%"></div>
+                    <div class="progress-bar__fill" [style.width.%]="item.width"></div>
                 </div>
             </div>
-            <div class="pipeline-item">
-                <div class="pipeline-item__header">
-                    <span class="pipeline-item__name">Proposal Sent</span>
-                    <span class="pipeline-item__value">$624K</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-bar__fill" style="width: 58%"></div>
-                </div>
-            </div>
-            <div class="pipeline-item">
-                <div class="pipeline-item__header">
-                    <span class="pipeline-item__name">Negotiation</span>
-                    <span class="pipeline-item__value">$412K</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-bar__fill" style="width: 38%"></div>
-                </div>
-            </div>
-            <div class="pipeline-item">
-                <div class="pipeline-item__header">
-                    <span class="pipeline-item__name">Closing</span>
-                    <span class="pipeline-item__value">$289K</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-bar__fill" style="width: 27%"></div>
-                </div>
-            </div>
+            }
         </div>
         <div class="pipeline-total">
-            <span class="pipeline-total__label">Total Pipeline</span>
-            <span class="pipeline-total__value">$2.17M</span>
+            <span class="pipeline-total__label">Tracked items</span>
+            <span class="pipeline-total__value">{{ vm.pipelineTotal | number }}</span>
         </div>
     </div>
 </section>
 
-<!-- Tables Row -->
 <section class="tables-row">
     <div class="table-card">
         <div class="table-card__header">
-            <h3 class="chart-card__title">Recent Orders</h3>
-            <p class="chart-card__subtitle">Latest transactions processed</p>
+            <h3 class="chart-card__title">Top Records</h3>
+            <p class="chart-card__subtitle">Organizations and contacts from CRM summary</p>
         </div>
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Order ID</th>
-                    <th>Customer</th>
-                    <th class="text-right">Amount</th>
-                    <th class="text-right">Status</th>
+                    <th>Record</th>
+                    <th class="text-right">Detail</th>
                 </tr>
             </thead>
             <tbody>
+                @for (record of vm.topRecords; track record.name) {
                 <tr>
-                    <td>#ORD-4829</td>
-                    <td>Acme Corp</td>
-                    <td class="text-right">$12,450</td>
-                    <td class="text-right"><span class="status-accent">Completed</span></td>
+                    <td>
+                        <div class="avatar-name">
+                            <div class="avatar-sm">{{ record.initials }}</div>
+                            <span>{{ record.name }}</span>
+                        </div>
+                    </td>
+                    <td class="text-right"><span class="status-muted">{{ record.detail }}</span></td>
                 </tr>
+                } @empty {
                 <tr>
-                    <td>#ORD-4828</td>
-                    <td>TechStart Inc</td>
-                    <td class="text-right">$8,920</td>
-                    <td class="text-right"><span class="status-muted">Processing</span></td>
+                    <td colspan="2">No CRM records available.</td>
                 </tr>
-                <tr>
-                    <td>#ORD-4827</td>
-                    <td>Global Solutions</td>
-                    <td class="text-right">$24,780</td>
-                    <td class="text-right"><span class="status-accent">Completed</span></td>
-                </tr>
-                <tr>
-                    <td>#ORD-4826</td>
-                    <td>Innovate Ltd</td>
-                    <td class="text-right">$5,340</td>
-                    <td class="text-right"><span class="status-accent">Completed</span></td>
-                </tr>
-                <tr>
-                    <td>#ORD-4825</td>
-                    <td>Nexus Group</td>
-                    <td class="text-right">$16,200</td>
-                    <td class="text-right"><span class="status-muted">Processing</span></td>
-                </tr>
+                }
             </tbody>
         </table>
     </div>
 
     <div class="table-card">
         <div class="table-card__header">
-            <h3 class="chart-card__title">Top Customers</h3>
-            <p class="chart-card__subtitle">By total revenue contribution</p>
+            <h3 class="chart-card__title">Next Actions</h3>
+            <p class="chart-card__subtitle">B4F-composed follow-up queue</p>
         </div>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Customer</th>
-                    <th class="text-right">Orders</th>
-                    <th class="text-right">Revenue</th>
-                    <th class="text-right">Growth</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>
-                        <div class="avatar-name">
-                            <div class="avatar-sm">GS</div><span>Global Solutions</span>
-                        </div>
-                    </td>
-                    <td class="text-right">142</td>
-                    <td class="text-right">$284K</td>
-                    <td class="text-right"><span class="status-accent">+24%</span></td>
-                </tr>
-                <tr>
-                    <td>
-                        <div class="avatar-name">
-                            <div class="avatar-sm">AC</div><span>Acme Corp</span>
-                        </div>
-                    </td>
-                    <td class="text-right">98</td>
-                    <td class="text-right">$197K</td>
-                    <td class="text-right"><span class="status-accent">+18%</span></td>
-                </tr>
-                <tr>
-                    <td>
-                        <div class="avatar-name">
-                            <div class="avatar-sm">TS</div><span>TechStart Inc</span>
-                        </div>
-                    </td>
-                    <td class="text-right">87</td>
-                    <td class="text-right">$156K</td>
-                    <td class="text-right"><span class="status-accent">+31%</span></td>
-                </tr>
-                <tr>
-                    <td>
-                        <div class="avatar-name">
-                            <div class="avatar-sm">NG</div><span>Nexus Group</span>
-                        </div>
-                    </td>
-                    <td class="text-right">76</td>
-                    <td class="text-right">$142K</td>
-                    <td class="text-right"><span class="status-accent">+15%</span></td>
-                </tr>
-                <tr>
-                    <td>
-                        <div class="avatar-name">
-                            <div class="avatar-sm">VS</div><span>Vertex Systems</span>
-                        </div>
-                    </td>
-                    <td class="text-right">52</td>
-                    <td class="text-right">$94K</td>
-                    <td class="text-right"><span class="status-accent">+12%</span></td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="alerts-list">
+            @for (action of vm.actions; track action.label) {
+            <div class="alert-item">
+                <div class="alert-icon alert-icon--accent"><i class="fa-solid fa-arrow-right"></i></div>
+                <div>
+                    <p class="alert-title">{{ action.label }}</p>
+                    <p class="alert-desc">{{ action.count | number }} item(s) need attention</p>
+                </div>
+            </div>
+            } @empty {
+            <div class="alert-item">
+                <div class="alert-icon"><i class="fa-solid fa-check"></i></div>
+                <div>
+                    <p class="alert-title">No pending CRM actions</p>
+                    <p class="alert-desc">The current B4F summary has no follow-up items.</p>
+                </div>
+            </div>
+            }
+        </div>
     </div>
 </section>
 
-<!-- Team Performance & Inventory -->
 <section class="charts-row">
     <div class="chart-card">
         <div class="chart-card__header">
-            <h3 class="chart-card__title">Inventory Status</h3>
-            <p class="chart-card__subtitle">Current stock levels</p>
+            <h3 class="chart-card__title">Products</h3>
+            <p class="chart-card__subtitle">Catalog footprint</p>
         </div>
-        <div class="pipeline-bars">
-            <div class="pipeline-item">
-                <div class="pipeline-item__header">
-                    <span class="pipeline-item__name">In Stock</span>
-                    <span class="pipeline-item__value">8,742</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-bar__fill" style="width: 87%"></div>
-                </div>
-            </div>
-            <div class="pipeline-item">
-                <div class="pipeline-item__header">
-                    <span class="pipeline-item__name">Low Stock</span>
-                    <span class="pipeline-item__value">1,248</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-bar__fill"
-                        style="width: 12%; background-color: var(--color-gray-400, #9CA3AF);"></div>
-                </div>
-            </div>
-            <div class="pipeline-item">
-                <div class="pipeline-item__header">
-                    <span class="pipeline-item__name">Out of Stock</span>
-                    <span class="pipeline-item__value">87</span>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-bar__fill"
-                        style="width: 1%; background-color: var(--color-gray-400, #9CA3AF);"></div>
-                </div>
-            </div>
-        </div>
-        <div class="pipeline-total"
-            style="border-top: 1px solid var(--color-border); margin-top: 2rem; padding-top: 1.5rem;">
-            <span class="pipeline-total__label" style="text-transform: uppercase;">Total SKUs</span>
-            <span class="pipeline-total__value">10,077</span>
+        <div class="pipeline-total pipeline-total--standalone">
+            <span class="pipeline-total__label">Products</span>
+            <span class="pipeline-total__value">{{ vm.productsTotal | number }}</span>
         </div>
     </div>
 
@@ -282,76 +146,4 @@
         <div id="team-performance-chart" style="height: 280px; margin-top: 1rem;"></div>
     </div>
 </section>
-
-<!-- Activity & Alerts -->
-<section class="tables-row">
-    <div class="table-card">
-        <div class="table-card__header">
-            <h3 class="chart-card__title">Recent Activity</h3>
-            <p class="chart-card__subtitle">Latest system events</p>
-        </div>
-        <div class="activity-list">
-            <div class="activity-item">
-                <div class="activity-dot activity-dot--accent"></div>
-                <div>
-                    <p class="activity-text">New order <strong>#ORD-4829</strong> received from Acme Corp</p>
-                    <p class="activity-time">2 minutes ago</p>
-                </div>
-            </div>
-            <div class="activity-item">
-                <div class="activity-dot"></div>
-                <div>
-                    <p class="activity-text">Payment processed for order <strong>#ORD-4828</strong></p>
-                    <p class="activity-time">15 minutes ago</p>
-                </div>
-            </div>
-            <div class="activity-item">
-                <div class="activity-dot"></div>
-                <div>
-                    <p class="activity-text">Inventory alert: Low stock on Product SKU-8472</p>
-                    <p class="activity-time">1 hour ago</p>
-                </div>
-            </div>
-            <div class="activity-item">
-                <div class="activity-dot"></div>
-                <div>
-                    <p class="activity-text">Customer <strong>Global Solutions</strong> updated profile information</p>
-                    <p class="activity-time">3 hours ago</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="table-card">
-        <div class="table-card__header">
-            <h3 class="chart-card__title">System Alerts</h3>
-            <p class="chart-card__subtitle">Requires attention</p>
-        </div>
-        <div class="alerts-list">
-            <div class="alert-item">
-                <div class="alert-icon alert-icon--accent"><i class="fa-solid fa-exclamation"></i></div>
-                <div>
-                    <p class="alert-title">Invoice Overdue</p>
-                    <p class="alert-desc">3 invoices are past due date and require follow-up</p><button
-                        class="link-accent text-xs">Review Invoices</button>
-                </div>
-            </div>
-            <div class="alert-item">
-                <div class="alert-icon"><i class="fa-solid fa-box"></i></div>
-                <div>
-                    <p class="alert-title">Inventory Replenishment</p>
-                    <p class="alert-desc">12 products need restocking within 7 days</p><button
-                        class="link-accent text-xs">View Products</button>
-                </div>
-            </div>
-            <div class="alert-item">
-                <div class="alert-icon"><i class="fa-solid fa-chart-line"></i></div>
-                <div>
-                    <p class="alert-title">Monthly Report Ready</p>
-                    <p class="alert-desc">December performance report is available for review</p><button
-                        class="link-accent text-xs">Download Report</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+}

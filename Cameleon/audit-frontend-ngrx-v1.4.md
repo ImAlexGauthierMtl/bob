@@ -31,6 +31,17 @@ Le frontend ne contenait aucun store NGRX au debut de l'audit. Cette passe ajout
 
 Le frontend legacy n'est pas encore completement migre vers le modele strict "actions -> effects -> services -> B4F". Plusieurs pages continuent d'appeler directement des services Angular et quelques composants injectent encore `HttpClient` directement. Cette passe installe le chemin de migration et couvre les nouvelles compositions B4F, mais ne reecrit pas toute l'application.
 
+## Progression apres le rapport final
+
+- `frontend/src/app/pages/dashboard/dashboard.ts` ne contient plus d'injection de services CRUD ni de `.subscribe()`.
+- `frontend/src/app/pages/dashboard/dashboard.html` lit le view-model CRM via `vm$ | async`.
+- `frontend/src/app/store/crm/crm.selectors.ts` expose les selectors du feature CRM.
+- Le dashboard dispatch `loadCrmDashboard` et consomme `crm-b4f-api /dashboard/summary` via l'Effect existant.
+- `crm-b4f-api /dashboard/summary` n'utilise plus l'ancien statut opportunite `OPEN`; il agrege les statuts ouverts `PROSPECTING`, `QUALIFICATION`, `PROPOSAL` et `NEGOTIATION`.
+- Validation locale: `npm run build` OK.
+- Validation Docker locale: `GET http://localhost:8002/dashboard/summary` retourne `HTTP 200`.
+- Capture UI locale: `captures/cde-dashboard-ngrx.png`.
+
 Exemples de reliquats a traiter dans une passe dediee:
 
 ```bash
@@ -50,6 +61,8 @@ Resultats:
 
 - `npm run build`: OK, avec warnings Angular existants sur optional chaining, imports inutilises, budgets CSS et dependances CommonJS.
 - `run_frontend_e2e.sh --project=chromium`: OK, 1 test passed.
+- `apis/exposed/crm-b4f-api/run_tests.sh`: OK, 9 tests passed, couverture 99.65 %.
+- Playwright local sur `http://localhost:4700/dashboard`: OK, aucune banniere `Request failed`.
 
 ## Statut par regle
 
@@ -57,7 +70,7 @@ Resultats:
 |---|---|---|
 | F-01 service Angular par B4F | OK partiel | Services B4F ajoutes pour les compositions; services legacy par entite conserves comme support |
 | F-02 feature NGRX par B4F | OK | `frontend/src/app/store/{auth,crm,communication,ai-agent,platform,kb}` |
-| F-03 aucun HTTP hors Effects | VIOLATION | Migration legacy incomplete; les nouvelles compositions passent par Effects |
-| F-04 templates async | VIOLATION | Plusieurs pages utilisent encore subscriptions/signals locaux; pas de migration globale dans cette passe |
+| F-03 aucun HTTP hors Effects | VIOLATION | Dashboard migre vers CRM Effect/B4F; migration legacy incomplete sur les autres pages |
+| F-04 templates async | VIOLATION | Dashboard lit `vm$ | async`; plusieurs pages utilisent encore subscriptions/signals locaux |
 | F-06 Playwright E2E | OK | `frontend/e2e/smoke.spec.ts` et `frontend/playwright.config.ts` |
 | F-08 hook pre-commit smoke E2E | OK | `frontend/.husky/pre-commit` lance `npm run e2e -- --project=chromium` |

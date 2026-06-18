@@ -10,6 +10,7 @@ from app.infrastructure.clients.crm_clients import (
     OrgClient,
     ProductClient,
 )
+from app.application.services.crm_dashboard_service import OPEN_OPPORTUNITY_STAGES
 from app.middleware.auth import get_current_user, settings
 from app.presentation.schemas import crm_schemas
 from app.presentation.routes import (
@@ -38,10 +39,15 @@ def entity_payload(kind, entity_id=None, **overrides):
 class FakeCRMClient:
     def __init__(self, kind):
         self.kind = kind
+        self.calls = []
 
     async def list(self, *args, **kwargs):
+        self.calls.append(("list", args, kwargs))
         skip = args[0] if len(args) > 0 else kwargs.get("skip", 0)
         limit = args[1] if len(args) > 1 else kwargs.get("limit", 50)
+        stage = kwargs.get("stage")
+        if self.kind == "opportunity" and stage and stage != "PROSPECTING":
+            return {"items": [], "total": 0, "skip": skip, "limit": limit}
         return {"items": [entity_payload(self.kind)], "total": 1, "skip": skip, "limit": limit}
 
     async def get(self, entity_id, forward_headers=None):
@@ -227,6 +233,10 @@ def test_dashboard_summary_composes_crm_backends(client, auth_headers):
     }
     assert payload["highlights"]["contacts"][0]["kind"] == "contact"
     assert {action["type"] for action in payload["next_actions"]} == {"review_pipeline", "follow_up"}
+    opportunity_calls = dashboard_routes.dashboard_service.opportunity_client.calls
+    stages = [call[2].get("stage") for call in opportunity_calls]
+    assert stages == list(OPEN_OPPORTUNITY_STAGES)
+    assert "OPEN" not in stages
 
 
 def test_organization_and_department_routes(client, auth_headers):
@@ -246,7 +256,7 @@ def test_organization_and_department_routes(client, auth_headers):
 
 
 def test_opportunity_quote_activity_and_product_routes(client, auth_headers):
-    assert client.get("/opportunities", params={"organization_id": "org-1", "stage": "OPEN"}, headers=auth_headers).json()["total"] == 1
+    assert client.get("/opportunities", params={"organization_id": "org-1", "stage": "PROSPECTING"}, headers=auth_headers).json()["total"] == 1
     assert client.post("/opportunities", json={"name": "Deal"}, headers=auth_headers).status_code == 201
     assert client.get("/opportunities/opp-1", headers=auth_headers).json()["id"] == "opp-1"
     assert client.get("/opportunities/missing", headers=auth_headers).status_code == 404
@@ -342,7 +352,7 @@ async def test_backend_client_methods_cover_paths(monkeypatch):
     assert (await org_client.update_department("dept-1", {"name": "Revenue"}))["name"] == "Revenue"
     assert await org_client.delete_department("dept-1") is True
 
-    assert (await opportunity_client.list(1, 2, "org-1", "OPEN"))["skip"] == 1
+    assert (await opportunity_client.list(1, 2, "org-1", "PROSPECTING"))["skip"] == 1
     assert await opportunity_client.get("missing") is None
     assert (await opportunity_client.get("opp-1"))["id"] == "opp-1"
     assert (await opportunity_client.create({"name": "Deal"}))["name"] == "Deal"
