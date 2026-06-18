@@ -76,13 +76,21 @@ class Settings(BaseSettings):
     # Observability
     otel_exporter_otlp_endpoint: Optional[str] = None
 
-    # Membrane Integration Platform
+    # Pipedream Integration Platform
+    pipedream_client_id: Optional[str] = None
+    pipedream_client_secret: Optional[str] = None
+    pipedream_project_id: Optional[str] = None
+    pipedream_environment: str = "development"
+    pipedream_api_url: str = "https://api.pipedream.com/v1"
+    pipedream_webhook_secret: Optional[str] = None
+
+    # Legacy local integration storage. These fields are kept for old local
+    # tables and historical deployments; new provider flows use Pipedream.
     membrane_workspace_key: Optional[str] = None
     membrane_workspace_secret: Optional[str] = None
     membrane_client_token: Optional[str] = None
-    membrane_api_url: str = "https://api.getmembrane.com"
-    # HMAC-SHA256 secret used to verify incoming Membrane webhooks.
-    # Configure the same value in Membrane Console → Admin → Webhooks → Secret.
+    membrane_api_url: str = ""
+    # Legacy webhook secret for historical deployments only.
     membrane_webhook_secret: Optional[str] = None
 
     # Auth-specific (used by auth-api seeding, ignored by other services)

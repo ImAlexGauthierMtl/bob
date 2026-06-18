@@ -4,7 +4,7 @@
 - Les skills portables `dx_*` versionnés dans `.agents/skills/` restent la référence officielle; les skills de conversion CDE vivent dans `Cameleon/skills/`.
 - Mettre à jour les skills avec `./.agents/update-skills.sh`; ne pas modifier un `SKILL.md` localement.
 - Les anciens workflows locaux, règles Playwright locales et templates d'agent ne sont plus applicables.
-- Les documents historiques du dépôt, dont `docs/ARCHITECTURE.md`, `docs/MEMBRANE_ARCHITECTURE.md` et les README d'API, servent seulement de contexte. En cas de conflit, appliquer `docs/regles-architecture-deploiement.md`.
+- Les documents historiques du dépôt, dont `docs/ARCHITECTURE.md` et les README d'API, servent seulement de contexte. Pour les intégrations actives, utiliser `docs/PIPEDREAM_ARCHITECTURE.md`. En cas de conflit, appliquer `docs/regles-architecture-deploiement.md`.
 
 ## Cible De Refactor
 

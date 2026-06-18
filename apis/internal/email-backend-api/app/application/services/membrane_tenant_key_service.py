@@ -1,4 +1,4 @@
-"""Membrane tenant key scoping helpers."""
+"""Integration external user scoping helpers."""
 
 from typing import Optional
 
@@ -17,7 +17,7 @@ _SCOPE_PER_ORG = {
 
 
 def build_tenant_key(tenant_id: str, scope: str, user_id: str, org_id: Optional[str]) -> str:
-    """Build a namespaced tenantKey for Membrane."""
+    """Build a namespaced external user key for provider integrations."""
     tenant_id = tenant_id or "default"
     if scope == "per-tenant":
         return f"t:{tenant_id}"

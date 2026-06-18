@@ -1,9 +1,9 @@
 """MS365 provider routes for OAuth flow, sync orchestration, and email/event actions.
 
-DEPRECATED: This custom MS365 integration is being replaced by Membrane (getmembrane.com).
-Membrane handles OAuth2, token refresh, delta sync, and provider-specific API calls.
+DEPRECATED: This custom MS365 integration is being replaced by Pipedream Connect.
+Pipedream handles OAuth2, token refresh, and provider-specific integration flows.
 During the transition period, these routes remain available for existing MS365 connections.
-New integrations should use the provider Membrane routes.
+New integrations should use the provider Pipedream routes.
 """
 
 import os

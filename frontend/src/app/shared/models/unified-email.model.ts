@@ -37,7 +37,7 @@ export interface UnifiedEmail {
     ai_action_items?: string[] | null;
     created_at: string;
     updated_at?: string;
-    // Membrane-specific fields
+    // local integration fields
     membrane_connection_id?: string;
     provider?: string;
     tenant_id?: string;

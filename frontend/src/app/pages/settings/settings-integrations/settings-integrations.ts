@@ -39,10 +39,10 @@ export class SettingsIntegrationsComponent implements OnInit {
     ms365Syncing = false;
     ms365Error: string | null = null;
 
-    /** Key used consistently for the Outlook integration across legacy and Membrane. */
+    /** Key used consistently for the Outlook integration across legacy and Pipedream. */
     readonly OUTLOOK_KEY = 'microsoft-outlook';
 
-    // Membrane state
+    // Pipedream state
     membraneConnections: MembraneConnection[] = [];
     membraneIntegrations: MembraneIntegration[] = [];
     membraneLoading = false;
@@ -53,7 +53,7 @@ export class SettingsIntegrationsComponent implements OnInit {
     integrationSettings: IntegrationSetting[] = [];
     isAdmin = false;
 
-    // Membrane platform config modal
+    // Pipedream platform config modal
     showMembraneConfigModal = false;
     membraneConfigured = false;
     /** True when the server confirmed a secret is already stored. Drives the
@@ -63,9 +63,11 @@ export class SettingsIntegrationsComponent implements OnInit {
     /** Local flag: user clicked "Change secret" and is now editing freely. */
     membraneEditingSecret = false;
     membraneConfigForm: MembraneConfig = {
-        workspace_key: '',
-        workspace_secret: '',
-        api_url: 'https://api.getmembrane.com',
+        client_id: '',
+        client_secret: '',
+        project_id: '',
+        environment: 'development',
+        api_url: 'https://api.pipedream.com/v1',
     };
     membraneConfigSaving = false;
     membraneConfigError: string | null = null;
@@ -74,9 +76,9 @@ export class SettingsIntegrationsComponent implements OnInit {
     get connectedIntegrations(): IntegrationViewModel[] {
         const connected: IntegrationViewModel[] = [];
         const hasMembraneOutlook = this.membraneConnections.some(
-            c => !c.disconnected && c.integration_key === this.OUTLOOK_KEY,
+            c => !c.disconnected && this._connectionKey(c) === this.OUTLOOK_KEY,
         );
-        // Legacy MS365 (during transition) — only shown if no Membrane Outlook yet
+        // Legacy MS365 (during transition) — only shown if no Pipedream Outlook yet
         if (this.ms365IsConnected && !hasMembraneOutlook) {
             connected.push({
                 key: this.OUTLOOK_KEY,
@@ -87,15 +89,16 @@ export class SettingsIntegrationsComponent implements OnInit {
                 isLegacyMs365: true,
             });
         }
-        // Membrane connections
+        // Pipedream connections
         for (const conn of this.membraneConnections) {
             if (conn.disconnected) continue;
-            const integration = this.membraneIntegrations.find(i => i.key === conn.integration_key || i.id === conn.integration_id);
+            const key = this._connectionKey(conn);
+            const integration = this.membraneIntegrations.find(i => i.key === key || i.id === conn.integration_id);
             connected.push({
-                key: conn.integration_key,
-                name: integration?.name || conn.name || conn.integration_key,
-                iconClass: this._iconForIntegration(conn.integration_key),
-                iconColorClass: this._colorClassForIntegration(conn.integration_key),
+                key,
+                name: integration?.name || conn.name || key,
+                iconClass: this._iconForIntegration(key),
+                iconColorClass: this._colorClassForIntegration(key),
                 description: conn.name,
                 connection: conn,
             });
@@ -103,7 +106,7 @@ export class SettingsIntegrationsComponent implements OnInit {
         return connected;
     }
 
-    /** True when the Membrane catalog already lists Microsoft-Outlook. */
+    /** True when the Pipedream catalog already lists Microsoft-Outlook. */
     get _hasOutlookInMembraneCatalog(): boolean {
         return this.membraneIntegrations.some(i => i.key === this.OUTLOOK_KEY);
     }
@@ -112,7 +115,7 @@ export class SettingsIntegrationsComponent implements OnInit {
         const connectedKeys = new Set(this.connectedIntegrations.map(i => i.key));
         const available: IntegrationViewModel[] = [];
 
-        // Membrane integrations not yet connected
+        // Pipedream integrations not yet connected
         for (const integration of this.membraneIntegrations) {
             if (!connectedKeys.has(integration.key)) {
                 available.push({
@@ -125,7 +128,7 @@ export class SettingsIntegrationsComponent implements OnInit {
             }
         }
 
-        // Hardcoded available integrations (fallback during Membrane setup)
+        // Hardcoded available integrations (fallback during Pipedream setup)
         const hardcoded = [
             { key: 'hubspot', name: 'HubSpot', iconClass: 'fa-brands fa-hubspot', iconColorClass: 'integration-card__icon--orange', description: 'Sync contacts and marketing campaigns with HubSpot' },
             { key: 'salesforce', name: 'Salesforce', iconClass: 'fa-brands fa-salesforce', iconColorClass: 'integration-card__icon--sf', description: 'Bi-directional sync with Salesforce CRM data' },
@@ -140,7 +143,7 @@ export class SettingsIntegrationsComponent implements OnInit {
             }
         }
 
-        // Legacy MS365 available (only if no Membrane connection AND not in Membrane catalog already)
+        // Legacy MS365 available (only if no Pipedream connection AND not in Pipedream catalog already)
         if (!this.ms365IsConnected && !this._hasOutlookInMembraneCatalog) {
             available.unshift({
                 key: this.OUTLOOK_KEY,
@@ -184,8 +187,8 @@ export class SettingsIntegrationsComponent implements OnInit {
             window.history.replaceState({}, '', window.location.pathname);
         }
 
-        // Membrane callback
-        const membraneStatus = params.get('membrane');
+        // Pipedream callback
+        const membraneStatus = params.get('pipedream') || params.get('membrane');
         if (membraneStatus === 'connected') {
             this.loadMembraneData();
             window.history.replaceState({}, '', window.location.pathname);
@@ -265,7 +268,7 @@ export class SettingsIntegrationsComponent implements OnInit {
             error: (err) => {
                 this.membraneLoading = false;
                 if (err?.status === 503) {
-                    this.membraneError = 'Membrane integration is not configured on this instance.';
+                    this.membraneError = 'Pipedream integration is not configured on this instance.';
                 }
             },
         });
@@ -321,7 +324,7 @@ export class SettingsIntegrationsComponent implements OnInit {
             },
             error: (err) => {
                 this.membraneLoading = false;
-                console.error('Failed to disconnect Membrane integration', err);
+                console.error('Failed to disconnect Pipedream integration', err);
                 alert('Failed to disconnect. Please try again.');
             },
         });
@@ -396,7 +399,12 @@ export class SettingsIntegrationsComponent implements OnInit {
         return map[key.toLowerCase()] || 'Connect this integration to your workspace';
     }
 
-    // ── Membrane Platform Config ─────────────────────────────────
+    // ── Pipedream Platform Config ─────────────────────────────────
+
+    private _connectionKey(connection: MembraneConnection): string {
+        const key = connection.integration_key || connection.app || '';
+        return key.replace(/_/g, '-');
+    }
 
     openMembraneConfig(): void {
         this.membraneConfigError = null;
@@ -415,13 +423,13 @@ export class SettingsIntegrationsComponent implements OnInit {
     /** User clicks "Change secret" — unlocks the secret input for editing. */
     startEditingSecret(): void {
         this.membraneEditingSecret = true;
-        this.membraneConfigForm.workspace_secret = '';
+        this.membraneConfigForm.client_secret = '';
     }
 
     /** User clicks "Keep existing secret" — locks the input back. */
     cancelEditingSecret(): void {
         this.membraneEditingSecret = false;
-        this.membraneConfigForm.workspace_secret = '';
+        this.membraneConfigForm.client_secret = '';
     }
 
     loadMembraneConfig(): void {
@@ -429,15 +437,17 @@ export class SettingsIntegrationsComponent implements OnInit {
             next: (res) => {
                 this.membraneConfigured = res.configured;
                 this.membraneSecretConfigured = res.secret_configured;
-                this.membraneConfigForm.workspace_key = res.workspace_key;
+                this.membraneConfigForm.client_id = res.client_id;
+                this.membraneConfigForm.project_id = res.project_id;
+                this.membraneConfigForm.environment = res.environment;
                 this.membraneConfigForm.api_url = res.api_url;
-                this.membraneConfigForm.workspace_secret = '';
+                this.membraneConfigForm.client_secret = '';
                 // If no secret exists yet, open the input in edit mode so the
                 // user can type something; otherwise show it as locked/masked.
                 this.membraneEditingSecret = !res.secret_configured;
             },
             error: (err) => {
-                console.error('Failed to load Membrane config', err);
+                console.error('Failed to load Pipedream config', err);
             },
         });
     }
@@ -450,11 +460,13 @@ export class SettingsIntegrationsComponent implements OnInit {
         // editing it. This prevents the common "I opened the modal, saved, and
         // my secret got wiped because the field was empty" footgun.
         const payload: MembraneConfig = {
-            workspace_key: this.membraneConfigForm.workspace_key,
+            client_id: this.membraneConfigForm.client_id,
+            project_id: this.membraneConfigForm.project_id,
+            environment: this.membraneConfigForm.environment,
             api_url: this.membraneConfigForm.api_url,
         };
-        if (this.membraneEditingSecret && this.membraneConfigForm.workspace_secret) {
-            payload.workspace_secret = this.membraneConfigForm.workspace_secret;
+        if (this.membraneEditingSecret && this.membraneConfigForm.client_secret) {
+            payload.client_secret = this.membraneConfigForm.client_secret;
         }
 
         this.membraneConfigSaving = true;
@@ -464,7 +476,7 @@ export class SettingsIntegrationsComponent implements OnInit {
                 this.membraneConfigured = res.configured;
                 this.membraneSecretConfigured = res.secret_configured;
                 this.membraneEditingSecret = false;
-                this.membraneConfigForm.workspace_secret = '';
+                this.membraneConfigForm.client_secret = '';
                 this.membraneConfigSuccess = res.message || 'Configuration saved successfully';
                 this.loadMembraneData();
             },

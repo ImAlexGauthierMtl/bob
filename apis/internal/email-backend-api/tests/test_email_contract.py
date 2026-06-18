@@ -31,7 +31,7 @@ from app.presentation.routes import (
     event_routes,
     integration_settings_routes,
     membrane_routes,
-    provider_membrane_routes,
+    provider_pipedream_routes,
     provider_ms365_routes,
     smart_label_routes,
 )
@@ -910,7 +910,7 @@ def test_python_package_contract_loads_runtime_components():
         integration_settings_routes,
         membrane_routes,
         provider_ms365_routes,
-        provider_membrane_routes,
+        provider_pipedream_routes,
     )
     assert contract.load_runtime_repository_classes() == (
         MS365Repository,

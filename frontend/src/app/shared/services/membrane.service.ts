@@ -16,11 +16,10 @@ import {
 
 const API_URL = `${environment.communicationApiUrl}`;
 
-/** Angular service for Membrane integration platform.
+/** Angular service for Pipedream integration platform.
  *
- * This service proxies all Membrane interactions through the Croo backend.
- * The backend generates signed JWTs scoped to the correct tenantKey
- * (per-user, per-organization, or per-tenant depending on admin config).
+ * This service proxies all Pipedream interactions through the Croo backend.
+ * The backend creates short-lived Connect tokens scoped to the current user.
  */
 @Injectable({ providedIn: 'root' })
 export class MembraneService {
@@ -28,19 +27,19 @@ export class MembraneService {
 
     // ── Token ─────────────────────────────────────────────────────
 
-    /** Get a signed Membrane JWT token for a given integration. */
+    /** Get a short-lived Pipedream Connect token for a given integration. */
     getToken(integrationKey: string): Observable<MembraneTokenResponse> {
         return this.http.post<MembraneTokenResponse>(
-            `${API_URL}/membrane/token`,
+            `${API_URL}/pipedream/token`,
             { integration_key: integrationKey } as MembraneTokenRequest,
         );
     }
 
     // ── Connections ───────────────────────────────────────────────
 
-    /** List Membrane connections for the current scoped tenant. */
+    /** List Pipedream connections for the current scoped user/entity. */
     getConnections(integrationKey?: string): Observable<MembraneConnectionListResponse> {
-        let url = `${API_URL}/membrane/connections`;
+        let url = `${API_URL}/pipedream/connections`;
         if (integrationKey) {
             url += `?integration_key=${encodeURIComponent(integrationKey)}`;
         }
@@ -49,27 +48,27 @@ export class MembraneService {
 
     // ── Integrations Catalog ─────────────────────────────────────
 
-    /** List available integrations configured in the Membrane workspace. */
+    /** List available Pipedream apps. */
     getIntegrations(): Observable<MembraneIntegrationListResponse> {
-        return this.http.get<MembraneIntegrationListResponse>(`${API_URL}/membrane/integrations`);
+        return this.http.get<MembraneIntegrationListResponse>(`${API_URL}/pipedream/integrations`);
     }
 
     // ── Actions ───────────────────────────────────────────────────
 
-    /** Run a Membrane action (e.g. send-email, create-deal). */
+    /** Run a Pipedream action (e.g. send-email, create-deal). */
     runAction(actionKey: string, request: MembraneActionRunRequest): Observable<MembraneActionRunResponse> {
         return this.http.post<MembraneActionRunResponse>(
-            `${API_URL}/membrane/actions/${actionKey}/run`,
+            `${API_URL}/pipedream/actions/${actionKey}/run`,
             request,
         );
     }
 
     // ── Hosted Connection URL ─────────────────────────────────────
 
-    /** Get a hosted Membrane connection URL to redirect the user to.
+    /** Get a hosted Pipedream Connect Link URL to redirect the user to.
      *  This is the simplest flow for Angular (no React SDK needed). */
     getConnectUrl(integrationKey: string, redirectUri?: string): Observable<MembraneConnectUrlResponse> {
-        let url = `${API_URL}/membrane/connect-url?integration_key=${encodeURIComponent(integrationKey)}`;
+        let url = `${API_URL}/pipedream/connect-url?integration_key=${encodeURIComponent(integrationKey)}`;
         if (redirectUri) {
             url += `&redirect_uri=${encodeURIComponent(redirectUri)}`;
         }
@@ -78,25 +77,25 @@ export class MembraneService {
 
     // ── Convenience: Open Connection in New Window ────────────────
 
-    /** Redirect the browser to Membrane hosted connection UI. */
+    /** Redirect the browser to Pipedream hosted connection UI. */
     openConnection(integrationKey: string, redirectUri?: string): void {
         this.getConnectUrl(integrationKey, redirectUri).subscribe({
             next: (res) => {
                 window.location.href = res.url;
             },
             error: (err) => {
-                console.error('Failed to get Membrane connect URL', err);
+                console.error('Failed to get Pipedream connect URL', err);
             },
         });
     }
 
-    /** Disconnect a Membrane connection.
+    /** Disconnect a Pipedream connection.
      *
      * `integrationKey` is optional but recommended: it ensures the backend
      * resolves the tenantKey with the correct scope (per-user vs per-org).
      */
     disconnect(connectionId: string, integrationKey?: string): Observable<void> {
-        let url = `${API_URL}/membrane/connections/${encodeURIComponent(connectionId)}`;
+        let url = `${API_URL}/pipedream/connections/${encodeURIComponent(connectionId)}`;
         if (integrationKey) {
             url += `?integration_key=${encodeURIComponent(integrationKey)}`;
         }
@@ -106,10 +105,10 @@ export class MembraneService {
     // ── Platform Configuration ───────────────────────────────────
 
     getConfig(): Observable<MembraneConfigResponse> {
-        return this.http.get<MembraneConfigResponse>(`${API_URL}/membrane/config`);
+        return this.http.get<MembraneConfigResponse>(`${API_URL}/pipedream/config`);
     }
 
     updateConfig(config: MembraneConfig): Observable<MembraneConfigResponse> {
-        return this.http.put<MembraneConfigResponse>(`${API_URL}/membrane/config`, config);
+        return this.http.put<MembraneConfigResponse>(`${API_URL}/pipedream/config`, config);
     }
 }

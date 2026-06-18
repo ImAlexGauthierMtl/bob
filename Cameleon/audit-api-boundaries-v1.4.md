@@ -21,7 +21,7 @@ Le CI/CD, Harbor et les validations registry restent hors perimetre actif.
 |---|---|---|
 | `auth-b4f-api` | Auth/session/admin IAM | Conforme au domaine frontend; `auth_routes.py` contient JWT, refresh, rate limit et session courante. Les routes admin user/tenant/role restent surtout des facades CRUD. |
 | `crm-b4f-api` | CRM | Partiellement corrige: `/dashboard/summary` compose contacts, organisations, opportunites ouvertes, activites et produits en une reponse UI. Les opportunites ouvertes utilisent les statuts backend valides `PROSPECTING`, `QUALIFICATION`, `PROPOSAL` et `NEGOTIATION`, pas l'ancien statut `OPEN`. Des routes CRUD directes restent presentes comme facades de support. |
-| `communication-b4f-api` | Communication/integrations | Conforme A-08 apres refactor provider. Partiellement corrige A-06: `/integrations/overview` compose settings, connexions MS365/Membrane et smart labels. Les routes provider minces sont une delegation volontaire pour garder `email-backend-api` invisible. |
+| `communication-b4f-api` | Communication/integrations | Conforme A-08 apres refactor provider. Partiellement corrige A-06: `/integrations/overview` compose settings, connexions MS365/Pipedream et smart labels. Les routes provider minces sont une delegation volontaire pour garder `email-backend-api` invisible. |
 | `ai-agent-b4f-api` | Agent/Bob | Conforme A-06 au niveau B4F: `bob_chat_routes.py` gere session/titre/reponse Bob et `client_map_routes.py` orchestre l'analyse comportementale; les routes BCC/training/capability/settings sont des facades de support. |
 | `platform-b4f-api` | Workflows/usage/platform | Corrige: `/overview` compose workflows, monitoring, executions recentes et usage; `workflow_routes.py` contient aussi une logique d'override. `enrichment_routes.py` reste une placeholder non migree, mais pas une facade CRUD. |
 | `kb-b4f-api` | Knowledge base | Partiellement corrige: `/kb/home` compose categories, articles recents, articles populaires et stats. Les routes CRUD/search restent des facades de support. |
@@ -38,7 +38,7 @@ Conclusion A-06: conforme au niveau B4F. Chaque B4F expose maintenant au moins u
 | `opportunity-backend-api` | Opportunity | quotes, opportunity_products | OK |
 | `activity-backend-api` | Activity | aucune famille non liee relevee | OK |
 | `product-backend-api` | Product | aucune famille non liee relevee | OK |
-| `email-backend-api` | Email provider account/data | connections, synced emails/events, contacts, smart labels, integration settings, provider variants MS365/Membrane | OK |
+| `email-backend-api` | Email provider account/data | connections, synced emails/events, contacts, smart labels, integration settings, provider variants MS365/Pipedream | OK |
 | `agent-backend-api` | Bob/agent knowledge and capability model | BCC taxonomy, capabilities, training, client maps, Bob settings | OK avec domaine large; a surveiller si le module grossit encore |
 | `workflow-backend-api` | Workflow | steps, executions, step executions | OK |
 | `kb-backend-api` | Knowledge base article | categories, feedback/stat endpoints via backend | OK |

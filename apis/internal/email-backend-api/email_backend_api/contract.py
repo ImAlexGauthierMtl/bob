@@ -22,7 +22,7 @@ def load_runtime_routes() -> tuple[Any, ...]:
         import_module("app.presentation.routes.integration_settings_routes"),
         import_module("app.presentation.routes.membrane_routes"),
         import_module("app.presentation.routes.provider_ms365_routes"),
-        import_module("app.presentation.routes.provider_membrane_routes"),
+        import_module("app.presentation.routes.provider_pipedream_routes"),
     )
 
 

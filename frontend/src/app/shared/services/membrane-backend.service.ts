@@ -88,65 +88,65 @@ export interface MembraneBackendEventList {
 export class MembraneBackendService {
     private http = inject(HttpClient);
 
-    /** List Membrane connections for a user (returns first active one). */
+    /** List Pipedream-backed local connections for a user (returns first active one). */
     getConnection(userId: string, integrationKey?: string): Observable<MembraneBackendConnection> {
-        let url = `${API_URL}/membrane/connections/by-user/${userId}`;
+        let url = `${API_URL}/pipedream/connections/by-user/${userId}`;
         if (integrationKey) {
             url += `?integration_key=${encodeURIComponent(integrationKey)}`;
         }
         return this.http.get<MembraneBackendConnection>(url);
     }
 
-    /** Get a specific synced email from Membrane backend. */
+    /** Get a specific synced email from the local integration backend. */
     getEmail(id: string, userId: string): Observable<MembraneBackendEmail> {
-        return this.http.get<MembraneBackendEmail>(`${API_URL}/membrane/emails/${id}?user_id=${userId}`);
+        return this.http.get<MembraneBackendEmail>(`${API_URL}/pipedream/emails/${id}?user_id=${userId}`);
     }
 
-    /** List emails from Membrane backend. */
+    /** List emails from the local integration backend. */
     getEmails(userId: string, skip = 0, limit = 20, folder?: string, search?: string, smartLabel?: string, linkedContactId?: string): Observable<MembraneBackendEmailList> {
         const params: Record<string, string> = { user_id: userId, skip: String(skip), limit: String(limit) };
         if (folder) params['folder'] = folder;
         if (search) params['search'] = search;
         if (smartLabel) params['smart_label'] = smartLabel;
         if (linkedContactId) params['linked_contact_id'] = linkedContactId;
-        return this.http.get<MembraneBackendEmailList>(`${API_URL}/membrane/emails`, { params });
+        return this.http.get<MembraneBackendEmailList>(`${API_URL}/pipedream/emails`, { params });
     }
 
-    /** Send a new email via Membrane backend. */
+    /** Send a new email via Pipedream backend action. */
     sendEmail(userId: string, request: { subject: string; body_content: string; to_recipients: string[]; cc_recipients?: string[]; bcc_recipients?: string[]; body_type?: string }): Observable<{ status: string }> {
-        return this.http.post<{ status: string }>(`${API_URL}/membrane/emails/send`, { ...request, user_id: userId });
+        return this.http.post<{ status: string }>(`${API_URL}/pipedream/emails/send`, { ...request, user_id: userId });
     }
 
-    /** Reply to an email via Membrane backend. */
+    /** Reply to an email via Pipedream backend action. */
     replyEmail(id: string, userId: string, request: { comment: string; reply_all?: boolean }): Observable<{ status: string }> {
-        return this.http.post<{ status: string }>(`${API_URL}/membrane/emails/${id}/reply`, { ...request, user_id: userId });
+        return this.http.post<{ status: string }>(`${API_URL}/pipedream/emails/${id}/reply`, { ...request, user_id: userId });
     }
 
-    /** Forward an email via Membrane backend. */
+    /** Forward an email via Pipedream backend action. */
     forwardEmail(id: string, userId: string, request: { to_recipients: string[]; comment?: string }): Observable<{ status: string }> {
-        return this.http.post<{ status: string }>(`${API_URL}/membrane/emails/${id}/forward`, { ...request, user_id: userId });
+        return this.http.post<{ status: string }>(`${API_URL}/pipedream/emails/${id}/forward`, { ...request, user_id: userId });
     }
 
-    /** Pull recent emails from Membrane into the local DB. */
+    /** Pull recent emails via Pipedream action into the local DB. */
     syncEmails(top = 50): Observable<{ status: string; synced: number; fetched: number; errors: string[] }> {
         return this.http.post<{ status: string; synced: number; fetched: number; errors: string[] }>(
-            `${API_URL}/membrane/sync-emails?top=${top}`,
+            `${API_URL}/pipedream/sync-emails?top=${top}`,
             {}
         );
     }
 
-    /** List events from Membrane backend. */
+    /** List events from the local integration backend. */
     getEvents(userId: string, skip = 0, limit = 20, fromDate?: string, toDate?: string): Observable<MembraneBackendEventList> {
         const params: Record<string, string> = { user_id: userId, skip: String(skip), limit: String(limit) };
         if (fromDate) params['from_date'] = fromDate;
         if (toDate) params['to_date'] = toDate;
-        return this.http.get<MembraneBackendEventList>(`${API_URL}/membrane/events`, { params });
+        return this.http.get<MembraneBackendEventList>(`${API_URL}/pipedream/events`, { params });
     }
 
-    /** Trigger a Membrane action (e.g. sync emails) — delegates to B4F. */
+    /** Trigger a Pipedream action (e.g. sync emails) — delegates to B4F. */
     runAction(actionKey: string, body: { input?: Record<string, unknown>; connection_id?: string }): Observable<{ success: boolean; output?: Record<string, unknown>; error?: string }> {
         return this.http.post<{ success: boolean; output?: Record<string, unknown>; error?: string }>(
-            `${API_URL}/membrane/actions/${actionKey}/run`,
+            `${API_URL}/pipedream/actions/${actionKey}/run`,
             body,
         );
     }

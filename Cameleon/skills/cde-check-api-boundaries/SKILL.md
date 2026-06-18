@@ -32,6 +32,6 @@ description: "Audit or refactor Croo Digital Experience API boundaries against d
 ## Useful Checks
 
 - Search B4F database leakage: `rg -n "DATABASE_URL|create_engine|SessionLocal|alembic|Base\\.metadata|sqlalchemy" apis/exposed`
-- Search B4F external clients: `rg -n "httpx|requests|graph\\.microsoft|membrane|openai|stripe|twilio" apis/exposed`
+- Search B4F external clients: `rg -n "httpx|requests|graph\\.microsoft|pipedream|membrane|openai|stripe|twilio" apis/exposed`
 - Search Backend HTTP coupling: `rg -n "http://.*backend|backend-api|HTTPClient" apis/internal`
 - Search event bus usage: `rg -n "event_bus|Event\\(" apis/internal apis/shared`

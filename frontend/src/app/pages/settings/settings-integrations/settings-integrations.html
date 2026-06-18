@@ -5,19 +5,19 @@
         <p class="settings-panel__subtitle">Connect your favorite tools and services</p>
     </div>
 
-    <!-- Membrane Platform Status (Admin only) -->
+    <!-- Pipedream Platform Status (Admin only) -->
     @if (isAdmin) {
     <div style="background: var(--color-surface, #f8fafc); border: 1px solid var(--color-border, #e2e8f0); border-radius: 8px; padding: 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
         <div style="width: 40px; height: 40px; border-radius: 8px; background: var(--color-primary-light, #e0e7ff); display: flex; align-items: center; justify-content: center;">
             <i class="fa-solid fa-network-wired" style="color: var(--color-primary, #4f46e5);"></i>
         </div>
         <div style="flex: 1;">
-            <p style="font-weight: 600; font-size: 14px; margin: 0;">Membrane Integration Platform</p>
+            <p style="font-weight: 600; font-size: 14px; margin: 0;">Pipedream Integration Platform</p>
             <p style="font-size: 12px; color: var(--color-text-muted); margin: 2px 0 0;">
                 @if (membraneConfigured) {
                     <i class="fa-solid fa-check-circle" style="color: var(--color-success, #10b981);"></i> Configured — integrations available
                 } @else {
-                    <i class="fa-solid fa-circle-xmark" style="color: var(--color-danger, #ef4444);"></i> Not configured — set up your Membrane credentials to enable integrations
+                    <i class="fa-solid fa-circle-xmark" style="color: var(--color-danger, #ef4444);"></i> Not configured — set up your Pipedream credentials to enable integrations
                 }
             </p>
         </div>
@@ -162,14 +162,14 @@
         </div>
 </div>
 
-<!-- Membrane Configuration Modal -->
+<!-- Pipedream Configuration Modal -->
 @if (showMembraneConfigModal) {
 <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;"
     (click)="showMembraneConfigModal = false">
     <div style="background: white; border-radius: 12px; padding: 24px; width: 100%; max-width: 480px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);"
         (click)="$event.stopPropagation()">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3 style="margin: 0; font-size: 18px;">Configure Membrane Platform</h3>
+            <h3 style="margin: 0; font-size: 18px;">Configure Pipedream Platform</h3>
         <button style="background: none; border: none; cursor: pointer; font-size: 18px; color: var(--color-text-muted);"
             (click)="closeMembraneConfig()">
                 <i class="fa-solid fa-xmark"></i>
@@ -177,19 +177,19 @@
         </div>
 
         <p style="font-size: 13px; color: var(--color-text-muted); margin-bottom: 16px;">
-            Enter your <a href="https://getmembrane.com" target="_blank" style="color: var(--color-primary);">getmembrane.com</a> workspace credentials.
-            These are used to generate scoped JWTs for your users.
+            Enter your <a href="https://pipedream.com" target="_blank" style="color: var(--color-primary);">Pipedream</a> Connect credentials.
+            These are used to create short-lived Connect tokens for your users.
         </p>
 
         <div style="margin-bottom: 16px;">
-            <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Workspace Key</label>
+            <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Client ID</label>
             <input type="text" class="search-bar__input" style="width: 100%;"
-                [(ngModel)]="membraneConfigForm.workspace_key" placeholder="e.g. croo-prod-2025" />
+                [(ngModel)]="membraneConfigForm.client_id" placeholder="Pipedream OAuth client ID" />
         </div>
 
         <div style="margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <label style="font-size: 13px; font-weight: 500;">Workspace Secret</label>
+                <label style="font-size: 13px; font-weight: 500;">Client Secret</label>
                 @if (membraneSecretConfigured) {
                     @if (!membraneEditingSecret) {
                     <button type="button"
@@ -216,16 +216,30 @@
             </p>
             } @else {
             <input type="password" class="search-bar__input" style="width: 100%;"
-                [(ngModel)]="membraneConfigForm.workspace_secret"
-                [placeholder]="membraneSecretConfigured ? 'Enter new secret to replace existing' : 'Paste your workspace secret'"
+                [(ngModel)]="membraneConfigForm.client_secret"
+                [placeholder]="membraneSecretConfigured ? 'Enter new secret to replace existing' : 'Paste your Pipedream client secret'"
                 autocomplete="new-password" />
             }
+        </div>
+
+        <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Project ID</label>
+            <input type="text" class="search-bar__input" style="width: 100%;"
+                [(ngModel)]="membraneConfigForm.project_id" placeholder="proj_..." />
+        </div>
+
+        <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Environment</label>
+            <select class="search-bar__input" style="width: 100%;" [(ngModel)]="membraneConfigForm.environment">
+                <option value="development">Development</option>
+                <option value="production">Production</option>
+            </select>
         </div>
 
         <div style="margin-bottom: 20px;">
             <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">API URL</label>
             <input type="text" class="search-bar__input" style="width: 100%;"
-                [(ngModel)]="membraneConfigForm.api_url" placeholder="https://api.getmembrane.com" />
+                [(ngModel)]="membraneConfigForm.api_url" placeholder="https://api.pipedream.com/v1" />
         </div>
 
         @if (membraneConfigError) {
@@ -266,7 +280,7 @@
             Define how each integration is scoped within your tenant. Changes apply to all users.
         </p>
         <div class="integration-grid">
-            <!-- Membrane integrations -->
+            <!-- Pipedream integrations -->
             @for (integration of membraneIntegrations; track integration.key) {
             <div class="integration-card">
                 <div class="integration-card__header">
@@ -291,7 +305,7 @@
                 </div>
             </div>
             }
-            <!-- Hardcoded integrations that don't appear in membraneIntegrations yet -->
+            <!-- Hardcoded integrations that don't appear in Pipedream yet -->
             @for (hardcoded of [{key:'hubspot',name:'HubSpot'},{key:'salesforce',name:'Salesforce'},{key:'slack',name:'Slack'}]; track hardcoded.key) {
             @if (!membraneIntegrations.some(i => i.key === hardcoded.key)) {
             <div class="integration-card">

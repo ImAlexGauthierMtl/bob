@@ -16,7 +16,7 @@ Preuves:
 - `apis/exposed/` porte les B4F et `apis/internal/` porte les Backends.
 - Les B4F n'ont pas de dossier Alembic ni de connexion DB directe.
 - Le frontend ne cible pas les Backends internes.
-- Les intégrations MS365/Membrane ont été déplacées côté `email-backend-api`.
+- Les intégrations MS365/Pipedream ont été déplacées côté `email-backend-api`.
 - Les Backends utilisent Redis events au lieu d'appels HTTP Backend->Backend.
 
 ### Frontend NGRX

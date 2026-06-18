@@ -27,7 +27,7 @@ export class EmailService {
         );
     }
 
-    /** Try Membrane connection, fallback to legacy */
+    /** Try Pipedream-backed connection, fallback to legacy */
     getConnection(): Observable<UnifiedConnection | null> {
         return this.getUserId().pipe(
             switchMap(userId => this.membraneService.getConnection(userId).pipe(
@@ -44,7 +44,7 @@ export class EmailService {
         );
     }
 
-    /** Try Membrane emails, fallback to legacy */
+    /** Try Pipedream-backed emails, fallback to legacy */
     getEmails(skip = 0, limit = 50, folder?: string, search?: string, smartLabel?: string, linkedContactId?: string): Observable<UnifiedEmailListResponse> {
         return this.getUserId().pipe(
             switchMap(userId => this.membraneService.getEmails(userId, skip, limit, folder, search, smartLabel, linkedContactId).pipe(
@@ -52,17 +52,17 @@ export class EmailService {
                 catchError(() => this.ms365Service.getEmails(skip, limit, folder, search, smartLabel, linkedContactId).pipe(
                     map(res => this.mapLegacyEmailList(res)),
                     catchError(err => {
-                        console.error('EmailService: both membrane and legacy email fetch failed', err);
+                        console.error('EmailService: both Pipedream and legacy email fetch failed', err);
                         return throwError(() => err);
                     })
                 ))
             )),
             catchError(err => {
-                console.error('EmailService: membrane email fetch failed, trying legacy', err);
+                console.error('EmailService: Pipedream-backed email fetch failed, trying legacy', err);
                 return this.ms365Service.getEmails(skip, limit, folder, search, smartLabel, linkedContactId).pipe(
                     map(res => this.mapLegacyEmailList(res)),
                     catchError(err2 => {
-                        console.error('EmailService: both membrane and legacy email fetch failed', err2);
+                        console.error('EmailService: both Pipedream and legacy email fetch failed', err2);
                         return throwError(() => err2);
                     })
                 );
@@ -70,7 +70,7 @@ export class EmailService {
         );
     }
 
-    /** Try Membrane getEmail, fallback to legacy */
+    /** Try Pipedream-backed getEmail, fallback to legacy */
     getEmail(id: string): Observable<UnifiedEmail> {
         return this.getUserId().pipe(
             switchMap(userId => this.membraneService.getEmail(id, userId).pipe(
@@ -78,7 +78,7 @@ export class EmailService {
                 catchError(() => this.ms365Service.getEmail(id).pipe(
                     map(e => this.mapLegacyEmail(e)),
                     catchError(err => {
-                        console.error('EmailService: both membrane and legacy getEmail failed', err);
+                        console.error('EmailService: both Pipedream and legacy getEmail failed', err);
                         return throwError(() => err);
                     })
                 ))
@@ -87,7 +87,7 @@ export class EmailService {
                 return this.ms365Service.getEmail(id).pipe(
                     map(e => this.mapLegacyEmail(e)),
                     catchError(err2 => {
-                        console.error('EmailService: both membrane and legacy getEmail failed', err2);
+                        console.error('EmailService: both Pipedream and legacy getEmail failed', err2);
                         return throwError(() => err2);
                     })
                 );
@@ -95,13 +95,13 @@ export class EmailService {
         );
     }
 
-    /** Try Membrane send, fallback to legacy */
+    /** Try Pipedream-backed send, fallback to legacy */
     sendEmail(request: SendEmailRequest): Observable<{ status: string }> {
         return this.getUserId().pipe(
             switchMap(userId => this.membraneService.sendEmail(userId, request).pipe(
                 catchError(() => this.ms365Service.sendEmail(request).pipe(
                     catchError(err => {
-                        console.error('EmailService: both membrane and legacy send failed', err);
+                        console.error('EmailService: both Pipedream and legacy send failed', err);
                         return throwError(() => err);
                     })
                 ))
@@ -109,7 +109,7 @@ export class EmailService {
             catchError(err => {
                 return this.ms365Service.sendEmail(request).pipe(
                     catchError(err2 => {
-                        console.error('EmailService: both membrane and legacy send failed', err2);
+                        console.error('EmailService: both Pipedream and legacy send failed', err2);
                         return throwError(() => err2);
                     })
                 );
@@ -117,13 +117,13 @@ export class EmailService {
         );
     }
 
-    /** Try Membrane reply, fallback to legacy */
+    /** Try Pipedream-backed reply, fallback to legacy */
     replyEmail(id: string, request: ReplyEmailRequest): Observable<{ status: string }> {
         return this.getUserId().pipe(
             switchMap(userId => this.membraneService.replyEmail(id, userId, request).pipe(
                 catchError(() => this.ms365Service.replyEmail(id, request).pipe(
                     catchError(err => {
-                        console.error('EmailService: both membrane and legacy reply failed', err);
+                        console.error('EmailService: both Pipedream and legacy reply failed', err);
                         return throwError(() => err);
                     })
                 ))
@@ -131,7 +131,7 @@ export class EmailService {
             catchError(err => {
                 return this.ms365Service.replyEmail(id, request).pipe(
                     catchError(err2 => {
-                        console.error('EmailService: both membrane and legacy reply failed', err2);
+                        console.error('EmailService: both Pipedream and legacy reply failed', err2);
                         return throwError(() => err2);
                     })
                 );
@@ -139,13 +139,13 @@ export class EmailService {
         );
     }
 
-    /** Try Membrane forward, fallback to legacy */
+    /** Try Pipedream-backed forward, fallback to legacy */
     forwardEmail(id: string, request: ForwardEmailRequest): Observable<{ status: string }> {
         return this.getUserId().pipe(
             switchMap(userId => this.membraneService.forwardEmail(id, userId, request).pipe(
                 catchError(() => this.ms365Service.forwardEmail(id, request).pipe(
                     catchError(err => {
-                        console.error('EmailService: both membrane and legacy forward failed', err);
+                        console.error('EmailService: both Pipedream and legacy forward failed', err);
                         return throwError(() => err);
                     })
                 ))
@@ -153,7 +153,7 @@ export class EmailService {
             catchError(err => {
                 return this.ms365Service.forwardEmail(id, request).pipe(
                     catchError(err2 => {
-                        console.error('EmailService: both membrane and legacy forward failed', err2);
+                        console.error('EmailService: both Pipedream and legacy forward failed', err2);
                         return throwError(() => err2);
                     })
                 );
@@ -161,14 +161,14 @@ export class EmailService {
         );
     }
 
-    /** Trigger sync — pull latest emails via Membrane proxy first, fallback to legacy MS365 */
+    /** Trigger sync — pull latest emails via Pipedream first, fallback to legacy MS365 */
     triggerSync(): Observable<any> {
         return this.membraneService.syncEmails(50).pipe(
             catchError(err => {
-                console.warn('EmailService: membrane sync failed, trying legacy', err);
+                console.warn('EmailService: Pipedream sync failed, trying legacy', err);
                 return this.ms365Service.triggerSync().pipe(
                     catchError(err2 => {
-                        console.error('EmailService: both membrane and legacy sync failed', err2);
+                        console.error('EmailService: both Pipedream and legacy sync failed', err2);
                         return throwError(() => err2);
                     })
                 );

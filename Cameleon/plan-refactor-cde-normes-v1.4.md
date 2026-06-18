@@ -42,7 +42,7 @@ Périmètre actif: conversion vérifiable dans le dépôt et en Docker local. Le
 - `deploy/helm/api-chart` ne contient pas le RBAC Lease Kubernetes requis.
 - `deploy/helm/gateway-chart/templates/ingress.yaml` route encore `apiRoutes.apis`; le gateway doit exposer les B4F seulement.
 - Plusieurs backends appellent `Base.metadata.create_all(...)` au démarrage, interdit par § 2.7.5.
-- Certaines B4F appellent des services externes directement, notamment MS365/Membrane; la règle v1.4 exige de déplacer ces intégrations côté Backend.
+- Certaines B4F appellent des services externes directement, notamment MS365/Pipedream; la règle v1.4 exige de déplacer ces intégrations côté Backend.
 - Le frontend repose surtout sur `shared/services/*.service.ts`; le store NGRX par B4F reste à structurer.
 - Un dossier d'outil local `.kilo/` existait à la racine et doit être supprimé selon § 10.3.
 

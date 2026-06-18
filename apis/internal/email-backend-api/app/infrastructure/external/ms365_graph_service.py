@@ -1,11 +1,11 @@
 """MS Graph API client — OAuth2 + mail/calendar data access.
 
-DEPRECATED: This custom Graph client is being replaced by Membrane (getmembrane.com).
-Membrane handles OAuth2, token refresh, delta sync, and provider-specific API calls.
+DEPRECATED: This custom Graph client is being replaced by Pipedream Connect.
+Pipedream handles OAuth2, token refresh, and provider-specific integration flows.
 During the transition period, this service remains available as a fallback for existing
-MS365 connections. New integrations should use the Membrane proxy routes.
+MS365 connections. New integrations should use the Pipedream provider routes.
 
-Planned removal: Phase 5 of Membrane migration (see plan 1778258726920-shiny-otter).
+Planned removal: future Pipedream migration cleanup.
 """
 
 from typing import Optional, Tuple, List, Any, Dict

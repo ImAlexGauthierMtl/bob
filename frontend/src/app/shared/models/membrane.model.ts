@@ -1,4 +1,5 @@
-// Membrane integration models — mirror backend membrane_schemas
+// Pipedream integration models. Historical interface names are kept to avoid
+// a broad frontend rename while the local email storage is migrated later.
 
 export interface MembraneTokenRequest {
     integration_key: string;
@@ -7,14 +8,18 @@ export interface MembraneTokenRequest {
 export interface MembraneTokenResponse {
     token: string;
     expires_at: string;
+    connect_link_url: string;
 }
 
 export interface MembraneConnection {
     id: string;
-    integration_id: string;
-    integration_key: string;
+    app?: string;
+    integration_id?: string;
+    integration_key?: string;
     name: string;
-    disconnected: boolean;
+    disconnected?: boolean;
+    healthy?: boolean;
+    dead?: boolean;
     created_at?: string;
 }
 
@@ -52,14 +57,18 @@ export interface MembraneConnectUrlResponse {
 }
 
 export interface MembraneConfig {
-    workspace_key: string;
+    client_id: string;
     /** Optional: leave empty / omit to keep the existing secret unchanged. */
-    workspace_secret?: string;
+    client_secret?: string;
+    project_id: string;
+    environment: string;
     api_url: string;
 }
 
 export interface MembraneConfigResponse {
-    workspace_key: string;
+    client_id: string;
+    project_id: string;
+    environment: string;
     api_url: string;
     configured: boolean;
     /** True when a secret is already stored server-side (value never returned). */
