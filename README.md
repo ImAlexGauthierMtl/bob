@@ -1,75 +1,25 @@
-# Framework HDQ — Haute Définition Qualité
+# Croo Digital Experience
 
-> Source de vérité pour le développement assisté par IA chez The Smart Crew.
+Croo Digital Experience est l'application CDE à refactorer vers les règles d'architecture et de déploiement v1.4.
 
-## Principe
+## Source De Vérité
 
-```
-Si une RÈGLE existe   → le LLM l'APPLIQUE (déterministe)
-Si AUCUNE règle       → le LLM le SIGNALE → gap à combler
-```
+- Règles architecture et déploiement: `docs/regles-architecture-deploiement.md`
+- Instructions agent du dépôt: `AGENTS.md`
+- Plan de conversion: `Cameleon/plan-refactor-cde-normes-v1.4.md`
+- Matrice de validation: `Cameleon/matrice-validation-conformite-v1.4.md`
+- Skills portables: `.agents/skills/`, version suivie dans `.agents/.skills-version`
 
-Le framework grandit par l'usage. Chaque gap détecté = une future norme.
+Les anciens workflows locaux et anciennes règles d'agent ne sont pas des sources applicables pour ce dépôt. Les skills `dx_*` sont synchronisées depuis le repo central avec `./.agents/update-skills.sh`.
 
-## Quick Start
+## Structure Actuelle
 
-### Installer dans un projet existant
+- `apis/exposed/`: APIs B4F exposées via le gateway.
+- `apis/internal/`: APIs backend internes avec Alembic.
+- `apis/shared/`: utilitaires partagés sans logique métier.
+- `frontend/`: application Angular.
+- `deploy/`: valeurs de déploiement projet et artefacts historiques à migrer vers le template CI/CD partagé.
 
-```bash
-# Copier la structure .agents/
-cp -r /chemin/vers/framework-hdq/ mon-projet/.agents/
+## Cible
 
-# Personnaliser le contexte projet
-cp .agents/context/projet.template.md .agents/context/projet.md
-# Éditer projet.md avec les infos spécifiques au projet
-```
-
-### Utilisation quotidienne
-
-Toute demande de travail commence par :
-
-```
-/start
-```
-
-L'agent pose les questions, classifie la demande, annonce la route HDQ, et exécute.
-
-## Structure
-
-```
-framework-hdq/
-├── workflows/        ← Slash-commands (/start, /delta, /implante...)
-├── skills/           ← Capacités agent (backend, frontend, testing...)
-├── normes/           ← Standards enrichis par domaine
-├── rules/            ← Règles agent (architecture, conventions...)
-├── context/          ← Templates Ω:CONTEXT
-├── decisions/        ← Templates ADR
-├── docs/             ← Index, gaps, dette technique, case studies
-└── graveyard/        ← Code/décisions retirés
-```
-
-## Mise à jour
-
-Le workflow `/start` synchronise automatiquement le framework depuis le repo central :
-
-```bash
-# Ou manuellement
-git -C ~/Dev/framework/framework-hdq pull --ff-only
-```
-
-## Projets utilisant ce framework
-
-| Projet | Domaine | Status |
-|--------|---------|--------|
-| Le Baluchon | PMS hôtelier | ⭐ Gold standard |
-| Bob V2 | CRM | Actif |
-| ASQ | CRM consultant | Actif |
-| Rondeau | CRM financier | Actif |
-| Madysta | ERP | Actif |
-| Croo | Pipeline IA | Actif |
-
-## Documentation
-
-- [HDQ.md](HDQ.md) — Point d'entrée développeur
-- [docs/index.md](docs/index.md) — Index complet Ω:DOCS
-- [docs/gaps.md](docs/gaps.md) — Normes à écrire (registre)
+Le refactor doit conserver ce qui est déjà aligné avec la norme v1.4 et corriger les écarts: CI/CD, migrations, gateway, séparation B4F/Backend, règles DB Alembic, frontend Angular/NGRX et validation locale.
