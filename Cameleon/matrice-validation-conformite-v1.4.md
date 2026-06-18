@@ -102,7 +102,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | K-05 | Gateway route `/` vers frontend | § 5.11-5.12 | `dx_base_check_gateway_routes_frontend_root` | Lire ingress | OK | `frontendRoute` présent |
 | K-06 | Gateway route `/api/<service>/v1` vers B4F seulement | § 5.11 | `dx_base_check_gateway_routes_apis_under_api_prefix` | Lire `apiRoutes` | OK | `deploy-gateway.sh` partagé découvre seulement `apis/exposed/*-b4f-api`; routes publiques alignées côté frontend/B4F |
 | K-07 | HTTPS redirect et wildcard TLS | § 5.7, § 5.11 | `dx_base_check_gateway_uses_wildcard_tls` | Lire values/annotations | A_VERIFIER | Audit à compléter |
-| K-08 | Probes health non authentifiées | § 5.10 | `dx_base_check_k8s_health_endpoints` | Appeler/lire routes API | A_VERIFIER | Audit à compléter |
+| K-08 | Probes health non authentifiées | § 5.10 | `dx_base_check_k8s_health_endpoints` | Appeler/lire routes API | OK | `auth_middleware.py` bypass `/health`, `/readiness`, `/liveness`, `/startup`, `/metrics`; test direct FastAPI retourne 200 pour les cinq endpoints |
 
 ### 6. Registry Harbor
 
@@ -132,11 +132,11 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | ID | Règle | Section | Skill | Méthode de validation | Statut initial | Preuve actuelle / à collecter |
 |---|---|---:|---|---|---|---|
 | O-01 | Logs JSON stdout/stderr | § 5.8 | `dx_base_check_k8s_logs_stdout_json` | Lire logging shared | A_VERIFIER | Audit à compléter |
-| O-02 | `/metrics` sur chaque API | § 5.8, § 5.10 | `dx_base_check_k8s_metrics_endpoint` | Lire routes / appeler local | A_VERIFIER | Audit à compléter |
+| O-02 | `/metrics` sur chaque API | § 5.8, § 5.10 | `dx_base_check_k8s_metrics_endpoint` | Lire routes / appeler local | OK | Toutes les APIs incluent `monitoring_router`; test direct FastAPI confirme `/metrics` en Prometheus text format |
 | O-03 | OTel vers Alloy | § 5.8 | `dx_base_check_k8s_observability_alloy_otlp` | Lire env/compose/chart | OK | `docker compose --env-file .env.example config` expose `alloy`, `OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4317`; l'image `grafana/alloy:v1.5.1` démarre avec `observability/alloy/config.alloy` |
 | O-04 | Propagation `traceparent` | § 5.9 | `dx_base_check_k8s_traceparent_propagation` | Lire HTTP client/middleware | A_VERIFIER | Audit à compléter |
 | O-05 | `trace_id` dans events Redis | § 2.4, § 5.9 | `dx_base_check_k8s_trace_id_in_events` | Lire schemas event bus | A_VERIFIER | Audit à compléter |
-| O-06 | `/health` liste dépendances | § 5.10 | `dx_base_check_k8s_health_endpoints` | Lire routes / appeler local | A_VERIFIER | Audit à compléter |
+| O-06 | `/health` liste dépendances | § 5.10 | `dx_base_check_k8s_health_endpoints` | Lire routes / appeler local | OK | `monitoring.py` retourne `dependencies` avec `database`, `redis`, `otel`; test direct FastAPI confirme le champ dans `/health` |
 
 ### 9. Développement local et conventions
 

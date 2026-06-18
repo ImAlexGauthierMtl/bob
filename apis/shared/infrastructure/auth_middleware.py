@@ -14,6 +14,7 @@ _PUBLIC_PATHS: List[str] = [
     "/health",
     "/readiness",
     "/liveness",
+    "/startup",
     "/metrics",
     "/api/v1/login",
     "/api/v1/register",
