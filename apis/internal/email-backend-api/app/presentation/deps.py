@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.application.use_cases.integration_settings_use_cases import IntegrationSettingsUseCases
 from app.application.use_cases.membrane_crud_use_cases import MembraneCrudUseCases
 from app.application.use_cases.ms365_core_use_cases import MS365CoreUseCases
+from app.application.use_cases.ms365_provider_use_cases import MS365ProviderUseCases
 from app.application.use_cases.pipedream_provider_use_cases import PipedreamProviderUseCases
 from app.application.use_cases.smart_label_use_cases import SmartLabelUseCases
 from app.application.services.membrane_tenant_key_service import build_tenant_key, default_scope_for
@@ -21,6 +22,7 @@ from app.infrastructure.persistence.membrane_repository import MembraneRepositor
 from app.infrastructure.persistence.models.smart_label import SmartLabel
 from app.infrastructure.persistence.ms365_repository import MS365Repository
 from app.infrastructure.persistence.smart_label_repository import SmartLabelRepository
+from app.presentation.ms365_provider_operations import MS365ProviderOperations
 
 
 def get_ms365_core_use_cases(db: Session = Depends(get_db)) -> MS365CoreUseCases:
@@ -28,6 +30,10 @@ def get_ms365_core_use_cases(db: Session = Depends(get_db)) -> MS365CoreUseCases
         repo=MS365Repository(db),
         publish_email_received=publish_email_received,
     )
+
+
+def get_ms365_provider_use_cases() -> MS365ProviderUseCases:
+    return MS365ProviderUseCases(operations=MS365ProviderOperations())
 
 
 def get_membrane_crud_use_cases(db: Session = Depends(get_db)) -> MembraneCrudUseCases:
