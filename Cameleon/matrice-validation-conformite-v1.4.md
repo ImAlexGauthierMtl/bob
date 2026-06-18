@@ -22,11 +22,11 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | ID | Section | Domaine | Skill de validation | Preuve attendue | Statut initial | Criticité |
 |---|---:|---|---|---|---|---|
 | M-00 | § 10.3-10.4 | Source de vérité et skills | `dx_intermediate_check_project_conventions` | `AGENTS.md`, `.agents/skills/`, `.agents/update-skills.sh`, `.agents/.skills-version` | OK | critique |
-| M-01 | § 2, § 8.1 | Architecture APIs deux tiers | `dx_intermediate_check_apis` | Arborescence `apis/exposed`, `apis/internal`, absence DB dans B4F, absence backend dans gateway | A_VERIFIER | critique |
+| M-01 | § 2, § 8.1 | Architecture APIs deux tiers | `dx_intermediate_check_apis` | Arborescence `apis/exposed`, `apis/internal`, absence DB dans B4F, absence backend dans gateway | VIOLATION | critique |
 | M-02 | § 2.7 | Alembic et DB | `dx_intermediate_check_apis` + base Alembic | Aucune DDL runtime, migrations avec schema + downgrade testé | VIOLATION | critique |
 | M-03 | § 3, § 14 | Frontend Angular/NGRX | `dx_intermediate_check_frontend_ngrx`, `dx_intermediate_check_frontend_clean_archi` | Store feature par B4F, HTTP dans Effects, modèles domaine | VIOLATION | à corriger |
 | M-04 | § 4, § 8.3 | CI/CD | `dx_intermediate_check_cicd_pipeline` | `.gitlab-ci.yml` minimal, parent/child, 5 stages, Harbor verify, pas de migrate stage | VIOLATION | critique |
-| M-05 | § 5, § 8.4 | Kubernetes et gateway | `dx_intermediate_check_k8s_config` | Gateway unique, Backends internes, initContainer migrate, Lease RBAC | A_VERIFIER | critique |
+| M-05 | § 5, § 8.4 | Kubernetes et gateway | `dx_intermediate_check_k8s_config` | Gateway unique, Backends internes, initContainer migrate, Lease RBAC | OK | critique |
 | M-06 | § 6, § 8.5 | Variables d'environnement | `dx_intermediate_check_env_vars` | Variables scopées GitLab, pas de préfixes DEV/STAGING/PROD, `.env.example` | A_VERIFIER | critique |
 | M-07 | § 7, § 8.6 | Harbor registry | `dx_intermediate_check_registry_to_k8s` | Harbor robot, imagePullSecrets, Cosign, absence `CI_REGISTRY_*` | VIOLATION | critique |
 | M-08 | § 5.8-5.10, § 8.8 | Observabilité et probes | `dx_intermediate_check_k8s_config` | `/liveness`, `/readiness`, `/startup`, `/health`, `/metrics`, logs JSON, trace_id | A_VERIFIER | critique |
@@ -53,9 +53,9 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | ID | Règle | Section | Skill | Méthode de validation | Statut initial | Preuve actuelle / à collecter |
 |---|---|---:|---|---|---|---|
 | A-01 | B4F sous `apis/exposed/`, Backends sous `apis/internal/` | § 2.1 | `dx_base_check_api_tier_placement` | `find apis/exposed apis/internal` | OK | Structure présente |
-| A-02 | Aucune B4F avec DB/Alembic/`DATABASE_URL` | § 2.2 | `dx_base_check_api_no_db_in_b4f` | Recherche `alembic`, `DATABASE_URL`, SQLAlchemy dans `apis/exposed` | A_VERIFIER | Audit à compléter |
-| A-03 | Aucun Backend dans le gateway | § 2.3, § 5.11 | `dx_base_check_api_no_backend_in_ingress` | Lire gateway values/templates | VIOLATION | `gateway-chart/templates/ingress.yaml` contient `apiRoutes.apis` |
-| A-04 | Frontend ne cible que les B4F | § 2.9 | `dx_base_check_api_no_frontend_to_backend` | Recherche `backend-api` dans `frontend/` | A_VERIFIER | Audit à compléter |
+| A-02 | Aucune B4F avec DB/Alembic/`DATABASE_URL` | § 2.2 | `dx_base_check_api_no_db_in_b4f` | Recherche `alembic`, `DATABASE_URL`, SQLAlchemy dans `apis/exposed` | OK | `find apis/exposed -type d \( -name alembic -o -name versions \) -print` ne retourne rien; `rg "DATABASE_URL|SQLAlchemy|sqlalchemy|create_engine|sessionmaker|declarative_base|metadata\.create_all|db\.create_all|SQLModel\.metadata" apis/exposed -g '*.py' -g '!**/tests/**'` ne retourne rien |
+| A-03 | Aucun Backend dans le gateway | § 2.3, § 5.11 | `dx_base_check_api_no_backend_in_ingress` | Lire gateway values/templates | OK | `find deploy -maxdepth 2 \( -name helm -o -name scripts \) -print` ne retourne rien; `deploy/values/*/gateway.yaml` contient seulement `routes.frontend`, `routes.apis: []`; les routes API sont découvertes par le template partagé depuis `apis/exposed/*-b4f-api` |
+| A-04 | Frontend ne cible que les B4F | § 2.9 | `dx_base_check_api_no_frontend_to_backend` | Recherche `backend-api` dans `frontend/` | OK | `rg "backend-api|apis/internal|http://.*backend|https://.*backend|localhost:80(0[7-9]|1[0-9])" frontend/src -g '*.ts' -g '*.html' -g '*.json' -g '*.js'` ne retourne rien |
 | A-05 | Aucun HTTP Backend->Backend | § 2.4 | `dx_base_check_api_no_http_between_backends` | Recherche clients HTTP dans `apis/internal` | OK | `email-backend-api` n'appelle plus `user-backend-api`; admin signé via JWT `role`/`is_super_admin`; `rg "create_service_client\(|httpx|requests|aiohttp|user~backend-api|/api/v1/users" apis/internal -g '*.py' -g '!**/tests/**'` ne retourne plus qu'une déclaration de route dans `user-backend-api` |
 | A-06 | B4F porte logique métier, pas proxy CRUD 1:1 | § 2.2, § 2.8 | `dx_base_check_b4f_holds_business_logic` | Lire routes B4F et clients backend | VIOLATION | Plusieurs routes documentées comme proxy |
 | A-07 | Backend possède une entité principale atomique | § 2.3 | `dx_base_check_backend_atomic_entity` | Cartographier modèles par backend | A_VERIFIER | Audit à compléter |
@@ -101,7 +101,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | K-04 | Gateway unique par namespace | § 5.11 | `dx_base_check_gateway_chart_exists` | Lire charts/ingress | OK | Gateway porté par `ci-cd-unified-template-v1.0/deploy/helm/gateway-chart` |
 | K-05 | Gateway route `/` vers frontend | § 5.11-5.12 | `dx_base_check_gateway_routes_frontend_root` | Lire ingress | OK | `frontendRoute` présent |
 | K-06 | Gateway route `/api/<service>/v1` vers B4F seulement | § 5.11 | `dx_base_check_gateway_routes_apis_under_api_prefix` | Lire `apiRoutes` | OK | `deploy-gateway.sh` partagé découvre seulement `apis/exposed/*-b4f-api`; routes publiques alignées côté frontend/B4F |
-| K-07 | HTTPS redirect et wildcard TLS | § 5.7, § 5.11 | `dx_base_check_gateway_uses_wildcard_tls` | Lire values/annotations | A_VERIFIER | Audit à compléter |
+| K-07 | HTTPS redirect et wildcard TLS | § 5.7, § 5.11 | `dx_base_check_gateway_uses_wildcard_tls` | Lire values/annotations | OK | `deploy/values/{dev,staging,prod}/gateway.yaml` définit `tls.secretName: wildcard-tls`, `tls.sourceNamespace: cert-manager`, `nginx.ingress.kubernetes.io/ssl-redirect: 'true'` et `force-ssl-redirect: 'true'` |
 | K-08 | Probes health non authentifiées | § 5.10 | `dx_base_check_k8s_health_endpoints` | Appeler/lire routes API | OK | `auth_middleware.py` bypass `/health`, `/readiness`, `/liveness`, `/startup`, `/metrics`; test direct FastAPI retourne 200 pour les cinq endpoints |
 
 ### 6. Registry Harbor
