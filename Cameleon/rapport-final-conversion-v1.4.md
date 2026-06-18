@@ -2,7 +2,7 @@
 
 Date: 2026-06-18
 Projet: Croo Digital Experience (`app-cde-dev-01`)
-Branche finale: `refactor/cde-v14-final-integration-docker-local`
+Branche finale: `refactor/cde-v14-final-integration-docker-local` (`62bf2bf`)
 Source de vérité: `docs/regles-architecture-deploiement.md`
 Matrice: `Cameleon/matrice-validation-conformite-v1.4.md`
 
@@ -32,6 +32,7 @@ Preuves:
 - Il reste des pages legacy avec appels/services/subscriptions hors Effects, suivies par `M-03`, `F-03` et `F-04`.
 - Docker local sert le frontend sur `http://localhost:4700`.
 - Capture locale: `captures/cde-docker-local-home.png`.
+- Capture finale Docker local: `captures/cde-final-docker-local.png`.
 - Capture dashboard NgRx: `captures/cde-dashboard-ngrx.png`.
 - Captures listes CRM NgRx: `captures/m03-organizations-list.png`, `captures/m03-contacts-list.png`, `captures/m03-opportunities-list.png`, `captures/m03-activities-list.png`.
 
@@ -97,10 +98,11 @@ Preuves:
 OK: Docker local est monté et validé.
 
 Preuves:
-- `docker compose --env-file .env.example up -d --build` terminé.
-- 11 Backends internes healthy: ports `9001` à `9011`.
-- 6 B4F healthy: ports `8001` à `8006`.
-- Frontend accessible: `http://localhost:4700` retourne `HTTP/1.1 200 OK`.
+- `docker compose --env-file .env.example up -d --build` terminé sur la branche finale fusionnée.
+- 11 Backends internes healthy: ports `9001` à `9011`, endpoints `/health` en `200`.
+- 6 B4F healthy: ports `8001` à `8006`, endpoints `/health` en `200`.
+- Frontend accessible: `http://localhost:4700` retourne `200`.
+- Capture finale: `captures/cde-final-docker-local.png`.
 - PgBouncer en mode transaction fonctionne sur `localhost:56432`.
 - Les migrations Alembic locales ont été exécutées avec succès: `completed=11`.
 - Le runtime DB applique `SET LOCAL search_path` par API pour respecter les schémas Alembic avec PgBouncer.
@@ -115,7 +117,7 @@ Preuves:
 - `membrane_tenant_key_service.py` retire une dependance `application -> presentation` dans `email-backend-api`.
 - `activity-backend-api` a une extraction verticale: les routes appellent `ActivityUseCases`, la dépendance FastAPI/repository est isolée dans `presentation/deps.py`, et le contrat local passe.
 - Les modèles SQLAlchemy résident maintenant dans `app/infrastructure/persistence/models`; `app/domain` ne contient plus de dépendance SQLAlchemy/Pydantic détectée.
-- Certaines routes contiennent encore de la logique métier.
+- La violation restante de M-10 est limitée à CA-04: certaines routes contiennent encore de la logique métier ou persistence directe.
 - Le test contractuel email passe, mais `email-backend-api/run_tests.sh` reste bloque localement avant pytest sur un `DATABASE_URL` de migration avec driver placeholder.
 
 ### Repo cicd-templates
@@ -141,8 +143,8 @@ OK: les branches de conversion locales sont incluses dans la branche finale.
 
 Preuve:
 - Commande de contrôle: `git merge-base --is-ancestor <branche> HEAD`.
-- Résultat: 39 branches `refactor/cde-v14-*` vérifiées comme `included`.
-- La branche finale contient la pile jusqu'à `refactor/cde-v14-local-clean-architecture-audits`, puis les correctifs Docker local.
+- Résultat final: 44 branches locales `refactor/cde-v14-*` vérifiées comme `included`, 0 manquante.
+- La branche finale contient la pile jusqu'à `refactor/cde-v14-orm-models-infrastructure`, incluant les branches dashboard NgRx, listes CRM NgRx, garde-fous Clean Architecture, use cases Activity et déplacement ORM.
 
 ### Résumé
 
@@ -153,7 +155,7 @@ Preuve:
 
 Violations restantes:
 - `M-03`: frontend NGRX partiel, composants/pages legacy à migrer.
-- `M-10`: Clean Architecture stricte incomplète.
+- `M-10`: Clean Architecture stricte incomplète sur CA-04 seulement, routes épaisses restantes.
 
 ### Variables CI/CD à créer/modifier dans GitLab
 
