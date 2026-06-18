@@ -76,6 +76,10 @@ class BobSessionInfo(BaseModel):
 _sessions: Dict[str, dict] = {}
 
 
+def _current_user_id(current_user: dict) -> str:
+    return current_user.get("user_id") or current_user.get("sub", "")
+
+
 # ── Routes ───────────────────────────────────────────────────────────
 
 @router.post("/chat", response_model=BobChatResponse)
@@ -91,7 +95,7 @@ async def bob_chat(body: BobChatRequest, request: Request, current_user: dict = 
     if session_id not in _sessions:
         _sessions[session_id] = {
             "session_id": session_id,
-            "user_id": current_user.get("sub", ""),
+            "user_id": _current_user_id(current_user),
             "user_email": current_user.get("email", ""),
             "turn_count": 0,
             "created_at": now,
@@ -127,7 +131,7 @@ async def bob_chat(body: BobChatRequest, request: Request, current_user: dict = 
 @router.get("/sessions", response_model=List[BobSessionInfo])
 async def list_sessions(request: Request, current_user: dict = Depends(get_current_user)):
     """List all chat sessions for the current user."""
-    user_id = current_user.get("sub", "")
+    user_id = _current_user_id(current_user)
     user_sessions = [
         BobSessionInfo(**s)
         for s in _sessions.values()
@@ -141,7 +145,7 @@ async def list_sessions(request: Request, current_user: dict = Depends(get_curre
 @router.delete("/sessions/{session_id}", status_code=204)
 async def delete_session(session_id: str, request: Request, current_user: dict = Depends(get_current_user)):
     """Delete a chat session."""
-    user_id = current_user.get("sub", "")
+    user_id = _current_user_id(current_user)
     sess = _sessions.get(session_id)
     if sess and sess.get("user_id") == user_id:
         del _sessions[session_id]
