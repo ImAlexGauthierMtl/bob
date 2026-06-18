@@ -18,6 +18,7 @@ from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.usage_repository import UsageRepository
 from app.middleware.auth import get_current_user, settings
+from app.presentation import deps as usage_deps
 from app.presentation.routes import usage_routes
 from app.presentation.schemas import usage_schemas
 
@@ -237,10 +238,10 @@ def client(monkeypatch, repo):
     async def noop_publish(*args, **kwargs):
         return None
 
-    monkeypatch.setattr(usage_routes, "UsageRepository", lambda db: repo)
-    monkeypatch.setattr(usage_routes, "publish_usage_recorded", noop_publish)
+    monkeypatch.setattr(usage_deps, "UsageRepository", lambda db: repo)
+    monkeypatch.setattr(usage_deps, "publish_usage_recorded", noop_publish)
     main.app.dependency_overrides[usage_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[usage_routes.get_db] = lambda: FakeDB()
+    main.app.dependency_overrides[usage_deps.get_db] = lambda: FakeDB()
     with TestClient(main.app) as test_client:
         yield test_client
     main.app.dependency_overrides.clear()

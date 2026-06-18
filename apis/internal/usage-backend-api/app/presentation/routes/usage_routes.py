@@ -1,16 +1,13 @@
-"""Usage CRUD routes — pure storage, no business logic."""
+"""Usage HTTP routes."""
 
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, Query, status
 
-from app.infrastructure.database import get_db
+from app.application.use_cases.usage_use_cases import UsageUseCases
 from app.middleware.auth import get_current_user
-from app.infrastructure.persistence.usage_repository import UsageRepository
-from app.infrastructure.persistence.models.usage_transaction import UsageTransaction, CostRateCard
-from app.events.publishers import publish_usage_recorded
+from app.presentation.deps import get_usage_use_cases
 from app.presentation.schemas.usage_schemas import (
     UsageTransactionCreate, UsageTransactionResponse, UsageListResponse,
     UsageSummaryItem, UsageSummaryResponse,
@@ -27,34 +24,9 @@ router = APIRouter()
 async def record_usage(
     data: UsageTransactionCreate,
     user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: UsageUseCases = Depends(get_usage_use_cases),
 ):
-    repo = UsageRepository(db)
-    txn = UsageTransaction(
-        tenant_id=user["tenant_id"],
-        user_id=data.user_id or user["user_id"],
-        user_email=data.user_email or user["email"],
-        service_type=data.service_type,
-        provider=data.provider,
-        model=data.model,
-        is_billable=data.is_billable,
-        billing_category=data.billing_category,
-        trigger_source=data.trigger_source,
-        trigger_id=data.trigger_id,
-        correlation_id=data.correlation_id,
-        correlation_label=data.correlation_label,
-        input_tokens=data.input_tokens,
-        output_tokens=data.output_tokens,
-        audio_seconds=data.audio_seconds,
-        characters=data.characters,
-        voip_minutes=data.voip_minutes,
-        cogs_amount=data.cogs_amount,
-        cogs_currency=data.cogs_currency,
-        metadata_=data.metadata,
-        duration_ms=data.duration_ms,
-    )
-    created = repo.record(txn)
-    await publish_usage_recorded(created.id, {"service_type": data.service_type, "tenant_id": user["tenant_id"]})
+    created = await use_cases.record_usage(data.model_dump(), user)
     return UsageTransactionResponse.model_validate(created)
 
 
@@ -70,22 +42,23 @@ async def list_usage(
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: UsageUseCases = Depends(get_usage_use_cases),
 ):
-    repo = UsageRepository(db)
-    tenant_id = user["tenant_id"]
-    items = repo.list_by_tenant(
-        tenant_id, skip=skip, limit=limit,
-        service_type=service_type, billing_category=billing_category,
-        user_id=user_id, date_from=date_from, date_to=date_to,
-    )
-    total = repo.count_by_tenant(
-        tenant_id, service_type=service_type, billing_category=billing_category,
-        user_id=user_id, date_from=date_from, date_to=date_to,
+    result = await use_cases.list_usage(
+        user["tenant_id"],
+        skip,
+        limit,
+        service_type,
+        billing_category,
+        user_id,
+        date_from,
+        date_to,
     )
     return UsageListResponse(
-        items=[UsageTransactionResponse.model_validate(t) for t in items],
-        total=total, skip=skip, limit=limit,
+        items=[UsageTransactionResponse.model_validate(t) for t in result.items],
+        total=result.total,
+        skip=result.skip,
+        limit=result.limit,
     )
 
 
@@ -96,23 +69,16 @@ async def get_usage_summary(
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: UsageUseCases = Depends(get_usage_use_cases),
 ):
-    repo = UsageRepository(db)
-    tenant_id = user["tenant_id"]
-    summary_rows = repo.get_summary(tenant_id, date_from=date_from, date_to=date_to)
-
-    items = [UsageSummaryItem(**row) for row in summary_rows]
-    total_cogs = sum(item.total_cogs for item in items)
-    total_txn = sum(item.transaction_count for item in items)
-
+    result = await use_cases.get_usage_summary(user["tenant_id"], date_from, date_to)
     return UsageSummaryResponse(
-        tenant_id=tenant_id,
-        date_from=date_from,
-        date_to=date_to,
-        items=items,
-        total_cogs=round(total_cogs, 4),
-        total_transactions=total_txn,
+        tenant_id=result.tenant_id,
+        date_from=result.date_from,
+        date_to=result.date_to,
+        items=[UsageSummaryItem(**row) for row in result.items],
+        total_cogs=result.total_cogs,
+        total_transactions=result.total_transactions,
     )
 
 
@@ -129,21 +95,23 @@ async def admin_list_usage(
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: UsageUseCases = Depends(get_usage_use_cases),
 ):
-    repo = UsageRepository(db)
-    items = repo.list_by_tenant(
-        tenant_id, skip=skip, limit=limit,
-        service_type=service_type, billing_category=billing_category,
-        user_id=user_id, date_from=date_from, date_to=date_to,
-    )
-    total = repo.count_by_tenant(
-        tenant_id, service_type=service_type, billing_category=billing_category,
-        user_id=user_id, date_from=date_from, date_to=date_to,
+    result = await use_cases.list_usage(
+        tenant_id,
+        skip,
+        limit,
+        service_type,
+        billing_category,
+        user_id,
+        date_from,
+        date_to,
     )
     return UsageListResponse(
-        items=[UsageTransactionResponse.model_validate(t) for t in items],
-        total=total, skip=skip, limit=limit,
+        items=[UsageTransactionResponse.model_validate(t) for t in result.items],
+        total=result.total,
+        skip=result.skip,
+        limit=result.limit,
     )
 
 
@@ -153,22 +121,16 @@ async def admin_get_usage_summary(
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: UsageUseCases = Depends(get_usage_use_cases),
 ):
-    repo = UsageRepository(db)
-    summary_rows = repo.get_summary(tenant_id, date_from=date_from, date_to=date_to)
-
-    items = [UsageSummaryItem(**row) for row in summary_rows]
-    total_cogs = sum(item.total_cogs for item in items)
-    total_txn = sum(item.transaction_count for item in items)
-
+    result = await use_cases.get_usage_summary(tenant_id, date_from, date_to)
     return UsageSummaryResponse(
-        tenant_id=tenant_id,
-        date_from=date_from,
-        date_to=date_to,
-        items=items,
-        total_cogs=round(total_cogs, 4),
-        total_transactions=total_txn,
+        tenant_id=result.tenant_id,
+        date_from=result.date_from,
+        date_to=result.date_to,
+        items=[UsageSummaryItem(**row) for row in result.items],
+        total_cogs=result.total_cogs,
+        total_transactions=result.total_transactions,
     )
 
 
@@ -180,19 +142,15 @@ async def admin_usage_by_intent(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: UsageUseCases = Depends(get_usage_use_cases),
 ):
-    repo = UsageRepository(db)
-    groups = repo.list_by_correlation(tenant_id=tenant_id, skip=skip, limit=limit)
-    total = repo.count_by_correlation(tenant_id=tenant_id)
-    total_cogs = repo.sum_cogs_by_correlation(tenant_id=tenant_id)
-
+    result = await use_cases.list_usage_by_intent(tenant_id, skip, limit)
     return UsageCorrelationListResponse(
-        items=[UsageCorrelationGroupResponse(**g) for g in groups],
-        total=total,
-        skip=skip,
-        limit=limit,
-        total_cogs=round(total_cogs, 6),
+        items=[UsageCorrelationGroupResponse(**g) for g in result.items],
+        total=result.total,
+        skip=result.skip,
+        limit=result.limit,
+        total_cogs=result.total_cogs,
     )
 
 
@@ -200,16 +158,14 @@ async def admin_usage_by_intent(
 async def admin_usage_intent_detail(
     correlation_id: str,
     user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: UsageUseCases = Depends(get_usage_use_cases),
 ):
-    repo = UsageRepository(db)
-    items = repo.list_by_correlation_id(correlation_id)
-
+    result = await use_cases.list_usage_by_intent_detail(correlation_id)
     return UsageListResponse(
-        items=[UsageTransactionResponse.model_validate(t) for t in items],
-        total=len(items),
-        skip=0,
-        limit=len(items),
+        items=[UsageTransactionResponse.model_validate(t) for t in result.items],
+        total=result.total,
+        skip=result.skip,
+        limit=result.limit,
     )
 
 
@@ -219,10 +175,9 @@ async def admin_usage_intent_detail(
 async def list_rate_cards(
     active_only: bool = Query(True),
     user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: UsageUseCases = Depends(get_usage_use_cases),
 ):
-    repo = UsageRepository(db)
-    cards = repo.list_rate_cards(active_only)
+    cards = await use_cases.list_rate_cards(active_only)
     return [RateCardResponse.model_validate(c) for c in cards]
 
 
@@ -230,16 +185,7 @@ async def list_rate_cards(
 async def create_rate_card(
     data: RateCardCreate,
     user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: UsageUseCases = Depends(get_usage_use_cases),
 ):
-    repo = UsageRepository(db)
-    card = CostRateCard(
-        provider=data.provider,
-        model=data.model,
-        service_type=data.service_type,
-        unit_type=data.unit_type,
-        rate_per_unit=data.rate_per_unit,
-        currency=data.currency,
-    )
-    created = repo.create_rate_card(card)
+    created = await use_cases.create_rate_card(data.model_dump())
     return RateCardResponse.model_validate(created)
