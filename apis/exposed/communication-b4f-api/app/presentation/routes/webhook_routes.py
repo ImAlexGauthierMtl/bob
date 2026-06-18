@@ -57,7 +57,7 @@ async def trigger_webhook(
     """Trigger workflows via authenticated webhook."""
     logger.info(
         "webhook_received",
-        event=payload.event,
+        event_name=payload.event,
         source=payload.source,
         user=current_user["email"],
     )
@@ -79,7 +79,7 @@ async def trigger_webhook(
         )
 
     except Exception as e:
-        logger.error("webhook_error", event=payload.event, error=str(e))
+        logger.error("webhook_error", event_name=payload.event, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Webhook processing failed: {str(e)}",
@@ -102,7 +102,7 @@ async def trigger_webhook_public(
 
     logger.info(
         "webhook_public_received",
-        event=payload.event,
+        event_name=payload.event,
         source=payload.source,
     )
 
@@ -123,7 +123,7 @@ async def trigger_webhook_public(
         )
 
     except Exception as e:
-        logger.error("webhook_public_error", event=payload.event, error=str(e))
+        logger.error("webhook_public_error", event_name=payload.event, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Webhook processing failed: {str(e)}",

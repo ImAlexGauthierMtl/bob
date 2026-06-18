@@ -155,7 +155,8 @@ async def _resolve_tenant_key(
 
 @router.post("/token", response_model=MembraneTokenResponse)
 async def create_membrane_token(
-    request: MembraneTokenRequest,
+    payload: MembraneTokenRequest,
+    request: Request,
     current_user: dict = Depends(get_current_user),
 ):
     """Generate a signed JWT for Membrane scoped to the current user/entity.
@@ -163,7 +164,7 @@ async def create_membrane_token(
     The frontend calls this before opening a Membrane connection popup.
     The token is short-lived (2h) and contains no secrets.
     """
-    tenant_key = await _resolve_tenant_key(current_user, request.integration_key, request.headers)
+    tenant_key = await _resolve_tenant_key(current_user, payload.integration_key, request.headers)
     name = current_user.get("email", tenant_key)
     fields = {
         "croo_user_id": current_user["user_id"],
@@ -185,7 +186,7 @@ async def create_membrane_token(
 
     from datetime import timedelta
     expires_at = (datetime.now(timezone.utc) + timedelta(minutes=120)).isoformat()
-    logger.info("membrane_token_generated", tenant_key=tenant_key, integration_key=request.integration_key)
+    logger.info("membrane_token_generated", tenant_key=tenant_key, integration_key=payload.integration_key)
     return MembraneTokenResponse(token=token, expires_at=expires_at)
 
 

@@ -171,8 +171,9 @@ class MS365GraphService:
     async def acquire_delta_token(self, access_token: str) -> Optional[str]:
         """After an initial full sync, page through a delta query to obtain a
         delta token for future incremental syncs."""
-        if self._last_delta_token:
-            return self._last_delta_token
+        last_delta_token = getattr(self, "_last_delta_token", None)
+        if last_delta_token:
+            return last_delta_token
         if getattr(self, "_last_sync_was_delta", False):
             return None
         try:
