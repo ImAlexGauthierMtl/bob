@@ -21,12 +21,12 @@ Le CI/CD, Harbor et les validations registry restent hors perimetre actif.
 |---|---|---|
 | `auth-b4f-api` | Auth/session/admin IAM | Conforme au domaine frontend; `auth_routes.py` contient JWT, refresh, rate limit et session courante. Les routes admin user/tenant/role restent surtout des facades CRUD. |
 | `crm-b4f-api` | CRM | Partiellement corrige: `/dashboard/summary` compose contacts, organisations, opportunites, activites et produits en une reponse UI. Des routes CRUD directes restent presentes comme facades de support. |
-| `communication-b4f-api` | Communication/integrations | Conforme A-08 apres refactor provider. Ecart A-06 restant sur quelques facades admin/labels; les routes provider minces sont une delegation volontaire pour garder `email-backend-api` invisible. |
+| `communication-b4f-api` | Communication/integrations | Conforme A-08 apres refactor provider. Partiellement corrige A-06: `/integrations/overview` compose settings, connexions MS365/Membrane et smart labels. Les routes provider minces sont une delegation volontaire pour garder `email-backend-api` invisible. |
 | `ai-agent-b4f-api` | Agent/Bob | Mixte: `bob_chat_routes.py` et `client_map_routes.py` portent une logique B4F, mais `bcc_routes.py`, `training_routes.py`, `capability_routes.py` et `bob_settings_routes.py` restent documentees comme proxys. |
 | `platform-b4f-api` | Workflows/usage/platform | Partiellement conforme: `workflow_routes.py` contient une logique d'override, `enrichment_routes.py` est une placeholder non migree, plusieurs routes usage/workflow restent pass-through. |
 | `kb-b4f-api` | Knowledge base | Partiellement corrige: `/kb/home` compose categories, articles recents, articles populaires et stats. Les routes CRUD/search restent des facades de support. |
 
-Conclusion A-06: non conforme pour l'instant. `crm-b4f-api` et `kb-b4f-api` ont maintenant des compositions B4F verifiees, mais la correction doit encore ajouter des endpoints composes/orchestres dans les autres domaines frontend ou reduire les facades CRUD sans valeur B4F.
+Conclusion A-06: non conforme pour l'instant. `crm-b4f-api`, `kb-b4f-api` et `communication-b4f-api` ont maintenant des compositions B4F verifiees, mais la correction doit encore ajouter des endpoints composes/orchestres dans les autres domaines frontend ou reduire les facades CRUD sans valeur B4F.
 
 ## Cartographie backend A-07
 
@@ -64,5 +64,5 @@ rg -n "from app\\.domain\\.entities|from .*backend|apis/internal|schema *=|__tab
 1. `crm-b4f-api`: fait pour le premier niveau avec `/dashboard/summary`; poursuivre avec `/contacts/{id}/summary` ou `/opportunities/{id}/workspace` si le frontend en a besoin.
 2. `kb-b4f-api`: fait pour le premier niveau avec `/kb/home`; poursuivre avec des compositions de recherche guidee si le frontend en a besoin.
 3. `ai-agent-b4f-api`: separer les routes BCC de pure administration des routes Bob orientees UI; garder les analyses et compositions en B4F.
-4. `communication-b4f-api`: documenter les routes provider comme delegation externe obligatoire et ajouter une composition d'etat d'integration si le frontend en a besoin.
+4. `communication-b4f-api`: fait pour le premier niveau avec `/integrations/overview`; garder les routes provider comme delegation externe obligatoire.
 5. `platform-b4f-api`: completer ou retirer `enrichment_routes.py` placeholder; conserver la logique d'override workflow en B4F.

@@ -15,7 +15,14 @@ from app.infrastructure.clients.email_client import (
 )
 from app.middleware import auth as auth_module
 from app.middleware.auth import settings
-from app.presentation.routes import integration_settings_routes, membrane_routes, ms365_routes, smart_label_routes, webhook_routes
+from app.presentation.routes import (
+    integration_overview_routes,
+    integration_settings_routes,
+    membrane_routes,
+    ms365_routes,
+    smart_label_routes,
+    webhook_routes,
+)
 from communication_b4f_api import contract
 
 
@@ -114,6 +121,18 @@ class FakeSmartLabelClient:
         return label_id != "missing"
 
 
+class FakeConnectionClient:
+    async def get_by_user(self, user_id, forward_headers=None):
+        return {"id": "ms365-connection-1", "user_id": user_id}
+
+
+class FakeMembraneCrudClient:
+    async def get_connection_by_user(self, user_id, integration_key=None, forward_headers=None):
+        if integration_key == "microsoft-outlook":
+            return {"id": "membrane-connection-1", "user_id": user_id, "integration_key": integration_key}
+        return None
+
+
 class FakeEventBus:
     async def publish(self, event_name, payload, tenant_id, triggered_by):
         return ["execution-1", "execution-2"]
@@ -134,6 +153,16 @@ def install_fakes(monkeypatch):
     monkeypatch.setattr(provider_proxy, "_client", provider_client)
     monkeypatch.setattr(integration_settings_routes, "integration_settings_client", FakeIntegrationSettingsClient())
     monkeypatch.setattr(smart_label_routes, "smart_label_client", FakeSmartLabelClient())
+    monkeypatch.setattr(
+        integration_overview_routes,
+        "overview_service",
+        integration_overview_routes.IntegrationOverviewService(
+            FakeIntegrationSettingsClient(),
+            FakeConnectionClient(),
+            FakeMembraneCrudClient(),
+            FakeSmartLabelClient(),
+        ),
+    )
     monkeypatch.setattr(webhook_routes, "event_bus", FakeEventBus())
     monkeypatch.setattr(webhook_routes, "settings", SimpleNamespace(webhook_api_key="public-key"))
     return provider_client
@@ -164,6 +193,19 @@ def test_integration_settings_and_smart_labels(monkeypatch):
         assert client.get("/inbox/labels/missing", headers=headers).status_code == 404
         assert client.patch("/inbox/labels/label-1", json={"color": "#ff0000"}, headers=headers).json()["color"] == "#ff0000"
         assert client.delete("/inbox/labels/label-1", headers=headers).status_code == 204
+
+
+def test_integration_overview_composes_settings_connections_and_labels(monkeypatch):
+    install_fakes(monkeypatch)
+    headers = auth_headers()
+    with TestClient(main.app) as client:
+        payload = client.get("/integrations/overview", headers=headers).json()
+
+    assert payload["tenant_id"] == "tenant-1"
+    assert payload["totals"] == {"configured": 1, "enabled": 1, "connected": 1, "smart_labels": 1}
+    assert payload["integrations"][0]["integration_key"] == "microsoft-outlook"
+    assert payload["integrations"][0]["connection_provider"] == "membrane"
+    assert payload["smart_labels"][0]["id"] == "label-1"
 
 
 def test_webhook_routes(monkeypatch):
@@ -218,7 +260,7 @@ def test_b4f_provider_route_modules_are_thin_proxies():
 
 def test_python_package_contract_loads_runtime_components():
     assert contract.load_app() is main.app
-    assert len(contract.load_runtime_routes()) == 5
+    assert len(contract.load_runtime_routes()) == 6
     assert contract.load_runtime_client_classes() == (
         IntegrationSettingsClient,
         ConnectionClient,
