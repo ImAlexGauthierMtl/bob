@@ -16,7 +16,7 @@ export PYTHONPATH="${SCRIPT_DIR}/../..:${SCRIPT_DIR}/../../apis:${PYTHONPATH:-}"
 
 if [ -d "alembic" ]; then
   echo "Running migrations for $(basename $SCRIPT_DIR)..."
-  alembic upgrade head
+  python -m alembic upgrade head
 else
   echo "No alembic directory found for $(basename $SCRIPT_DIR), skipping."
 fi

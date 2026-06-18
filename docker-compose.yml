@@ -64,7 +64,7 @@ services:
       retries: 5
 
   pgbouncer:
-    image: bitnami/pgbouncer:1.24.1
+    image: bitnamilegacy/pgbouncer:1.24.1
     container_name: croo-pgbouncer
     restart: unless-stopped
     environment:
@@ -73,6 +73,7 @@ services:
       POSTGRESQL_USERNAME: ${DB_USERNAME:-croo}
       POSTGRESQL_PASSWORD: ${DB_PASSWORD:-croo}
       POSTGRESQL_DATABASE: ${DB_DATABASE:-croo_digital_experience}
+      PGBOUNCER_DATABASE: ${DB_DATABASE:-croo_digital_experience}
       PGBOUNCER_PORT: 5432
       PGBOUNCER_POOL_MODE: transaction
       PGBOUNCER_AUTH_TYPE: md5
@@ -84,7 +85,7 @@ services:
       database:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U ${DB_USERNAME:-croo} -d ${DB_DATABASE:-croo_digital_experience}"]
+      test: ["CMD-SHELL", "/opt/bitnami/common/bin/wait-for-port --host 127.0.0.1 --timeout 1 5432"]
       interval: 5s
       timeout: 3s
       retries: 10

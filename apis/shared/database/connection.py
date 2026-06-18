@@ -1,7 +1,8 @@
 """Database connection management for shared library."""
 
 import os
-from sqlalchemy import create_engine
+import re
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator, Optional
 from ..config import get_settings
@@ -12,6 +13,8 @@ _session_factories = {}
 MAX_POOL_SIZE = 5
 DEFAULT_POOL_SIZE = 3
 DEFAULT_MAX_OVERFLOW = 5
+POSTGRESQL_URL_PREFIXES = ("postgresql://", "postgresql+")
+SCHEMA_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def _bounded_int_from_env(name: str, default: int, minimum: int, maximum: int) -> int:
@@ -31,6 +34,40 @@ def _connect_args_for_database_url(database_url: str) -> dict:
     return connect_args
 
 
+def _schema_name_for_api(api_name: Optional[str]) -> Optional[str]:
+    if api_name:
+        schema_name = api_name
+        for suffix in ("-backend-api", "-backend", "-api"):
+            if schema_name.endswith(suffix):
+                schema_name = schema_name[: -len(suffix)]
+                break
+        schema_name = schema_name.replace("-", "_")
+    else:
+        schema_name = os.environ.get("DB_SCHEMA", "").strip()
+
+    if not schema_name:
+        return None
+    if not SCHEMA_IDENTIFIER_RE.match(schema_name):
+        raise ValueError(f"Invalid database schema name: {schema_name}")
+    return schema_name
+
+
+def _configure_postgres_search_path(engine, database_url: str, api_name: Optional[str]) -> None:
+    if not database_url.startswith(POSTGRESQL_URL_PREFIXES):
+        return
+
+    schema_name = _schema_name_for_api(api_name)
+    if not schema_name:
+        return
+
+    search_path_statement = f'SET LOCAL search_path TO "{schema_name}", public'
+
+    def set_search_path(connection):
+        connection.exec_driver_sql(search_path_statement)
+
+    event.listen(engine, "begin", set_search_path)
+
+
 def create_db_engine(api_name: Optional[str] = None):
     """Create or return cached database engine from settings."""
     cache_key = api_name or "__default__"
@@ -48,7 +85,7 @@ def create_db_engine(api_name: Optional[str] = None):
             "DB_MAX_OVERFLOW", DEFAULT_MAX_OVERFLOW, 0, MAX_POOL_SIZE
         )
 
-        _engines[cache_key] = create_engine(
+        engine = create_engine(
             database_url,
             pool_size=pool_size,
             max_overflow=max_overflow,
@@ -56,6 +93,8 @@ def create_db_engine(api_name: Optional[str] = None):
             pool_recycle=300,
             connect_args=connect_args,
         )
+        _configure_postgres_search_path(engine, database_url, api_name)
+        _engines[cache_key] = engine
     return _engines[cache_key]
 
 

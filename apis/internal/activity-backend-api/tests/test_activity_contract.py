@@ -306,15 +306,20 @@ def test_database_facade_and_schema_contracts(monkeypatch):
 
 def test_shared_database_engine_uses_pgbouncer_safe_options(monkeypatch):
     captured = {}
+    captured_listeners = []
 
     def fake_create_engine(database_url, **kwargs):
         captured["database_url"] = database_url
         captured["kwargs"] = kwargs
         return "engine"
 
+    def fake_listen(engine, event_name, listener):
+        captured_listeners.append((engine, event_name, listener))
+
     shared_db_connection._engines.clear()
     shared_db_connection._session_factories.clear()
     monkeypatch.setattr(shared_db_connection, "create_engine", fake_create_engine)
+    monkeypatch.setattr(shared_db_connection.event, "listen", fake_listen)
     monkeypatch.setattr(
         shared_db_connection,
         "get_settings",
@@ -331,6 +336,21 @@ def test_shared_database_engine_uses_pgbouncer_safe_options(monkeypatch):
     assert captured["kwargs"]["pool_pre_ping"] is True
     assert captured["kwargs"]["pool_recycle"] == 300
     assert captured["kwargs"]["connect_args"] == {"prepare_threshold": None}
+    assert len(captured_listeners) == 1
+    engine, event_name, listener = captured_listeners[0]
+    assert engine == "engine"
+    assert event_name == "begin"
+
+    statements = []
+
+    class FakeConnection:
+        def exec_driver_sql(self, statement):
+            statements.append(statement)
+
+    listener(FakeConnection())
+    assert statements == ['SET LOCAL search_path TO "activity", public']
+    assert shared_db_connection._schema_name_for_api("activity-backend-api") == "activity"
+    assert shared_db_connection._schema_name_for_api("activity-backend") == "activity"
     assert shared_db_connection._connect_args_for_database_url(
         "postgresql+psycopg2://user:pass@pgbouncer:5432/app"
     ) == {}

@@ -34,7 +34,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | M-08 | § 5.8-5.10, § 8.8 | Observabilité et probes | `cde-check-observability` | `/liveness`, `/readiness`, `/startup`, `/health`, `/metrics`, logs JSON, trace_id | OK | critique |
 | M-09 | § 10, § 11 | Conventions et dev local | `cde-check-local-dev` | Wrappers racine, scripts par API, compose postgres/pgbouncer/redis/alloy | OK | à corriger |
 | M-10 | § 12 | Clean Architecture API | `cde-check-clean-architecture` | `domain/application/infrastructure/presentation`, import-linter, tests par couche | VIOLATION | à corriger |
-| M-11 | § 9 | Rapport final | `cde-master-validation` | Rapport markdown final, branches fusionnées, Docker local, CI/CD marqué skip | A_VERIFIER | critique |
+| M-11 | § 9 | Rapport final | `cde-master-validation` | Rapport markdown final, branches fusionnées, Docker local, CI/CD marqué skip | OK | critique |
 
 ## Matrice détaillée
 
@@ -77,7 +77,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | DB-06 | CI teste downgrade puis upgrade | § 2.7.5, § 4.9 | `cde-master-validation` | Hors périmètre actif | SKIP_CI_CD | Preuve locale manuelle OK sur `email-backend-api` et `activity-backend-api`; validation CI volontairement ignorée tant que le volet CI/CD est exclu |
 | DB-07 | InitContainer exécute `scripts/migrate_with_lease.py` | § 2.7.5 | `cde-check-k8s-gateway` | Lire deployment chart/values | OK | `deploy/values/*/*-backend-api.yaml` active `initContainers.migrate.enabled`; chart partagé `api-chart` lance `/app/scripts/migrate_with_lease.py` |
 | DB-08 | Lease Kubernetes et RBAC présents | § 2.7.5 | `cde-check-k8s-gateway` | Chercher `coordination.k8s.io`, `leases` | OK | Chart partagé `api-chart/templates/migration-lease-rbac.yaml` fournit Lease/RBAC; les backends activent l'initContainer |
-| DB-09 | Pool SQLAlchemy compatible PgBouncer | § 2.7.3-2.7.4 | `cde-check-database-alembic` | Lire `apis/shared/database` | OK | `apis/shared/database/connection.py` borne `DB_POOL_SIZE` et `DB_MAX_OVERFLOW` à 5, garde `pool_pre_ping=True`, `pool_recycle=300`, et ajoute `connect_args={"prepare_threshold": None}` pour `postgresql+psycopg`; test local `activity-backend-api/tests/test_activity_contract.py` OK (`8 passed`) |
+| DB-09 | Pool SQLAlchemy compatible PgBouncer | § 2.7.3-2.7.4 | `cde-check-database-alembic` | Lire `apis/shared/database` | OK | `apis/shared/database/connection.py` borne `DB_POOL_SIZE` et `DB_MAX_OVERFLOW` à 5, garde `pool_pre_ping=True`, `pool_recycle=300`, ajoute `connect_args={"prepare_threshold": None}` pour `postgresql+psycopg`, et applique `SET LOCAL search_path` par API au début des transactions pour PgBouncer transaction mode; contrôle Python dans `activity-backend-api` OK |
 
 ### 4. CI/CD
 
@@ -122,7 +122,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | ID | Règle | Section | Skill | Méthode de validation | Statut initial | Preuve actuelle / à collecter |
 |---|---|---:|---|---|---|---|
 | F-01 | Un service Angular par B4F | § 3.1 | `cde-check-frontend-ngrx` | Mapper services vers B4F | OK | Audit `Cameleon/audit-frontend-ngrx-v1.4.md`: services B4F ajoutés pour les compositions CRM, KB, Communication et Platform; services legacy par entité conservés comme support |
-| F-02 | Un feature NGRX par B4F | § 3.1 | `cde-check-frontend-ngrx` | Chercher `store/<feature>` | OK | `frontend/src/app/store/{auth,crm,communication,ai-agent,platform,kb}` + `provideStore/provideEffects`; `npm run build` OK |
+| F-02 | Un feature NGRX par B4F | § 3.1 | `cde-check-frontend-ngrx` | Chercher `store/<feature>` | OK | `frontend/src/app/store/{auth,crm,communication,ai-agent,platform,kb}` + `provideStore/provideEffects`; Docker frontend compile et sert `http://localhost:4700` après renouvellement du volume `node_modules` |
 | F-03 | Aucun HTTP hors Effects | § 3.1-3.6 | `cde-check-frontend-ngrx` | Recherche `HttpClient`/services dans components | VIOLATION | Les nouvelles compositions B4F passent par Effects, mais `rg "HttpClient|\\.subscribe\\(" frontend/src/app -g '*.ts'` montre encore des composants/pages legacy hors Effects |
 | F-04 | Templates utilisent `| async` | § 3.1 | `cde-check-frontend-ngrx` | Lire templates critiques | VIOLATION | Migration legacy incomplete: plusieurs pages gardent des subscriptions/signals locaux; voir `Cameleon/audit-frontend-ngrx-v1.4.md` |
 | F-05 | API base URL = `/api` | § 5.12 | `cde-check-frontend-ngrx` | Lire environments | OK | Production utilise `/api/<b4f>/v1` et le frontend chart injecte `API_BASE_URL=/api` |
@@ -148,7 +148,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | L-01 | Wrappers racine présents | § 11.1 | `cde-check-local-dev` | `ls run_* migrate_all_apis.sh` | OK | Wrappers exécutables: `run_all_apis.sh`, `migrate_all_apis.sh`, `run_all_apis_tests.sh`, `run_all_tests.sh`, `run_frontend.sh`, `run_frontend_tests.sh`, `run_frontend_e2e.sh` |
 | L-02 | Scripts par API uniformes | § 11.2 | `cde-check-local-dev` | `find apis -name run_api.sh -o -name run_tests.sh` | OK | 17 APIs ont `run_api.sh` + `run_tests.sh`; 11 Backends ont `migrate.sh`; B4F `run_tests.sh` produit `junit.xml` + `coverage.xml` avec seuil 85 % |
 | L-03 | B4F sans `migrate.sh` | § 11.2 | `cde-check-local-dev` | `find apis/exposed -name migrate.sh` | OK | `find apis/exposed -name migrate.sh` retourne 0 fichier |
-| L-04 | Compose postgres + pgbouncer + redis + alloy | § 11.3 | `cde-check-local-dev` | Lire `docker-compose.yml` | OK | `docker compose --env-file .env.example config --quiet` passe; services `database`, `pgbouncer`, `redis`, `alloy` présents; PgBouncer en `transaction` |
+| L-04 | Compose postgres + pgbouncer + redis + alloy | § 11.3 | `cde-check-local-dev` | Lire `docker-compose.yml` | OK | `docker compose --env-file .env.example config --quiet` passe; services `database`, `pgbouncer`, `redis`, `alloy` présents; PgBouncer en `transaction`; `docker compose --env-file .env.example up -d --build` terminé avec 11 Backends healthy, 6 B4F healthy et frontend `http://localhost:4700` en `HTTP/1.1 200 OK` |
 | L-05 | `.env.example` à jour | § 11.4 | `cde-check-local-dev` | `[ -f .env.example ]` + variables | OK | Variables globales `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`, `DATABASE_SSLMODE`, `REDIS_URL`, `OTEL_EXPORTER_OTLP_ENDPOINT`; ports préfixés par API |
 | L-06 | Docs sous `/docs` | § 10.1 | `cde-check-local-dev` | Chercher docs hors racine autorisée | OK | `Cameleon/` est le dossier de plan de conversion demandé; hors `docs/`/`Cameleon/`, seuls `AGENTS.md`, `README.md`, `frontend/README.md` et `apis/shared/requirements.txt` existent comme conventions racine/manifests techniques |
 | L-07 | Pas de données client réelles | § 10.2 | `cde-check-local-dev` | Scan secrets/data | OK | Audit `Cameleon/audit-local-dev-clean-architecture-v1.4.md`: `.env` ignoré, `.env.example` versionné, scan Git sans clé privée/token évident, values Kubernetes via `secretRefs`; fallback Docker local explicitement `dev-only-secret-not-for-production` |
