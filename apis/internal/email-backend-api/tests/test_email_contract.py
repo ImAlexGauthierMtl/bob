@@ -523,6 +523,12 @@ class FakeMembraneRepository:
     def get_connection_by_user_integration(self, user_id, integration_key, tenant_id):
         return self.connection if user_id == "user-1" and integration_key == "microsoft-outlook" else None
 
+    def get_first_connection_by_user(self, user_id, tenant_id):
+        return self.connection if user_id == "user-1" and tenant_id == "tenant-1" else None
+
+    def get_connection_by_id(self, connection_id, tenant_id):
+        return self.connection if connection_id == "membrane-conn-1" and tenant_id == "tenant-1" else None
+
     def create_connection(self, data, tenant_id):
         return make_membrane_connection("membrane-new", tenant_id=tenant_id, **data)
 
@@ -581,7 +587,7 @@ def client(monkeypatch, fake_db):
     monkeypatch.setattr(email_deps, "publish_email_received", noop_publish)
     monkeypatch.setattr(email_deps, "SmartLabelRepository", lambda db: label_repo)
     monkeypatch.setattr(email_deps, "IntegrationSettingsRepository", lambda db: settings_repo)
-    monkeypatch.setattr(membrane_routes, "MembraneRepository", lambda db: membrane_repo)
+    monkeypatch.setattr(email_deps, "MembraneRepository", lambda db: membrane_repo)
 
     for module in (
         connection_routes,

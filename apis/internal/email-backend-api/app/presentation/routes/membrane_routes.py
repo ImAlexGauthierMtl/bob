@@ -7,11 +7,11 @@ and by the frontend when displaying Membrane Outlook data in /settings/ms365.
 from typing import Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
 
-from app.infrastructure.database import get_db
+from app.application.use_cases.membrane_crud_use_cases import MembraneCrudUseCases
+from app.domain.exceptions import ConnectionNotFoundError, EmailNotFoundError, EventNotFoundError
 from app.middleware.auth import get_current_user
-from app.infrastructure.persistence.membrane_repository import MembraneRepository
+from app.presentation.deps import get_membrane_crud_use_cases
 from app.presentation.schemas.membrane_schemas import (
     MembraneConnectionCreateRequest,
     MembraneConnectionResponse,
@@ -32,17 +32,10 @@ router = APIRouter(prefix="/api/v1/membrane")
 async def create_connection(
     data: MembraneConnectionCreateRequest,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MembraneCrudUseCases = Depends(get_membrane_crud_use_cases),
 ):
     """Create a Membrane connection record (usually called by webhook or B4F after connect)."""
-    repo = MembraneRepository(db)
-    existing = repo.get_connection_by_user_integration(
-        data.user_id, data.integration_key, current_user["tenant_id"]
-    )
-    if existing:
-        updated = repo.update_connection(existing, data.model_dump(exclude_unset=True))
-        return MembraneConnectionResponse.model_validate(updated)
-    conn = repo.create_connection(data.model_dump(), current_user["tenant_id"])
+    conn = await use_cases.create_connection(data.model_dump(exclude_unset=True), current_user["tenant_id"])
     return MembraneConnectionResponse.model_validate(conn)
 
 
@@ -51,20 +44,12 @@ async def get_connection_by_user(
     user_id: str,
     integration_key: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MembraneCrudUseCases = Depends(get_membrane_crud_use_cases),
 ):
     """Get a user's Membrane connection (optionally filtered by integration_key)."""
-    repo = MembraneRepository(db)
-    if integration_key:
-        conn = repo.get_connection_by_user_integration(user_id, integration_key, current_user["tenant_id"])
-    else:
-        # Return first active connection (simplification for single-integration users)
-        from app.infrastructure.persistence.models.membrane_connection import MembraneConnection as MC
-        conn = db.query(MC).filter(
-            MC.user_id == user_id, MC.tenant_id == current_user["tenant_id"],
-            MC.is_deleted == False,
-        ).first()
-    if not conn:
+    try:
+        conn = await use_cases.get_connection_by_user(user_id, integration_key, current_user["tenant_id"])
+    except ConnectionNotFoundError:
         raise HTTPException(status_code=404, detail="Connection not found")
     return MembraneConnectionResponse.model_validate(conn)
 
@@ -73,14 +58,11 @@ async def get_connection_by_user(
 async def get_connection(
     connection_id: str,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MembraneCrudUseCases = Depends(get_membrane_crud_use_cases),
 ):
-    repo = MembraneRepository(db)
-    from app.infrastructure.persistence.models.membrane_connection import MembraneConnection as MC
-    conn = db.query(MC).filter(
-        MC.id == connection_id, MC.tenant_id == current_user["tenant_id"], MC.is_deleted == False,
-    ).first()
-    if not conn:
+    try:
+        conn = await use_cases.get_connection(connection_id, current_user["tenant_id"])
+    except ConnectionNotFoundError:
         raise HTTPException(status_code=404, detail="Connection not found")
     return MembraneConnectionResponse.model_validate(conn)
 
@@ -90,16 +72,16 @@ async def update_connection(
     connection_id: str,
     data: MembraneConnectionCreateRequest,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MembraneCrudUseCases = Depends(get_membrane_crud_use_cases),
 ):
-    repo = MembraneRepository(db)
-    from app.infrastructure.persistence.models.membrane_connection import MembraneConnection as MC
-    conn = db.query(MC).filter(
-        MC.id == connection_id, MC.tenant_id == current_user["tenant_id"], MC.is_deleted == False,
-    ).first()
-    if not conn:
+    try:
+        updated = await use_cases.update_connection(
+            connection_id,
+            data.model_dump(exclude_unset=True),
+            current_user["tenant_id"],
+        )
+    except ConnectionNotFoundError:
         raise HTTPException(status_code=404, detail="Connection not found")
-    updated = repo.update_connection(conn, data.model_dump(exclude_unset=True))
     return MembraneConnectionResponse.model_validate(updated)
 
 
@@ -107,16 +89,12 @@ async def update_connection(
 async def delete_connection(
     connection_id: str,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MembraneCrudUseCases = Depends(get_membrane_crud_use_cases),
 ):
-    repo = MembraneRepository(db)
-    from app.infrastructure.persistence.models.membrane_connection import MembraneConnection as MC
-    conn = db.query(MC).filter(
-        MC.id == connection_id, MC.tenant_id == current_user["tenant_id"], MC.is_deleted == False,
-    ).first()
-    if not conn:
+    try:
+        await use_cases.delete_connection(connection_id, current_user)
+    except ConnectionNotFoundError:
         raise HTTPException(status_code=404, detail="Connection not found")
-    repo.soft_delete_connection(conn, current_user.get("user_id", "system"))
 
 
 # ── Email CRUD ───────────────────────────────────────────────────
@@ -125,11 +103,10 @@ async def delete_connection(
 async def upsert_email(
     data: MembraneEmailUpsertRequest,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MembraneCrudUseCases = Depends(get_membrane_crud_use_cases),
 ):
     """Upsert an email ingested via Membrane webhook."""
-    repo = MembraneRepository(db)
-    email = repo.upsert_email(data.model_dump(), current_user["tenant_id"])
+    email = await use_cases.upsert_email(data.model_dump(), current_user["tenant_id"])
     return MembraneEmailResponse.model_validate(email)
 
 
@@ -141,15 +118,13 @@ async def list_emails(
     folder: Optional[str] = None,
     search: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MembraneCrudUseCases = Depends(get_membrane_crud_use_cases),
 ):
     """List Membrane-synced emails for a user."""
-    repo = MembraneRepository(db)
-    items = repo.list_emails(user_id, current_user["tenant_id"], skip, limit, folder, search)
-    total = repo.count_emails(user_id, current_user["tenant_id"], folder, search)
+    result = await use_cases.list_emails(user_id, current_user["tenant_id"], skip, limit, folder, search)
     return MembraneEmailListResponse(
-        items=[MembraneEmailResponse.model_validate(e) for e in items],
-        total=total, skip=skip, limit=limit,
+        items=[MembraneEmailResponse.model_validate(e) for e in result.items],
+        total=result.total, skip=result.skip, limit=result.limit,
     )
 
 
@@ -158,11 +133,11 @@ async def get_email(
     email_id: str,
     user_id: str = Query(...),
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MembraneCrudUseCases = Depends(get_membrane_crud_use_cases),
 ):
-    repo = MembraneRepository(db)
-    email = repo.get_email_by_id(email_id, user_id, current_user["tenant_id"])
-    if not email:
+    try:
+        email = await use_cases.get_email(email_id, user_id, current_user["tenant_id"])
+    except EmailNotFoundError:
         raise HTTPException(status_code=404, detail="Email not found")
     return MembraneEmailResponse.model_validate(email)
 
@@ -173,11 +148,10 @@ async def get_email(
 async def upsert_event(
     data: MembraneEventUpsertRequest,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MembraneCrudUseCases = Depends(get_membrane_crud_use_cases),
 ):
     """Upsert an event ingested via Membrane webhook."""
-    repo = MembraneRepository(db)
-    event = repo.upsert_event(data.model_dump(), current_user["tenant_id"])
+    event = await use_cases.upsert_event(data.model_dump(), current_user["tenant_id"])
     return MembraneEventResponse.model_validate(event)
 
 
@@ -189,15 +163,13 @@ async def list_events(
     from_date: Optional[datetime] = None,
     to_date: Optional[datetime] = None,
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MembraneCrudUseCases = Depends(get_membrane_crud_use_cases),
 ):
     """List Membrane-synced events for a user."""
-    repo = MembraneRepository(db)
-    items = repo.list_events(user_id, current_user["tenant_id"], skip, limit, from_date, to_date)
-    total = repo.count_events(user_id, current_user["tenant_id"], from_date, to_date)
+    result = await use_cases.list_events(user_id, current_user["tenant_id"], skip, limit, from_date, to_date)
     return MembraneEventListResponse(
-        items=[MembraneEventResponse.model_validate(e) for e in items],
-        total=total, skip=skip, limit=limit,
+        items=[MembraneEventResponse.model_validate(e) for e in result.items],
+        total=result.total, skip=result.skip, limit=result.limit,
     )
 
 
@@ -206,10 +178,10 @@ async def get_event(
     event_id: str,
     user_id: str = Query(...),
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    use_cases: MembraneCrudUseCases = Depends(get_membrane_crud_use_cases),
 ):
-    repo = MembraneRepository(db)
-    event = repo.get_event_by_id(event_id, user_id, current_user["tenant_id"])
-    if not event:
+    try:
+        event = await use_cases.get_event(event_id, user_id, current_user["tenant_id"])
+    except EventNotFoundError:
         raise HTTPException(status_code=404, detail="Event not found")
     return MembraneEventResponse.model_validate(event)

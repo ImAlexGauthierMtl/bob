@@ -43,6 +43,20 @@ class MembraneRepository:
             MembraneConnection.is_deleted == False,
         ).first()
 
+    def get_first_connection_by_user(self, user_id: str, tenant_id: str) -> Optional[MembraneConnection]:
+        return self.db.query(MembraneConnection).filter(
+            MembraneConnection.user_id == user_id,
+            MembraneConnection.tenant_id == tenant_id,
+            MembraneConnection.is_deleted == False,
+        ).first()
+
+    def get_connection_by_id(self, connection_id: str, tenant_id: str) -> Optional[MembraneConnection]:
+        return self.db.query(MembraneConnection).filter(
+            MembraneConnection.id == connection_id,
+            MembraneConnection.tenant_id == tenant_id,
+            MembraneConnection.is_deleted == False,
+        ).first()
+
     def update_connection(self, conn: MembraneConnection, data: dict) -> MembraneConnection:
         for key, value in data.items():
             if hasattr(conn, key):
