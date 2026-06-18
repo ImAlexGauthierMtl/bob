@@ -27,11 +27,13 @@ Preuves:
 - `frontend/src/app/store/{auth,crm,communication,ai-agent,platform,kb}` existe.
 - Les nouvelles compositions B4F passent par services + effects.
 - Le dashboard est migre vers `loadCrmDashboard` -> `CrmEffects` -> `CrmB4fService`, avec template `vm$ | async` et sans `.subscribe()`.
+- Les lectures de listes CRM `organizations`, `contacts`, `opportunities` et `activities` passent maintenant par `CrmEffects` -> `CrmB4fService`; les workflows de creation/search/enrich restent legacy pour une passe suivante.
 - Le contrat `crm-b4f-api /dashboard/summary` utilise maintenant les statuts opportunite ouverts valides au lieu de `OPEN`.
 - Il reste des pages legacy avec appels/services/subscriptions hors Effects, suivies par `M-03`, `F-03` et `F-04`.
 - Docker local sert le frontend sur `http://localhost:4700`.
 - Capture locale: `captures/cde-docker-local-home.png`.
 - Capture dashboard NgRx: `captures/cde-dashboard-ngrx.png`.
+- Captures listes CRM NgRx: `captures/m03-organizations-list.png`, `captures/m03-contacts-list.png`, `captures/m03-opportunities-list.png`, `captures/m03-activities-list.png`.
 
 ### Pipeline CI/CD
 

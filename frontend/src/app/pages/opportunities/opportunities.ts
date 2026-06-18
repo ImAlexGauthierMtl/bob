@@ -1,12 +1,20 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, effect, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DecimalPipe, SlicePipe } from '@angular/common';
+import { Store } from '@ngrx/store';
 import { Subscription } from 'rxjs';
 import { OpportunityService } from '../../shared/services/opportunity.service';
 import { OrganizationService } from '../../shared/services/organization.service';
 import { BobActionService } from '../../shared/services/bob-action.service';
 import { Opportunity, CreateOpportunityDto } from '../../shared/models/opportunity.model';
+import type { AppState } from '../../store';
+import { loadCrmOpportunities } from '../../store/crm/crm.actions';
+import {
+    selectCrmOpportunities,
+    selectCrmOpportunitiesLoading,
+    selectCrmOpportunitiesTotal,
+} from '../../store/crm/crm.selectors';
 
 @Component({
     selector: 'croo-opportunities',
@@ -16,21 +24,13 @@ import { Opportunity, CreateOpportunityDto } from '../../shared/models/opportuni
     styleUrl: './opportunities.css',
 })
 export class OpportunitiesComponent implements OnInit, OnDestroy {
-    opportunities: Opportunity[] = [];
-    total = 0;
-    isLoading = true;
-
     // Pagination
     currentPage = 1;
     pageSize = 50;
-    totalPages = 1;
     Math = Math;
 
     // Org name resolution
     orgNames: Record<string, string> = {};
-
-    // Pipeline stats
-    pipelineValue = 0;
 
     // Dialog state
     showAddDialog = false;
@@ -42,10 +42,35 @@ export class OpportunitiesComponent implements OnInit, OnDestroy {
 
     private bobActionSub?: Subscription;
 
+    private store: Store<AppState> = inject(Store);
     private oppService = inject(OpportunityService);
     private orgService = inject(OrganizationService);
     private router = inject(Router);
     private bobActionService = inject(BobActionService);
+    private opportunitiesSignal = this.store.selectSignal(selectCrmOpportunities);
+    private totalSignal = this.store.selectSignal(selectCrmOpportunitiesTotal);
+    private loadingSignal = this.store.selectSignal(selectCrmOpportunitiesLoading);
+    private orgNameEffect = effect(() => this.resolveOrgNames(this.opportunitiesSignal()));
+
+    get opportunities(): Opportunity[] {
+        return this.opportunitiesSignal();
+    }
+
+    get total(): number {
+        return this.totalSignal();
+    }
+
+    get isLoading(): boolean {
+        return this.loadingSignal();
+    }
+
+    get totalPages(): number {
+        return Math.max(1, Math.ceil(this.total / this.pageSize));
+    }
+
+    get pipelineValue(): number {
+        return this.opportunities.reduce((sum, o) => sum + (o.amount || 0), 0);
+    }
 
     ngOnInit(): void {
         this.loadOpportunities();
@@ -62,19 +87,8 @@ export class OpportunitiesComponent implements OnInit, OnDestroy {
     }
 
     loadOpportunities(): void {
-        this.isLoading = true;
         const skip = (this.currentPage - 1) * this.pageSize;
-        this.oppService.getAll(skip, this.pageSize).subscribe({
-            next: (res) => {
-                this.opportunities = res.items;
-                this.total = res.total;
-                this.totalPages = Math.max(1, Math.ceil(this.total / this.pageSize));
-                this.isLoading = false;
-                this.resolveOrgNames();
-                this.pipelineValue = this.opportunities.reduce((sum, o) => sum + (o.amount || 0), 0);
-            },
-            error: () => (this.isLoading = false),
-        });
+        this.store.dispatch(loadCrmOpportunities({ skip, limit: this.pageSize }));
     }
 
     goToPage(page: number): void {
@@ -136,9 +150,14 @@ export class OpportunitiesComponent implements OnInit, OnDestroy {
         return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
     }
 
-    private resolveOrgNames(): void {
+    private resolveOrgNames(opportunities: Opportunity[]): void {
+        for (const opportunity of opportunities) {
+            if (opportunity.organization_id && opportunity.organization_name) {
+                this.orgNames[opportunity.organization_id] = opportunity.organization_name;
+            }
+        }
         const orgIds = [...new Set(
-            this.opportunities.map(o => o.organization_id).filter((id): id is string => !!id)
+            opportunities.map(o => o.organization_id).filter((id): id is string => !!id && !this.orgNames[id])
         )];
         for (const id of orgIds) {
             this.orgService.getById(id).subscribe({

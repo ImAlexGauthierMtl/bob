@@ -34,3 +34,4 @@ captures/
 .run/
 test-reports/
 coverage-reports/
+frontend/test-results/

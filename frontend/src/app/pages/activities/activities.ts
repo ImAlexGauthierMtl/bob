@@ -2,8 +2,16 @@ import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Store } from '@ngrx/store';
 import { ActivityService } from '../../shared/services/activity.service';
 import { Activity, CreateActivityDto } from '../../shared/models/activity.model';
+import type { AppState } from '../../store';
+import { loadCrmActivities } from '../../store/crm/crm.actions';
+import {
+    selectCrmActivities,
+    selectCrmActivitiesLoading,
+    selectCrmActivitiesTotal,
+} from '../../store/crm/crm.selectors';
 
 @Component({
     selector: 'croo-activities',
@@ -13,9 +21,6 @@ import { Activity, CreateActivityDto } from '../../shared/models/activity.model'
     styleUrl: './activities.css',
 })
 export class ActivitiesComponent implements OnInit {
-    activities: Activity[] = [];
-    total = 0;
-    isLoading = true;
     activeTypeFilter = 'ALL';
     searchQuery = '';
 
@@ -24,36 +29,41 @@ export class ActivitiesComponent implements OnInit {
     newActivity: CreateActivityDto = { subject: '' };
     isCreating = false;
 
+    private store: Store<AppState> = inject(Store);
     private actService = inject(ActivityService);
+    private activitiesSignal = this.store.selectSignal(selectCrmActivities);
+    private totalSignal = this.store.selectSignal(selectCrmActivitiesTotal);
+    private loadingSignal = this.store.selectSignal(selectCrmActivitiesLoading);
+
+    get activities(): Activity[] {
+        let items = this.activitiesSignal();
+        if (this.activeTypeFilter !== 'ALL') {
+            items = items.filter(a => a.activity_type === this.activeTypeFilter);
+        }
+        if (this.searchQuery.trim()) {
+            const q = this.searchQuery.toLowerCase();
+            items = items.filter(a =>
+                a.subject.toLowerCase().includes(q) ||
+                (a.description && a.description.toLowerCase().includes(q))
+            );
+        }
+        return items;
+    }
+
+    get total(): number {
+        return this.totalSignal();
+    }
+
+    get isLoading(): boolean {
+        return this.loadingSignal();
+    }
 
     ngOnInit(): void {
         this.loadActivities();
     }
 
     loadActivities(): void {
-        this.isLoading = true;
-        const typeFilter = this.activeTypeFilter !== 'ALL' ? this.activeTypeFilter : undefined;
-        this.actService.getAll(0, 100, undefined, undefined, undefined, undefined).subscribe({
-            next: (res) => {
-                let items = res.items;
-                // Client-side type filter
-                if (typeFilter) {
-                    items = items.filter(a => a.activity_type === typeFilter);
-                }
-                // Client-side search
-                if (this.searchQuery.trim()) {
-                    const q = this.searchQuery.toLowerCase();
-                    items = items.filter(a =>
-                        a.subject.toLowerCase().includes(q) ||
-                        (a.description && a.description.toLowerCase().includes(q))
-                    );
-                }
-                this.activities = items;
-                this.total = res.total;
-                this.isLoading = false;
-            },
-            error: () => (this.isLoading = false),
-        });
+        this.store.dispatch(loadCrmActivities({ skip: 0, limit: 100 }));
     }
 
     setTypeFilter(type: string): void {

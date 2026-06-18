@@ -1,10 +1,18 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Store } from '@ngrx/store';
 import { Subscription } from 'rxjs';
 import { OrganizationService } from '../../shared/services/organization.service';
 import { BobActionService } from '../../shared/services/bob-action.service';
 import { Organization, PlaceResult, CreateOrganizationDto } from '../../shared/models/organization.model';
+import type { AppState } from '../../store';
+import { loadCrmOrganizations } from '../../store/crm/crm.actions';
+import {
+    selectCrmOrganizations,
+    selectCrmOrganizationsLoading,
+    selectCrmOrganizationsTotal,
+} from '../../store/crm/crm.selectors';
 
 @Component({
     selector: 'croo-organizations',
@@ -14,14 +22,9 @@ import { Organization, PlaceResult, CreateOrganizationDto } from '../../shared/m
     styleUrl: './organizations.css',
 })
 export class OrganizationsComponent implements OnInit, OnDestroy {
-    organizations: Organization[] = [];
-    total = 0;
-    isLoading = true;
-
     // Pagination
     currentPage = 1;
     pageSize = 50;
-    totalPages = 1;
     Math = Math;
 
     // Dialog state
@@ -47,9 +50,29 @@ export class OrganizationsComponent implements OnInit, OnDestroy {
 
     private bobActionSub?: Subscription;
 
+    private store: Store<AppState> = inject(Store);
     private orgService = inject(OrganizationService);
     private router = inject(Router);
     private bobActionService = inject(BobActionService);
+    private organizationsSignal = this.store.selectSignal(selectCrmOrganizations);
+    private totalSignal = this.store.selectSignal(selectCrmOrganizationsTotal);
+    private loadingSignal = this.store.selectSignal(selectCrmOrganizationsLoading);
+
+    get organizations(): Organization[] {
+        return this.organizationsSignal();
+    }
+
+    get total(): number {
+        return this.totalSignal();
+    }
+
+    get isLoading(): boolean {
+        return this.loadingSignal();
+    }
+
+    get totalPages(): number {
+        return Math.max(1, Math.ceil(this.total / this.pageSize));
+    }
 
     ngOnInit(): void {
         this.loadOrganizations();
@@ -89,19 +112,8 @@ export class OrganizationsComponent implements OnInit, OnDestroy {
     }
 
     loadOrganizations(): void {
-        this.isLoading = true;
         const skip = (this.currentPage - 1) * this.pageSize;
-        this.orgService.getAll(skip, this.pageSize).subscribe({
-            next: (res) => {
-                this.organizations = res.items;
-                this.total = res.total;
-                this.totalPages = Math.max(1, Math.ceil(this.total / this.pageSize));
-                this.isLoading = false;
-            },
-            error: () => {
-                this.isLoading = false;
-            },
-        });
+        this.store.dispatch(loadCrmOrganizations({ skip, limit: this.pageSize }));
     }
 
     goToPage(page: number): void {

@@ -1,11 +1,19 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, effect, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Store } from '@ngrx/store';
 import { Subscription } from 'rxjs';
 import { ContactService } from '../../shared/services/contact.service';
 import { OrganizationService } from '../../shared/services/organization.service';
 import { BobActionService } from '../../shared/services/bob-action.service';
 import { Contact, CreateContactDto } from '../../shared/models/contact.model';
+import type { AppState } from '../../store';
+import { loadCrmContacts } from '../../store/crm/crm.actions';
+import {
+    selectCrmContacts,
+    selectCrmContactsLoading,
+    selectCrmContactsTotal,
+} from '../../store/crm/crm.selectors';
 
 @Component({
     selector: 'croo-contacts',
@@ -15,14 +23,9 @@ import { Contact, CreateContactDto } from '../../shared/models/contact.model';
     styleUrl: './contacts.css',
 })
 export class ContactsComponent implements OnInit, OnDestroy {
-    contacts: Contact[] = [];
-    total = 0;
-    isLoading = true;
-
     // Pagination
     currentPage = 1;
     pageSize = 50;
-    totalPages = 1;
     Math = Math;
 
     // Dialog state
@@ -41,10 +44,31 @@ export class ContactsComponent implements OnInit, OnDestroy {
 
     private bobActionSub?: Subscription;
 
+    private store: Store<AppState> = inject(Store);
     private contactService = inject(ContactService);
     private orgService = inject(OrganizationService);
     private router = inject(Router);
     private bobActionService = inject(BobActionService);
+    private contactsSignal = this.store.selectSignal(selectCrmContacts);
+    private totalSignal = this.store.selectSignal(selectCrmContactsTotal);
+    private loadingSignal = this.store.selectSignal(selectCrmContactsLoading);
+    private orgNameEffect = effect(() => this.resolveOrgNames(this.contactsSignal()));
+
+    get contacts(): Contact[] {
+        return this.contactsSignal();
+    }
+
+    get total(): number {
+        return this.totalSignal();
+    }
+
+    get isLoading(): boolean {
+        return this.loadingSignal();
+    }
+
+    get totalPages(): number {
+        return Math.max(1, Math.ceil(this.total / this.pageSize));
+    }
 
     ngOnInit(): void {
         this.loadContacts();
@@ -73,18 +97,8 @@ export class ContactsComponent implements OnInit, OnDestroy {
     }
 
     loadContacts(): void {
-        this.isLoading = true;
         const skip = (this.currentPage - 1) * this.pageSize;
-        this.contactService.getAll(skip, this.pageSize).subscribe({
-            next: (res) => {
-                this.contacts = res.items;
-                this.total = res.total;
-                this.totalPages = Math.max(1, Math.ceil(this.total / this.pageSize));
-                this.isLoading = false;
-                this.resolveOrgNames();
-            },
-            error: () => (this.isLoading = false),
-        });
+        this.store.dispatch(loadCrmContacts({ skip, limit: this.pageSize }));
     }
 
     goToPage(page: number): void {
@@ -195,9 +209,9 @@ export class ContactsComponent implements OnInit, OnDestroy {
         }
     }
 
-    private resolveOrgNames(): void {
+    private resolveOrgNames(contacts: Contact[]): void {
         const orgIds = [...new Set(
-            this.contacts.map(c => c.organization_id).filter((id): id is string => !!id)
+            contacts.map(c => c.organization_id).filter((id): id is string => !!id && !this.orgNames[id])
         )];
         for (const id of orgIds) {
             this.orgService.getById(id).subscribe({
