@@ -66,7 +66,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 
 | ID | Règle | Section | Skill | Méthode de validation | Statut initial | Preuve actuelle / à collecter |
 |---|---|---:|---|---|---|---|
-| DB-01 | Aucune DDL au startup | § 2.7.5 | `dx_base_check_alembic_no_create_all_in_code` | `rg "create_all|db.create_all|DDL"` | VIOLATION | `Base.metadata.create_all(...)` trouvé dans plusieurs `main.py` |
+| DB-01 | Aucune DDL au startup | § 2.7.5 | `dx_base_check_alembic_no_create_all_in_code` | `rg "create_all|db.create_all|DDL"` | OK | `rg "metadata\\.create_all|db\\.create_all|SQLModel\\.metadata\\.create_all|drop_all\\(" apis -g '*.py'` ne retourne aucune DDL runtime |
 | DB-02 | Toute DDL passe par Alembic | § 2.7.5 | `dx_base_check_alembic_all_ddl_in_alembic` | Chercher `.sql`, `CREATE TABLE`, `CREATE SCHEMA` hors versions | A_VERIFIER | Audit à compléter |
 | DB-03 | Première migration crée le schéma du service | § 2.7.2, § 2.7.5 | `dx_base_check_alembic_first_revision_creates_schema` | Lire première révision par backend | A_VERIFIER | Audit à compléter |
 | DB-04 | Downgrade non vide | § 2.7.5 | `dx_base_check_alembic_downgrade_not_empty` | `rg "def downgrade|pass|NotImplementedError"` | A_VERIFIER | Fonctions présentes, contenu à valider |

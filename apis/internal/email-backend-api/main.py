@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from shared.config import get_settings
 from shared.infrastructure import configure_logging, get_logger, setup_cors, RequestLoggingMiddleware, monitoring_router
-from shared.database import Base
 from shared.event_bus import event_bus
 
 settings = get_settings("email-backend")
@@ -21,11 +20,8 @@ async def lifespan(app: FastAPI):
         email_contact, smart_label, integration_setting,
         membrane_connection, membrane_synced_email, membrane_synced_event,
     )  # noqa: F401
-    from app.infrastructure.database import init as db_init, get_engine
+    from app.infrastructure.database import init as db_init
     db_init("email-backend")
-    engine = get_engine()
-    Base.metadata.create_all(bind=engine)
-    logger.info("database_tables_created")
 
     if hasattr(event_bus, 'start_listening'):
         await event_bus.start_listening()
