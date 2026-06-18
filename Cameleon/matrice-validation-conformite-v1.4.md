@@ -46,7 +46,7 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | S-04 | `update-skills.sh` présent | § 10.4 | `dx_base_check_update_skills_script_present` | `[ -x .agents/update-skills.sh ]` | OK | `.agents/update-skills.sh` présent |
 | S-05 | Version des skills traçable | § 10.4 | `dx_base_check_skills_version_tracked` | Lire `.agents/.skills-version` | OK | `v1.7.0` |
 | S-06 | Aucun dossier/fichier outil spécifique interdit | § 10.3 | `dx_base_check_no_tool_specific_dirs` | `find` des patterns interdits | OK | `.kilo/` supprimé |
-| S-07 | Aucun `SKILL.md` local modifié manuellement | § 10.4 | `dx_base_check_skills_not_modified_locally` | Comparer au repo central/tag | A_VERIFIER | À revalider avant commit |
+| S-07 | Aucun `SKILL.md` local modifié manuellement | § 10.4 | `dx_base_check_skills_not_modified_locally` | Comparer au repo central/tag | OK | `validate-skills.sh .agents/skills`: 204 skills validées, 0 échec; comparaison avec le tag central `v1.7.0` sans écart |
 
 ### 2. Architecture APIs
 
