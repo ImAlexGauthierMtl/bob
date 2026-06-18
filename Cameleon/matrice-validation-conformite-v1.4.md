@@ -29,11 +29,11 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | M-03 | § 3, § 14 | Frontend Angular/NGRX | `cde-check-frontend-ngrx` | Store feature par B4F, HTTP dans Effects, modèles domaine | VIOLATION | à corriger |
 | M-04 | § 4, § 8.3 | CI/CD | `cde-master-validation` | Hors périmètre actif: CI/CD non suivi faute d'éléments plateforme | SKIP_CI_CD | critique |
 | M-05 | § 5, § 8.4 | Kubernetes et gateway | `cde-check-k8s-gateway` | Gateway unique, Backends internes, initContainer migrate, Lease RBAC | OK | critique |
-| M-06 | § 6, § 8.5 | Variables d'environnement | `cde-check-local-dev` | Variables locales documentées, pas de secrets réels, `.env.example` | A_VERIFIER | critique |
+| M-06 | § 6, § 8.5 | Variables d'environnement | `cde-check-local-dev` | Variables locales documentées, pas de secrets réels, `.env.example` | OK | critique |
 | M-07 | § 7, § 8.6 | Harbor registry | `cde-master-validation` | Hors périmètre actif: Harbor/registry dépend des éléments CI/CD manquants | SKIP_CI_CD | critique |
 | M-08 | § 5.8-5.10, § 8.8 | Observabilité et probes | `cde-check-observability` | `/liveness`, `/readiness`, `/startup`, `/health`, `/metrics`, logs JSON, trace_id | OK | critique |
-| M-09 | § 10, § 11 | Conventions et dev local | `cde-check-local-dev` | Wrappers racine, scripts par API, compose postgres/pgbouncer/redis/alloy | A_VERIFIER | à corriger |
-| M-10 | § 12 | Clean Architecture API | `cde-check-clean-architecture` | `domain/application/infrastructure/presentation`, import-linter, tests par couche | A_VERIFIER | à corriger |
+| M-09 | § 10, § 11 | Conventions et dev local | `cde-check-local-dev` | Wrappers racine, scripts par API, compose postgres/pgbouncer/redis/alloy | OK | à corriger |
+| M-10 | § 12 | Clean Architecture API | `cde-check-clean-architecture` | `domain/application/infrastructure/presentation`, import-linter, tests par couche | VIOLATION | à corriger |
 | M-11 | § 9 | Rapport final | `cde-master-validation` | Rapport markdown final, branches fusionnées, Docker local, CI/CD marqué skip | A_VERIFIER | critique |
 
 ## Matrice détaillée
@@ -150,19 +150,19 @@ Criticité: `critique` si la règle bloque sécurité, déploiement, rollback ou
 | L-03 | B4F sans `migrate.sh` | § 11.2 | `cde-check-local-dev` | `find apis/exposed -name migrate.sh` | OK | `find apis/exposed -name migrate.sh` retourne 0 fichier |
 | L-04 | Compose postgres + pgbouncer + redis + alloy | § 11.3 | `cde-check-local-dev` | Lire `docker-compose.yml` | OK | `docker compose --env-file .env.example config --quiet` passe; services `database`, `pgbouncer`, `redis`, `alloy` présents; PgBouncer en `transaction` |
 | L-05 | `.env.example` à jour | § 11.4 | `cde-check-local-dev` | `[ -f .env.example ]` + variables | OK | Variables globales `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`, `DATABASE_SSLMODE`, `REDIS_URL`, `OTEL_EXPORTER_OTLP_ENDPOINT`; ports préfixés par API |
-| L-06 | Docs sous `/docs` | § 10.1 | `cde-check-local-dev` | Chercher docs hors racine autorisée | A_VERIFIER | `Cameleon/` est plan de travail de conversion; destination finale à décider au rapport |
-| L-07 | Pas de données client réelles | § 10.2 | `cde-check-local-dev` | Scan secrets/data | A_VERIFIER | Audit à compléter |
+| L-06 | Docs sous `/docs` | § 10.1 | `cde-check-local-dev` | Chercher docs hors racine autorisée | OK | `Cameleon/` est le dossier de plan de conversion demandé; hors `docs/`/`Cameleon/`, seuls `AGENTS.md`, `README.md`, `frontend/README.md` et `apis/shared/requirements.txt` existent comme conventions racine/manifests techniques |
+| L-07 | Pas de données client réelles | § 10.2 | `cde-check-local-dev` | Scan secrets/data | OK | Audit `Cameleon/audit-local-dev-clean-architecture-v1.4.md`: `.env` ignoré, `.env.example` versionné, scan Git sans clé privée/token évident, values Kubernetes via `secretRefs`; fallback Docker local explicitement `dev-only-secret-not-for-production` |
 
 ### 10. Clean Architecture
 
 | ID | Règle | Section | Skill | Méthode de validation | Statut initial | Preuve actuelle / à collecter |
 |---|---|---:|---|---|---|---|
-| CA-01 | APIs en 4 couches uniformes | § 12.2 | `cde-check-clean-architecture` | `find apis -maxdepth` + import graph | A_VERIFIER | Structure partiellement présente |
-| CA-02 | `domain/` sans framework | § 12.3 | `cde-check-clean-architecture` | Recherche imports FastAPI/SQLAlchemy/Pydantic dans domain | A_VERIFIER | Audit à compléter |
-| CA-03 | `application/` sans framework | § 12.3 | `cde-check-clean-architecture` | Recherche imports FastAPI/SQLAlchemy/Pydantic dans application | A_VERIFIER | Audit à compléter |
-| CA-04 | Routes sans logique métier | § 12.3 | `cde-check-clean-architecture` | Lire routes longues/complexes | A_VERIFIER | Audit à compléter |
-| CA-05 | Entités métier ne dérivent pas de SQLAlchemy/Pydantic | § 12.3 | `cde-check-clean-architecture` | Recherche `Base`, `BaseModel` dans domain entities | A_VERIFIER | Audit à compléter |
-| CA-06 | Import-linter configuré | § 12.3 | `cde-check-clean-architecture` | Lire config test/lint | A_VERIFIER | Audit à compléter |
+| CA-01 | APIs en 4 couches uniformes | § 12.2 | `cde-check-clean-architecture` | `find apis -maxdepth` + import graph | VIOLATION | Audit `Cameleon/audit-local-dev-clean-architecture-v1.4.md`: 16 API sur 17 ont au moins une couche manquante; B4F sans `domain`, `auth-b4f-api` sans `application`, backends internes sans `application` sauf `email-backend-api` |
+| CA-02 | `domain/` sans framework | § 12.3 | `cde-check-clean-architecture` | Recherche imports FastAPI/SQLAlchemy/Pydantic dans domain | VIOLATION | 30 fichiers `app/domain/entities/*.py` importent SQLAlchemy ou déclarent `Column`/`relationship` |
+| CA-03 | `application/` sans framework | § 12.3 | `cde-check-clean-architecture` | Recherche imports FastAPI/SQLAlchemy/Pydantic dans application | OK | Scan `apis/*/*/app/application` pour FastAPI, Pydantic, SQLAlchemy, `Column`, `relationship`: aucun résultat |
+| CA-04 | Routes sans logique métier | § 12.3 | `cde-check-clean-architecture` | Lire routes longues/complexes | VIOLATION | Plusieurs routes contiennent persistence/logique métier; exemples: `provider_membrane_routes.py` 1198 lignes, `training_routes.py` 239 lignes, `auth_routes.py` porte token/rate-limit/session |
+| CA-05 | Entités métier ne dérivent pas de SQLAlchemy/Pydantic | § 12.3 | `cde-check-clean-architecture` | Recherche `Base`, `BaseModel` dans domain entities | VIOLATION | Les entités de domaine sont des modèles ORM SQLAlchemy dans `app/domain/entities`, donc non pures |
+| CA-06 | Import-linter configuré | § 12.3 | `cde-check-clean-architecture` | Lire config test/lint | VIOLATION | `import-linter` est listé en dépendance, mais aucun contrat `[tool.importlinter]`/`[importlinter]` n'est configuré |
 
 ## Commandes de validation recommandées
 
