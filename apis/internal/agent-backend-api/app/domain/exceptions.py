@@ -27,3 +27,11 @@ class TrainingNoteNotFoundError(Exception):
 
 class TrainingMissingElementNotFoundError(Exception):
     """Raised when a missing training element cannot be found for the active user."""
+
+
+class InvalidBobVoiceError(Exception):
+    """Raised when a requested Bob voice is not available."""
+
+
+class InvalidBobToneError(Exception):
+    """Raised when a requested Bob tone is not available."""

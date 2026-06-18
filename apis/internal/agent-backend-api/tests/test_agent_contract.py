@@ -553,11 +553,9 @@ def fake_db():
 def client(monkeypatch, fake_db):
     repository = FakeClientMapRepository(fake_db)
     monkeypatch.setattr(agent_deps, "ClientMapRepository", lambda db: repository)
-    monkeypatch.setattr(bob_settings_routes.BobUserSettings, "get_or_create", lambda db, user_id: fake_db.bob_settings)
     main.app.dependency_overrides[bcc_routes.get_current_user] = lambda: USER
     main.app.dependency_overrides[bcc_routes.get_db] = lambda: fake_db
     main.app.dependency_overrides[bob_settings_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[bob_settings_routes._get_db] = lambda: fake_db
     main.app.dependency_overrides[capability_routes.get_current_user] = lambda: USER
     main.app.dependency_overrides[agent_deps.get_db] = lambda: fake_db
     main.app.dependency_overrides[client_map_routes.get_current_user] = lambda: USER
