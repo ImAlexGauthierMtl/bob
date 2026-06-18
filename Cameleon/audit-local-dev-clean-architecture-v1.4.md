@@ -15,12 +15,13 @@ Le périmètre local/dev est conforme aux règles applicables:
 - aucune référence aux anciens outils/projets exclus n'est présente dans le dépôt.
 - aucun pattern évident de secret réel suivi par Git n'a été détecté.
 
-La Clean Architecture stricte n'est pas encore conforme:
+La Clean Architecture stricte progresse, mais n'est pas encore conforme:
 
-- 16 API sur 17 n'ont pas les quatre couches `domain`, `application`, `infrastructure`, `presentation`.
+- les 17 APIs ont maintenant les quatre couches `domain`, `application`, `infrastructure`, `presentation`.
+- `activity-backend-api` possède une première extraction verticale: routes HTTP minces, dépendance FastAPI isolée dans `presentation/deps.py`, et logique CRUD/orchestration dans `application/use_cases/activity_use_cases.py`.
 - 30 fichiers d'entités de domaine importent SQLAlchemy ou déclarent des `Column`/`relationship`.
 - plusieurs routes contiennent encore de la logique métier ou de persistence.
-- `import-linter` est listé dans les dépendances, mais aucune configuration de contrats de couches n'est présente.
+- les 17 `pyproject.toml` contiennent des contrats `import-linter` progressifs, validés localement.
 
 ## Validation dev local et secrets
 
@@ -42,7 +43,7 @@ La Clean Architecture stricte n'est pas encore conforme:
 | Quatre couches uniformes par API | OK | Les 17 APIs ont maintenant les couches `domain`, `application`, `infrastructure` et `presentation`; les couches ajoutees sont des packages vides servant de garde-fou avant les refactors verticaux |
 | `domain/` sans framework | VIOLATION | 30 fichiers `app/domain/entities/*.py` importent SQLAlchemy ou déclarent `Column`/`relationship` |
 | `application/` sans framework | OK | scan `application/` pour FastAPI, SQLAlchemy, httpx, redis, pydantic_settings et import `app.presentation`: aucun résultat direct |
-| Routes minces | VIOLATION | exemples: `provider_membrane_routes.py` fait 1198 lignes, `training_routes.py` 239 lignes, `auth_routes.py` porte token/rate-limit/session |
+| Routes minces | VIOLATION | `activity-backend-api/app/presentation/routes/activity_routes.py` est maintenant mince et passe par `ActivityUseCases`; la violation reste ouverte pour les routes encore épaisses, exemples: `provider_membrane_routes.py`, `training_routes.py`, `auth_routes.py` |
 | Entités métier pures | VIOLATION | les entités de domaine dérivent indirectement du modèle SQLAlchemy via `Base` et déclarent leurs colonnes ORM |
 | Contrats import-linter | OK | Les 17 `pyproject.toml` configurent 2 contrats progressifs; `lint-imports --config pyproject.toml --no-cache` passe sur les 17 APIs, 34 contrats gardes, 0 brise |
 
@@ -95,4 +96,4 @@ Pour fermer M-10/CA-* sans casser le runtime, faire une passe dédiée par famil
 3. Ajouter des repositories/ports en `application`.
 4. Garder les routes FastAPI limitées à validation HTTP, appel de use case et mapping réponse.
 5. Ajouter des contrats import-linter par API avant de déplacer tout le code.
-6. Migrer une API verticale d'abord (`activity-backend-api` ou `contact-backend-api`) puis appliquer le pattern aux autres.
+6. Répliquer le pattern validé sur `activity-backend-api` vers `contact-backend-api`, `org-backend-api`, `opportunity-backend-api` et les routes longues `email-backend-api`.

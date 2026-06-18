@@ -14,6 +14,7 @@ from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.activity_repository import ActivityRepository
 from app.middleware.auth import get_current_user, settings
+from app.presentation import deps as activity_deps
 from app.presentation.routes import activity_routes
 from app.presentation.schemas import activity_schemas
 
@@ -161,11 +162,11 @@ def client(monkeypatch, repo):
     async def noop_publish(*args, **kwargs):
         return None
 
-    monkeypatch.setattr(activity_routes, "ActivityRepository", lambda db: repo)
-    monkeypatch.setattr(activity_routes, "publish_activity_created", noop_publish)
-    monkeypatch.setattr(activity_routes, "publish_activity_updated", noop_publish)
+    monkeypatch.setattr(activity_deps, "ActivityRepository", lambda db: repo)
+    monkeypatch.setattr(activity_deps, "publish_activity_created", noop_publish)
+    monkeypatch.setattr(activity_deps, "publish_activity_updated", noop_publish)
     main.app.dependency_overrides[activity_routes.get_current_user] = lambda: USER
-    main.app.dependency_overrides[activity_routes.get_db] = lambda: FakeDB()
+    main.app.dependency_overrides[activity_deps.get_db] = lambda: FakeDB()
     with TestClient(main.app) as test_client:
         yield test_client
     main.app.dependency_overrides.clear()
