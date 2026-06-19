@@ -19,6 +19,7 @@
 ## Validation
 
 - Après chaque changement, exécuter la validation locale pertinente avant d'annoncer que c'est terminé.
+- Après chaque changement de code, déclencher un subagent de certification indépendant qui évalue le résultat contre `Cameleon/matrice-certification-regles-architecture-v1.5.md` et attribue un score sur 10. Si le score est inférieur à 10/10, le subagent doit retourner à l'agent principal les critères non conformes, les preuves manquantes et les corrections attendues; l'agent principal doit corriger puis relancer la certification avant de déclarer le travail terminé.
 - Pour les changements UI, valider dans un navigateur et conserver les captures dans `captures/`, dossier gitignoré.
 - Une capture d'erreur, de page blanche, de login bloqué ou d'écran non lié ne compte pas comme validation.
 - Inclure les captures pertinentes dans la conversation lorsque l'UI est touchée.
