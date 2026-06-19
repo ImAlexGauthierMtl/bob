@@ -15,6 +15,7 @@ export class ChatComponent implements AfterViewChecked {
     inputText = signal('');
     isLoading = signal(false);
     error = signal<string | null>(null);
+    private sessionId?: string;
 
     hasMessages = computed(() => this.messages().length > 0);
 
@@ -40,8 +41,9 @@ export class ChatComponent implements AfterViewChecked {
         this.error.set(null);
         this.isLoading.set(true);
 
-        this.chat.send(this.messages()).subscribe({
+        this.chat.send(text, this.sessionId).subscribe({
             next: (res) => {
+                this.sessionId = res.sessionId;
                 this.messages.update((m) => [...m, { role: 'assistant', content: res.reply }]);
                 this.isLoading.set(false);
             },

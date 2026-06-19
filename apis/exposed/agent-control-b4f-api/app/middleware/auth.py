@@ -47,7 +47,7 @@ def require_agent_control_permission(
         | _as_set(current_user.get("roles"))
         | _capabilities_from_header_or_env(x_cde_capabilities)
     )
-    if "admin" in granted or "agent_control.manage" in granted or "agent_control.use" in granted:
+    if _has_agent_control_permission(granted):
         return current_user
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -62,6 +62,14 @@ def _capabilities_from_header_or_env(x_cde_capabilities: str | None) -> set[str]
     if raw is None:
         raw = os.environ.get("CDE_LOCAL_AGENT_CONTROL_CAPABILITIES")
     return _as_set(raw)
+
+
+def _has_agent_control_permission(granted: set[str]) -> bool:
+    if {"admin", "agent_control.manage", "agent_control.use"} & granted:
+        return True
+    if _is_development() and {"bcc:read", "bcc:write"} & granted:
+        return True
+    return False
 
 
 def _as_set(value) -> set[str]:

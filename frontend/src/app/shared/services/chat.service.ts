@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+
+import { BobChannel } from '../models/bob.model';
+import { BobService } from './bob.service';
 
 export interface ChatMessage {
     role: 'user' | 'assistant';
@@ -13,15 +16,25 @@ export interface ChatRequest {
 
 export interface ChatResponse {
     reply: string;
+    sessionId: string;
 }
-
-const API_URL = 'http://localhost:8555/api/v1/chat';
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
-    constructor(private http: HttpClient) {}
+    constructor(private bob: BobService) {}
 
-    send(messages: ChatMessage[]): Observable<ChatResponse> {
-        return this.http.post<ChatResponse>(API_URL, { messages });
+    send(message: string, sessionId?: string): Observable<ChatResponse> {
+        return this.bob.chat(
+            message,
+            sessionId,
+            undefined,
+            { source: 'conversation-page' },
+            'workspace' satisfies BobChannel,
+        ).pipe(
+            map((response) => ({
+                reply: response.response,
+                sessionId: response.session_id,
+            })),
+        );
     }
 }

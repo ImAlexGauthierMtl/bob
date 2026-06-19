@@ -229,6 +229,46 @@ def test_agent_control_local_dev_env_capability_context(client, monkeypatch):
     assert response.status_code == 200
 
 
+def test_agent_control_local_dev_accepts_converted_bcc_permissions(client, monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("CDE_LOCAL_AGENT_CONTROL_CAPABILITIES", "")
+    token = jwt.encode(
+        {
+            "sub": "user-1",
+            "email": "user@example.com",
+            "tenant_id": "tenant-1",
+            "type": "access",
+            "permissions": ["bcc:write"],
+        },
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+
+    response = client.get("/bcc/organizations", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+
+
+def test_agent_control_production_rejects_converted_bcc_permissions(client, monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CDE_LOCAL_AGENT_CONTROL_CAPABILITIES", "")
+    token = jwt.encode(
+        {
+            "sub": "user-1",
+            "email": "user@example.com",
+            "tenant_id": "tenant-1",
+            "type": "access",
+            "permissions": ["bcc:write"],
+        },
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+
+    response = client.get("/bcc/organizations", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 403
+
+
 def test_agent_control_surface_mounts_only_its_public_namespaces():
     bounded_app = main.create_app()
     paths = set(bounded_app.openapi()["paths"])

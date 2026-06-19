@@ -91,7 +91,13 @@ def get_bob_cloud_client() -> BobCloudClient:
 def get_bob_cloud_client_for_request(request: Request) -> BobCloudClient | None:
     if _local_auth_enabled() and _bearer_token(request):
         return None
-    return get_bob_cloud_client()
+    try:
+        return get_bob_cloud_client()
+    except HTTPException as exc:
+        detail = exc.detail if isinstance(exc.detail, dict) else {}
+        if _local_auth_enabled() and detail.get("code") == "bob_cloud_unconfigured":
+            return None
+        raise
 
 
 def _copy_set_cookie(source: httpx.Response, target: Response) -> None:
@@ -133,7 +139,7 @@ async def get_session(
     if local_session is not None:
         return local_session
     if bob_cloud_client is None:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Bob Cloud session unavailable")
+        return {"authenticated": False, "source": "local-dev"}
     return await _proxy_bob_cloud(
         lambda: bob_cloud_client.get_session_response(forward_headers=request.headers),
         response,

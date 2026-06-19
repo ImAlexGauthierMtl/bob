@@ -336,6 +336,20 @@ def test_local_dev_session_uses_local_jwt_without_bob_cloud(client, auth_headers
     assert payload["permissions"] == ["users:manage"]
 
 
+def test_local_dev_session_without_bearer_returns_unauthenticated_when_bob_cloud_unconfigured(client, monkeypatch):
+    def broken_factory():
+        raise BobCloudModeError("BOB_CLOUD_API_URL is required when BOB_CLOUD_MODE=real")
+
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.delenv("CDE_LOCAL_AUTH_ENABLED", raising=False)
+    monkeypatch.setattr(bob_cloud_auth_routes, "create_bob_cloud_client_from_env", broken_factory)
+
+    session = client.get("/api/auth/v1/session")
+
+    assert session.status_code == 200
+    assert session.json() == {"authenticated": False, "source": "local-dev"}
+
+
 def test_local_jwt_session_is_refused_outside_dev_without_flag(client, auth_headers, monkeypatch):
     def broken_factory():
         raise BobCloudModeError("BOB_CLOUD_API_URL is required when BOB_CLOUD_MODE=real")
