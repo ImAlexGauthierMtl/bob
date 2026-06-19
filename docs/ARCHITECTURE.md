@@ -38,7 +38,8 @@ graph TB
         direction TB
         B4F_AUTH["🔐 auth~b4f-api<br/>Login, JWT, sessions"]
         B4F_CRM["📇 crm~b4f-api<br/>Pipeline commercial,<br/>agrégation contact+org+opp"]
-        B4F_AI["🤖 ai-agent~b4f-api<br/>Orchestration Bob,<br/>BCC, capabilities"]
+        B4F_BOB["🤖 bob-chat~b4f-api<br/>Conversation Bob,<br/>session, memoire"]
+        B4F_AGENT_CONTROL["🧭 agent-control~b4f-api<br/>BCC, training,<br/>client map"]
         B4F_COMM["📨 communication~b4f-api<br/>Sync MS365, filtrage emails,<br/>smart labels"]
         B4F_PLAT["🛠️ platform~b4f-api<br/>Workflows, analytics,<br/>agrégation usage"]
         B4F_KB["📚 kb~b4f-api<br/>Recherche KB,<br/>génération articles"]
@@ -76,7 +77,8 @@ graph TB
 
     MFE_INBOX --> B4F_COMM
     MFE_CRM --> B4F_CRM
-    MFE_BOB --> B4F_AI
+    MFE_BOB --> B4F_BOB
+    MFE_BOB --> B4F_AGENT_CONTROL
     MFE_PLAT --> B4F_PLAT
     MFE_PLAT --> B4F_KB
     MFE_SET --> B4F_AUTH
@@ -89,7 +91,8 @@ graph TB
     B4F_CRM --> BE_OPP
     B4F_CRM --> BE_ACTIVITY
     B4F_CRM --> BE_PRODUCT
-    B4F_AI --> BE_AGENT
+    B4F_BOB --> BE_AGENT
+    B4F_AGENT_CONTROL --> BE_AGENT
     B4F_COMM --> BE_EMAIL
     B4F_PLAT --> BE_WORKFLOW
     B4F_PLAT --> BE_USAGE
@@ -114,9 +117,8 @@ graph TB
     BE_AGENT -.-> EVENT_BUS
     BE_WORKFLOW -.-> EVENT_BUS
 
-    B4F_COMM --> MS365
-    B4F_AI --> LLM
-    B4F_PLAT --> ENRICH
+    BE_EMAIL --> MS365
+    BE_WORKFLOW --> ENRICH
 
     style MFE fill:#0f3460,stroke:#16213e,color:#e2e2e2
     style B4F fill:#533483,stroke:#16213e,color:#e2e2e2
@@ -137,7 +139,7 @@ graph TB
 | **Shell** | `/login`, `/select-organization`, layout | `auth~b4f-api` |
 | **mfe-inbox** | `/inbox` | `communication~b4f-api` |
 | **mfe-crm** | `/contacts`, `/organizations`, `/opportunities`, `/quotes`, `/activities` | `crm~b4f-api` |
-| **mfe-bob** | Bob chat overlay, `/settings/bob/**`, `/settings/bob-control-center/**`, `/template` | `ai-agent~b4f-api` |
+| **mfe-bob** | Bob chat overlay, `/settings/bob/**`, `/settings/bob-control-center/**`, `/template` | `bob-chat~b4f-api`, `agent-control~b4f-api` |
 | **mfe-platform** | `/dashboard`, `/analytics`, `/usage-logs`, `/tenants`, `/knowledge-base` | `platform~b4f-api`, `kb~b4f-api` |
 | **mfe-settings** | `/settings/profile`, `/security`, `/team`, `/roles`, `/integrations`, `/ms365`, `/automation`, `/products`, `/inbox` | Multi-B4F |
 
@@ -147,7 +149,8 @@ graph TB
 |---|---|---|
 | `auth~b4f-api` | Login, sessions JWT, gestion users/tenants | `user~backend-api` |
 | `crm~b4f-api` | Pipeline commercial, agrégation entités CRM | `contact~`, `org~`, `opportunity~`, `activity~`, `product~backend-api` |
-| `ai-agent~b4f-api` | Orchestration Bob AI, BCC, capabilities | `agent~backend-api` |
+| `bob-chat~b4f-api` | Conversation Bob, sessions, messages, orchestration de reponse | `agent~backend-api`, `conversation~backend-api`, `agent-runtime~backend-api` |
+| `agent-control~b4f-api` | BCC, training, client-map et controle Agent Control | `agent~backend-api` |
 | `communication~b4f-api` | Sync MS365, filtrage emails, smart labels | `email~backend-api` |
 | `platform~b4f-api` | Workflows, analytics, enrichment | `workflow~`, `usage~backend-api` |
 | `kb~b4f-api` | Recherche et génération KB | `kb~backend-api` |
@@ -200,7 +203,8 @@ croo-digital-experience/
 ├── apis/
 │   ├── auth~b4f-api/                  # 🔐 Domaine Auth
 │   ├── crm~b4f-api/                   # 📇 Domaine CRM
-│   ├── ai-agent~b4f-api/              # 🤖 Domaine AI
+│   ├── bob-chat~b4f-api/              # 🤖 Conversation Bob
+│   ├── agent-control~b4f-api/         # 🧭 Controle Agent/BCC
 │   ├── communication~b4f-api/         # 📨 Domaine Communication
 │   ├── platform~b4f-api/              # 🛠️ Domaine Platform
 │   ├── kb~b4f-api/                    # 📚 Domaine KB

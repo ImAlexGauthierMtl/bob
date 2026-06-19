@@ -24,7 +24,7 @@ class MembraneSyncedEmail(Base, TenantMixin, AuditMixin):
         nullable=False, index=True,
     )
     user_id = Column(String(36), nullable=False, index=True,
-                     comment="Soft ref to user-backend-api users.id")
+                     comment="Soft ref to user service users.id")
 
     # Provider identity (e.g. MS Graph message id, Gmail thread id)
     provider_message_id = Column(
@@ -60,6 +60,6 @@ class MembraneSyncedEmail(Base, TenantMixin, AuditMixin):
 
     # CRM auto-linking
     linked_contact_id = Column(String(36), nullable=True, index=True,
-                               comment="Soft ref to contact-backend-api contacts.id")
+                               comment="Soft ref to contact service contacts.id")
     linked_organization_id = Column(String(36), nullable=True, index=True,
-                                    comment="Soft ref to org-backend-api organizations.id")
+                                    comment="Soft ref to organization service organizations.id")

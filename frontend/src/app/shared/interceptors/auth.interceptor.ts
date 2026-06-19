@@ -1,88 +1,43 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { BehaviorSubject, catchError, filter, switchMap, take, throwError } from 'rxjs';
+import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { Router } from '@angular/router';
 
-// Module-level state for token refresh queuing
-let isRefreshing = false;
-const refreshTokenSubject = new BehaviorSubject<string | null>(null);
+const isAuthSessionRequest = (url: string): boolean => (
+    url.includes('/api/auth/v1/session') ||
+    url.includes('/api/auth/v1/refresh') ||
+    url.includes('/api/auth/v1/logout') ||
+    url.includes('/auth/login') ||
+    url.includes('/auth/register') ||
+    url.includes('/auth/refresh')
+);
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
     const authService = inject(AuthService);
-    const token = authService.getToken();
+    const router = inject(Router);
+    const credentialRequest = req.withCredentials ? req : req.clone({ withCredentials: true });
 
-    // Skip auth header for login/register/refresh requests
-    if (
-        req.url.includes('/auth/login') ||
-        req.url.includes('/auth/register') ||
-        req.url.includes('/auth/refresh')
-    ) {
-        return next(req);
-    }
-
-    // Add token if available
-    if (token) {
-        req = req.clone({
-            setHeaders: {
-                Authorization: `Bearer ${token}`,
-            },
-        });
-    }
-
-    return next(req).pipe(
+    return next(credentialRequest).pipe(
         catchError((error: HttpErrorResponse) => {
             if (error.status === 0) {
                 // Backend unreachable (network error / connection refused) — skip refresh
-                console.warn('[AuthInterceptor] Backend unreachable, skipping refresh for:', req.url);
+                console.warn('[AuthInterceptor] Backend unreachable, skipping refresh for:', credentialRequest.url);
                 return throwError(() => error);
             }
-            if (error.status === 401) {
-                if (!isRefreshing) {
-                    // First 401 — initiate refresh
-                    isRefreshing = true;
-                    refreshTokenSubject.next(null);
-
-                    return authService.refreshToken().pipe(
-                        switchMap((tokenResponse) => {
-                            isRefreshing = false;
-                            refreshTokenSubject.next(tokenResponse.access_token);
-                            const retryReq = req.clone({
-                                setHeaders: {
-                                    Authorization: `Bearer ${tokenResponse.access_token}`,
-                                },
-                            });
-                            return next(retryReq);
-                        }),
-                        catchError((refreshError) => {
-                            isRefreshing = false;
-                            refreshTokenSubject.next(null);
-                            // Only logout on 401 from refresh; keep session on network errors
-                            if (refreshError?.status !== 0) {
-                                authService.logout();
-                            }
-                            return throwError(() => refreshError);
-                        }),
-                    );
-                } else {
-                    // Refresh already in progress — wait for it to complete
-                    return refreshTokenSubject.pipe(
-                        filter((newToken): newToken is string => newToken !== null),
-                        take(1),
-                        switchMap((newToken) => {
-                            const retryReq = req.clone({
-                                setHeaders: {
-                                    Authorization: `Bearer ${newToken}`,
-                                },
-                            });
-                            return next(retryReq);
-                        }),
-                    );
-                }
+            if (error.status === 401 && !isAuthSessionRequest(credentialRequest.url)) {
+                return authService.refreshSession().pipe(
+                    switchMap(() => next(credentialRequest.clone({ withCredentials: true }))),
+                    catchError((refreshError) => {
+                        if (refreshError?.status !== 0) {
+                            authService.clearSessionAndRedirect();
+                        }
+                        return throwError(() => refreshError);
+                    }),
+                );
             }
             if (error.status === 403) {
                 // Insufficient permissions — navigate to dashboard
-                const router = inject(Router);
                 console.warn('[RBAC] Access denied:', error.error?.detail || 'Insufficient permissions');
                 router.navigate(['/dashboard']);
                 return throwError(() => error);

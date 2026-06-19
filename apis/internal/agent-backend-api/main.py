@@ -1,6 +1,6 @@
 """Agent Backend API — pure CRUD for BCC, Bob Settings, Client Map, Capabilities, Training.
 
-Storage layer for the AI Agent domain. Port: 9008.
+Storage layer for Bob Agent Control domain data. Port: 9008.
 """
 from contextlib import asynccontextmanager
 

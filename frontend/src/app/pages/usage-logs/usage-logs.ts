@@ -1,57 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { environment } from '../../../environments/environment';
-
-interface UsageLog {
-    id: string;
-    timestamp: string;
-    service_type: string;
-    provider: string;
-    model: string;
-    trigger_source: string;
-    trigger_id: string;
-    correlation_id: string;
-    correlation_label: string;
-    input_tokens: number;
-    output_tokens: number;
-    audio_seconds: number;
-    characters: number;
-    cogs_amount: number;
-    cogs_currency: string;
-    tenant_id: string;
-    user_id: string;
-    user_email: string;
-    is_billable: boolean;
-    metadata_: Record<string, unknown> | null;
-}
-
-interface UsageListResponse {
-    items: UsageLog[];
-    total: number;
-    skip: number;
-    limit: number;
-}
-
-interface IntentGroup {
-    correlation_id: string;
-    correlation_label: string;
-    transaction_count: number;
-    total_cogs: number;
-    first_timestamp: string;
-    service_types: string[];
-    trigger_source: string;
-    tenant_id: string;
-    user_email: string;
-}
-
-interface IntentListResponse {
-    items: IntentGroup[];
-    total: number;
-    skip: number;
-    limit: number;
-    total_cogs: number;
-}
+import { IntentGroup, UsageLog, UsageService } from '../../shared/services/usage.service';
 
 type ViewMode = 'transactions' | 'intents';
 
@@ -92,7 +41,7 @@ export class UsageLogsComponent implements OnInit {
     Math = Math;
     JSON = JSON;
 
-    private http = inject(HttpClient);
+    private usageService = inject(UsageService);
 
     ngOnInit(): void {
         this.loadLogs();
@@ -107,11 +56,12 @@ export class UsageLogsComponent implements OnInit {
 
     loadLogs(): void {
         this.isLoading = true;
-        let url = `${environment.platformApiUrl}/admin/usage?skip=${this.logOffset}&limit=${this.logLimit}`;
-        if (this.filterService) url += `&service_type=${this.filterService}`;
-        if (this.filterTenant) url += `&tenant_id=${this.filterTenant}`;
-
-        this.http.get<UsageListResponse>(url).subscribe({
+        this.usageService.listUsage({
+            skip: this.logOffset,
+            limit: this.logLimit,
+            serviceType: this.filterService || undefined,
+            tenantId: this.filterTenant || undefined,
+        }).subscribe({
             next: (res) => {
                 this.logItems = res.items;
                 this.logTotal = res.total;
@@ -128,10 +78,11 @@ export class UsageLogsComponent implements OnInit {
 
     loadIntents(): void {
         this.isLoading = true;
-        let url = `${environment.platformApiUrl}/admin/usage/by-intent?skip=${this.intentOffset}&limit=${this.intentLimit}`;
-        if (this.filterTenant) url += `&tenant_id=${this.filterTenant}`;
-
-        this.http.get<IntentListResponse>(url).subscribe({
+        this.usageService.listIntents({
+            skip: this.intentOffset,
+            limit: this.intentLimit,
+            tenantId: this.filterTenant || undefined,
+        }).subscribe({
             next: (res) => {
                 this.intentItems = res.items;
                 this.intentTotal = res.total;
@@ -152,9 +103,7 @@ export class UsageLogsComponent implements OnInit {
         this.drawerLoading = true;
         this.drawerItems = [];
 
-        this.http.get<UsageListResponse>(
-            `${environment.platformApiUrl}/admin/usage/by-intent/${intent.correlation_id}`
-        ).subscribe({
+        this.usageService.getIntentUsage(intent.correlation_id).subscribe({
             next: (res) => {
                 this.drawerItems = res.items;
                 this.drawerLoading = false;

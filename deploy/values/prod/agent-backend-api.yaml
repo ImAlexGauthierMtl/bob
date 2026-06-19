@@ -16,6 +16,7 @@ config:
   LOG_FORMAT: json
   PORT: '9008'
   API_PORT: '9008'
+  WORKSPACE_MODEL: llama-3.1-8b-instant
 secretRefs:
 - name: backend-runtime-secrets
 initContainers:

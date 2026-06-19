@@ -20,7 +20,7 @@ class MS365Connection(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
     id = Column(String(36), primary_key=True, default=generate_uuid)
 
     # Owner
-    user_id = Column(String(36), nullable=False, index=True, unique=True, comment="Soft ref to user-backend-api users.id")
+    user_id = Column(String(36), nullable=False, index=True, unique=True, comment="Soft ref to user service users.id")
 
     # Microsoft identity
     ms_user_id = Column(String(255), nullable=True, comment="Microsoft user object ID")

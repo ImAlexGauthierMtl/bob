@@ -39,7 +39,7 @@ class UserCapability(Base, TenantMixin, AuditMixin):
     __tablename__ = "user_capabilities"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(36), nullable=False, index=True, comment="Soft ref to user-backend-api users.id")
+    user_id = Column(String(36), nullable=False, index=True, comment="Soft ref to user service users.id")
     capability_id = Column(String(36), ForeignKey("capability_definitions.id"), nullable=False, index=True)
     granted = Column(Boolean, nullable=False, default=True)
     granted_by = Column(String(100), nullable=True)

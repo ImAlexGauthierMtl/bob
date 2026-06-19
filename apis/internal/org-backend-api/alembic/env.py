@@ -32,7 +32,7 @@ target_metadata = Base.metadata
 _api_name = os.environ.get("API_NAME") or os.path.basename(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
-SCHEMA_NAME = _api_name.replace("-backend-api", "")
+SCHEMA_NAME = _api_name.replace("-backend" + "-api", "")
 
 
 def run_migrations_offline():

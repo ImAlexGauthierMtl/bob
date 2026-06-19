@@ -161,7 +161,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_bcc_task_templates_tenant_id'), 'bcc_task_templates', ['tenant_id'], unique=False)
     op.create_table('bob_user_settings',
     sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('user_id', sa.String(length=36), nullable=False, comment='Soft ref to user-backend-api users.id'),
+    sa.Column('user_id', sa.String(length=36), nullable=False, comment='Soft ref to user service users.id'),
     sa.Column('tone', sa.String(length=20), nullable=False),
     sa.Column('formality', sa.Float(), nullable=False),
     sa.Column('response_length', sa.String(length=20), nullable=False),
@@ -418,7 +418,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_training_notes_user_id'), 'training_notes', ['user_id'], unique=False)
     op.create_table('user_capabilities',
     sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('user_id', sa.String(length=36), nullable=False, comment='Soft ref to user-backend-api users.id'),
+    sa.Column('user_id', sa.String(length=36), nullable=False, comment='Soft ref to user service users.id'),
     sa.Column('capability_id', sa.String(length=36), nullable=False),
     sa.Column('granted', sa.Boolean(), nullable=False),
     sa.Column('granted_by', sa.String(length=100), nullable=True),
@@ -436,7 +436,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_user_capabilities_user_id'), 'user_capabilities', ['user_id'], unique=False)
     op.create_table('user_departments',
     sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('user_id', sa.String(length=36), nullable=False, comment='Soft ref to user-backend-api users.id'),
+    sa.Column('user_id', sa.String(length=36), nullable=False, comment='Soft ref to user service users.id'),
     sa.Column('department_id', sa.String(length=36), nullable=False),
     sa.Column('is_manager', sa.String(length=5), nullable=False),
     sa.ForeignKeyConstraint(['department_id'], ['departments.id'], ),
@@ -635,7 +635,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_bcc_tasks_tenant_id'), 'bcc_tasks', ['tenant_id'], unique=False)
     op.create_table('bcc_user_roles',
     sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('user_id', sa.String(length=36), nullable=False, comment='Soft ref to user-backend-api users.id'),
+    sa.Column('user_id', sa.String(length=36), nullable=False, comment='Soft ref to user service users.id'),
     sa.Column('role_id', sa.String(length=36), nullable=False),
     sa.Column('current_stage', sa.String(length=20), nullable=False),
     sa.Column('assigned_by', sa.String(length=100), nullable=True),
@@ -681,7 +681,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_bcc_task_steps_task_id'), 'bcc_task_steps', ['task_id'], unique=False)
     op.create_table('bcc_user_progress',
     sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('user_id', sa.String(length=36), nullable=False, comment='Soft ref to user-backend-api users.id'),
+    sa.Column('user_id', sa.String(length=36), nullable=False, comment='Soft ref to user service users.id'),
     sa.Column('skill_id', sa.String(length=36), nullable=False),
     sa.Column('score', sa.Float(), nullable=False),
     sa.Column('source', sa.String(length=20), nullable=False),
@@ -699,7 +699,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_bcc_user_progress_user_id'), 'bcc_user_progress', ['user_id'], unique=False)
     op.create_table('bcc_user_task_logs',
     sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('user_id', sa.String(length=36), nullable=False, comment='Soft ref to user-backend-api users.id'),
+    sa.Column('user_id', sa.String(length=36), nullable=False, comment='Soft ref to user service users.id'),
     sa.Column('task_id', sa.String(length=36), nullable=False),
     sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('outcome', sa.String(length=20), nullable=False),

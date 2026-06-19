@@ -24,7 +24,7 @@ class SyncedEmail(Base, TenantMixin, AuditMixin):
         String(36), ForeignKey("ms365_connections.id", ondelete="CASCADE"),
         nullable=False, index=True,
     )
-    user_id = Column(String(36), nullable=False, index=True, comment="Soft ref to user-backend-api users.id")
+    user_id = Column(String(36), nullable=False, index=True, comment="Soft ref to user service users.id")
 
     # Microsoft Graph identity
     ms_message_id = Column(String(255), nullable=False, unique=True, index=True, comment="MS Graph message ID")
@@ -55,5 +55,5 @@ class SyncedEmail(Base, TenantMixin, AuditMixin):
     conversation_id = Column(String(255), nullable=True, index=True, comment="MS Graph conversation ID for threading")
 
     # CRM auto-linking
-    linked_contact_id = Column(String(36), nullable=True, index=True, comment="Soft ref to contact-backend-api contacts.id")
-    linked_organization_id = Column(String(36), nullable=True, index=True, comment="Soft ref to org-backend-api organizations.id")
+    linked_contact_id = Column(String(36), nullable=True, index=True, comment="Soft ref to contact service contacts.id")
+    linked_organization_id = Column(String(36), nullable=True, index=True, comment="Soft ref to organization service organizations.id")

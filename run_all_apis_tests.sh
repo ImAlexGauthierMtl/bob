@@ -32,11 +32,12 @@ for layer in exposed internal; do
     printf '[test] %s/%s\n' "$layer" "$api_name"
     if (cd "$api_dir" && ./run_tests.sh); then
       pass=$((pass + 1))
-      [ -f "$api_dir/junit.xml" ] && cp "$api_dir/junit.xml" "$REPORT_DIR/$api_name-junit.xml"
-      [ -f "$api_dir/coverage.xml" ] && cp "$api_dir/coverage.xml" "$COVERAGE_DIR/$api_name-coverage.xml"
     else
       fail=$((fail + 1))
     fi
+
+    [ -f "$api_dir/junit.xml" ] && cp "$api_dir/junit.xml" "$REPORT_DIR/$api_name-junit.xml"
+    [ -f "$api_dir/coverage.xml" ] && cp "$api_dir/coverage.xml" "$COVERAGE_DIR/$api_name-coverage.xml"
   done
 done
 

@@ -1,15 +1,11 @@
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-export interface InboxFilter {
-    folder?: string;
-    smartLabel?: string;
-    isUnread?: boolean;
-    isImportant?: boolean;
-}
-
+import { Store } from '@ngrx/store';
+import { Observable } from 'rxjs';
+import { InboxFilter } from '../../../../shared/models/inbox-filter.model';
 import { SmartLabel } from '../../../../shared/models/smart-label.model';
-import { SmartLabelService } from '../../../../shared/services/smart-label.service';
+import { loadInboxLabels } from '../../../../store/inbox/inbox.actions';
+import { selectInboxLabels } from '../../../../store/inbox/inbox.selectors';
 
 @Component({
     selector: 'app-inbox-sidebar',
@@ -20,26 +16,24 @@ import { SmartLabelService } from '../../../../shared/services/smart-label.servi
 })
 export class InboxSidebarComponent implements OnInit {
 
+    @Output() composeRequested = new EventEmitter<void>();
     @Output() filterChanged = new EventEmitter<InboxFilter>();
 
     activeFolder = 'All Mail';
     activeSmartLabel = '';
     
-    smartLabels: SmartLabel[] = [];
+    smartLabels$: Observable<SmartLabel[]>;
 
-    constructor(private smartLabelService: SmartLabelService) {}
-
-    ngOnInit(): void {
-        this.loadLabels();
+    constructor(private store: Store) {
+        this.smartLabels$ = this.store.select(selectInboxLabels);
     }
 
-    loadLabels(): void {
-        this.smartLabelService.getAll(0, 50).subscribe({
-            next: (res) => {
-                this.smartLabels = res.items;
-            },
-            error: (err) => console.error('Failed to load smart labels in sidebar', err)
-        });
+    ngOnInit(): void {
+        this.store.dispatch(loadInboxLabels());
+    }
+
+    openCompose(): void {
+        this.composeRequested.emit();
     }
 
     setFolder(folder: string): void {

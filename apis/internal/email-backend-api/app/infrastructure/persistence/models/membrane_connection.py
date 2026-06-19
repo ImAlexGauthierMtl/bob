@@ -20,7 +20,7 @@ class MembraneConnection(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
 
     # Owner
     user_id = Column(String(36), nullable=False, index=True,
-                     comment="Soft ref to user-backend-api users.id")
+                     comment="Soft ref to user service users.id")
 
     # Membrane identifiers
     membrane_connection_id = Column(

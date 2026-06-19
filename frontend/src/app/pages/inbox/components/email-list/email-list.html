@@ -1,43 +1,41 @@
 <div class="email-list-layout">
-    <!-- Toolbar -->
     <div class="email-list-toolbar">
-        <div class="email-list-toolbar__actions">
-            <!-- Hidden: select-all checkbox (no backend) -->
-            <!-- <input type="checkbox" class="email-list-toolbar__checkbox"> -->
-            <button (click)="onRefresh()" class="email-list-toolbar__btn" [class.animate-spin]="isLoading">
-                <i class="fa-solid fa-rotate-right text-sm"></i>
-            </button>
-            <!-- Hidden: trash button (no backend) -->
-            <!-- <button class="email-list-toolbar__btn"><i class="fa-solid fa-trash text-sm"></i></button> -->
-            <!-- Hidden: folder button (no backend) -->
-            <!-- <button class="email-list-toolbar__btn"><i class="fa-solid fa-folder text-sm"></i></button> -->
+        <div>
+            <p class="email-list-toolbar__title">Conversations</p>
+            <p class="email-list-toolbar__subtitle">
+                {{ (total$ | async) || 0 }} message{{ ((total$ | async) || 0) === 1 ? '' : 's' }}
+            </p>
         </div>
-        <p class="email-list-toolbar__stats">{{ emails.length > 0 ? skip + 1 : 0 }}-{{ skip + emails.length }} of {{ total }}</p>
+        <div class="email-list-toolbar__actions">
+            <button (click)="onRefresh()" class="email-list-toolbar__btn" [class.animate-spin]="isLoading$ | async">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+            <p class="email-list-toolbar__stats">{{ rangeText$ | async }}</p>
+        </div>
     </div>
 
-    <!-- Scrollable List -->
     <div class="email-list-scroll" (scroll)="onScroll($event)">
         <div class="email-list-items">
 
-            <!-- Connection Banner -->
-            <div *ngIf="showConnectionBanner" style="background: var(--color-warning-light, #fffbeb); border: 1px solid var(--color-warning, #f59e0b); border-radius: 8px; padding: 12px 16px; margin: 8px 12px; display: flex; align-items: center; gap: 10px;">
-                <i class="fa-solid fa-triangle-exclamation" style="color: var(--color-warning, #f59e0b); font-size: 16px;"></i>
-                <span style="flex: 1; font-size: 13px;">{{ connectionBannerMessage }}</span>
-                <a routerLink="/settings/integrations" style="font-size: 13px; font-weight: 500; color: var(--color-accent); text-decoration: none; white-space: nowrap;">
-                    Go to Settings <i class="fa-solid fa-arrow-right" style="margin-left: 4px;"></i>
+            <div *ngIf="showConnectionBanner$ | async" class="email-list-banner">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>{{ connectionBannerMessage$ | async }}</span>
+                <a routerLink="/settings/integrations">
+                    Settings <i class="fa-solid fa-arrow-right"></i>
                 </a>
             </div>
+
+            <ng-container *ngIf="emails$ | async as emails">
             
-            <div *ngIf="isLoading && emails.length === 0" class="email-list-state">
+            <div *ngIf="(isLoading$ | async) && emails.length === 0" class="email-list-state">
                 <i class="fa-solid fa-circle-notch fa-spin email-list-state__spinner"></i>
             </div>
             
-            <div *ngIf="!isLoading && emails.length === 0" class="email-list-state">
+            <div *ngIf="!(isLoading$ | async) && emails.length === 0" class="email-list-state">
                 <i class="fa-solid fa-inbox email-list-state__icon"></i>
                 <p>No emails found.</p>
             </div>
 
-            <!-- Dynamic Emails -->
             <div *ngFor="let email of emails" 
                  (click)="selectEmail(email)"
                  [class.email-item]="true"
@@ -45,35 +43,21 @@
                  [class.email-item--unread]="!email.is_read"
                  [class.email-item--read]="email.is_read">
                 <div class="email-item__inner">
-                    <!-- Actions -->
-                    <div style="display: flex; flex-direction: column; align-items: center;">
-                        <!-- Hidden: item checkbox (no backend) -->
-                        <!-- <input type="checkbox" class="email-item__check" (click)="$event.stopPropagation()"> -->
-                        <!-- Hidden: star button (no backend) -->
-                        <!-- <button class="email-item__star" [class.email-item__star--active]="email.importance === 'high'" (click)="$event.stopPropagation()">
-                            <i class="fa-solid fa-star" *ngIf="email.importance === 'high'"></i>
-                            <i class="fa-regular fa-star" *ngIf="email.importance !== 'high'"></i>
-                        </button> -->
-                    </div>
-                    
-                    <!-- Avatar -->
                     <div class="email-item__avatar">
                         {{ email.from_name ? email.from_name.charAt(0).toUpperCase() : (email.from_address ? email.from_address.charAt(0).toUpperCase() : '?') }}
                     </div>
 
-                    <!-- Content -->
                     <div class="email-item__content">
                         <div class="email-item__header">
                             <div class="email-item__sender-area">
                                 <p class="email-item__sender">{{ email.from_name || email.from_address }}</p>
-                                <span *ngIf="email.importance === 'high'" class="email-item__urgent">URGENT</span>
+                                <span *ngIf="!email.is_read" class="email-item__status">New</span>
+                                <span *ngIf="email.importance === 'high'" class="email-item__urgent">Urgent</span>
                                 <ng-container *ngIf="email.smart_label">
                                     <span *ngFor="let part of parseSmartLabel(email.smart_label); let last = last" 
-                                          class="email-item__badge email-item__badge--ai" 
-                                          [style.backgroundColor]="'var(--color-accent-light)'" 
-                                          [style.color]="'var(--color-accent)'"
+                                          class="email-item__badge"
                                           [style.marginRight.px]="last ? 0 : 4">
-                                        <i *ngIf="last" class="fa-solid fa-sparkles text-xs mr-1"></i> {{ part }}
+                                        {{ part }}
                                     </span>
                                 </ng-container>
                             </div>
@@ -82,24 +66,23 @@
                         <p class="email-item__subject">{{ email.subject || '(No Subject)' }}</p>
                         <p class="email-item__preview">{{ email.body_preview }}</p>
                         
-                        <!-- Indicators -->
                         <div class="email-item__indicators" *ngIf="email.has_attachments || email.linked_contact_id">
                             <span *ngIf="email.has_attachments" class="email-item__attachment">
                                 <i class="fa-solid fa-paperclip"></i>
                                 {{ email.attachments_meta?.length }}
                             </span>
                             <span *ngIf="email.linked_contact_id" class="email-item__badge email-item__badge--crm">
-                                <i class="fa-solid fa-user-circle"></i> CRM Linked
+                                <i class="fa-regular fa-address-card"></i> CRM
                             </span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Loading Indicator for Infinite Scroll -->
-            <div class="email-list-more" *ngIf="isLoading && emails.length > 0">
-                <i class="fa-solid fa-circle-notch fa-spin text-gray-400 text-lg"></i>
+            <div class="email-list-more" *ngIf="(isLoading$ | async) && emails.length > 0">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
             </div>
+            </ng-container>
         </div>
     </div>
 </div>

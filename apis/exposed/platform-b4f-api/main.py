@@ -20,8 +20,24 @@ from app.presentation.routes.workflow_routes import router as workflow_router
 from app.presentation.routes.usage_routes import router as usage_router
 from app.presentation.routes.enrichment_routes import router as enrichment_router
 from app.presentation.routes.overview_routes import router as overview_router
+from app.presentation.routes.entitlement_routes import router as entitlement_router
+from app.presentation.routes.bob_settings_preferences_routes import router as bob_settings_preferences_router
+from app.presentation.routes.bob_settings_security_routes import router as bob_settings_security_router
 
 app.include_router(overview_router, tags=["overview"])
+app.include_router(entitlement_router, tags=["entitlements"])
+app.include_router(bob_settings_preferences_router, tags=["bob-settings"])
+app.include_router(bob_settings_security_router, tags=["bob-settings"])
+app.include_router(
+    bob_settings_preferences_router,
+    prefix="/api/bob-settings/v1",
+    tags=["bob-settings-public"],
+)
+app.include_router(
+    bob_settings_security_router,
+    prefix="/api/bob-settings/v1",
+    tags=["bob-settings-public"],
+)
 app.include_router(workflow_router, tags=["workflows"])
 app.include_router(usage_router, tags=["usage"])
 app.include_router(enrichment_router, tags=["enrichment"])

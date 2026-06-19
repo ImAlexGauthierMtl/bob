@@ -1,36 +1,9 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { TenantService } from '../../shared/services/tenant.service';
 import { Tenant, UpdateTenantDto, ProvisionRequest } from '../../shared/models/tenant.model';
-import { environment } from '../../../environments/environment';
-
-interface UsageLog {
-    id: string;
-    timestamp: string;
-    service_type: string;
-    provider: string;
-    model: string;
-    trigger_source: string;
-    trigger_id: string;
-    input_tokens: number;
-    output_tokens: number;
-    audio_seconds: number;
-    characters: number;
-    cogs_amount: number;
-    cogs_currency: string;
-    user_id: string;
-    user_email: string;
-    is_billable: boolean;
-}
-
-interface UsageListResponse {
-    items: UsageLog[];
-    total: number;
-    skip: number;
-    limit: number;
-}
+import { UsageLog, UsageService } from '../../shared/services/usage.service';
 
 @Component({
     selector: 'croo-tenant-detail',
@@ -77,7 +50,7 @@ export class TenantDetailComponent implements OnInit {
     Math = Math;
 
     private tenantService = inject(TenantService);
-    private http = inject(HttpClient);
+    private usageService = inject(UsageService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
 
@@ -117,12 +90,12 @@ export class TenantDetailComponent implements OnInit {
         if (!this.tenant) return;
         this.logsLoading = true;
 
-        let url = `${environment.platformApiUrl}/admin/usage?tenant_id=${this.tenant.id}&skip=${this.logOffset}&limit=${this.logLimit}`;
-        if (this.logFilterService) {
-            url += `&service_type=${this.logFilterService}`;
-        }
-
-        this.http.get<UsageListResponse>(url).subscribe({
+        this.usageService.listUsage({
+            tenantId: this.tenant.id,
+            skip: this.logOffset,
+            limit: this.logLimit,
+            serviceType: this.logFilterService || undefined,
+        }).subscribe({
             next: (res) => {
                 this.logItems = res.items;
                 this.logTotal = res.total;

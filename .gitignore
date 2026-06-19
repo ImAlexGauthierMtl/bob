@@ -31,6 +31,8 @@ Thumbs.db
 
 # Local evidence
 captures/
+reports/
+project-x/
 .run/
 test-reports/
 coverage-reports/

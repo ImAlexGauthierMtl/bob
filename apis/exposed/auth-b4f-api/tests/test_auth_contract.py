@@ -1,11 +1,13 @@
 from datetime import datetime, timezone
 
 import pytest
+import httpx
 from fastapi.testclient import TestClient
 
 import main
 from app.infrastructure.clients.user_client import RoleClient, TenantClient, UserClient
-from app.presentation.routes import auth_routes, role_routes, tenant_routes, user_routes
+from app.presentation.routes import auth_routes, bob_cloud_auth_routes, role_routes, tenant_routes, user_routes
+from shared.services import BobCloudModeError, BobCloudResponseError
 
 
 def user_payload(user_id="user-1", email="user@example.com", **overrides):
@@ -205,6 +207,40 @@ class FakeServiceClient:
         return FakeResponse(status_code=404 if path.endswith("/missing") else 204)
 
 
+class FakeBobCloudClient:
+    def __init__(self):
+        self.calls = []
+
+    async def get_session_response(self, forward_headers=None):
+        self.calls.append(("session", dict(forward_headers or {})))
+        return httpx.Response(
+            200,
+            headers={"Set-Cookie": "bob_cloud_session=abc; HttpOnly; Path=/"},
+            json={
+                "authenticated": True,
+                "user": {"id": "user-alex-local"},
+                "tenant": {"id": "tenant-croo-local"},
+                "source": "bob-cloud-stub",
+            },
+        )
+
+    async def refresh_session_response(self, forward_headers=None):
+        self.calls.append(("refresh", dict(forward_headers or {})))
+        return httpx.Response(
+            200,
+            headers={"Set-Cookie": "bob_cloud_session=refreshed; HttpOnly; Path=/"},
+            json={"authenticated": True, "source": "bob-cloud-stub"},
+        )
+
+    async def logout_response(self, forward_headers=None):
+        self.calls.append(("logout", dict(forward_headers or {})))
+        return httpx.Response(
+            200,
+            headers={"Set-Cookie": "bob_cloud_session=; Max-Age=0; Path=/"},
+            json={"authenticated": False, "source": "bob-cloud-stub"},
+        )
+
+
 @pytest.fixture()
 def fake_clients(monkeypatch):
     async def skip_admin_seed():
@@ -256,6 +292,63 @@ def test_monitoring_endpoints(client):
         assert response.status_code == 200
     assert "dependencies" in client.get("/health").json()
     assert "cde_api_info" in client.get("/metrics").text
+
+
+def test_bob_cloud_auth_routes_delegate_and_preserve_cookie(client):
+    fake_bob_cloud = FakeBobCloudClient()
+    main.app.dependency_overrides[bob_cloud_auth_routes.get_bob_cloud_client] = lambda: fake_bob_cloud
+
+    session = client.get(
+        "/api/auth/v1/session",
+        headers={"Cookie": "bob_cloud_session=old", "X-Request-Id": "req-1"},
+    )
+    refresh = client.post("/api/auth/v1/refresh", headers={"X-Request-Id": "req-2"})
+    logout = client.post("/api/auth/v1/logout", headers={"X-Request-Id": "req-3"})
+
+    assert session.status_code == 200
+    assert session.json()["authenticated"] is True
+    assert "httponly" in session.headers["set-cookie"].lower()
+    assert refresh.json()["authenticated"] is True
+    assert logout.json()["authenticated"] is False
+    assert fake_bob_cloud.calls[0][0] == "session"
+    assert fake_bob_cloud.calls[0][1]["cookie"] == "bob_cloud_session=old"
+    assert fake_bob_cloud.calls[0][1]["x-request-id"] == "req-1"
+    assert [call[0] for call in fake_bob_cloud.calls] == ["session", "refresh", "logout"]
+
+
+def test_bob_cloud_auth_routes_map_bob_cloud_errors(client):
+    class FailingBobCloudClient:
+        async def get_session_response(self, forward_headers=None):
+            raise BobCloudResponseError(
+                status_code=403,
+                detail={"code": "capability_denied"},
+                path="/api/auth/v1/session",
+                method="GET",
+            )
+
+    main.app.dependency_overrides[bob_cloud_auth_routes.get_bob_cloud_client] = lambda: FailingBobCloudClient()
+
+    response = client.get("/api/auth/v1/session")
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == {"code": "capability_denied"}
+
+
+def test_bob_cloud_client_dependency_maps_configuration_error():
+    def broken_factory():
+        raise BobCloudModeError("BOB_CLOUD_API_URL is required when BOB_CLOUD_MODE=real")
+
+    original_factory = bob_cloud_auth_routes.create_bob_cloud_client_from_env
+    bob_cloud_auth_routes.create_bob_cloud_client_from_env = broken_factory
+    try:
+        response = bob_cloud_auth_routes.get_bob_cloud_client()
+    except Exception as exc:
+        mapped = exc
+    finally:
+        bob_cloud_auth_routes.create_bob_cloud_client_from_env = original_factory
+
+    assert mapped.status_code == 503
+    assert mapped.detail["code"] == "bob_cloud_unconfigured"
 
 
 def test_auth_register_login_refresh_and_profile(client, auth_headers):

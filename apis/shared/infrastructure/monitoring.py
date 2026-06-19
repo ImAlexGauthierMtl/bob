@@ -25,11 +25,21 @@ def _dependency_status() -> dict:
     otel_configured = bool(
         os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT") or os.environ.get("OTLP_URL")
     )
-    return {
+    dependencies = {
         "database": "configured" if database_configured else "not_configured",
         "redis": "configured" if redis_configured else "not_configured",
         "otel": "configured" if otel_configured else "not_configured",
     }
+    milvus_enabled = os.environ.get("MILVUS_ENABLED", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    milvus_configured = bool(os.environ.get("MILVUS_URI"))
+    if milvus_enabled or milvus_configured:
+        dependencies["milvus"] = "configured" if milvus_enabled and milvus_configured else "not_configured"
+    return dependencies
 
 
 def _service_name() -> str:

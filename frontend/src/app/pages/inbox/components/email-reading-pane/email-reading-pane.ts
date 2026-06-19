@@ -2,10 +2,16 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Store } from '@ngrx/store';
+import { Observable } from 'rxjs';
 import { UnifiedEmail } from '../../../../shared/models/unified-email.model';
-import { EmailService } from '../../../../shared/services/email.service';
-import { catchError, finalize } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { forwardInboxEmail, replyInboxEmail } from '../../../../store/inbox/inbox.actions';
+import {
+    selectInboxForwardError,
+    selectInboxForwarding,
+    selectInboxReplyError,
+    selectInboxReplying,
+} from '../../../../store/inbox/inbox.selectors';
 
 @Component({
     selector: 'app-email-reading-pane',
@@ -16,20 +22,26 @@ import { of } from 'rxjs';
 })
 export class EmailReadingPaneComponent implements OnChanges {
     @Input() email: UnifiedEmail | null = null;
+    @Output() backRequested = new EventEmitter<void>();
     @Output() emailActionCompleted = new EventEmitter<void>();
     
     replyForm: FormGroup;
-    isReplying = false;
-    replyError: string | null = null;
+    isReplying$: Observable<boolean>;
+    replyError$: Observable<string | null>;
 
     forwardForm: FormGroup;
-    isForwarding = false;
-    forwardError: string | null = null;
+    isForwarding$: Observable<boolean>;
+    forwardError$: Observable<string | null>;
 
     activeTab: 'reply' | 'forward' = 'reply';
     sanitizedBodyHtml: SafeHtml | null = null;
 
-    constructor(private emailService: EmailService, private fb: FormBuilder, private sanitizer: DomSanitizer) {
+    constructor(private store: Store, private fb: FormBuilder, private sanitizer: DomSanitizer) {
+        this.isReplying$ = this.store.select(selectInboxReplying);
+        this.replyError$ = this.store.select(selectInboxReplyError);
+        this.isForwarding$ = this.store.select(selectInboxForwarding);
+        this.forwardError$ = this.store.select(selectInboxForwardError);
+
         this.replyForm = this.fb.group({
             comment: ['', Validators.required]
         });
@@ -42,8 +54,6 @@ export class EmailReadingPaneComponent implements OnChanges {
 
     ngOnChanges(changes: SimpleChanges): void {
         if (changes['email'] && this.email) {
-            this.replyError = null;
-            this.forwardError = null;
             this.replyForm.reset();
             this.forwardForm.reset();
             this.activeTab = 'reply';
@@ -51,8 +61,6 @@ export class EmailReadingPaneComponent implements OnChanges {
                 ? this.sanitizer.bypassSecurityTrustHtml(this.email.body_html)
                 : null;
         } else if (!this.email) {
-            this.replyError = null;
-            this.forwardError = null;
             this.replyForm.reset();
             this.forwardForm.reset();
             this.sanitizedBodyHtml = null;
@@ -64,33 +72,16 @@ export class EmailReadingPaneComponent implements OnChanges {
     }
 
     sendReply(): void {
-        if (!this.email || this.replyForm.invalid || this.isReplying) return;
-
-        this.isReplying = true;
-        this.replyError = null;
+        if (!this.email || this.replyForm.invalid) return;
         const comment = this.replyForm.get('comment')?.value;
 
-        this.emailService.replyEmail(this.email.id, { comment, reply_all: false })
-            .pipe(
-                finalize(() => this.isReplying = false)
-            )
-            .subscribe({
-                next: () => {
-                    this.replyForm.reset();
-                    this.emailActionCompleted.emit();
-                },
-                error: (err) => {
-                    console.error('Failed to reply', err);
-                    this.replyError = 'Failed to send reply.';
-                }
-            });
+        this.store.dispatch(replyInboxEmail({ id: this.email.id, request: { comment, reply_all: false } }));
+        this.replyForm.reset();
+        this.emailActionCompleted.emit();
     }
 
     sendForward(): void {
-        if (!this.email || this.forwardForm.invalid || this.isForwarding) return;
-
-        this.isForwarding = true;
-        this.forwardError = null;
+        if (!this.email || this.forwardForm.invalid) return;
         const formValues = this.forwardForm.value;
         
         // Simple split by comma/semicolon for multiple recipients
@@ -100,32 +91,26 @@ export class EmailReadingPaneComponent implements OnChanges {
             .filter((email: string) => email.length > 0);
 
         if (to_recipients.length === 0) {
-            this.forwardError = 'Please provide at least one valid recipient.';
-            this.isForwarding = false;
             return;
         }
 
-        this.emailService.forwardEmail(this.email.id, { 
-            to_recipients, 
-            comment: formValues.comment || '' 
-        })
-            .pipe(
-                finalize(() => this.isForwarding = false)
-            )
-            .subscribe({
-                next: () => {
-                    this.forwardForm.reset();
-                    this.emailActionCompleted.emit();
-                },
-                error: (err) => {
-                    console.error('Failed to forward', err);
-                    this.forwardError = 'Failed to send forward message.';
-                }
-            });
+        this.store.dispatch(forwardInboxEmail({
+            id: this.email.id,
+            request: {
+                to_recipients,
+                comment: formValues.comment || ''
+            }
+        }));
+        this.forwardForm.reset();
+        this.emailActionCompleted.emit();
     }
 
     setActiveTab(tab: 'reply' | 'forward'): void {
         this.activeTab = tab;
+    }
+
+    goBack(): void {
+        this.backRequested.emit();
     }
 
     parseSmartLabel(label: string): string[] {

@@ -1,0 +1,28 @@
+apiName: agent-control-b4f-api
+apiTier: exposed
+replicaCount: 1
+service:
+  targetPort: 8008
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 300m
+    memory: 384Mi
+config:
+  ENVIRONMENT: staging
+  LOG_LEVEL: INFO
+  LOG_FORMAT: json
+  PORT: '8008'
+  API_PORT: '8008'
+  API_NAME: agent-control-b4f-api
+  OTEL_SERVICE_NAME: agent-control-b4f-api
+  CDE_B4F_SURFACE: agent-control
+secretRefs:
+- name: b4f-runtime-secrets
+initContainers:
+  migrate:
+    enabled: false
+backends:
+- agent-backend-api

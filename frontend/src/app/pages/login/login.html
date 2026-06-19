@@ -1,50 +1,125 @@
 <main class="login-shell">
-  <section class="login-preview" aria-label="Croo Digital Experience">
-    <div class="login-brand">
-      <img src="croo-logo.png" alt="Croo" class="login-brand__logo" />
-      <div class="login-brand__divider"></div>
-      <div class="login-brand__text">
-        <span>Digital</span>
-        <strong>Experience</strong>
+  <section class="login-stage" aria-label="Croo Digital Experience preview">
+    <header class="login-stage__nav">
+      <div class="login-brand">
+        <img src="croo-logo.png" alt="Croo" class="login-brand__logo" />
+        <div class="login-brand__divider"></div>
+        <div class="login-brand__text">
+          <span>Digital</span>
+          <strong>Experience</strong>
+        </div>
       </div>
-    </div>
 
-    <div class="preview-window">
-      <aside class="preview-sidebar">
-        <div class="preview-dot"></div>
-        <div class="preview-link preview-link--active">
-          <i class="fa-regular fa-comments"></i>
-          <span>Conversation</span>
-        </div>
-        <div class="preview-link">
-          <i class="fa-regular fa-envelope"></i>
-          <span>Inbox</span>
-        </div>
-        <div class="preview-link">
-          <i class="fa-regular fa-building"></i>
-          <span>Organizations</span>
-        </div>
-        <div class="preview-link">
-          <i class="fa-regular fa-address-book"></i>
-          <span>Contacts</span>
-        </div>
-      </aside>
+      <nav class="login-stage__links" aria-label="Product areas">
+        <span>Conversation</span>
+        <span>Inbox</span>
+        <span>Contacts</span>
+      </nav>
+    </header>
 
-      <div class="preview-conversation">
-        <div class="preview-thread">
-          <div class="preview-message preview-message--user">Préparer le suivi client</div>
-          <div class="preview-message">Je peux résumer le contexte et proposer les prochaines actions.</div>
-          <div class="preview-message preview-message--user">Créer une tâche pour demain</div>
-        </div>
-        <div class="preview-composer">
-          <span>Demander à Bob...</span>
-          <i class="fa-solid fa-arrow-up"></i>
+    <div class="login-stage__content">
+      <div class="login-copy">
+        <p class="login-copy__eyebrow">Agent workspace</p>
+        <h1 class="login-copy__title">Bob travaille fort pour que vous n'ayez pas à le faire.</h1>
+      </div>
+
+      <div class="app-showcase">
+        <div class="app-mock" aria-hidden="true">
+          <div class="app-mock__chrome">
+            <span></span>
+            <span></span>
+            <span></span>
+            <p>Croo Digital Experience</p>
+          </div>
+
+          <div class="app-mock__body">
+            <aside class="app-mock__sidebar">
+              <div class="app-mock__logo-row">
+                <img src="favicon.png" alt="" />
+                <strong>Bob</strong>
+              </div>
+              <div class="app-mock__nav app-mock__nav--active">
+                <i class="fa-regular fa-comments"></i>
+                <span>Conversation</span>
+              </div>
+              <div class="app-mock__nav">
+                <i class="fa-regular fa-envelope"></i>
+                <span>Inbox</span>
+              </div>
+              <div class="app-mock__nav">
+                <i class="fa-regular fa-address-book"></i>
+                <span>Contacts</span>
+              </div>
+              <div class="app-mock__section-title">Agents</div>
+              <div class="app-mock__nav">
+                <i class="fa-solid fa-users"></i>
+                <span>Team</span>
+              </div>
+            </aside>
+
+            <section class="app-mock__main">
+              <div class="app-mock__toolbar">
+                <div class="app-mock__search">
+                  <i class="fa-solid fa-search"></i>
+                  <span>Search mail</span>
+                </div>
+                <button type="button">Compose</button>
+              </div>
+
+              <div class="app-mock__grid">
+                <div class="app-mock__feed">
+                  <div class="app-mock__feed-head">
+                    <strong>Conversations</strong>
+                    <span>12</span>
+                  </div>
+                  <div class="app-mock__message app-mock__message--active">
+                    <div class="app-mock__avatar">S</div>
+                    <div>
+                      <strong>Samuel Sirois</strong>
+                      <p>Confirmer le prochain suivi client.</p>
+                    </div>
+                  </div>
+                  <div class="app-mock__message">
+                    <div class="app-mock__avatar">F</div>
+                    <div>
+                      <strong>Finance</strong>
+                      <p>Question sur la facture.</p>
+                    </div>
+                  </div>
+                  <div class="app-mock__message">
+                    <div class="app-mock__avatar">C</div>
+                    <div>
+                      <strong>Client Success</strong>
+                      <p>Récapitulatif des actions.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="app-mock__reader">
+                  <div class="app-mock__reader-actions">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <i class="fa-regular fa-envelope"></i>
+                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                  </div>
+                  <h2>Follow-up on proposal timeline</h2>
+                  <div class="app-mock__agent-note">
+                    <strong>Agent Summary</strong>
+                    <p>Le message demande une prochaine étape claire et une date de suivi.</p>
+                  </div>
+                  <div class="app-mock__reply">
+                    <span>Reply</span>
+                    <p>Merci, je confirme le prochain suivi...</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="login-panel">
+  <aside class="login-panel" aria-label="Connexion">
     <div class="login-card">
       <div class="login-mobile-brand">
         <img src="croo-logo.png" alt="Croo" class="login-mobile-logo" />
@@ -55,9 +130,14 @@
         </div>
       </div>
 
+      <div class="login-bob">
+        <img src="favicon.png" alt="" />
+        <span>Bob ready</span>
+      </div>
+
       <header class="login-header" id="login-header">
         <p class="login-eyebrow">Workspace</p>
-        <h1 class="login-title">Connexion</h1>
+        <h2 class="login-title">Connexion</h2>
         <p class="login-description">Accédez à votre environnement Croo.</p>
       </header>
 
@@ -121,12 +201,7 @@
           <i class="fa-brands fa-microsoft"></i>
           <span>Microsoft</span>
         </button>
-
-        <button type="button" class="btn-sso" (click)="signInWithBiometric()">
-          <i class="fa-solid fa-fingerprint"></i>
-          <span>Biométrie</span>
-        </button>
       </div>
     </div>
-  </section>
+  </aside>
 </main>

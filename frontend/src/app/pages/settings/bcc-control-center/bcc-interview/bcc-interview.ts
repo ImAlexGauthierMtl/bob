@@ -1,15 +1,22 @@
 import { Component, OnInit, OnDestroy, inject, ViewChild, ElementRef, AfterViewChecked, Input, Output, EventEmitter } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Store } from '@ngrx/store';
+import { Subscription } from 'rxjs';
 import { BccService } from '../../../../shared/services/bcc.service';
 import { BccProfile, BccProfileEntry } from '../../../../shared/models/bcc.model';
-import { BobService } from '../../../../shared/services/bob.service';
-
-interface ChatMessage {
-    role: 'user' | 'bob';
-    text: string;
-    time: Date;
-    isLoading?: boolean;
-}
+import {
+    acknowledgeBccInterviewSpeech,
+    resetBccInterviewChat,
+    sendBccInterviewChatMessage,
+} from '../../../../store/bcc-interview-chat/bcc-interview-chat.actions';
+import { BccInterviewChatMessage } from '../../../../store/bcc-interview-chat/bcc-interview-chat.models';
+import {
+    selectBccInterviewChatError,
+    selectBccInterviewChatLoading,
+    selectBccInterviewChatMessages,
+    selectBccInterviewChatPendingSpeech,
+    selectBccInterviewChatSessionId,
+} from '../../../../store/bcc-interview-chat/bcc-interview-chat.selectors';
 
 interface InsightBlock {
     id: string;
@@ -39,10 +46,12 @@ export class BccInterviewComponent implements OnInit, AfterViewChecked, OnDestro
     @Output() close = new EventEmitter<void>();
 
     private bccService = inject(BccService);
-    private bobService = inject(BobService);
+    private store = inject(Store);
+    private subscriptions = new Subscription();
+    private lastHandledError: string | null = null;
 
     // ── Chat ────────────────────────────────────────
-    messages: ChatMessage[] = [];
+    messages: BccInterviewChatMessage[] = [];
     message = '';
     isSending = false;
     sessionId: string | undefined;
@@ -109,6 +118,41 @@ export class BccInterviewComponent implements OnInit, AfterViewChecked, OnDestro
         ];
 
         this.buildMissionPrompt();
+        this.store.dispatch(resetBccInterviewChat());
+        this.subscriptions.add(
+            this.store.select(selectBccInterviewChatMessages).subscribe((messages) => {
+                const previousLength = this.messages.length;
+                this.messages = messages;
+                if (messages.length !== previousLength) {
+                    this.shouldScrollChat = true;
+                }
+            }),
+        );
+        this.subscriptions.add(
+            this.store.select(selectBccInterviewChatLoading).subscribe((loading) => {
+                this.isSending = loading;
+            }),
+        );
+        this.subscriptions.add(
+            this.store.select(selectBccInterviewChatSessionId).subscribe((sessionId) => {
+                this.sessionId = sessionId;
+                this.missionSent = Boolean(sessionId);
+            }),
+        );
+        this.subscriptions.add(
+            this.store.select(selectBccInterviewChatPendingSpeech).subscribe((speech) => {
+                if (!speech) return;
+                this.speakBobResponse(speech.text);
+                this.store.dispatch(acknowledgeBccInterviewSpeech({ speechId: speech.id }));
+            }),
+        );
+        this.subscriptions.add(
+            this.store.select(selectBccInterviewChatError).subscribe((error) => {
+                if (!error || error === this.lastHandledError) return;
+                this.lastHandledError = error;
+                if (this.isVoiceActive) this.startListening();
+            }),
+        );
         this.loadExistingInsights();
         this.startPolling();
         this.initSpeechRecognition();
@@ -123,6 +167,8 @@ export class BccInterviewComponent implements OnInit, AfterViewChecked, OnDestro
     }
 
     ngOnDestroy(): void {
+        this.subscriptions.unsubscribe();
+        this.store.dispatch(resetBccInterviewChat());
         if (this.pollTimer) clearInterval(this.pollTimer);
         this.stopVoice();
     }
@@ -404,42 +450,21 @@ TON : Chaleureux, empathique, incisif. Carl Rogers meets Simon Sinek.
     }
 
     private sendChatMessage(text: string, isInitial: boolean, speakResponse = false): void {
-        if (!isInitial) {
-            this.messages.push({ role: 'user', text, time: new Date() });
-        }
-        this.isSending = true;
+        const shouldSpeakResponse = speakResponse || this.isVoiceActive;
         this.shouldScrollChat = true;
 
-        const loadingMsg: ChatMessage = { role: 'bob', text: '', time: new Date(), isLoading: true };
-        this.messages.push(loadingMsg);
-
         const missionToSend = this.missionSent ? undefined : this.missionPrompt;
-
-        this.bobService.chat(text, this.sessionId, missionToSend).subscribe({
-            next: (response) => {
-                const idx = this.messages.indexOf(loadingMsg);
-                if (idx > -1) this.messages.splice(idx, 1);
-                this.messages.push({ role: 'bob', text: response.response, time: new Date() });
-                this.sessionId = response.session_id;
-                this.missionSent = true;
-                this.isSending = false;
-                this.shouldScrollChat = true;
-                this.loadExistingInsights();
-
-                // If voice mode active or voice requested, speak the response
-                if (speakResponse || this.isVoiceActive) {
-                    this.speakBobResponse(response.response);
-                }
-            },
-            error: () => {
-                const idx = this.messages.indexOf(loadingMsg);
-                if (idx > -1) this.messages.splice(idx, 1);
-                this.messages.push({ role: 'bob', text: 'Erreur de communication. Réessayez.', time: new Date() });
-                this.isSending = false;
-                this.shouldScrollChat = true;
-                if (this.isVoiceActive) this.startListening();
-            },
-        });
+        this.store.dispatch(sendBccInterviewChatMessage({
+            text,
+            missionPrompt: missionToSend,
+            orgId: this.orgId,
+            orgName: this.orgName,
+            showUserMessage: !isInitial,
+            speakResponse: shouldSpeakResponse,
+            messageId: this.createMessageId('bcc-user'),
+            loadingMessageId: this.createMessageId('bcc-loading'),
+        }));
+        this.loadExistingInsights();
     }
 
     // ── Shared ──────────────────────────────────────
@@ -476,5 +501,13 @@ TON : Chaleureux, empathique, incisif. Carl Rogers meets Simon Sinek.
                     this.chatMessagesEl.nativeElement.scrollHeight;
             }
         } catch (_) { /* ignore */ }
+    }
+
+    private createMessageId(prefix: string): string {
+        if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+            return `${prefix}-${crypto.randomUUID()}`;
+        }
+
+        return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     }
 }

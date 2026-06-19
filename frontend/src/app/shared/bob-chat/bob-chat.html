@@ -43,11 +43,11 @@
             @for (group of sessionGroups; track group.label) {
             <div class="bob-exp__session-group">
                 <p class="bob-exp__session-label">{{ group.label }}</p>
-                @for (session of group.sessions; track session.session_id) {
+                @for (session of group.sessions; track session.id) {
                 <button class="bob-exp__session-item"
-                    [class.bob-exp__session-item--active]="session.session_id === sessionId"
+                    [class.bob-exp__session-item--active]="session.id === sessionId"
                     (click)="selectSession(session)">
-                    <span class="bob-exp__session-name">{{ session.title || 'Session #' + session.session_id.slice(0, 8)
+                    <span class="bob-exp__session-name">{{ session.title || 'Session #' + session.id.slice(0, 8)
                         }}</span>
                     <button class="bob-exp__session-del" (click)="deleteSession(session, $event)" title="Delete">
                         <i class="fa-solid fa-trash-can"></i>

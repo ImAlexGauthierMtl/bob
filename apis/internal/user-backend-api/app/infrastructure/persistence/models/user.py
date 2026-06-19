@@ -1,4 +1,4 @@
-"""User entity for authentication."""
+"""User entity for auth."""
 from sqlalchemy import Column, String, Text, Float, Boolean
 from sqlalchemy.orm import relationship
 import bcrypt

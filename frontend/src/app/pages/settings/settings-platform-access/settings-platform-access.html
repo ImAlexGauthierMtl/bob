@@ -1,0 +1,165 @@
+<div class="settings-panel">
+    <div class="platform-header">
+        <div class="settings-panel__header platform-header__copy">
+            <h3 class="settings-panel__title">Platform Access</h3>
+            <p class="settings-panel__subtitle">Tenants, licenses and RBAC delegated to Bob Cloud</p>
+        </div>
+        <button class="btn btn-outline" (click)="refresh()">
+            <i class="fa-solid fa-rotate-right"></i>
+            Refresh
+        </button>
+    </div>
+
+    @if (loading$ | async) {
+    <div class="platform-state">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <span>Loading access controls...</span>
+    </div>
+    }
+
+    @if (error$ | async; as error) {
+    <div class="platform-alert platform-alert--error">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>{{ error }}</span>
+    </div>
+    }
+
+    @if (notice$ | async; as notice) {
+    <div class="platform-alert platform-alert--success">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>{{ notice }}</span>
+    </div>
+    }
+
+    @if (data$ | async; as data) {
+    <section class="platform-section">
+        <div class="settings-section__header">
+            <div>
+                <h4 class="settings-section__title">Tenant</h4>
+                <p class="settings-section__desc">Current local tenant context</p>
+            </div>
+        </div>
+
+        @for (tenant of data.tenants; track tenant.id) {
+        <div class="platform-editor">
+            <div class="platform-editor__identity">
+                <div class="platform-icon">
+                    <i class="fa-solid fa-building-shield"></i>
+                </div>
+                <div>
+                    <p class="platform-row__title">{{ tenant.name }}</p>
+                    <p class="platform-row__meta">{{ tenant.id }} · {{ tenant.scope || 'tenant' }}</p>
+                </div>
+                <span class="status-badge {{ statusBadgeClass(tenant.status) }}">{{ tenant.status }}</span>
+            </div>
+            <div class="platform-editor__form">
+                <input class="form-input" [ngModel]="tenantName || tenant.name"
+                    (ngModelChange)="tenantName = $event" (focus)="stageTenant(tenant)" />
+                <select class="form-input" [ngModel]="tenantStatus || tenant.status"
+                    (ngModelChange)="tenantStatus = $event" (focus)="stageTenant(tenant)">
+                    <option value="active">active</option>
+                    <option value="suspended">suspended</option>
+                    <option value="disabled">disabled</option>
+                </select>
+                <button class="btn btn-accent" (click)="saveTenant(tenant)" [disabled]="(saving$ | async) === true">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Save
+                </button>
+            </div>
+        </div>
+        }
+    </section>
+
+    <section class="platform-section">
+        <div class="settings-section__header">
+            <div>
+                <h4 class="settings-section__title">Licenses</h4>
+                <p class="settings-section__desc">Bob capabilities and local quotas</p>
+            </div>
+        </div>
+
+        <div class="platform-grid">
+            @for (license of data.licenses; track license.code) {
+            <div class="platform-license">
+                <div class="platform-license__top">
+                    <div>
+                        <p class="platform-row__title">{{ license.code }}</p>
+                        <p class="platform-row__meta">{{ license.source || 'license' }}</p>
+                    </div>
+                    <span class="status-badge {{ statusBadgeClass(license.status) }}">{{ license.status }}</span>
+                </div>
+                <div class="platform-meter">
+                    <span class="platform-meter__fill" [style.width.%]="licenseUsage(license)"></span>
+                </div>
+                <div class="platform-license__bottom">
+                    <span>{{ license.remaining || 0 }} / {{ license.limit || 0 }} remaining</span>
+                    <div class="platform-actions">
+                        <button class="icon-btn" title="Enable" (click)="setLicenseStatus(license, 'enabled')"
+                            [disabled]="(saving$ | async) === true">
+                            <i class="fa-solid fa-toggle-on"></i>
+                        </button>
+                        <button class="icon-btn" title="Preview" (click)="setLicenseStatus(license, 'preview')"
+                            [disabled]="(saving$ | async) === true">
+                            <i class="fa-solid fa-vial"></i>
+                        </button>
+                        <button class="icon-btn" title="Disable" (click)="setLicenseStatus(license, 'disabled')"
+                            [disabled]="(saving$ | async) === true">
+                            <i class="fa-solid fa-toggle-off"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+    </section>
+
+    <section class="platform-section">
+        <div class="settings-section__header">
+            <div>
+                <h4 class="settings-section__title">Users & RBAC</h4>
+                <p class="settings-section__desc">Invitations and memberships delegated through Bob Cloud</p>
+            </div>
+        </div>
+
+        <div class="platform-invite">
+            <input class="form-input" type="email" placeholder="email@company.com" [(ngModel)]="inviteEmail" />
+            <input class="form-input" type="text" placeholder="Display name" [(ngModel)]="inviteName" />
+            <select class="form-input" [(ngModel)]="inviteRole">
+                @for (role of data.roles; track role.id) {
+                <option [value]="role.code">{{ role.label || role.code }}</option>
+                }
+            </select>
+            <button class="btn btn-accent" (click)="inviteUser(data.tenants[0]?.id)"
+                [disabled]="(saving$ | async) === true || !inviteEmail.trim()">
+                <i class="fa-solid fa-user-plus"></i>
+                Invite
+            </button>
+        </div>
+
+        <div class="platform-table">
+            <div class="platform-table__head">
+                <span>User</span>
+                <span>Status</span>
+                <span>Role</span>
+            </div>
+            @for (membership of data.memberships; track membership.id) {
+            <div class="platform-table__row">
+                <div>
+                    <p class="platform-row__title">{{ userLabel(data, membership.user_id) }}</p>
+                    <p class="platform-row__meta">{{ userEmail(data, membership.user_id) || membership.user_id }}</p>
+                </div>
+                <span class="status-badge {{ statusBadgeClass(membership.status) }}">{{ membership.status }}</span>
+                <select class="form-input platform-role-select"
+                    [ngModel]="membershipRole(membership)"
+                    (ngModelChange)="setMembershipRole(membership, $event)"
+                    [disabled]="(saving$ | async) === true">
+                    @for (role of data.roles; track role.id) {
+                    <option [value]="role.code">{{ role.label || role.code }}</option>
+                    }
+                </select>
+            </div>
+            }
+        </div>
+    </section>
+    }
+</div>

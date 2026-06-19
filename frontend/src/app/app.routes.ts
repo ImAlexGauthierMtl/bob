@@ -206,6 +206,13 @@ export const routes: Routes = [
                             ),
                     },
                     {
+                        path: 'platform-access',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-platform-access/settings-platform-access').then(
+                                (m) => m.SettingsPlatformAccessComponent
+                            ),
+                    },
+                    {
                         path: 'automation',
                         loadComponent: () =>
                             import('./pages/settings/settings-automation/settings-automation').then(

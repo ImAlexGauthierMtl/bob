@@ -1,9 +1,11 @@
 from types import SimpleNamespace
 
+import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
 
 import main
+from app.infrastructure.clients import email_client as email_client_module
 from app.infrastructure.clients import provider_proxy
 from app.infrastructure.clients.email_client import (
     ConnectionClient,
@@ -43,6 +45,37 @@ def integration_setting(**overrides):
         "display_name": "Outlook",
         "notes": None,
         "tenant_id": "tenant-1",
+    }
+    data.update(overrides)
+    return data
+
+
+def connection(**overrides):
+    data = {
+        "id": "conn-1",
+        "user_id": "user-1",
+        "integration_key": "microsoft-outlook",
+        "status": "connected",
+    }
+    data.update(overrides)
+    return data
+
+
+def smart_label(**overrides):
+    data = {
+        "id": "label-1",
+        "name": "Client",
+        "color": "#111111",
+    }
+    data.update(overrides)
+    return data
+
+
+def membrane_connection(**overrides):
+    data = {
+        "id": "membrane-1",
+        "user_id": "user-1",
+        "integration_key": "microsoft-outlook",
     }
     data.update(overrides)
     return data
@@ -133,9 +166,73 @@ class FakeMembraneCrudClient:
         return None
 
 
-class FakeEventBus:
-    async def publish(self, event_name, payload, tenant_id, triggered_by):
-        return ["execution-1", "execution-2"]
+class FakeResponse:
+    def __init__(self, payload=None, status_code=200, text=""):
+        self._payload = payload or {}
+        self.status_code = status_code
+        self.text = text or str(self._payload)
+
+    def json(self):
+        return self._payload
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
+
+
+class FakeEmailBackendServiceClient:
+    def __init__(self):
+        self.calls = []
+
+    async def get(self, path, params=None, forward_headers=None):
+        self.calls.append(("GET", path, params, forward_headers))
+        if "missing" in path:
+            return FakeResponse(status_code=404)
+        if path == "/api/v1/integration-settings":
+            return FakeResponse({"items": [integration_setting()]})
+        if path.endswith("/active/all"):
+            return FakeResponse([connection()])
+        if "/membrane/connections/by-user/" in path:
+            return FakeResponse(membrane_connection())
+        if "/membrane/connections/" in path:
+            return FakeResponse(membrane_connection(id=path.rsplit("/", 1)[-1]))
+        if "/connections/by-user/" in path:
+            return FakeResponse(connection())
+        if "/connections/" in path:
+            return FakeResponse(connection(id=path.rsplit("/", 1)[-1]))
+        if path == "/api/v1/membrane/emails":
+            return FakeResponse({"items": [{"id": "membrane-email-1"}], "total": 1})
+        if "/membrane/emails/" in path:
+            return FakeResponse({"id": path.rsplit("/", 1)[-1]})
+        if path == "/api/v1/membrane/events":
+            return FakeResponse({"items": [{"id": "membrane-event-1"}], "total": 1})
+        if "/membrane/events/" in path:
+            return FakeResponse({"id": path.rsplit("/", 1)[-1]})
+        if path == "/api/v1/emails":
+            return FakeResponse({"items": [{"id": "email-1"}], "total": 1})
+        if "/emails/" in path:
+            return FakeResponse({"id": path.rsplit("/", 1)[-1]})
+        if path == "/api/v1/events":
+            return FakeResponse({"items": [{"id": "event-1"}], "total": 1})
+        if "/events/" in path:
+            return FakeResponse({"id": path.rsplit("/", 1)[-1]})
+        if path == "/api/v1/smart-labels":
+            return FakeResponse({"items": [smart_label()], "total": 1})
+        if "/smart-labels/" in path:
+            return FakeResponse(smart_label(id=path.rsplit("/", 1)[-1]))
+        return FakeResponse({"ok": True})
+
+    async def post(self, path, json=None, forward_headers=None):
+        self.calls.append(("POST", path, json, forward_headers))
+        return FakeResponse({"id": "created", **(json or {})})
+
+    async def patch(self, path, json=None, params=None, forward_headers=None):
+        self.calls.append(("PATCH", path, json, params, forward_headers))
+        return FakeResponse({"id": path.rsplit("/", 1)[-1], **(json or {})})
+
+    async def delete(self, path, params=None, forward_headers=None):
+        self.calls.append(("DELETE", path, params, forward_headers))
+        return FakeResponse(status_code=404 if "missing" in path else 204)
 
 
 def auth_headers():
@@ -163,7 +260,6 @@ def install_fakes(monkeypatch):
             FakeSmartLabelClient(),
         ),
     )
-    monkeypatch.setattr(webhook_routes, "event_bus", FakeEventBus())
     monkeypatch.setattr(webhook_routes, "settings", SimpleNamespace(webhook_api_key="public-key"))
     return provider_client
 
@@ -213,7 +309,9 @@ def test_webhook_routes(monkeypatch):
     headers = auth_headers()
     body = {"event": "contact.created", "data": {"id": "contact-1"}, "source": "test"}
     with TestClient(main.app) as client:
-        assert client.post("/webhooks/trigger", json=body, headers=headers).json()["executions_triggered"] == 2
+        response = client.post("/webhooks/trigger", json=body, headers=headers).json()
+        assert response["status"] == "accepted"
+        assert response["executions_triggered"] == 0
         assert client.post("/webhooks/trigger/public", json=body, headers={"X-API-Key": "public-key"}).json()["status"] == "accepted"
         assert client.post("/webhooks/trigger/public", json=body, headers={"X-API-Key": "bad"}).status_code == 401
         assert "contact.created" in client.get("/webhooks/events", headers=headers).json()
@@ -255,6 +353,67 @@ def test_b4f_provider_route_modules_are_thin_proxies():
     assert not hasattr(pipedream_routes, "PipedreamClient")
     assert hasattr(ms365_routes, "proxy_ms365")
     assert hasattr(pipedream_routes, "proxy_pipedream")
+
+
+@pytest.mark.asyncio
+async def test_email_backend_clients_cover_crud_paths(monkeypatch):
+    service_client = FakeEmailBackendServiceClient()
+    monkeypatch.setattr(email_client_module, "create_service_client", lambda name: service_client)
+
+    integration = IntegrationSettingsClient()
+    assert (await integration.list())[0]["integration_key"] == "microsoft-outlook"
+    assert (await integration.get("microsoft-outlook"))["id"] == "setting-1"
+    assert await integration.get("missing") is None
+    assert (await integration.upsert({"integration_key": "gmail"}))["integration_key"] == "gmail"
+    assert (await integration.update("gmail", {"enabled": True}))["enabled"] is True
+    assert await integration.delete("gmail") is True
+
+    connections = ConnectionClient()
+    assert (await connections.get_by_user("user-1"))["id"] == "conn-1"
+    assert (await connections.get("conn-1"))["id"] == "conn-1"
+    assert await connections.get("missing") is None
+    assert (await connections.list_active())[0]["id"] == "conn-1"
+    assert (await connections.create({"user_id": "user-1"}))["user_id"] == "user-1"
+    assert (await connections.update("conn-1", {"status": "connected"}))["status"] == "connected"
+    assert await connections.delete("conn-1") is True
+
+    emails = EmailCrudClient()
+    assert (await emails.list("user-1", folder="inbox", search="hello", smart_label="client", linked_contact_id="contact-1"))["total"] == 1
+    assert (await emails.get("email-1", "user-1"))["id"] == "email-1"
+    assert await emails.get("missing", "user-1") is None
+    assert (await emails.upsert({"subject": "Hi"}))["subject"] == "Hi"
+    assert (await emails.update("email-1", {"is_read": True}, "user-1"))["is_read"] is True
+    assert await emails.delete("email-1", "user-1") is True
+
+    events = EventCrudClient()
+    assert (await events.list("user-1", from_date="2026-01-01", to_date="2026-01-02"))["total"] == 1
+    assert (await events.get("event-1", "user-1"))["id"] == "event-1"
+    assert await events.get("missing", "user-1") is None
+    assert (await events.upsert({"title": "Meet"}))["title"] == "Meet"
+    assert (await events.update("event-1", {"status": "confirmed"}, "user-1"))["status"] == "confirmed"
+    assert await events.delete("event-1", "user-1") is True
+
+    labels = SmartLabelClient()
+    assert (await labels.list())["total"] == 1
+    assert (await labels.get("label-1"))["id"] == "label-1"
+    assert await labels.get("missing") is None
+    assert (await labels.create({"name": "VIP"}))["name"] == "VIP"
+    assert (await labels.update("label-1", {"color": "#fff"}))["color"] == "#fff"
+    assert await labels.delete("label-1") is True
+
+    membrane = MembraneCrudClient()
+    assert (await membrane.upsert_connection({"id": "membrane-1"}))["id"] == "membrane-1"
+    assert (await membrane.get_connection("membrane-1"))["id"] == "membrane-1"
+    assert await membrane.get_connection("missing") is None
+    assert (await membrane.upsert_email({"id": "membrane-email-1"}))["id"] == "membrane-email-1"
+    assert (await membrane.upsert_event({"id": "membrane-event-1"}))["id"] == "membrane-event-1"
+    assert (await membrane.get_connection_by_user("user-1", integration_key="microsoft-outlook"))["id"] == "membrane-1"
+    assert (await membrane.list_emails("user-1", folder="inbox", search="q"))["total"] == 1
+    assert (await membrane.get_email("email-1", "user-1"))["id"] == "email-1"
+    assert await membrane.get_email("missing", "user-1") is None
+    assert (await membrane.get_event("event-1", "user-1"))["id"] == "event-1"
+    assert await membrane.get_event("missing", "user-1") is None
+    assert (await membrane.list_events("user-1", from_date="2026-01-01", to_date="2026-01-02"))["total"] == 1
 
 
 def test_python_package_contract_loads_runtime_components():

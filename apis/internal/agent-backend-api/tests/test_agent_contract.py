@@ -653,6 +653,11 @@ def test_client_map_routes(client):
     score = client.get("/api/v1/contacts/contact-1/client-map/meddpicc-score")
     assert score.status_code == 200
     assert score.json()["total_score"] > 0
+    analyzed = client.post("/api/v1/contacts/contact-1/client-map/analyze-behavior")
+    assert analyzed.status_code == 200
+    assert "disc_primary" in analyzed.json()["behavioral_profile"]
+    assert client.get("/api/v1/contacts/missing/client-map/analyze-behavior").status_code == 405
+    assert client.post("/api/v1/contacts/missing/client-map/analyze-behavior").status_code == 404
 
 
 def test_training_routes(client):

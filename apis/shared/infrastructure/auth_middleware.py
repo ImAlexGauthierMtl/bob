@@ -1,4 +1,4 @@
-"""JWT authentication middleware — shared across all APIs."""
+"""JWT auth middleware — shared across all APIs."""
 
 from typing import Callable, List, Optional
 from fastapi import Request, Response, HTTPException, status
@@ -28,7 +28,7 @@ _DEV_ONLY_PATHS: List[str] = [
 
 
 class JWTAuthMiddleware:
-    """Middleware for JWT authentication with local token verification.
+    """Middleware for JWT auth with local token verification.
 
     Validates JWT tokens and injects user_id/tenant_id into request.state.
     All microservices use this to verify tokens issued by auth-api.
@@ -39,7 +39,7 @@ class JWTAuthMiddleware:
         self.extra_public_paths = extra_public_paths or []
 
     def _is_skip_path(self, path: str) -> bool:
-        """Check if the request path should bypass authentication."""
+        """Check if the request path should bypass auth."""
         if path in _PUBLIC_PATHS or path in self.extra_public_paths:
             return True
         is_dev = self.settings.environment.lower() in ("development", "dev")

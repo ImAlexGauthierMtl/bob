@@ -2,28 +2,30 @@
     min-height: 100vh;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    background: var(--color-shell);
+    background-image: url('/login-abstract-art.png');
+    background-size: cover;
+    background-position: center;
     color: var(--color-gray-800);
 }
 
-.login-preview {
+.login-stage {
     display: none;
 }
 
 .login-panel {
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1.5rem;
+    padding: 1.25rem;
+    background: rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(10px) saturate(1.12);
+    -webkit-backdrop-filter: blur(10px) saturate(1.12);
+    box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.36);
 }
 
 .login-card {
     width: min(100%, 28rem);
-    padding: 1.5rem;
-    background: var(--color-surface-raised);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
 }
 
 .login-brand,
@@ -57,7 +59,6 @@
     flex-direction: column;
     line-height: 1.15;
     font-size: 0.75rem;
-    letter-spacing: 0;
     text-transform: uppercase;
     color: var(--color-gray-500);
 }
@@ -67,29 +68,50 @@
     color: var(--color-gray-800);
 }
 
+.login-bob {
+    width: fit-content;
+    min-height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 2rem;
+    padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    color: var(--color-gray-600);
+    font-size: 0.8125rem;
+}
+
+.login-bob img {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 999px;
+}
+
 .login-header {
     margin-bottom: 1.75rem;
 }
 
 .login-eyebrow {
-    margin-bottom: 0.5rem;
-    font-size: 0.75rem;
+    margin: 0 0 0.5rem;
     color: var(--color-gray-500);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
     text-transform: uppercase;
 }
 
 .login-title {
     margin: 0;
-    font-size: 1.875rem;
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0;
-    color: var(--color-gray-800);
+    color: var(--color-black);
+    font-size: clamp(1.5rem, 2vw, 2rem);
+    line-height: 1.08;
+    font-weight: var(--font-weight-medium);
 }
 
 .login-description {
-    margin-top: 0.5rem;
-    font-size: 0.9375rem;
+    margin: 0.75rem 0 0;
     color: var(--color-gray-500);
+    font-size: 0.9375rem;
 }
 
 .login-form {
@@ -106,9 +128,9 @@
 
 .form-label {
     display: block;
+    color: var(--color-gray-600);
     font-size: 0.8125rem;
     font-weight: var(--font-weight-medium);
-    color: var(--color-gray-600);
 }
 
 .input-wrapper {
@@ -149,7 +171,7 @@
 }
 
 .input-action:hover {
-    color: var(--color-gray-800);
+    color: var(--color-black);
 }
 
 .login-options {
@@ -164,19 +186,25 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    cursor: pointer;
-    font-size: 0.875rem;
     color: var(--color-gray-600);
+    font-size: 0.875rem;
+    cursor: pointer;
 }
 
 .checkbox {
     width: 1rem;
     height: 1rem;
-    accent-color: var(--color-accent);
+    accent-color: var(--color-black);
 }
 
 .link-accent {
+    color: var(--color-black);
     font-size: 0.875rem;
+    text-decoration: none;
+}
+
+.link-accent:hover {
+    text-decoration: underline;
 }
 
 .login-error {
@@ -184,9 +212,9 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 0.875rem;
-    background-color: var(--color-red-100);
     border: 1px solid #fecaca;
     border-radius: var(--radius-md);
+    background-color: var(--color-red-100);
     color: var(--color-red-600);
     font-size: 0.875rem;
 }
@@ -209,13 +237,13 @@
 }
 
 .login-divider__text {
-    font-size: 0.75rem;
     color: var(--color-gray-400);
+    font-size: 0.75rem;
 }
 
 .sso-options {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
 }
 
@@ -228,7 +256,7 @@
     padding: 0.625rem 1rem;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    background: var(--color-surface-raised);
+    background: var(--color-white);
     color: var(--color-gray-700);
     font-family: var(--font-family);
     font-size: 0.875rem;
@@ -242,140 +270,358 @@
     background: var(--color-gray-50);
 }
 
-.preview-window {
-    height: min(68vh, 42rem);
-    display: grid;
-    grid-template-columns: 16rem minmax(0, 1fr);
-    overflow: hidden;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-}
-
-.preview-sidebar {
-    padding: 1rem;
-    background: var(--color-shell);
-    border-right: 1px solid var(--color-border);
-}
-
-.preview-dot {
-    width: 2rem;
-    height: 2rem;
-    margin-bottom: 1.25rem;
-    border-radius: 50%;
-    background: var(--color-surface-raised);
-    border: 1px solid var(--color-border);
-}
-
-.preview-link {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    min-height: 2.25rem;
-    padding: 0.625rem 0.75rem;
-    border-radius: var(--radius-md);
-    color: var(--color-gray-600);
-    font-size: 0.875rem;
-}
-
-.preview-link i {
-    width: 1rem;
-    text-align: center;
-    color: var(--color-gray-500);
-}
-
-.preview-link--active {
-    background: var(--color-gray-100);
-    color: var(--color-gray-800);
-    font-weight: var(--font-weight-medium);
-}
-
-.preview-link--active i {
-    color: var(--color-accent);
-}
-
-.preview-conversation {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 2rem;
-}
-
-.preview-thread {
-    width: min(100%, 36rem);
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.preview-message {
-    width: fit-content;
-    max-width: 85%;
-    padding: 0.75rem 1rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-surface-raised);
-    color: var(--color-gray-700);
-    font-size: 0.9375rem;
-}
-
-.preview-message--user {
-    margin-left: auto;
-    background: var(--color-gray-100);
-    color: var(--color-gray-800);
-}
-
-.preview-composer {
-    width: min(100%, 36rem);
-    min-height: 2.75rem;
-    margin: 2rem auto 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.625rem 0.75rem 0.625rem 1rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-surface-raised);
-    color: var(--color-gray-400);
-    font-size: 0.875rem;
-}
-
-.preview-composer i {
-    width: 1.75rem;
-    height: 1.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: var(--color-accent);
-    color: var(--color-white);
-    font-size: 0.75rem;
-}
-
-@media (min-width: 900px) {
+@media (min-width: 980px) {
     .login-shell {
-        grid-template-columns: minmax(0, 1.4fr) minmax(24rem, 0.8fr);
+        grid-template-columns: minmax(0, 1fr) minmax(24rem, 31rem);
     }
 
-    .login-preview {
+    .login-stage {
+        position: relative;
+        isolation: isolate;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 2rem;
+        overflow: hidden;
+    }
+
+    .login-stage::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -2;
+        background: transparent;
+        filter: none;
+    }
+
+    .login-stage::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: transparent;
+        backdrop-filter: none;
+    }
+
+    .login-stage__nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2rem;
+        max-width: 86rem;
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    .login-stage__links {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        color: var(--color-gray-600);
+        font-size: 0.875rem;
+    }
+
+    .login-stage__content {
+        flex: 1;
+        width: 100%;
+        max-width: 86rem;
+        margin: 0 auto;
         display: flex;
         flex-direction: column;
         justify-content: center;
-        gap: 2rem;
-        padding: 2rem;
+        gap: 1.5rem;
+        padding: 2rem 0;
+    }
+
+    .login-copy {
+        max-width: 36rem;
+    }
+
+    .login-copy__eyebrow {
+        margin: 0 0 50px;
+        color: var(--color-gray-500);
+        font-size: 0.75rem;
+        font-weight: var(--font-weight-medium);
+        text-transform: uppercase;
+    }
+
+    .login-copy__title {
+        margin: 0;
+        color: var(--color-black);
+        font-size: clamp(1.875rem, 2.8vw, 3.25rem);
+        line-height: 1.06;
+        font-weight: var(--font-weight-medium);
+        max-width: 38rem;
     }
 
     .login-panel {
+        border-left: 1px solid rgba(255, 255, 255, 0.34);
         padding: 2rem;
-        border-left: 1px solid var(--color-border);
-        background: var(--color-surface);
+    }
+
+    .login-card {
+        transform: translateY(-3.5rem);
     }
 
     .login-mobile-brand {
         display: none;
+    }
+}
+
+.app-showcase {
+    width: min(100%, 78rem);
+    margin-top: clamp(4.5rem, 11vh, 7.5rem);
+    min-height: 39.5rem;
+    padding: clamp(0.625rem, 1.5vw, 1.5rem);
+    border: 1px solid rgba(32, 32, 30, 0.1);
+    border-radius: 0.5rem;
+    background-image: url('/login-abstract-art.png');
+    background-size: cover;
+    background-position: center;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.26),
+        0 1.5rem 4rem rgba(32, 32, 30, 0.11);
+}
+
+.app-mock {
+    width: min(100%, 72rem);
+    margin: 0 auto;
+    min-height: 34rem;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(4px);
+    box-shadow: 0 1.25rem 3rem rgba(32, 32, 30, 0.16);
+}
+
+.app-mock__chrome {
+    height: 2.125rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 0.875rem;
+    border-bottom: 1px solid var(--color-border);
+    background: #f7f7f5;
+}
+
+.app-mock__chrome span {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 999px;
+    background: var(--color-gray-300);
+}
+
+.app-mock__chrome p {
+    flex: 1;
+    margin: 0;
+    color: var(--color-gray-500);
+    font-size: 0.75rem;
+    text-align: center;
+}
+
+.app-mock__body {
+    min-height: 32rem;
+    display: grid;
+    grid-template-columns: 14rem minmax(0, 1fr);
+}
+
+.app-mock__sidebar {
+    padding: 1rem;
+    border-right: 1px solid var(--color-border);
+    background: #f1f1ef;
+}
+
+.app-mock__logo-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 1.5rem;
+}
+
+.app-mock__logo-row img {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+}
+
+.app-mock__nav {
+    min-height: 2.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 0.75rem;
+    border-radius: 0.5rem;
+    color: var(--color-gray-600);
+    font-size: 0.875rem;
+}
+
+.app-mock__nav i {
+    width: 1rem;
+    text-align: center;
+}
+
+.app-mock__nav--active {
+    background: var(--color-white);
+    color: var(--color-black);
+    font-weight: var(--font-weight-medium);
+}
+
+.app-mock__section-title {
+    margin: 1.5rem 0 0.5rem;
+    color: var(--color-gray-500);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+}
+
+.app-mock__main {
+    min-width: 0;
+    padding: 1rem;
+}
+
+.app-mock__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.app-mock__search {
+    height: 2.75rem;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    color: var(--color-gray-500);
+    background: #f7f7f5;
+    font-size: 0.875rem;
+}
+
+.app-mock__toolbar button {
+    height: 2.5rem;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: var(--color-black);
+    color: var(--color-white);
+}
+
+.app-mock__grid {
+    display: grid;
+    grid-template-columns: minmax(20rem, 0.85fr) minmax(0, 1.15fr);
+    min-height: 26rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.app-mock__feed {
+    border-right: 1px solid var(--color-border);
+    background: var(--color-white);
+}
+
+.app-mock__feed-head {
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.app-mock__message {
+    display: flex;
+    gap: 0.875rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.app-mock__message--active {
+    box-shadow: inset 3px 0 0 var(--color-black);
+    background: #f5f5f3;
+}
+
+.app-mock__avatar {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: var(--color-black);
+    color: var(--color-white);
+    font-size: 0.8125rem;
+}
+
+.app-mock__message strong,
+.app-mock__reader h2,
+.app-mock__agent-note strong,
+.app-mock__reply span {
+    color: var(--color-black);
+}
+
+.app-mock__message p {
+    margin: 0.25rem 0 0;
+    color: var(--color-gray-600);
+    font-size: 0.8125rem;
+}
+
+.app-mock__reader {
+    padding: 1.25rem;
+    background: var(--color-white);
+}
+
+.app-mock__reader-actions {
+    display: flex;
+    gap: 1rem;
+    color: var(--color-gray-600);
+    margin-bottom: 1.5rem;
+}
+
+.app-mock__reader h2 {
+    margin: 0 0 1rem;
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-light);
+}
+
+.app-mock__agent-note {
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    background: #f7f7f5;
+}
+
+.app-mock__agent-note p,
+.app-mock__reply p {
+    margin: 0.5rem 0 0;
+    color: var(--color-gray-600);
+    font-size: 0.875rem;
+}
+
+.app-mock__reply {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+}
+
+@media (max-width: 1199px) {
+    .app-mock__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .app-mock__reader {
+        display: none;
+    }
+}
+
+@media (max-width: 979px) {
+    .sso-options {
+        grid-template-columns: 1fr;
     }
 }

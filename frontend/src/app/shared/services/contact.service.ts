@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Contact, ContactListResponse, CreateContactDto, AiParseResult } from '../models/contact.model';
+import { Contact, ContactListResponse, CreateContactDto, BobParseResult } from '../models/contact.model';
 
 const API_URL = `${environment.crmApiUrl}`;
 
@@ -32,8 +32,8 @@ export class ContactService {
         return this.http.delete<void>(`${API_URL}/contacts/${id}`);
     }
 
-    aiParse(rawText: string, organizationId?: string): Observable<AiParseResult> {
-        return this.http.post<AiParseResult>(`${API_URL}/contacts/ai-parse`, {
+    bobParse(rawText: string, organizationId?: string): Observable<BobParseResult> {
+        return this.http.post<BobParseResult>(`${API_URL}/contacts/ai-parse`, {
             raw_text: rawText,
             organization_id: organizationId ?? null,
         });

@@ -1,5 +1,5 @@
 import os
-"""Auth B4F API — authentication, authorization, JWT management.
+"""Auth B4F API — auth, authorization, JWT management.
 
 B4F layer — business logic only, delegates CRUD to user~backend-api.
 Port: 8001
@@ -103,11 +103,12 @@ if _api_prefix:
     app.include_router(monitoring_router, prefix=f"/api/v1/{_api_prefix}", tags=["monitoring"])
 
 from app.presentation.routes.auth_routes import router as auth_router
+from app.presentation.routes.bob_cloud_auth_routes import router as bob_cloud_auth_router
 from app.presentation.routes.user_routes import router as user_router
 from app.presentation.routes.tenant_routes import router as tenant_router
 from app.presentation.routes.role_routes import router as role_router
 app.include_router(auth_router, tags=["auth"])
+app.include_router(bob_cloud_auth_router, tags=["auth"])
 app.include_router(user_router, tags=["users"])
 app.include_router(tenant_router, tags=["tenants"])
 app.include_router(role_router, tags=["roles"])
-

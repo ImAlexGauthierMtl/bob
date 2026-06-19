@@ -18,6 +18,7 @@ from app.infrastructure.persistence.models.synced_event import SyncedEvent
 from app.events import publishers
 from app.infrastructure import database
 from app.infrastructure.persistence.integration_settings_repository import IntegrationSettingsRepository
+from app.infrastructure import clients_email_backend as local_clients
 from app.infrastructure.persistence.membrane_repository import MembraneRepository
 from app.infrastructure.persistence.ms365_repository import MS365Repository
 from app.infrastructure.persistence.smart_label_repository import SmartLabelRepository
@@ -888,6 +889,94 @@ def test_repository_methods_cover_persistence_paths():
     assert membrane.get_event_by_id("membrane-event-1", "user-1", "tenant-1").id == "membrane-event-1"
     assert len(membrane.list_events("user-1", "tenant-1", from_date=NOW, to_date=NOW + timedelta(days=1))) == 1
     assert membrane.count_events("user-1", "tenant-1", from_date=NOW, to_date=NOW + timedelta(days=1)) == 1
+
+
+@pytest.mark.asyncio
+async def test_local_provider_clients_use_repositories_without_http(monkeypatch, auth_headers):
+    fake_db = FakeDB()
+    ms365_repo = FakeMS365Repository(fake_db)
+    membrane_repo = FakeMembraneRepository(fake_db)
+    settings_repo = FakeIntegrationSettingsRepository(fake_db)
+
+    def fake_get_db():
+        yield fake_db
+
+    async def noop_publish(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(local_clients, "get_db", fake_get_db)
+    monkeypatch.setattr(local_clients, "MS365Repository", lambda db: ms365_repo)
+    monkeypatch.setattr(local_clients, "MembraneRepository", lambda db: membrane_repo)
+    monkeypatch.setattr(local_clients, "IntegrationSettingsRepository", lambda db: settings_repo)
+    monkeypatch.setattr(local_clients, "publish_email_received", noop_publish)
+
+    headers = {"authorization": auth_headers["Authorization"]}
+
+    assert (await local_clients.integration_settings_client.list(headers))[0]["integration_key"] == "microsoft-outlook"
+    assert (await local_clients.integration_settings_client.get("microsoft-outlook", headers))["id"] == "setting-1"
+    assert (await local_clients.integration_settings_client.get("missing", headers)) is None
+    assert (await local_clients.integration_settings_client.upsert({"integration_key": "microsoft-outlook"}, headers))["tenant_id"] == "tenant-1"
+    assert (await local_clients.integration_settings_client.update("microsoft-outlook", {"is_enabled": False}, headers))["is_enabled"] is False
+    assert await local_clients.integration_settings_client.delete("microsoft-outlook", headers) is True
+    assert await local_clients.integration_settings_client.delete("missing", headers) is False
+
+    assert (await local_clients.connection_client.get_by_user("user-1", headers))["id"] == "conn-1"
+    assert await local_clients.connection_client.get_by_user("missing", headers) is None
+    assert (await local_clients.connection_client.get("conn-1", headers))["ms_email"] == "ada@example.com"
+    assert await local_clients.connection_client.get("missing", headers) is None
+    assert (await local_clients.connection_client.list_active(headers))[0]["id"] == "conn-1"
+    assert (await local_clients.connection_client.create({"user_id": "user-new"}, headers))["id"] == "conn-new"
+    assert (await local_clients.connection_client.create({"user_id": "user-1"}, headers))["id"] == "conn-new"
+    assert (await local_clients.connection_client.update("conn-1", {"ms_email": "updated@example.com"}, headers))["ms_email"] == "updated@example.com"
+    assert await local_clients.connection_client.delete("conn-1", headers) is True
+    assert await local_clients.connection_client.delete("missing", headers) is False
+
+    email_list = await local_clients.email_crud_client.list("user-1", forward_headers=headers)
+    assert email_list["total"] == 1
+    assert (await local_clients.email_crud_client.get("email-1", "user-1", headers))["subject"] == "Hello"
+    assert await local_clients.email_crud_client.get("missing", "user-1", headers) is None
+    assert (await local_clients.email_crud_client.upsert(
+        {"ms365_connection_id": "conn-1", "user_id": "user-1", "ms_message_id": "message-new"},
+        headers,
+    ))["id"] == "email-new"
+    assert (await local_clients.email_crud_client.update("email-1", {"is_read": True}, "user-1", headers))["is_read"] is True
+    assert await local_clients.email_crud_client.delete("email-1", "user-1", headers) is True
+    assert await local_clients.email_crud_client.delete("missing", "user-1", headers) is False
+
+    event_list = await local_clients.event_crud_client.list("user-1", from_date=NOW.isoformat(), forward_headers=headers)
+    assert event_list["total"] == 1
+    assert (await local_clients.event_crud_client.get("event-1", "user-1", headers))["subject"] == "Demo"
+    assert await local_clients.event_crud_client.get("missing", "user-1", headers) is None
+    assert (await local_clients.event_crud_client.upsert(
+        {"ms365_connection_id": "conn-1", "user_id": "user-1", "ms_event_id": "event-new"},
+        headers,
+    ))["id"] == "event-new"
+    assert (await local_clients.event_crud_client.update("event-1", {"location": "Office"}, "user-1", headers))["location"] == "Office"
+    assert await local_clients.event_crud_client.delete("event-1", "user-1", headers) is True
+    assert await local_clients.event_crud_client.delete("missing", "user-1", headers) is False
+
+    assert (await local_clients.membrane_crud_client.upsert_connection(
+        {"user_id": "user-2", "membrane_connection_id": "membrane-2", "integration_key": "microsoft-outlook"},
+        headers,
+    ))["id"] == "membrane-new"
+    assert (await local_clients.membrane_crud_client.get_connection("membrane-conn-1", headers))["id"] == "membrane-conn-1"
+    assert await local_clients.membrane_crud_client.get_connection("missing", headers) is None
+    assert (await local_clients.membrane_crud_client.get_connection_by_user("user-1", "microsoft-outlook", headers))["id"] == "membrane-conn-1"
+    assert await local_clients.membrane_crud_client.get_connection_by_user("missing", None, headers) is None
+    assert (await local_clients.membrane_crud_client.upsert_email(
+        {"membrane_connection_id": "membrane-conn-1", "user_id": "user-1", "provider_message_id": "provider-new"},
+        headers,
+    ))["id"] == "membrane-email-new"
+    assert (await local_clients.membrane_crud_client.list_emails("user-1", forward_headers=headers))["total"] == 1
+    assert (await local_clients.membrane_crud_client.get_email("membrane-email-1", "user-1", headers))["subject"] == "Membrane hello"
+    assert await local_clients.membrane_crud_client.get_email("missing", "user-1", headers) is None
+    assert (await local_clients.membrane_crud_client.upsert_event(
+        {"membrane_connection_id": "membrane-conn-1", "user_id": "user-1", "provider_event_id": "provider-event-new"},
+        headers,
+    ))["id"] == "membrane-event-new"
+    assert (await local_clients.membrane_crud_client.list_events("user-1", from_date=NOW.isoformat(), forward_headers=headers))["total"] == 1
+    assert (await local_clients.membrane_crud_client.get_event("membrane-event-1", "user-1", headers))["subject"] == "Membrane demo"
+    assert await local_clients.membrane_crud_client.get_event("missing", "user-1", headers) is None
 
 
 def test_python_package_contract_loads_runtime_components():

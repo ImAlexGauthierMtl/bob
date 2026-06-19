@@ -10,3 +10,4 @@ python-jose[cryptography]>=3.3
 structlog>=23.0
 httpx>=0.24
 redis[hiredis]>=5.0
+groq>=0.11

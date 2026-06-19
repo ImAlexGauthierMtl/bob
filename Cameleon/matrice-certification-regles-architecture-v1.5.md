@@ -6,6 +6,28 @@ Source de vérité: `/Users/alexandregauthier/Downloads/regles-architecture-depl
 Périmètre actif: code, architecture locale, frontend, APIs, DB, observabilité, valeurs de déploiement projet.
 Périmètre exclu: CI/CD, Harbor, registry, runners et variables GitLab, selon décision de skip CI/CD.
 
+## Execution 2026-06-19
+
+Rapport: `Cameleon/rapport-execution-matrice-architecture-v1.5-2026-06-19.md`
+
+Decision:
+
+- perimetre Bob/CDE local: certifie avec preuves;
+- matrice locale hors CI/CD: certifiee;
+- reserves restantes: CI/CD `SKIP_CI_CD` et smoke Bob Cloud reel/staging externe.
+
+Mise a jour 2026-06-19:
+
+- CERT-05 corrige: le self-call HTTP interne de `email-backend-api` est
+  remplace par des adapters locaux sur repositories/use cases; scan
+  `create_service_client|backend-api|\.svc\.cluster\.local` propre hors tests.
+- CERT-17 ferme localement: `./run_all_apis_tests.sh` passe 22 APIs /
+  0 echec / 0 skip sans DB, puis repasse 22 APIs / 0 echec / 0 skip avec
+  `DATABASE_URL` vers une DB PostgreSQL jetable. Les scripts Backends executent
+  Alembic si une DB est configuree et sautent explicitement cette etape en
+  local sans DB. Sortie persistée:
+  `test-reports/run_all_apis_tests-with-alembic-2026-06-19.log`.
+
 ## Objectif
 
 Cette matrice sert à certifier qu'un refactor respecte les règles d'architecture et de déploiement du projet. Elle doit être utilisée avant une MR finale ou avant de déclarer une conversion terminée.
@@ -94,13 +116,13 @@ Une certification est accordée seulement si:
 | --- | --- | --- | --- |
 | Aucune migration dans B4F | `find apis/exposed -type d \( -name alembic -o -name versions \)` | Aucun résultat | A_CERTIFIER |
 | Aucun accès DB B4F | `rg "DATABASE_URL|create_engine|sessionmaker|declarative_base|metadata\\.create_all|SQLAlchemy|sqlalchemy" apis/exposed -g '*.py'` | Aucun résultat hors tests | A_CERTIFIER |
-| Aucun client externe direct en B4F | `rg "graph\\.microsoft|Pipedream|requests\\.|httpx\\.|aiohttp|create_connect_token" apis/exposed -g '*.py'` | Pas d'appel tiers direct; délégation Backend uniquement | A_CERTIFIER |
+| Aucun client externe direct en B4F hors exception Bob Cloud | `rg "graph\\.microsoft|Pipedream|requests\\.|httpx\\.|aiohttp|create_connect_token" apis/exposed -g '*.py'` | Pas d'appel tiers direct; délégation Backend uniquement, sauf `BobCloudClient` partagé pour Auth/IAM/licences/tenants selon `docs/regles-architecture-deploiement.md` § 2.2 | A_CERTIFIER |
 
 ### CERT-04 — Backend invisible hors cluster
 
 | Critère | Test | Preuve attendue | Statut |
 | --- | --- | --- | --- |
-| Aucun Backend dans gateway values | `rg "backend-api" deploy/values frontend/src` | Aucun Backend exposé | A_CERTIFIER |
+| Aucun Backend dans gateway values | `rg "backend-api" deploy/values/*/gateway.yaml frontend/src` | Aucun Backend exposé | A_CERTIFIER |
 | Aucun Ingress propre Backend | `rg "ingress|Ingress" deploy/values apis/internal` | Pas de config Ingress Backend projet | A_CERTIFIER |
 | Backends accessibles par DNS interne seulement | Revue B4F clients | URLs internes ou variables service internes | A_CERTIFIER |
 
@@ -120,6 +142,7 @@ Une certification est accordée seulement si:
 | Aucun SQL manuel hors Alembic | `find . -name '*.sql' -not -path './.git/*'` | Aucun fichier SQL d'init manuel | A_CERTIFIER |
 | DDL seulement en versions Alembic | `rg "CREATE TABLE|CREATE SCHEMA|ALTER TABLE|DROP TABLE|GRANT " apis/internal -g '*.py' -g '!**/alembic/versions/**'` | Aucun résultat hors migrations | A_CERTIFIER |
 | Première migration crée schéma et droits | Revue première migration par Backend | `CREATE SCHEMA`, `GRANT`, `ALTER DEFAULT PRIVILEGES` | A_CERTIFIER |
+| Table version Alembic service-spécifique | `rg "version_table=.*_alembic_version|version_table_schema" apis/internal/*-backend-api/alembic/env.py` | Table de version nommée `<service>_alembic_version`; schéma `public` accepté pour éviter DDL pré-migration dans `env.py` | A_CERTIFIER |
 
 ### CERT-07 — Downgrade Alembic
 

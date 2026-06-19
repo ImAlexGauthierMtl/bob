@@ -22,7 +22,7 @@
         <!-- Form -->
         <form [formGroup]="composeForm" (ngSubmit)="sendEmail()" class="flex-1 flex flex-col overflow-hidden">
             <!-- Error Banner -->
-            <div *ngIf="errorMsg" class="bg-red-50 text-red-600 px-4 py-2 text-xs font-medium border-b border-red-100 flex items-center gap-2">
+            <div *ngIf="errorMsg$ | async as errorMsg" class="bg-red-50 text-red-600 px-4 py-2 text-xs font-medium border-b border-red-100 flex items-center gap-2">
                 <i class="fa-solid fa-circle-exclamation"></i>
                 {{ errorMsg }}
             </div>
@@ -59,9 +59,9 @@
             <!-- Toolbar / Footer -->
             <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-4">
-                    <button type="submit" [disabled]="isSending" class="px-6 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-medium rounded-md shadow-sm transition-all disabled:opacity-50 flex items-center gap-2">
-                        <i class="fa-solid fa-circle-notch fa-spin" *ngIf="isSending"></i>
-                        <i class="fa-regular fa-paper-plane" *ngIf="!isSending"></i>
+                    <button type="submit" [disabled]="isSending$ | async" class="px-6 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-medium rounded-md shadow-sm transition-all disabled:opacity-50 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-notch fa-spin" *ngIf="isSending$ | async"></i>
+                        <i class="fa-regular fa-paper-plane" *ngIf="!(isSending$ | async)"></i>
                         Send
                     </button>
                     

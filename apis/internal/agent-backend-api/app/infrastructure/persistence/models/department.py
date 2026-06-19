@@ -12,6 +12,6 @@ class Department(Base, TenantMixin, AuditMixin, SoftDeleteMixin):
 class UserDepartment(Base):
     __tablename__ = "user_departments"
     id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(36), nullable=False, index=True, comment="Soft ref to user-backend-api users.id")
+    user_id = Column(String(36), nullable=False, index=True, comment="Soft ref to user service users.id")
     department_id = Column(String(36), ForeignKey("departments.id"), nullable=False, index=True)
     is_manager = Column(String(5), nullable=False, default="false")

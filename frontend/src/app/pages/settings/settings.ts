@@ -46,6 +46,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
                     'member': 'team',
                     'roles': 'roles',
                     'permissions': 'roles',
+                    'platform': 'platform-access',
+                    'tenant': 'platform-access',
+                    'license': 'platform-access',
+                    'licence': 'platform-access',
+                    'rbac': 'platform-access',
                     'integration': 'integrations',
                     'integrations': 'integrations'
                 };

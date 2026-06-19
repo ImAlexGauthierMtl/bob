@@ -1,4 +1,4 @@
-"""MS365 Sync Service — orchestrates sync via HTTP client to email~backend-api."""
+"""MS365 sync service."""
 
 from datetime import datetime, timezone
 from typing import Union, Dict, Any, Optional
@@ -93,7 +93,7 @@ def _graph_event_to_upsert(ev: Dict[str, Any], connection_id: str, user_id: str)
 
 
 class MS365SyncService:
-    """Sync orchestration — business logic stays here, CRUD via HTTP."""
+    """Sync orchestration with local persistence adapters."""
 
     def __init__(self, forward_headers=None):
         self._headers = forward_headers
@@ -105,6 +105,7 @@ class MS365SyncService:
 
         connection_id = connection["id"]
         user_id = connection["user_id"]
+        tenant_id = connection.get("tenant_id")
         access_token = connection.get("access_token")
         refresh_token = connection.get("refresh_token")
         expires_at = _parse_expires_at(connection.get("token_expires_at"))
@@ -112,12 +113,13 @@ class MS365SyncService:
         try:
             access_token, new_data = await graph.ensure_valid_token(access_token, refresh_token, expires_at)
             if new_data:
-                await connection_client.update(connection_id, new_data, forward_headers=self._headers)
+                await connection_client.update(connection_id, new_data, forward_headers=self._headers, tenant_id=tenant_id)
         except Exception as e:
             await connection_client.update(
                 connection_id,
                 {"is_active": False, "connection_status": "token_expired"},
                 forward_headers=self._headers,
+                tenant_id=tenant_id,
             )
             raise e
 
@@ -125,13 +127,14 @@ class MS365SyncService:
         async for messages, _page, _total in graph.get_emails_batched(access_token, connection.get("email_delta_token")):
             for msg in messages:
                 upsert_data = _graph_msg_to_upsert(msg, connection_id, user_id)
-                await email_crud_client.upsert(upsert_data, forward_headers=self._headers)
+                await email_crud_client.upsert(upsert_data, forward_headers=self._headers, tenant_id=tenant_id)
                 total_synced += 1
             if hasattr(graph, "_last_delta_token") and graph._last_delta_token:
                 await connection_client.update(
                     connection_id,
                     {"email_delta_token": graph._last_delta_token, "last_email_sync": datetime.now(timezone.utc).isoformat()},
                     forward_headers=self._headers,
+                    tenant_id=tenant_id,
                 )
 
         return total_synced
@@ -143,6 +146,7 @@ class MS365SyncService:
 
         connection_id = connection["id"]
         user_id = connection["user_id"]
+        tenant_id = connection.get("tenant_id")
         access_token = connection.get("access_token")
         refresh_token = connection.get("refresh_token")
         expires_at = _parse_expires_at(connection.get("token_expires_at"))
@@ -150,12 +154,13 @@ class MS365SyncService:
         try:
             access_token, new_data = await graph.ensure_valid_token(access_token, refresh_token, expires_at)
             if new_data:
-                await connection_client.update(connection_id, new_data, forward_headers=self._headers)
+                await connection_client.update(connection_id, new_data, forward_headers=self._headers, tenant_id=tenant_id)
         except Exception as e:
             await connection_client.update(
                 connection_id,
                 {"is_active": False, "connection_status": "token_expired"},
                 forward_headers=self._headers,
+                tenant_id=tenant_id,
             )
             raise e
 
@@ -165,13 +170,13 @@ class MS365SyncService:
         total_synced = 0
         for ev in all_events:
             upsert_data = _graph_event_to_upsert(ev, connection_id, user_id)
-            await event_crud_client.upsert(upsert_data, forward_headers=self._headers)
+            await event_crud_client.upsert(upsert_data, forward_headers=self._headers, tenant_id=tenant_id)
             total_synced += 1
 
         update_data = {"last_calendar_sync": datetime.now(timezone.utc).isoformat()}
         if new_delta:
             update_data["calendar_delta_token"] = new_delta
-        await connection_client.update(connection_id, update_data, forward_headers=self._headers)
+        await connection_client.update(connection_id, update_data, forward_headers=self._headers, tenant_id=tenant_id)
 
         return total_synced
 
@@ -186,4 +191,3 @@ class MS365SyncService:
                 await self.sync_calendar(conn)
             except Exception as e:
                 logger.error("ms365_webhook_sync_error", connection_id=conn.get("id"), error=str(e))
-

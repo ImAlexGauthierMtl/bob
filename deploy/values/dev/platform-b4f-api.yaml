@@ -16,6 +16,8 @@ config:
   LOG_FORMAT: json
   PORT: '8005'
   API_PORT: '8005'
+  BOB_CLOUD_MODE: stub
+  BOB_CLOUD_STUB_API_URL: http://bob-cloud-stub-api:8010
 secretRefs:
 - name: b4f-runtime-secrets
 initContainers:

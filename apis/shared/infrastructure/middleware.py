@@ -37,7 +37,16 @@ def setup_cors(app: FastAPI, api_name: Optional[str] = None) -> None:
         if ingress and ingress not in origins:
             origins.append(ingress)
         # Also add common Angular/Vite dev origins if not present
-        for dev_origin in ("http://localhost:4200", "http://localhost:4300", "http://localhost:24200"):
+        for dev_origin in (
+            "http://localhost:4200",
+            "http://localhost:4300",
+            "http://localhost:4700",
+            "http://localhost:24200",
+            "http://127.0.0.1:4200",
+            "http://127.0.0.1:4300",
+            "http://127.0.0.1:4700",
+            "http://127.0.0.1:24200",
+        ):
             if dev_origin not in origins:
                 origins.append(dev_origin)
 

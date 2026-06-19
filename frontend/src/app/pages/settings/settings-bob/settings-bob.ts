@@ -1,42 +1,26 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { AuthService } from '../../../shared/services/auth.service';
-import { environment } from '../../../../environments/environment';
-
-interface VoiceOption {
-    id: string;
-    name: string;
-    gender: string;
-    accent: string;
-    style: string;
-    provider?: string;
-}
-
-interface LanguageOption {
-    code: string;
-    name: string;
-}
-
-interface BobSettings {
-    personality: {
-        tone: string;
-        formality: number;
-        response_length: string;
-        language: string;
-        creativity: number;
-        emoji_usage: boolean;
-    };
-    voice: {
-        voice: string;
-        speed: number;
-        auto_listen: boolean;
-    };
-    available_voices: VoiceOption[];
-    available_tones: string[];
-    available_languages: LanguageOption[];
-}
+import { Store } from '@ngrx/store';
+import { Subscription } from 'rxjs';
+import {
+    BobConversationPersonality,
+    BobLanguageOption,
+    BobVoiceOption,
+    BobVoiceSettings,
+} from '../../../shared/services/bob-assistant-settings.service';
+import {
+    loadBobAssistantSettings,
+    saveBobAssistantSettings,
+} from '../../../store/bob-assistant-settings/bob-assistant-settings.actions';
+import {
+    selectBobAssistantSettingsError,
+    selectBobAssistantSettingsNotice,
+    selectBobAssistantSettingsOptions,
+    selectBobAssistantSettingsPersonality,
+    selectBobAssistantSettingsSaving,
+    selectBobAssistantSettingsVoice,
+} from '../../../store/bob-assistant-settings/bob-assistant-settings.selectors';
 
 @Component({
     selector: 'croo-settings-bob',
@@ -45,9 +29,10 @@ interface BobSettings {
     templateUrl: './settings-bob.html',
     styleUrls: ['../settings-shared.css', './settings-bob.css'],
 })
-export class SettingsBobComponent implements OnInit {
-    private http = inject(HttpClient);
-    private auth = inject(AuthService);
+export class SettingsBobComponent implements OnInit, OnDestroy {
+    private store = inject(Store);
+    private subscriptions = new Subscription();
+    private savingSignal = this.store.selectSignal(selectBobAssistantSettingsSaving);
 
     // Personality
     tone = 'professional';
@@ -63,81 +48,60 @@ export class SettingsBobComponent implements OnInit {
     autoListen = true;
 
     // Options
-    availableVoices: VoiceOption[] = [];
+    availableVoices: BobVoiceOption[] = [];
     availableTones: string[] = [];
-    availableLanguages: LanguageOption[] = [];
+    availableLanguages: BobLanguageOption[] = [];
     private isLoadingVoices = false;
 
     // UI state
-    isSaving = false;
     saveMessage = '';
 
-    private apiUrl = `${environment.aiAgentApiUrl}/bob/settings`;
-
-    ngOnInit(): void {
-        this.loadSettings();
+    get isSaving(): boolean {
+        return this.savingSignal();
     }
 
-    loadSettings(): void {
-        this.http.get<BobSettings>(this.apiUrl, {
-            headers: { Authorization: `Bearer ${this.auth.getToken()}` },
-        }).subscribe({
-            next: (data) => {
-                this.tone = data.personality.tone;
-                this.formality = data.personality.formality;
-                this.responseLength = data.personality.response_length;
-                this.language = data.personality.language;
-                this.creativity = data.personality.creativity;
-                this.emojiUsage = data.personality.emoji_usage;
+    ngOnInit(): void {
+        this.subscriptions.add(
+            this.store.select(selectBobAssistantSettingsPersonality).subscribe((personality) => {
+                if (personality) this.applyPersonality(personality);
+            }),
+        );
+        this.subscriptions.add(
+            this.store.select(selectBobAssistantSettingsVoice).subscribe((voice) => {
+                if (voice) this.applyVoice(voice);
+            }),
+        );
+        this.subscriptions.add(
+            this.store.select(selectBobAssistantSettingsOptions).subscribe((options) => {
+                this.availableTones = options.availableTones;
+                this.availableLanguages = options.availableLanguages;
+                this.availableVoices = options.availableVoices;
+            }),
+        );
+        this.subscriptions.add(
+            this.store.select(selectBobAssistantSettingsNotice).subscribe((notice) => {
+                if (notice) this.flashMessage(notice);
+            }),
+        );
+        this.subscriptions.add(
+            this.store.select(selectBobAssistantSettingsError).subscribe((error) => {
+                if (error) this.flashMessage(error);
+            }),
+        );
+        this.store.dispatch(loadBobAssistantSettings());
+    }
 
-                this.selectedVoice = data.voice.voice;
-                this.voiceSpeed = data.voice.speed;
-                this.autoListen = data.voice.auto_listen;
-
-                this.availableVoices = data.available_voices;
-                this.availableTones = data.available_tones;
-                this.availableLanguages = data.available_languages;
-            },
-            error: () => {
-                // Use defaults on error
-            },
-        });
+    ngOnDestroy(): void {
+        this.subscriptions.unsubscribe();
     }
 
     saveSettings(): void {
-        this.isSaving = true;
         this.saveMessage = '';
 
-        const payload = {
-            personality: {
-                tone: this.tone,
-                formality: this.formality,
-                response_length: this.responseLength,
-                language: this.language,
-                creativity: this.creativity,
-                emoji_usage: this.emojiUsage,
-            },
-            voice: {
-                voice: this.selectedVoice,
-                speed: this.voiceSpeed,
-                auto_listen: this.autoListen,
-            },
-        };
-
-        this.http.put<BobSettings>(this.apiUrl, payload, {
-            headers: { Authorization: `Bearer ${this.auth.getToken()}` },
-        }).subscribe({
-            next: () => {
-                this.isSaving = false;
-                this.saveMessage = 'Settings saved';
-                setTimeout(() => this.saveMessage = '', 3000);
-            },
-            error: () => {
-                this.isSaving = false;
-                this.saveMessage = 'Error saving settings';
-                setTimeout(() => this.saveMessage = '', 3000);
-            },
-        });
+        this.store.dispatch(saveBobAssistantSettings({
+            personality: this.currentPersonality(),
+            voice: this.currentVoice(),
+        }));
     }
 
     onLanguageChange(): void {
@@ -190,36 +154,49 @@ export class SettingsBobComponent implements OnInit {
         if (this.isLoadingVoices) return;
         this.isLoadingVoices = true;
 
-        const tempPayload = {
-            personality: {
-                tone: this.tone,
-                formality: this.formality,
-                response_length: this.responseLength,
-                language: this.language,
-                creativity: this.creativity,
-                emoji_usage: this.emojiUsage,
-            },
-            voice: {
-                voice: this.selectedVoice,
-                speed: this.voiceSpeed,
-                auto_listen: this.autoListen,
-            },
-        };
+        this.store.dispatch(saveBobAssistantSettings({
+            personality: this.currentPersonality(),
+            voice: this.currentVoice(),
+        }));
+        setTimeout(() => this.isLoadingVoices = false, 500);
+    }
 
-        this.http.put<BobSettings>(this.apiUrl, tempPayload, {
-            headers: { Authorization: `Bearer ${this.auth.getToken()}` },
-        }).subscribe({
-            next: (data) => {
-                this.availableVoices = data.available_voices;
-                const currentValid = this.availableVoices.some(v => v.id === this.selectedVoice);
-                if (!currentValid && this.availableVoices.length > 0) {
-                    this.selectedVoice = this.availableVoices[0].id;
-                }
-                this.isLoadingVoices = false;
-            },
-            error: () => {
-                this.isLoadingVoices = false;
-            },
-        });
+    private applyPersonality(personality: BobConversationPersonality): void {
+        this.tone = personality.tone;
+        this.formality = personality.formality;
+        this.responseLength = personality.response_length;
+        this.language = personality.language;
+        this.creativity = personality.creativity;
+        this.emojiUsage = personality.emoji_usage;
+    }
+
+    private applyVoice(voice: BobVoiceSettings): void {
+        this.selectedVoice = voice.voice;
+        this.voiceSpeed = voice.speed;
+        this.autoListen = voice.auto_listen;
+    }
+
+    private currentPersonality(): BobConversationPersonality {
+        return {
+            tone: this.tone,
+            formality: this.formality,
+            response_length: this.responseLength,
+            language: this.language,
+            creativity: this.creativity,
+            emoji_usage: this.emojiUsage,
+        };
+    }
+
+    private currentVoice(): BobVoiceSettings {
+        return {
+            voice: this.selectedVoice,
+            speed: this.voiceSpeed,
+            auto_listen: this.autoListen,
+        };
+    }
+
+    private flashMessage(message: string): void {
+        this.saveMessage = message;
+        setTimeout(() => this.saveMessage = '', 3000);
     }
 }

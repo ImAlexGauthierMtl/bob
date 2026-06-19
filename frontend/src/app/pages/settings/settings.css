@@ -199,6 +199,18 @@
 }
 
 /* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 1023px) {
+    .settings-layout {
+        height: auto;
+        min-height: calc(100vh - 80px);
+    }
+
+    .settings-nav,
+    .settings-content {
+        overflow: visible;
+    }
+}
+
 @media (min-width: 1024px) {
     .settings-layout {
         flex-direction: row;

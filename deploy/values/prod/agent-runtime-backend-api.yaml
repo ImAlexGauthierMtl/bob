@@ -1,0 +1,27 @@
+apiName: agent-runtime-backend-api
+apiTier: internal
+replicaCount: 2
+service:
+  targetPort: 9013
+resources:
+  requests:
+    cpu: 150m
+    memory: 192Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+config:
+  ENVIRONMENT: production
+  LOG_LEVEL: INFO
+  LOG_FORMAT: json
+  PORT: '9013'
+  API_PORT: '9013'
+secretRefs:
+- name: backend-runtime-secrets
+initContainers:
+  migrate:
+    enabled: true
+externalDependencies:
+- postgres
+- redis
+backends: []

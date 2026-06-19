@@ -1,0 +1,32 @@
+apiName: bob-chat-b4f-api
+apiTier: exposed
+replicaCount: 1
+service:
+  targetPort: 8007
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+config:
+  ENVIRONMENT: development
+  LOG_LEVEL: DEBUG
+  LOG_FORMAT: json
+  PORT: '8007'
+  API_PORT: '8007'
+  BOB_CLOUD_MODE: stub
+  BOB_CLOUD_STUB_API_URL: http://bob-cloud-stub-api:8010
+  CONVERSATION_BACKEND_API_URL: http://conversation-backend-api:9012
+  AGENT_RUNTIME_BACKEND_API_URL: http://agent-runtime-backend-api:9013
+  AGENT_MEMORY_BACKEND_API_URL: http://agent-memory-backend-api:9014
+secretRefs:
+- name: b4f-runtime-secrets
+initContainers:
+  migrate:
+    enabled: false
+backends:
+- conversation-backend-api
+- agent-runtime-backend-api
+- agent-memory-backend-api

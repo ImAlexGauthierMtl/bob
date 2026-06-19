@@ -47,6 +47,11 @@ export const settingsRoutes: Routes = [
                     import('../pages/settings/settings-roles/settings-roles').then((m) => m.SettingsRolesComponent),
             },
             {
+                path: 'platform-access',
+                loadComponent: () =>
+                    import('../pages/settings/settings-platform-access/settings-platform-access').then((m) => m.SettingsPlatformAccessComponent),
+            },
+            {
                 path: 'automation',
                 loadComponent: () =>
                     import('../pages/settings/settings-automation/settings-automation').then((m) => m.SettingsAutomationComponent),

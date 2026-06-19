@@ -1,0 +1,26 @@
+apiName: bob-cloud-stub-api
+apiTier: internal
+replicaCount: 1
+service:
+  targetPort: 8010
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+config:
+  ENVIRONMENT: development
+  ENV: development
+  LOG_LEVEL: DEBUG
+  LOG_FORMAT: json
+  PORT: '8010'
+  API_PORT: '8010'
+  BOB_CLOUD_MODE: stub
+secretRefs: []
+initContainers:
+  migrate:
+    enabled: false
+externalDependencies: []
+backends: []

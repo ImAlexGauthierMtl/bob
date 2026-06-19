@@ -1,0 +1,27 @@
+apiName: conversation-backend-api
+apiTier: internal
+replicaCount: 2
+service:
+  targetPort: 9012
+resources:
+  requests:
+    cpu: 150m
+    memory: 192Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+config:
+  ENVIRONMENT: production
+  LOG_LEVEL: INFO
+  LOG_FORMAT: json
+  PORT: '9012'
+  API_PORT: '9012'
+secretRefs:
+- name: backend-runtime-secrets
+initContainers:
+  migrate:
+    enabled: true
+externalDependencies:
+- postgres
+- redis
+backends: []

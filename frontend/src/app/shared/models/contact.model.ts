@@ -59,7 +59,7 @@ export interface CreateContactDto {
 
 export type UpdateContactDto = Partial<CreateContactDto>;
 
-export interface AiParseResult {
+export interface BobParseResult {
     extracted: Partial<CreateContactDto>;
     confidence: number;
     raw_text: string;

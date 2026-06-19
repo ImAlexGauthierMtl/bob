@@ -22,10 +22,16 @@ export class LoginComponent {
         private authService: AuthService,
         private router: Router,
     ) {
-        // Redirect if already logged in
-        if (this.authService.hasToken()) {
-            this.router.navigate(['/dashboard']);
-        }
+        this.authService.ensureSession().subscribe({
+            next: (session) => {
+                if (session.authenticated) {
+                    this.router.navigate(['/dashboard']);
+                }
+            },
+            error: () => {
+                // Stay on the login screen until Bob Cloud provides a session cookie.
+            },
+        });
     }
 
     togglePasswordVisibility(): void {
@@ -46,11 +52,11 @@ export class LoginComponent {
                 error: (err) => {
                     this.isLoading = false;
                     if (err.status === 401) {
-                        this.errorMessage = 'Invalid email or password';
+                        this.errorMessage = 'Session Bob Cloud requise. Connectez-vous via Bob Cloud puis réessayez.';
                     } else if (err.status === 429) {
                         this.errorMessage = 'Too many attempts. Please wait.';
                     } else {
-                        this.errorMessage = 'Connection error. Please try again.';
+                        this.errorMessage = 'Session Bob Cloud indisponible. Please try again.';
                     }
                 },
             });
@@ -65,6 +71,6 @@ export class LoginComponent {
     }
 
     signInWithBiometric(): void {
-        // TODO: Implement biometric authentication
+        // TODO: Implement biometric auth
     }
 }

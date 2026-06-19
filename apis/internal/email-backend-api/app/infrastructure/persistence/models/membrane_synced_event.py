@@ -23,7 +23,7 @@ class MembraneSyncedEvent(Base, TenantMixin, AuditMixin):
         nullable=False, index=True,
     )
     user_id = Column(String(36), nullable=False, index=True,
-                     comment="Soft ref to user-backend-api users.id")
+                     comment="Soft ref to user service users.id")
 
     # Provider identity
     provider_event_id = Column(

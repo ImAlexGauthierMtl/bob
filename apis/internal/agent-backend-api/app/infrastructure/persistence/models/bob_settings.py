@@ -17,7 +17,7 @@ class BobUserSettings(Base, TenantMixin, AuditMixin):
     __tablename__ = "bob_user_settings"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(36), nullable=False, unique=True, index=True, comment="Soft ref to user-backend-api users.id")
+    user_id = Column(String(36), nullable=False, unique=True, index=True, comment="Soft ref to user service users.id")
 
     # Personality
     tone = Column(String(20), default="professional", nullable=False)

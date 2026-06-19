@@ -3,7 +3,8 @@ x-common-env: &common-env
   DEBUG: ${DEBUG:-true}
   JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-only-secret-not-for-production}
   JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-  CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4700","http://localhost:24200","http://localhost:4300"]}
+  CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4300","http://localhost:4700","http://localhost:24200","http://127.0.0.1:4200","http://127.0.0.1:4300","http://127.0.0.1:4700","http://127.0.0.1:24200"]}
+  CDE_LOCAL_BOB_SETTINGS_CAPABILITIES: ${CDE_LOCAL_BOB_SETTINGS_CAPABILITIES:-bob_settings.manage}
   INGRESS_URL: ${INGRESS_URL:-http://localhost:4200}
   REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
   EVENT_BUS_BACKEND: ${EVENT_BUS_BACKEND:-redis}
@@ -31,6 +32,9 @@ x-backend-urls: &backend-urls
   WORKFLOW_BACKEND_API_URL: http://workflow-backend-api:9009
   KB_BACKEND_API_URL: http://kb-backend-api:9010
   USAGE_BACKEND_API_URL: http://usage-backend-api:9011
+  CONVERSATION_BACKEND_API_URL: http://conversation-backend-api:9012
+  AGENT_RUNTIME_BACKEND_API_URL: http://agent-runtime-backend-api:9013
+  AGENT_MEMORY_BACKEND_API_URL: http://agent-memory-backend-api:9014
 
 x-shared-volume: &shared-volume
   - ./apis/shared:/shared:ro
@@ -121,6 +125,27 @@ services:
   # ═══════════════════════════════════════
   # B4F LAYER — Business logic (exposed)
   # ═══════════════════════════════════════
+  bob-cloud-stub-api:
+    build:
+      context: .
+      dockerfile: apis/exposed/bob-cloud-stub-api/Dockerfile
+      target: dev
+    container_name: croo-bob-cloud-stub-api
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      PORT: 8010
+      BOB_CLOUD_MODE: stub
+      ENV: ${ENV:-development}
+    ports:
+      - "${BOB_CLOUD_STUB_API_PORT:-8010}:8010"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8010/health || exit 1"]
+      <<: *healthcheck
+    volumes:
+      - ./apis/exposed/bob-cloud-stub-api/app:/app/app
+      - ./apis/exposed/bob-cloud-stub-api/main.py:/app/main.py
+
   auth-b4f-api:
     build:
       context: .
@@ -176,26 +201,38 @@ services:
       org-backend-api:
         condition: service_healthy
 
-  ai-agent-b4f-api:
+  agent-control-b4f-api:
     build:
       context: .
-      dockerfile: apis/exposed/ai-agent-b4f-api/Dockerfile
+      dockerfile: apis/exposed/agent-control-b4f-api/Dockerfile
       target: dev
-    container_name: croo-ai-agent-b4f-api
+    container_name: croo-agent-control-b4f-api
     restart: unless-stopped
     environment:
-      <<: [*common-env, *backend-urls]
-      PORT: 8003
-      GROQ_API_KEY: ${GROQ_API_KEY}
-      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
+      <<: *backend-urls
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-only-secret-not-for-production}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4300","http://localhost:4700","http://localhost:24200","http://127.0.0.1:4200","http://127.0.0.1:4300","http://127.0.0.1:4700","http://127.0.0.1:24200"]}
+      CDE_LOCAL_BOB_SETTINGS_CAPABILITIES: ${CDE_LOCAL_BOB_SETTINGS_CAPABILITIES:-bob_settings.manage}
+      CDE_LOCAL_AGENT_CONTROL_CAPABILITIES: ${CDE_LOCAL_AGENT_CONTROL_CAPABILITIES:-}
+      INGRESS_URL: ${INGRESS_URL:-http://localhost:4200}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://alloy:4317}
+      OTLP_URL: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://alloy:4317}
+      PORT: 8008
+      API_PORT: 8008
+      API_NAME: agent-control-b4f-api
+      OTEL_SERVICE_NAME: agent-control-b4f-api
+      CDE_B4F_SURFACE: agent-control
     ports:
-      - "${AI_AGENT_B4F_API_PORT:-8003}:8003"
+      - "${AGENT_CONTROL_B4F_API_PORT:-8008}:8008"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8003/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8008/health || exit 1"]
       <<: *healthcheck
     volumes:
-      - ./apis/exposed/ai-agent-b4f-api/app:/app/app
-      - ./apis/exposed/ai-agent-b4f-api/main.py:/app/main.py
+      - ./apis/exposed/agent-control-b4f-api/app:/app/app
+      - ./apis/exposed/agent-control-b4f-api/main.py:/app/main.py
 
     depends_on:
       agent-backend-api:
@@ -287,6 +324,39 @@ services:
 
     depends_on:
       kb-backend-api:
+        condition: service_healthy
+
+  bob-chat-b4f-api:
+    build:
+      context: .
+      dockerfile: apis/exposed/bob-chat-b4f-api/Dockerfile
+      target: dev
+    container_name: croo-bob-chat-b4f-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *backend-urls]
+      PORT: 8007
+      BOB_CLOUD_MODE: ${BOB_CLOUD_MODE:-stub}
+      BOB_CLOUD_STUB_API_URL: http://bob-cloud-stub-api:8010
+      INTERNAL_SESSION_SECRET: ${INTERNAL_SESSION_SECRET:-dev-internal-session-secret-not-for-production}
+      INTERNAL_SESSION_KID: ${INTERNAL_SESSION_KID:-internal-session-dev}
+    ports:
+      - "${BOB_CHAT_B4F_API_PORT:-8007}:8007"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8007/health || exit 1"]
+      <<: *healthcheck
+    volumes:
+      - ./apis/exposed/bob-chat-b4f-api/app:/app/app
+      - ./apis/exposed/bob-chat-b4f-api/main.py:/app/main.py
+
+    depends_on:
+      bob-cloud-stub-api:
+        condition: service_healthy
+      conversation-backend-api:
+        condition: service_healthy
+      agent-runtime-backend-api:
+        condition: service_healthy
+      agent-memory-backend-api:
         condition: service_healthy
 
   # ═══════════════════════════════════════
@@ -508,6 +578,8 @@ services:
     environment:
       <<: [*common-env, *db-env]
       PORT: 9008
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      WORKSPACE_MODEL: ${WORKSPACE_MODEL:-llama-3.1-8b-instant}
     ports:
       - "${AGENT_BACKEND_API_PORT:-9008}:9008"
     healthcheck:
@@ -601,6 +673,96 @@ services:
       - ./apis/internal/usage-backend-api/app:/app/app
       - ./apis/internal/usage-backend-api/main.py:/app/main.py
       - ./apis/internal/usage-backend-api/alembic:/app/alembic
+
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      alloy:
+        condition: service_started
+
+  conversation-backend-api:
+    build:
+      context: .
+      dockerfile: apis/internal/conversation-backend-api/Dockerfile
+      target: dev
+    container_name: croo-conversation-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9012
+      INTERNAL_SESSION_SECRET: ${INTERNAL_SESSION_SECRET:-dev-internal-session-secret-not-for-production}
+      INTERNAL_SESSION_KID: ${INTERNAL_SESSION_KID:-internal-session-dev}
+    ports:
+      - "${CONVERSATION_BACKEND_API_PORT:-9012}:9012"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9012/health || exit 1"]
+      <<: *healthcheck
+    volumes:
+      - ./apis/internal/conversation-backend-api/app:/app/app
+      - ./apis/internal/conversation-backend-api/main.py:/app/main.py
+      - ./apis/internal/conversation-backend-api/alembic:/app/alembic
+
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      alloy:
+        condition: service_started
+
+  agent-runtime-backend-api:
+    build:
+      context: .
+      dockerfile: apis/internal/agent-runtime-backend-api/Dockerfile
+      target: dev
+    container_name: croo-agent-runtime-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9013
+      INTERNAL_SESSION_SECRET: ${INTERNAL_SESSION_SECRET:-dev-internal-session-secret-not-for-production}
+      INTERNAL_SESSION_KID: ${INTERNAL_SESSION_KID:-internal-session-dev}
+    ports:
+      - "${AGENT_RUNTIME_BACKEND_API_PORT:-9013}:9013"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9013/health || exit 1"]
+      <<: *healthcheck
+    volumes:
+      - ./apis/internal/agent-runtime-backend-api/app:/app/app
+      - ./apis/internal/agent-runtime-backend-api/main.py:/app/main.py
+      - ./apis/internal/agent-runtime-backend-api/alembic:/app/alembic
+
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      alloy:
+        condition: service_started
+
+  agent-memory-backend-api:
+    build:
+      context: .
+      dockerfile: apis/internal/agent-memory-backend-api/Dockerfile
+      target: dev
+    container_name: croo-agent-memory-backend-api
+    restart: unless-stopped
+    environment:
+      <<: [*common-env, *db-env]
+      PORT: 9014
+      INTERNAL_SESSION_SECRET: ${INTERNAL_SESSION_SECRET:-dev-internal-session-secret-not-for-production}
+      INTERNAL_SESSION_KID: ${INTERNAL_SESSION_KID:-internal-session-dev}
+    ports:
+      - "${AGENT_MEMORY_BACKEND_API_PORT:-9014}:9014"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9014/health || exit 1"]
+      <<: *healthcheck
+    volumes:
+      - ./apis/internal/agent-memory-backend-api/app:/app/app
+      - ./apis/internal/agent-memory-backend-api/main.py:/app/main.py
+      - ./apis/internal/agent-memory-backend-api/alembic:/app/alembic
 
     depends_on:
       pgbouncer:

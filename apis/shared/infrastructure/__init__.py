@@ -9,6 +9,13 @@ from .logging import (
 )
 from .middleware import setup_cors, RequestLoggingMiddleware
 from .auth_middleware import JWTAuthMiddleware
+from .internal_session_context import (
+    InMemoryReplayStore,
+    InternalSessionContext,
+    InternalSessionContextError,
+    InternalSessionContextMiddleware,
+    InternalSessionContextSigner,
+)
 from .monitoring import router as monitoring_router
 from .rate_limiter import rate_limiter, RateLimiter
 
@@ -23,6 +30,11 @@ __all__ = [
     "setup_cors",
     "RequestLoggingMiddleware",
     "JWTAuthMiddleware",
+    "InMemoryReplayStore",
+    "InternalSessionContext",
+    "InternalSessionContextError",
+    "InternalSessionContextMiddleware",
+    "InternalSessionContextSigner",
     "monitoring_router",
     "rate_limiter",
     "RateLimiter",

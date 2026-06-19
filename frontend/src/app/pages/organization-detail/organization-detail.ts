@@ -238,7 +238,7 @@ export class OrganizationDetailComponent implements OnInit, OnDestroy {
         this.contactStatusMessage = '';
         this.parsedContactPreview = null;
 
-        this.contactService.aiParse(this.contactInput, this.org?.id).subscribe({
+        this.contactService.bobParse(this.contactInput, this.org?.id).subscribe({
             next: (result) => {
                 this.parsedContactPreview = result.extracted;
                 this.isProcessingContact = false;

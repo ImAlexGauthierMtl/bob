@@ -1,32 +1,35 @@
 import { Component, inject, ViewChild, ElementRef, AfterViewChecked, OnDestroy, OnInit, NgZone } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
-import { BobService } from '../services/bob.service';
-import { BobArtifact, BobSessionInfo } from '../models/bob.model';
+import { Store } from '@ngrx/store';
 import { AuthService } from '../services/auth.service';
 import { BobActionService, BobAction, BobMission } from '../services/bob-action.service';
 import { PipecatClient, RTVIEvent } from '@pipecat-ai/client-js';
 import { WebSocketTransport } from '@pipecat-ai/websocket-transport';
-
-interface ChatMessage {
-    role: 'user' | 'bob';
-    text: string;
-    time: Date;
-    isLoading?: boolean;
-    toolSteps?: { tool: string; status: string }[];
-    artifact?: BobArtifact;
-}
+import {
+    addBobChatMessage,
+    addBobChatToolStep,
+    appendBobChatTranscript,
+    deleteBobChatSession,
+    loadBobChatSessions,
+    selectBobChatSession,
+    sendBobChatMessage,
+    setBobChatMission,
+    startNewBobChatConversation,
+} from '../../store/bob-chat/bob-chat.actions';
+import { BobChatMessageView, BobChatSessionSummary } from '../../store/bob-chat/bob-chat.models';
+import {
+    selectBobChatActiveTitle,
+    selectBobChatLoading,
+    selectBobChatMessages,
+    selectBobChatSessionGroups,
+    selectBobChatSessionId,
+} from '../../store/bob-chat/bob-chat.selectors';
 
 interface QuickWorkflow {
     icon: string;
     label: string;
     description: string;
-}
-
-interface SessionGroup {
-    label: string;
-    sessions: BobSessionInfo[];
 }
 
 type VoiceState = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking';
@@ -48,31 +51,27 @@ import { MarkdownPipe } from '../pipes/markdown.pipe';
 export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
 
-    private http = inject(HttpClient);
-    private bobService = inject(BobService);
+    private store = inject(Store);
     private authService = inject(AuthService);
     private bobActionService = inject(BobActionService);
     private missionSub!: Subscription;
     private missionUpdateSub?: Subscription;
+    private messagesSub?: Subscription;
+    private readonly messagesSignal = this.store.selectSignal(selectBobChatMessages);
+    private readonly sessionGroupsSignal = this.store.selectSignal(selectBobChatSessionGroups);
+    private readonly sessionIdSignal = this.store.selectSignal(selectBobChatSessionId);
+    private readonly activeTitleSignal = this.store.selectSignal(selectBobChatActiveTitle);
+    private readonly loadingSignal = this.store.selectSignal(selectBobChatLoading);
 
     isOpen = false;
     isExpanded = false;
     message = '';
     hasUnread = true;
-    isLoading = false;
-    sessionId: string | undefined;
     private shouldScrollToBottom = false;
 
     // ── Expanded sidebar state ──────────────────────────
-    sessionGroups: SessionGroup[] = [];
-    activeTitle = 'New Conversation';
     userName = '';
     userRole = '';
-
-    // ── Mission state ───────────────────────────────────
-    activeMissionPrompt: string | undefined;
-    activeMissionContext: Record<string, unknown> | undefined;
-    isMissionActive = false;
 
     // ── Voice state ─────────────────────────────────────
     voiceState: VoiceState = 'idle';
@@ -82,16 +81,28 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private intentionalDisconnect = false;
     private ngZone = inject(NgZone);
-    private currentBotTranscriptMsg: ChatMessage | null = null;
+    private currentBotTranscriptMessageId: string | null = null;
     private autoListenEnabled = true;
 
-    messages: ChatMessage[] = [
-        {
-            role: 'bob',
-            text: 'Hello! I\'m Bob, your AI assistant. How can I help you today?',
-            time: new Date(),
-        },
-    ];
+    get messages(): BobChatMessageView[] {
+        return this.messagesSignal();
+    }
+
+    get sessionGroups() {
+        return this.sessionGroupsSignal();
+    }
+
+    get sessionId(): string | undefined {
+        return this.sessionIdSignal();
+    }
+
+    get activeTitle(): string {
+        return this.activeTitleSignal();
+    }
+
+    get isLoading(): boolean {
+        return this.loadingSignal();
+    }
 
     quickWorkflows: QuickWorkflow[] = [
         {
@@ -117,6 +128,14 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     ];
 
     ngOnInit(): void {
+        let previousMessageCount = this.messages.length;
+        this.messagesSub = this.store.select(selectBobChatMessages).subscribe((messages) => {
+            if (messages.length !== previousMessageCount) {
+                this.shouldScrollToBottom = true;
+                previousMessageCount = messages.length;
+            }
+        });
+
         this.missionSub = this.bobActionService.mission$.subscribe((mission: BobMission) => {
             this.startMission(mission);
         });
@@ -144,6 +163,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         this.disconnectVoice();
         if (this.missionSub) this.missionSub.unsubscribe();
         if (this.missionUpdateSub) this.missionUpdateSub.unsubscribe();
+        if (this.messagesSub) this.messagesSub.unsubscribe();
     }
 
     toggle(): void {
@@ -174,72 +194,24 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     // ── Session management (expanded sidebar) ───────────
 
     loadSessions(): void {
-        this.bobService.listSessions().subscribe({
-            next: (sessions) => {
-                this.sessionGroups = this.groupSessions(sessions);
-            },
-            error: () => {
-                this.sessionGroups = [];
-            },
-        });
+        this.store.dispatch(loadBobChatSessions());
     }
 
-    private groupSessions(sessions: BobSessionInfo[]): SessionGroup[] {
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-        const yesterday = today - 86400000;
-        const weekAgo = today - 7 * 86400000;
-
-        const groups: Record<string, BobSessionInfo[]> = {
-            'Today': [],
-            'Yesterday': [],
-            'Last 7 Days': [],
-            'Older': [],
-        };
-
-        for (const s of sessions) {
-            const ts = s.last_activity * 1000;
-            if (ts >= today) {
-                groups['Today'].push(s);
-            } else if (ts >= yesterday) {
-                groups['Yesterday'].push(s);
-            } else if (ts >= weekAgo) {
-                groups['Last 7 Days'].push(s);
-            } else {
-                groups['Older'].push(s);
-            }
-        }
-
-        return Object.entries(groups)
-            .filter(([, list]) => list.length > 0)
-            .map(([label, list]) => ({ label, sessions: list }));
-    }
-
-    selectSession(session: BobSessionInfo): void {
-        this.sessionId = session.session_id;
-        this.activeTitle = session.title || `Session #${session.session_id.slice(0, 8)}`;
-        this.messages = [
-            { role: 'bob', text: 'Resuming conversation…', time: new Date() },
-        ];
+    selectSession(session: BobChatSessionSummary): void {
+        this.store.dispatch(selectBobChatSession({
+            sessionId: session.id,
+            title: session.title || `Session #${session.id.slice(0, 8)}`,
+        }));
         this.shouldScrollToBottom = true;
     }
 
-    deleteSession(session: BobSessionInfo, event: Event): void {
+    deleteSession(session: BobChatSessionSummary, event: Event): void {
         event.stopPropagation();
-        this.bobService.deleteSession(session.session_id).subscribe(() => {
-            this.loadSessions();
-            if (this.sessionId === session.session_id) {
-                this.newConversation();
-            }
-        });
+        this.store.dispatch(deleteBobChatSession({ sessionId: session.id }));
     }
 
     newConversation(): void {
-        this.sessionId = undefined;
-        this.activeTitle = 'New Conversation';
-        this.messages = [
-            { role: 'bob', text: 'Hello! I\'m Bob, your AI assistant. How can I help you today?', time: new Date() },
-        ];
+        this.store.dispatch(startNewBobChatConversation());
         this.shouldScrollToBottom = true;
     }
 
@@ -262,77 +234,15 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         if (!this.message.trim() || this.isLoading) return;
 
         const userMsg = this.message.trim();
-        this.messages.push({
-            role: 'user',
-            text: userMsg,
-            time: new Date(),
-        });
         this.message = '';
-        this.isLoading = true;
         this.shouldScrollToBottom = true;
 
-        // Add typing indicator
-        const loadingMsg: ChatMessage = {
-            role: 'bob',
-            text: '',
-            time: new Date(),
-            isLoading: true,
-        };
-        this.messages.push(loadingMsg);
-
-        this.bobService.chat(userMsg, this.sessionId, this.activeMissionPrompt, this.activeMissionContext, this.isExpanded ? 'workspace' : 'compact').subscribe({
-            next: (response) => {
-                const idx = this.messages.indexOf(loadingMsg);
-                if (idx > -1) this.messages.splice(idx, 1);
-
-                this.messages.push({
-                    role: 'bob',
-                    text: response.response,
-                    time: new Date(),
-                    toolSteps: response.tool_steps?.length ? response.tool_steps : undefined,
-                    artifact: response.artifact || undefined,
-                });
-
-                this.sessionId = response.session_id;
-                this.isLoading = false;
-                this.shouldScrollToBottom = true;
-
-                // Update active title from session_title
-                if (response.session_title) {
-                    this.activeTitle = response.session_title;
-                    // Refresh sidebar sessions if expanded
-                    if (this.isExpanded) this.loadSessions();
-                }
-
-                // After first mission message is sent, clear the prompt
-                // (backend session already has it, no need to resend)
-                if (this.activeMissionPrompt) {
-                    this.activeMissionPrompt = undefined;
-                }
-
-                // Dispatch any actions from tool calls
-                if (response.actions && response.actions.length > 0) {
-                    console.log('[Bob] Text chat actions:', response.actions);
-                    for (const action of response.actions) {
-                        this.bobActionService.dispatch(action as BobAction);
-                    }
-                }
-            },
-            error: (err) => {
-                const idx = this.messages.indexOf(loadingMsg);
-                if (idx > -1) this.messages.splice(idx, 1);
-
-                this.messages.push({
-                    role: 'bob',
-                    text: 'Sorry, I encountered an error. Please try again.',
-                    time: new Date(),
-                });
-
-                this.isLoading = false;
-                this.shouldScrollToBottom = true;
-                console.error('Bob chat error:', err);
-            },
-        });
+        this.store.dispatch(sendBobChatMessage({
+            messageId: this.createMessageId('user'),
+            loadingMessageId: this.createMessageId('loading'),
+            text: userMsg,
+            channel: this.isExpanded ? 'workspace' : 'compact',
+        }));
     }
 
     // ── Voice ───────────────────────────────────────────
@@ -389,28 +299,13 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         this.showConsentDialog = false;
     }
 
-    private loadVoiceSettings(): void {
-        const token = this.authService.getToken();
-        if (!token) return;
-        this.http.get<any>(`${environment.aiAgentApiUrl}/bob/settings`, {
-            headers: { Authorization: `Bearer ${token}` },
-        }).subscribe({
-            next: (data) => {
-                this.autoListenEnabled = data?.voice?.auto_listen ?? true;
-            },
-            error: () => { /* keep default */ },
-        });
-    }
-
     private async connectVoice(): Promise<void> {
-        const token = this.authService.getToken();
-        if (!token) {
-            console.error('No auth token for voice');
+        if (!this.authService.hasActiveSession()) {
+            console.error('No active Bob Cloud session for voice');
             return;
         }
 
         this.voiceState = 'connecting';
-        this.loadVoiceSettings();
 
         try {
             this.pipecatClient = new PipecatClient({
@@ -423,11 +318,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
             this.pipecatClient.on(RTVIEvent.Connected, () => {
                 this.ngZone.run(() => {
                     this.voiceState = 'listening';
-                    this.messages.push({
-                        role: 'bob',
-                        text: '🎤 Voice mode activated — speak naturally, I\'m listening.',
-                        time: new Date(),
-                    });
+                    this.addStoreMessage('bob', '🎤 Voice mode activated — speak naturally, I\'m listening.');
                     this.shouldScrollToBottom = true;
                 });
             });
@@ -435,13 +326,8 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
             this.pipecatClient.on(RTVIEvent.BotStartedSpeaking, () => {
                 this.ngZone.run(() => {
                     this.voiceState = 'speaking';
-                    // Prepare a new transcript bubble
-                    this.currentBotTranscriptMsg = {
-                        role: 'bob',
-                        text: '',
-                        time: new Date(),
-                    };
-                    this.messages.push(this.currentBotTranscriptMsg);
+                    this.currentBotTranscriptMessageId = this.createMessageId('voice-bob');
+                    this.addStoreMessage('bob', '', this.currentBotTranscriptMessageId);
                     this.shouldScrollToBottom = true;
                 });
             });
@@ -449,7 +335,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
             this.pipecatClient.on(RTVIEvent.BotStoppedSpeaking, () => {
                 this.ngZone.run(() => {
                     this.voiceState = 'listening';
-                    this.currentBotTranscriptMsg = null;
+                    this.currentBotTranscriptMessageId = null;
                     if (this.autoListenEnabled && this.pipecatClient) {
                         this.pipecatClient.enableMic(true);
                     }
@@ -467,15 +353,14 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
                     this.ngZone.run(() => {
                         let clean = this.stripVoiceTags(data.text);
                         if (!clean) return;
-                        if (this.currentBotTranscriptMsg) {
-                            this.currentBotTranscriptMsg.text += clean + ' ';
+                        if (this.currentBotTranscriptMessageId) {
+                            this.store.dispatch(appendBobChatTranscript({
+                                messageId: this.currentBotTranscriptMessageId,
+                                text: `${clean} `,
+                            }));
                         } else {
-                            this.currentBotTranscriptMsg = {
-                                role: 'bob',
-                                text: clean + ' ',
-                                time: new Date(),
-                            };
-                            this.messages.push(this.currentBotTranscriptMsg);
+                            this.currentBotTranscriptMessageId = this.createMessageId('voice-bob');
+                            this.addStoreMessage('bob', `${clean} `, this.currentBotTranscriptMessageId);
                         }
                         this.shouldScrollToBottom = true;
                     });
@@ -486,11 +371,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
                 // Only show final user transcriptions (not interim) as light confirmations
                 if (data?.text && data?.final) {
                     this.ngZone.run(() => {
-                        this.messages.push({
-                            role: 'user',
-                            text: data.text,
-                            time: new Date(),
-                        });
+                        this.addStoreMessage('user', data.text);
                         this.shouldScrollToBottom = true;
                     });
                 }
@@ -502,11 +383,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
                         this.reconnectAttempts++;
                         const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 8000);
                         this.voiceState = 'connecting';
-                        this.messages.push({
-                            role: 'bob',
-                            text: `Connection lost. Reconnecting (${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`,
-                            time: new Date(),
-                        });
+                        this.addStoreMessage('bob', `Connection lost. Reconnecting (${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
                         this.shouldScrollToBottom = true;
                         this.reconnectTimer = setTimeout(() => this.connectVoice(), delay);
                     } else {
@@ -569,7 +446,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
 
             // ── Connect ─────────────────────────────────
             await this.pipecatClient.connect({
-                wsUrl: `${WS_URL}/ws/bob/voice?token=${token}`,
+                wsUrl: `${WS_URL}/ws/bob/voice`,
             });
 
         } catch (err) {
@@ -577,11 +454,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
             this.voiceState = 'idle';
             this.pipecatClient = null;
 
-            this.messages.push({
-                role: 'bob',
-                text: 'Could not access microphone. Please check permissions.',
-                time: new Date(),
-            });
+            this.addStoreMessage('bob', 'Could not access microphone. Please check permissions.');
             this.shouldScrollToBottom = true;
         }
     }
@@ -597,12 +470,11 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
 
     private addVoiceToolBadge(fnName: string): void {
         if (!fnName) return;
-        const target = this.currentBotTranscriptMsg || this.messages[this.messages.length - 1];
-        if (target && target.role === 'bob') {
-            if (!target.toolSteps) target.toolSteps = [];
-            target.toolSteps.push({ tool: fnName, status: 'ok' });
-            this.shouldScrollToBottom = true;
-        }
+        this.store.dispatch(addBobChatToolStep({
+            messageId: this.currentBotTranscriptMessageId || undefined,
+            step: { tool: fnName, status: 'ok' },
+        }));
+        this.shouldScrollToBottom = true;
     }
 
     private dispatchVoiceAction(fnName: string, args: Record<string, any>): void {
@@ -647,17 +519,18 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         this.hasUnread = false;
 
         // Reset session for fresh mission
-        this.sessionId = undefined;
-        this.activeMissionPrompt = mission.missionPrompt;
-        this.activeMissionContext = mission.missionContext;
-        this.isMissionActive = true;
+        this.store.dispatch(startNewBobChatConversation());
+        this.store.dispatch(setBobChatMission({
+            prompt: mission.missionPrompt,
+            context: mission.missionContext,
+            active: true,
+        }));
 
         // Add system-like message to indicate mission start
-        this.messages.push({
-            role: 'bob',
-            text: '🎯 **Mission activée** — Interview CEO en cours. Bob est maintenant en mode intervieweur psychodynamique.',
-            time: new Date(),
-        });
+        this.addStoreMessage(
+            'bob',
+            '🎯 **Mission activée** — Interview CEO en cours. Bob est maintenant en mode intervieweur psychodynamique.',
+        );
         this.shouldScrollToBottom = true;
 
         // Send the initial message
@@ -670,8 +543,11 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
      * Does NOT reset the session.
      */
     updateMission(mission: BobMission): void {
-        this.activeMissionPrompt = mission.missionPrompt;
-        this.activeMissionContext = mission.missionContext;
+        this.store.dispatch(setBobChatMission({
+            prompt: mission.missionPrompt,
+            context: mission.missionContext,
+            active: true,
+        }));
 
         if (this.isVoiceActive && this.pipecatClient) {
             // Inject new context directly into the running Pipecat Voice pipeline
@@ -702,5 +578,24 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         } catch (e) {
             // Ignore scroll errors
         }
+    }
+
+    private addStoreMessage(role: 'user' | 'bob', text: string, id = this.createMessageId(role)): void {
+        this.store.dispatch(addBobChatMessage({
+            message: {
+                id,
+                role,
+                text,
+                time: new Date(),
+            },
+        }));
+    }
+
+    private createMessageId(prefix: string): string {
+        if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+            return `${prefix}-${crypto.randomUUID()}`;
+        }
+
+        return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     }
 }

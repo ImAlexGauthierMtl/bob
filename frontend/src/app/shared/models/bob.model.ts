@@ -5,9 +5,13 @@ export type BobChannel = 'compact' | 'workspace' | 'voice_app' | 'voice_phone';
 export interface BobChatRequest {
     message: string;
     session_id?: string;
-    mission_prompt?: string;
-    mission_context?: Record<string, unknown>;
     channel?: BobChannel;
+    mission?: {
+        id?: string;
+        prompt?: string;
+        context?: Record<string, unknown>;
+    };
+    client_context?: Record<string, unknown>;
 }
 
 export interface BobChatAction {
@@ -67,6 +71,52 @@ export interface BobChatResponse {
     tool_steps?: { tool: string; status: string }[];
     artifact?: BobArtifact;
     session_title?: string;
+}
+
+export interface BobChatV1Message {
+    id: string;
+    role: string;
+    content: string;
+    created_at: string;
+    metadata?: Record<string, unknown>;
+}
+
+export interface BobChatV1Session {
+    id: string;
+    title: string;
+    channel: string;
+    status?: string;
+    turn_count: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface BobChatV1Run {
+    id: string;
+    status: string;
+    mode?: string;
+    trace_id?: string;
+}
+
+export interface BobChatV1NarrationStep {
+    label: string;
+    kind: 'lookup' | 'draft' | 'validate' | 'wait_confirmation' | 'summarize';
+    status: string;
+    safe_to_show: boolean;
+}
+
+export interface BobChatV1Response {
+    message: BobChatV1Message;
+    input_message?: BobChatV1Message;
+    session: BobChatV1Session;
+    run: BobChatV1Run;
+    actions: BobChatAction[];
+    narration_steps: BobChatV1NarrationStep[];
+    artifacts: BobArtifact[];
+}
+
+export interface BobChatV1SessionList {
+    items: BobChatV1Session[];
 }
 
 export interface BobSessionInfo {

@@ -59,6 +59,8 @@ class CircuitBreaker:
 FORWARDED_HEADERS = [
     "authorization",
     "x-tenant-id",
+    "x-session-context",
+    "x-trace-id",
     "x-request-id",
     "x-correlation-id",
     "traceparent",
@@ -178,12 +180,17 @@ _SERVICE_URL_MAP: Dict[str, str] = {
     "workflow~backend-api": "WORKFLOW_BACKEND_API_URL",
     "kb~backend-api": "KB_BACKEND_API_URL",
     "usage~backend-api": "USAGE_BACKEND_API_URL",
+    "conversation~backend-api": "CONVERSATION_BACKEND_API_URL",
+    "agent-runtime~backend-api": "AGENT_RUNTIME_BACKEND_API_URL",
+    "agent-memory~backend-api": "AGENT_MEMORY_BACKEND_API_URL",
     "auth~b4f-api": "AUTH_B4F_API_URL",
     "crm~b4f-api": "CRM_B4F_API_URL",
     "communication~b4f-api": "COMMUNICATION_B4F_API_URL",
-    "ai-agent~b4f-api": "AI_AGENT_B4F_API_URL",
     "platform~b4f-api": "PLATFORM_B4F_API_URL",
     "kb~b4f-api": "KB_B4F_API_URL",
+    "bob-chat~b4f-api": "BOB_CHAT_B4F_API_URL",
+    "agent-control~b4f-api": "AGENT_CONTROL_B4F_API_URL",
+    "bob-cloud-stub-api": "BOB_CLOUD_STUB_API_URL",
 }
 
 _DEFAULT_PORTS: Dict[str, int] = {
@@ -198,12 +205,17 @@ _DEFAULT_PORTS: Dict[str, int] = {
     "workflow~backend-api": 9009,
     "kb~backend-api": 9010,
     "usage~backend-api": 9011,
+    "conversation~backend-api": 9012,
+    "agent-runtime~backend-api": 9013,
+    "agent-memory~backend-api": 9014,
     "auth~b4f-api": 8001,
     "crm~b4f-api": 8002,
     "communication~b4f-api": 8004,
-    "ai-agent~b4f-api": 8003,
     "platform~b4f-api": 8005,
     "kb~b4f-api": 8006,
+    "bob-chat~b4f-api": 8007,
+    "agent-control~b4f-api": 8008,
+    "bob-cloud-stub-api": 8010,
 }
 
 
@@ -228,3 +240,13 @@ def create_service_client(service_name: str, **kwargs: Any) -> HTTPClient:
     """Create an HTTPClient configured for a specific backend service."""
     url = get_service_url(service_name)
     return HTTPClient(base_url=url, **kwargs)
+
+
+from .bob_cloud_client import (  # noqa: E402
+    BobCloudClient,
+    BobCloudClientConfig,
+    BobCloudClientError,
+    BobCloudModeError,
+    BobCloudResponseError,
+    create_bob_cloud_client_from_env,
+)

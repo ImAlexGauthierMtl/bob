@@ -71,7 +71,16 @@ class Settings(BaseSettings):
     cors_origins: List[str] = ["http://localhost:4200"]
     cors_allow_credentials: bool = True
     cors_allow_methods: List[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
-    cors_allow_headers: List[str] = ["Content-Type", "Authorization"]
+    cors_allow_headers: List[str] = [
+        "Content-Type",
+        "Authorization",
+        "Idempotency-Key",
+        "Traceparent",
+        "X-Correlation-Id",
+        "X-Request-Id",
+        "X-Session-Context",
+        "X-Trace-Id",
+    ]
 
     # Observability
     otel_exporter_otlp_endpoint: Optional[str] = None

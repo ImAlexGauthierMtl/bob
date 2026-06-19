@@ -77,6 +77,24 @@ Référence unique pour la conception, la revue et le déploiement des projets.
 - **JAMAIS** d'accès direct DB ou services externes
 - Appels Backend via DNS K8s interne
 
+#### Exception plateforme : Bob Cloud Auth/IAM/Licences
+
+Bob Cloud est l'autorité plateforme pour les tenants, licences, sessions,
+utilisateurs, rôles et capabilities fournis à CDE. Une B4F peut appeler Bob Cloud
+directement uniquement via l'adapter partagé `BobCloudClient`, et seulement pour :
+
+- valider une session utilisateur;
+- lire le tenant courant;
+- vérifier une licence, un entitlement ou une capability;
+- déléguer une opération IAM/RBAC explicitement couverte par le contrat Bob Cloud.
+
+Cette exception ne permet aucun appel fournisseur métier arbitraire depuis une B4F.
+Les mutations via Bob Cloud exigent `Idempotency-Key`, forwarding d'identité et
+mapping d'erreur sans fuite de secret. En local/CI, `BOB_CLOUD_MODE=stub` peut
+pointer vers `bob-cloud-stub-api`; ce mode est interdit en production. Les
+Backends internes continuent de recevoir uniquement un `X-Session-Context` signé
+par la B4F après validation Bob Cloud.
+
 ### 2.3 Responsabilités Backend API
 
 - Une **entité principale** par Backend (`rooms`, `clients`, `rates`...) avec CRUD complet
@@ -217,9 +235,17 @@ context.configure(
     connection=connection,
     target_metadata=target_metadata,
     include_schemas=True,
-    version_table_schema="<service>",
+    version_table="<service>_alembic_version",
+    version_table_schema="public",
 )
 ```
+
+La table de version Alembic est une exception technique : elle reste dans
+`public`, mais son nom est obligatoirement préfixé par le service
+(`<service>_alembic_version`). Cette convention évite toute DDL dans `env.py`
+avant que la première migration ait créé le schéma métier. Les tables métier,
+index, contraintes et clés étrangères restent toujours qualifiés dans le schéma
+du service (`<service>.*`). `SET search_path` demeure interdit.
 
 #### 2.7.3 Pool de connexions applicatif (SQLAlchemy)
 

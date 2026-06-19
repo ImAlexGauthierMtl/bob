@@ -1,61 +1,42 @@
 <div class="inbox-layout">
-    <!-- Header -->
     <header class="inbox-header">
-        <div class="inbox-header__top">
-            <div class="inbox-header__title-area">
-                <h2 class="inbox-header__title">Inbox</h2>
-                <p class="inbox-header__subtitle">Manage your communications with intelligent prioritization</p>
-            </div>
-            
-            <div class="inbox-header__actions">
-                <button (click)="openCompose()" class="btn btn-accent">
-                    <i class="fa-solid fa-pen"></i> Compose
-                </button>
-            </div>
+        <div class="inbox-header__title-area">
+            <h2 class="inbox-header__title">Inbox</h2>
+            <p class="inbox-header__subtitle">Conversations, replies and follow-ups in one place.</p>
         </div>
 
-        <!-- Search and filters -->
         <div class="inbox-toolbar">
             <div class="inbox-search">
                 <i class="fa-solid fa-search inbox-search__icon"></i>
-                <input type="text" placeholder="Search emails, contacts, subjects..." class="inbox-search__input">
+                <input type="text" placeholder="Search mail" class="inbox-search__input">
             </div>
-            <!-- Hidden: Filter and Sort buttons (no backend implementation) -->
-            <!-- <div class="inbox-filters">
-                <button class="btn btn-outline">
-                    <i class="fa-solid fa-filter"></i> Filter
-                </button>
-                <button class="btn btn-outline">
-                    <i class="fa-solid fa-arrow-down-wide-short"></i> Sort
-                </button>
-            </div> -->
         </div>
+
+        <a routerLink="/dashboard" class="inbox-close" aria-label="Close mailbox">
+            <i class="fa-solid fa-xmark"></i>
+        </a>
     </header>
 
-    <!-- Main Content Grid -->
     <main class="inbox-main">
-        <div class="inbox-grid">
-            
-            <!-- Sidebar / Folders -->
+        <div class="inbox-grid" [class.inbox-grid--reading]="selectedEmail$ | async">
             <div class="inbox-sidebar-col">
-                <app-inbox-sidebar (filterChanged)="onFilterChanged($event)"></app-inbox-sidebar>
+                <app-inbox-sidebar (composeRequested)="openCompose()" (filterChanged)="onFilterChanged($event)"></app-inbox-sidebar>
             </div>
 
-            <!-- Email List -->
             <div class="inbox-list-col">
                 <app-email-list [filter]="currentFilter" (emailSelected)="onEmailSelected($event)"></app-email-list>
             </div>
 
-            <!-- Reading Pane -->
             <div class="inbox-reading-col">
-                <app-email-reading-pane [email]="selectedEmail" (emailActionCompleted)="onEmailActionCompleted()"></app-email-reading-pane>
+                <app-email-reading-pane
+                    [email]="selectedEmail$ | async"
+                    (backRequested)="clearSelectedEmail()"
+                    (emailActionCompleted)="onEmailActionCompleted()">
+                </app-email-reading-pane>
             </div>
-
-
         </div>
     </main>
 
-    <!-- Compose Modal -->
     <app-email-compose 
         *ngIf="isComposeOpen" 
         (close)="closeCompose()" 

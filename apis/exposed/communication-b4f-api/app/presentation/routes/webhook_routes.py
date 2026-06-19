@@ -1,7 +1,7 @@
 """Webhook routes — external workflow triggers via API.
 
 Allows external systems to trigger workflows via HTTP POST.
-Supports API key authentication and event routing through EventBus.
+Supports API key auth. Workflow execution is owned by workflow-backend-api.
 """
 
 from datetime import datetime, timezone
@@ -10,7 +10,6 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
 from pydantic import BaseModel, Field
 
 from app.middleware.auth import get_current_user
-from app.infrastructure.workflow_event_bus import event_bus
 from shared.config import get_settings
 settings = get_settings("communication")
 
@@ -63,18 +62,11 @@ async def trigger_webhook(
     )
 
     try:
-        execution_ids = await event_bus.publish(
-            event_name=payload.event,
-            payload=payload.data,
-            tenant_id=current_user["tenant_id"],
-            triggered_by=f"webhook:{payload.source}:{current_user['email']}",
-        )
-
         return WebhookResponse(
             status="accepted",
             event=payload.event,
-            executions_triggered=len(execution_ids) if execution_ids else 0,
-            execution_ids=execution_ids or [],
+            executions_triggered=0,
+            execution_ids=[],
             received_at=datetime.now(timezone.utc).isoformat(),
         )
 
@@ -107,18 +99,11 @@ async def trigger_webhook_public(
     )
 
     try:
-        execution_ids = await event_bus.publish(
-            event_name=payload.event,
-            payload=payload.data,
-            tenant_id="default",
-            triggered_by=f"webhook:{payload.source}:api-key",
-        )
-
         return WebhookResponse(
             status="accepted",
             event=payload.event,
-            executions_triggered=len(execution_ids) if execution_ids else 0,
-            execution_ids=execution_ids or [],
+            executions_triggered=0,
+            execution_ids=[],
             received_at=datetime.now(timezone.utc).isoformat(),
         )
 

@@ -42,6 +42,9 @@ export interface MembraneBackendEmail {
     conversation_id: string | null;
     linked_contact_id: string | null;
     linked_organization_id: string | null;
+    smart_label?: string | null;
+    ai_summary?: string | null;
+    ai_action_items?: string[] | null;
     tenant_id: string;
     created_at: string;
 }

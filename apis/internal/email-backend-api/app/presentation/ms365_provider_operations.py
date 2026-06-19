@@ -67,9 +67,7 @@ class MS365ProviderOperations:
         return MS365AuthUrlResponse(auth_url=auth_url)
 
     async def oauth_callback(self, request: Request, code: str = Query(...), state: Optional[str] = Query(None)):
-        """OAuth2 callback — exchanges code for tokens and creates/updates connection via backend.
-        Uses service-to-service authentication (system JWT) when calling the email-backend-api.
-        """
+        """OAuth2 callback: exchange code for tokens and save the connection locally."""
         from jose import jwt
         try:
             logger.info("ms365_callback_received", state=state, has_code=bool(code))
@@ -129,7 +127,7 @@ class MS365ProviderOperations:
             # #endregion
             logger.info("ms365_connected", user_id=user_id, ms_email=profile.get("mail"))
     
-            # Fetch the full connection detail (with id, user_id, tokens) for sync
+            # Fetch the full connection detail with token fields for sync.
             full_conn = await connection_client.get_by_user(user_id, forward_headers=service_headers)
             if full_conn:
                 # Merge token fields that may not be in the response
@@ -179,7 +177,7 @@ class MS365ProviderOperations:
         logger.info("ms365_disconnected", user_id=current_user["user_id"])
 
     async def force_sync(self, request: Request, current_user: dict = None):
-        """Force an immediate sync — fires background tasks and returns immediately."""
+        """Force an immediate sync and return before the background work completes."""
         conn = await connection_client.get_by_user(current_user["user_id"], forward_headers=request.headers)
         if not conn or not conn.get("is_active"):
             raise HTTPException(status_code=404, detail="No active MS365 connection")
@@ -225,7 +223,7 @@ class MS365ProviderOperations:
         return email
 
     async def generate_email_ai_insights(self, email_id: str, request: Request, current_user: dict = None):
-        """Generate AI insights — business logic stays in B4F."""
+        """Generate AI insights for an email."""
         email = await email_crud_client.get(email_id, current_user["user_id"], forward_headers=request.headers)
         if not email:
             raise HTTPException(status_code=404, detail="Email not found")
@@ -269,7 +267,7 @@ class MS365ProviderOperations:
             raise HTTPException(status_code=500, detail="Failed to generate AI insights.")
 
     async def send_email(self, send_request: SendEmailRequest, request: Request, current_user: dict = None):
-        """Compose and send via MS Graph — business logic stays in B4F."""
+        """Compose and send via MS Graph."""
         conn = await connection_client.get_by_user(current_user["user_id"], forward_headers=request.headers)
         if not conn or not conn.get("is_active"):
             raise HTTPException(status_code=400, detail="No active MS365 connection.")
@@ -372,7 +370,7 @@ class MS365ProviderOperations:
         return event
 
     async def ms365_webhook(self, request: Request):
-        """Receive MS Graph change notifications — business logic stays in B4F."""
+        """Receive MS Graph change notifications."""
         params = request.query_params
         validation_token = params.get("validationToken")
         if validation_token:

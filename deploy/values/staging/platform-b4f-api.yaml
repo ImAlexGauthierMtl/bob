@@ -16,8 +16,10 @@ config:
   LOG_FORMAT: json
   PORT: '8005'
   API_PORT: '8005'
+  BOB_CLOUD_MODE: real
 secretRefs:
 - name: b4f-runtime-secrets
+- name: bob-cloud-runtime-secrets
 initContainers:
   migrate:
     enabled: false

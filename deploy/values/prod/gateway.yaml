@@ -7,7 +7,23 @@ tls:
   sourceNamespace: cert-manager
   enableCopyJob: false
 routes:
-  apis: []
+  apis:
+  - name: auth
+    service: auth-b4f-api
+  - name: crm
+    service: crm-b4f-api
+  - name: agent-control
+    service: agent-control-b4f-api
+  - name: communication
+    service: communication-b4f-api
+  - name: platform
+    service: platform-b4f-api
+  - name: bob-settings
+    service: platform-b4f-api
+  - name: kb
+    service: kb-b4f-api
+  - name: bob-chat
+    service: bob-chat-b4f-api
   frontend:
     enabled: true
     service: frontend

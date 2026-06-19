@@ -142,7 +142,7 @@ export class ContactsComponent implements OnInit, OnDestroy {
         this.parsedPreview = null;
     }
 
-    // ── AI Agent Processing ─────────────────
+    // ── Bob Processing ─────────────────
 
     processInput(): void {
         if (!this.contactInput.trim()) return;
@@ -150,7 +150,7 @@ export class ContactsComponent implements OnInit, OnDestroy {
         this.statusMessage = '';
         this.parsedPreview = null;
 
-        this.contactService.aiParse(this.contactInput).subscribe({
+        this.contactService.bobParse(this.contactInput).subscribe({
             next: (result) => {
                 this.parsedPreview = result.extracted;
                 this.isProcessing = false;

@@ -12,10 +12,32 @@ export interface RegisterRequest {
     last_name: string;
 }
 
-export interface TokenResponse {
-    access_token: string;
-    refresh_token: string;
-    token_type: string;
+export interface AuthSessionUser {
+    id: string;
+    email?: string;
+    display_name?: string;
+    first_name?: string;
+    last_name?: string;
+    status?: string;
+}
+
+export interface AuthSessionTenant {
+    id: string;
+    name?: string;
+    status?: string;
+    hierarchy_path?: string;
+    scope?: string;
+}
+
+export interface AuthSession {
+    authenticated: boolean;
+    session_id?: string;
+    user?: AuthSessionUser;
+    tenant?: AuthSessionTenant;
+    permissions?: string[];
+    platform_roles?: string[];
+    expires_at?: string;
+    source?: string;
 }
 
 export interface AuthUser {

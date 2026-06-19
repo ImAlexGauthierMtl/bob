@@ -1,0 +1,8 @@
+# Agent Control B4F API dependencies (no direct DB access)
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.0
+pydantic-settings>=2.0
+python-jose[cryptography]>=3.3
+structlog>=23.0
+httpx>=0.24

@@ -1,207 +1,88 @@
 <div class="inbox-sidebar">
-    <!-- AI-Enhanced Smart Inbox Header -->
+    <button type="button" class="inbox-compose" (click)="openCompose()">
+        <i class="fa-solid fa-pen"></i>
+        <span>Compose</span>
+    </button>
+
     <div class="inbox-sidebar__section">
-        <div class="inbox-sidebar__header">
-            <h3 class="inbox-sidebar__title">Smart Views</h3>
-            <!-- Hidden: Customize button (no backend) -->
-            <!-- <button class="inbox-sidebar__action">Customize</button> -->
-        </div>
-        
-        <!-- AI Priority Inbox -->
-        <button class="smart-view-btn smart-view-btn--ai" (click)="setFilter('ai_priority')">
-            <div class="smart-view-btn__inner">
-                <div class="smart-view-btn__content">
-                    <div class="smart-view-btn__icon-wrapper">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    </div>
-                    <div class="smart-view-btn__text">
-                        <p class="smart-view-btn__name">AI Priority</p>
-                        <p class="smart-view-btn__desc">Intelligent sorting</p>
-                    </div>
-                </div>
-                <!-- Hidden: static counts (no backend) -->
-                <!-- <div class="smart-view-btn__stats">
-                    <span class="smart-view-btn__count">12</span>
-                    <span class="smart-view-btn__status">Active</span>
-                </div> -->
-            </div>
-        </button>
-
-        <!-- Focus Inbox -->
-        <button class="smart-view-btn smart-view-btn--focus" (click)="setFilter('focus')">
-            <div class="smart-view-btn__inner">
-                <div class="smart-view-btn__content">
-                    <div class="smart-view-btn__icon-wrapper">
-                        <i class="fa-solid fa-bullseye"></i>
-                    </div>
-                    <div class="smart-view-btn__text">
-                        <p class="smart-view-btn__name">Focus</p>
-                        <p class="smart-view-btn__desc">Important & actionable</p>
-                    </div>
-                </div>
-                <!-- Hidden: static counts (no backend) -->
-                <!-- <div class="smart-view-btn__stats">
-                    <span class="smart-view-btn__count">8</span>
-                </div> -->
-            </div>
-        </button>
-
-        <!-- Unread with AI Summary -->
-        <button class="smart-view-btn smart-view-btn--unread" (click)="setFilter('unread_ai')">
-            <div class="smart-view-btn__inner">
-                <div class="smart-view-btn__content">
-                    <div class="smart-view-btn__icon-wrapper">
-                        <i class="fa-solid fa-envelope"></i>
-                    </div>
-                    <div class="smart-view-btn__text">
-                        <p class="smart-view-btn__name">Unread</p>
-                        <p class="smart-view-btn__desc">AI summaries ready</p>
-                    </div>
-                </div>
-                <!-- Hidden: static counts (no backend) -->
-                <!-- <div class="smart-view-btn__stats">
-                    <span class="smart-view-btn__count">24</span>
-                </div> -->
-            </div>
-        </button>
-
-        <!-- Starred with Smart Groups -->
-        <button class="smart-view-btn smart-view-btn--starred" (click)="setFilter('starred')">
-            <div class="smart-view-btn__inner">
-                <div class="smart-view-btn__content">
-                    <div class="smart-view-btn__icon-wrapper">
-                        <i class="fa-solid fa-star"></i>
-                    </div>
-                    <div class="smart-view-btn__text">
-                        <p class="smart-view-btn__name">Starred</p>
-                        <p class="smart-view-btn__desc">Quick access</p>
-                    </div>
-                </div>
-                <!-- Hidden: static counts (no backend) -->
-                <!-- <div class="smart-view-btn__stats">
-                    <span class="smart-view-btn__count">8</span>
-                </div> -->
-            </div>
-        </button>
-    </div>
-
-    <!-- AI Insights Panel -->
-    <!-- Hidden: static AI Insights cards (no backend) -->
-    <!-- <div class="inbox-sidebar__section">
-        <div class="inbox-sidebar__header">
-            <h3 class="inbox-sidebar__title">AI Insights</h3>
-        </div>
-        
-        <div class="ai-insight-card ai-insight-card--purple">
-            <div class="ai-insight-card__top">
-                <div class="ai-insight-card__icon ai-insight-card__icon--purple">
-                    <i class="fa-solid fa-sparkles"></i>
-                </div>
-                <div class="ai-insight-card__text">
-                    <p class="ai-insight-card__title">Smart Suggestions</p>
-                    <p class="ai-insight-card__desc">3 emails could be auto-replied</p>
-                </div>
-            </div>
-            <button class="ai-insight-card__btn ai-insight-card__btn--purple">
-                Review &amp; Send
-            </button>
-        </div>
-
-        <div class="ai-insight-card ai-insight-card--green">
-            <div class="ai-insight-card__top">
-                <div class="ai-insight-card__icon ai-insight-card__icon--green">
-                    <i class="fa-solid fa-clock"></i>
-                </div>
-                <div class="ai-insight-card__text">
-                    <p class="ai-insight-card__title">Follow-up Reminders</p>
-                    <p class="ai-insight-card__desc">5 emails need response</p>
-                </div>
-            </div>
-            <button class="ai-insight-card__btn ai-insight-card__btn--green">
-                View All
-            </button>
-        </div>
-    </div> -->
-
-    <!-- Traditional Folders -->
-    <div class="inbox-sidebar__section">
-        <div class="inbox-sidebar__header">
-            <h3 class="inbox-sidebar__title">Folders</h3>
-        </div>
-        <nav class="inbox-nav">
-            <button (click)="setFolder('All Mail')" [class.inbox-nav__item--active]="activeFolder === 'All Mail'" class="inbox-nav__item group">
-                <div class="inbox-nav__link-left">
+        <p class="inbox-sidebar__title">Mailbox</p>
+        <nav class="inbox-nav" aria-label="Mailbox folders">
+            <button (click)="setFolder('All Mail')" [class.inbox-nav__item--active]="activeFolder === 'All Mail'" class="inbox-nav__item">
+                <span class="inbox-nav__link-left">
                     <i class="fa-solid fa-inbox inbox-nav__icon"></i>
-                    <span>All Mail</span>
-                </div>
-                <!-- Hidden: static counts (no backend) -->
-                <!-- <span class="inbox-nav__count">142</span> -->
+                    <span>Inbox</span>
+                </span>
             </button>
-            <button (click)="setFolder('Sent Items')" [class.inbox-nav__item--active]="activeFolder === 'Sent Items'" class="inbox-nav__item group">
-                <div class="inbox-nav__link-left">
-                    <i class="fa-solid fa-paper-plane inbox-nav__icon"></i>
+            <button (click)="setFilter('unread_ai')" [class.inbox-nav__item--active]="activeFolder === '' && !activeSmartLabel" class="inbox-nav__item">
+                <span class="inbox-nav__link-left">
+                    <i class="fa-regular fa-envelope inbox-nav__icon"></i>
+                    <span>Unread</span>
+                </span>
+            </button>
+            <button (click)="setFilter('starred')" class="inbox-nav__item">
+                <span class="inbox-nav__link-left">
+                    <i class="fa-regular fa-star inbox-nav__icon"></i>
+                    <span>Starred</span>
+                </span>
+            </button>
+            <button (click)="setFolder('Sent Items')" [class.inbox-nav__item--active]="activeFolder === 'Sent Items'" class="inbox-nav__item">
+                <span class="inbox-nav__link-left">
+                    <i class="fa-regular fa-paper-plane inbox-nav__icon"></i>
                     <span>Sent</span>
-                </div>
-                <!-- Hidden: static counts (no backend) -->
-                <!-- <span class="inbox-nav__count">89</span> -->
+                </span>
             </button>
-            <button (click)="setFolder('Drafts')" [class.inbox-nav__item--active]="activeFolder === 'Drafts'" class="inbox-nav__item group">
-                <div class="inbox-nav__link-left">
-                    <i class="fa-solid fa-file-lines inbox-nav__icon"></i>
+            <button (click)="setFolder('Drafts')" [class.inbox-nav__item--active]="activeFolder === 'Drafts'" class="inbox-nav__item">
+                <span class="inbox-nav__link-left">
+                    <i class="fa-regular fa-file-lines inbox-nav__icon"></i>
                     <span>Drafts</span>
-                </div>
-                <!-- Hidden: static counts (no backend) -->
-                <!-- <span class="inbox-nav__count">3</span> -->
+                </span>
             </button>
-            <button (click)="setFolder('Deleted Items')" [class.inbox-nav__item--active]="activeFolder === 'Deleted Items'" class="inbox-nav__item group">
-                <div class="inbox-nav__link-left">
-                    <i class="fa-solid fa-trash inbox-nav__icon"></i>
+            <button (click)="setFolder('Deleted Items')" [class.inbox-nav__item--active]="activeFolder === 'Deleted Items'" class="inbox-nav__item">
+                <span class="inbox-nav__link-left">
+                    <i class="fa-regular fa-trash-can inbox-nav__icon"></i>
                     <span>Trash</span>
-                </div>
-                <!-- Hidden: static counts (no backend) -->
-                <!-- <span class="inbox-nav__count">16</span> -->
+                </span>
             </button>
         </nav>
     </div>
 
-    <!-- Smart Labels -->
     <div class="inbox-sidebar__section">
-        <div class="inbox-sidebar__header">
-            <h3 class="inbox-sidebar__title">Smart Labels</h3>
-            <!-- Hidden: plus button (no backend to add labels from here) -->
-            <!-- <button class="inbox-sidebar__action">
-                <i class="fa-solid fa-plus text-xs"></i>
-            </button> -->
-        </div>
-        <nav class="inbox-nav">
+        <p class="inbox-sidebar__title">Priority</p>
+        <nav class="inbox-nav" aria-label="Priority views">
+            <button class="inbox-nav__item" (click)="setFilter('ai_priority')">
+                <span class="inbox-nav__link-left">
+                    <i class="fa-solid fa-arrow-up-wide-short inbox-nav__icon"></i>
+                    <span>Priority</span>
+                </span>
+            </button>
+            <button class="inbox-nav__item" (click)="setFilter('focus')">
+                <span class="inbox-nav__link-left">
+                    <i class="fa-regular fa-circle-dot inbox-nav__icon"></i>
+                    <span>Actionable</span>
+                </span>
+            </button>
+        </nav>
+    </div>
+
+    <div class="inbox-sidebar__section">
+        <p class="inbox-sidebar__title">Labels</p>
+        <nav class="inbox-nav" aria-label="Smart labels">
+            <ng-container *ngIf="smartLabels$ | async as smartLabels">
             <ng-container *ngIf="smartLabels && smartLabels.length > 0; else noLabels">
-                <button *ngFor="let label of smartLabels" 
-                    (click)="setSmartLabel(label.name)" 
-                    [class.inbox-nav__item--active]="activeSmartLabel === label.name" 
+                <button *ngFor="let label of smartLabels"
+                    (click)="setSmartLabel(label.name)"
+                    [class.inbox-nav__item--active]="activeSmartLabel === label.name"
                     class="inbox-nav__item">
-                    <div class="inbox-nav__link-left">
-                        <div class="inbox-nav__dot" [class]="'inbox-nav__dot--' + label.color"></div>
+                    <span class="inbox-nav__link-left">
+                        <span class="inbox-nav__dot" [class]="'inbox-nav__dot--' + label.color"></span>
                         <span>{{ label.name }}</span>
-                    </div>
-                    <!-- Hidden: static counts (no backend) -->
-                    <!-- <span class="inbox-nav__count">{{ label.count }}</span> -->
+                    </span>
                 </button>
             </ng-container>
             <ng-template #noLabels>
-                <div class="text-xs text-gray-500 py-2 px-3">
-                    No custom labels defined.
-                </div>
+                <p class="inbox-sidebar__empty">No labels yet.</p>
             </ng-template>
+            </ng-container>
         </nav>
     </div>
-
-    <!-- AI Learning Indicator -->
-    <!-- Hidden: static AI Learning section (no backend) -->
-    <!-- <div class="ai-status">
-        <div class="ai-status__header">
-            <i class="fa-solid fa-robot text-accent"></i>
-            <span class="ai-status__title">AI Learning Active</span>
-        </div>
-        <p class="ai-status__desc">Analyzing your email patterns to improve sorting accuracy</p>
-    </div> -->
 </div>

@@ -1,0 +1,35 @@
+apiName: agent-memory-backend-api
+apiTier: internal
+replicaCount: 1
+service:
+  targetPort: 9014
+resources:
+  requests:
+    cpu: 100m
+    memory: 160Mi
+  limits:
+    cpu: 350m
+    memory: 448Mi
+config:
+  ENVIRONMENT: staging
+  LOG_LEVEL: INFO
+  LOG_FORMAT: json
+  PORT: '9014'
+  API_PORT: '9014'
+  MILVUS_ENABLED: 'false'
+  MILVUS_DB_NAME: default
+  MILVUS_SECURE: 'false'
+  MILVUS_CONNECT_TIMEOUT_SECONDS: '5'
+  MILVUS_DEFAULT_DIMENSION: '1536'
+  EMBEDDINGS_PROVIDER: disabled
+  EMBEDDINGS_MODEL: ''
+  EMBEDDINGS_DIMENSION: '1536'
+secretRefs:
+- name: backend-memory-secrets
+initContainers:
+  migrate:
+    enabled: true
+externalDependencies:
+- postgres
+- redis
+backends: []

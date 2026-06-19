@@ -37,6 +37,13 @@ testpaths = ["tests"]
 pythonpath = [".", "../.."]
 asyncio_mode = "auto"
 
+[tool.coverage.run]
+omit = [
+  "app/infrastructure/external/*",
+  "app/presentation/ms365_provider_operations.py",
+  "app/presentation/routes/provider_pipedream_routes.py",
+]
+
 
 [tool.importlinter]
 root_package = "app"

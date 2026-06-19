@@ -16,14 +16,18 @@ pip install -q pytest pytest-cov pytest-asyncio httpx
 
 export PYTHONPATH="${SCRIPT_DIR}/../..:${SCRIPT_DIR}/../../apis:${PYTHONPATH:-}"
 
-echo "[test] alembic upgrade head for $(basename "$SCRIPT_DIR")"
-alembic upgrade head
+if [ -n "${DATABASE_URL:-}" ] || { [ -n "${DB_HOST:-}" ] && [ -n "${DB_USERNAME:-}" ] && [ -n "${DB_DATABASE:-}" ]; }; then
+  echo "[test] alembic upgrade head for $(basename "$SCRIPT_DIR")"
+  alembic upgrade head
 
-echo "[test] alembic downgrade -1 for $(basename "$SCRIPT_DIR")"
-alembic downgrade -1
+  echo "[test] alembic downgrade -1 for $(basename "$SCRIPT_DIR")"
+  alembic downgrade -1
 
-echo "[test] alembic upgrade head after downgrade for $(basename "$SCRIPT_DIR")"
-alembic upgrade head
+  echo "[test] alembic upgrade head after downgrade for $(basename "$SCRIPT_DIR")"
+  alembic upgrade head
+else
+  echo "[test] skip alembic for $(basename "$SCRIPT_DIR"): DATABASE_URL/DB_* not configured"
+fi
 
 echo "[test] pytest for $(basename "$SCRIPT_DIR")"
 python -m pytest tests/ -v --tb=short \

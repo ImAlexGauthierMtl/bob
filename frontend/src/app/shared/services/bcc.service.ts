@@ -11,7 +11,7 @@ import {
     CognitiveMapDomain,
 } from '../models/bcc.model';
 
-const API_URL = `${environment.aiAgentApiUrl}/bcc`;
+const API_URL = `${environment.agentControlApiUrl}/bcc`;
 
 @Injectable({ providedIn: 'root' })
 export class BccService {

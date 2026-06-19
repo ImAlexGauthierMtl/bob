@@ -6,7 +6,7 @@ from jose import JWTError, jwt
 
 
 class AuthError(Exception):
-    """Raised when authentication cannot continue."""
+    """Raised when auth cannot continue."""
 
     def __init__(self, detail: str, status_code: int = 401) -> None:
         super().__init__(detail)

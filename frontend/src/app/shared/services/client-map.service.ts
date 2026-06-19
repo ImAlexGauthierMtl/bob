@@ -6,7 +6,7 @@ import { ClientMap, GoldenNote, CreateGoldenNote, MeddpiccScoreDetail, Behaviora
 
 @Injectable({ providedIn: 'root' })
 export class ClientMapService {
-  private baseUrl = environment.aiAgentApiUrl;
+  private baseUrl = environment.agentControlApiUrl;
 
   constructor(private http: HttpClient) {}
 

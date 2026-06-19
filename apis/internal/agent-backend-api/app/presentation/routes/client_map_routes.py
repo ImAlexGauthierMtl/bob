@@ -2,10 +2,11 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.application.use_cases.behavioral_analysis_use_cases import BehavioralAnalysisUseCases
 from app.application.use_cases.client_map_use_cases import ClientMapUseCases
 from app.domain.exceptions import ClientMapNotFoundError, ContactNotFoundError, GoldenNoteNotFoundError
 from app.middleware.auth import get_current_user
-from app.presentation.deps import get_client_map_use_cases
+from app.presentation.deps import get_behavioral_analysis_use_cases, get_client_map_use_cases
 from app.presentation.schemas.client_map_schemas import (
     ClientMapUpsert, ClientMapResponse,
     GoldenNoteCreate, GoldenNoteUpdate, GoldenNoteResponse,
@@ -95,3 +96,16 @@ async def get_meddpicc_score(
         raise HTTPException(status_code=404, detail="Contact not found")
     except ClientMapNotFoundError:
         raise HTTPException(status_code=404, detail="Client Map not found for this contact")
+
+
+@router.post("/analyze-behavior")
+async def analyze_behavior(
+    contact_id: str,
+    current_user: dict = Depends(get_current_user),
+    use_cases: BehavioralAnalysisUseCases = Depends(get_behavioral_analysis_use_cases),
+):
+    try:
+        profile = await use_cases.analyze(contact_id, current_user)
+        return {"status": "ok", "behavioral_profile": profile}
+    except ContactNotFoundError:
+        raise HTTPException(status_code=404, detail="Contact not found")
