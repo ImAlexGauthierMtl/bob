@@ -70,7 +70,7 @@
 }
 
 .product-header__avatar.category--blue {
-    background-color: #3B82F6;
+    background-color: #686862;
 }
 
 .product-header__avatar.category--green {
@@ -105,7 +105,7 @@
 .product-header__name {
     font-size: 1.5rem;
     font-weight: var(--font-weight-light);
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
 }
 
 .product-header__meta {
@@ -131,7 +131,7 @@
 }
 
 .category-badge--blue {
-    background-color: #3B82F6;
+    background-color: #686862;
 }
 
 .category-badge--green {
@@ -251,7 +251,7 @@
 .section-title {
     font-size: 1.125rem;
     font-weight: var(--font-weight-light);
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
     margin-bottom: 1rem;
 }
 
@@ -533,8 +533,8 @@
 }
 
 .panel-tag--blue {
-    background: #dbeafe;
-    color: #2563eb;
+    background: #ECECEA;
+    color: #333330;
 }
 
 .panel-tag--green {

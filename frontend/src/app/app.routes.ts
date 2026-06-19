@@ -54,6 +54,18 @@ export const routes: Routes = [
                     ),
             },
             {
+                path: 'conversation',
+                loadComponent: () =>
+                    import('./pages/chat/chat').then(
+                        (m) => m.ChatComponent
+                    ),
+            },
+            {
+                path: 'chat',
+                redirectTo: 'conversation',
+                pathMatch: 'full',
+            },
+            {
                 path: 'contacts/:id',
                 loadComponent: () =>
                     import('./pages/contact-profile/contact-profile').then(

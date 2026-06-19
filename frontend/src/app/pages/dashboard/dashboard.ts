@@ -40,6 +40,9 @@ interface DashboardAction {
 export class DashboardComponent implements OnInit, AfterViewInit {
     private store: Store<AppState> = inject(Store);
     private dashboard$ = this.store.select(selectCrmDashboard);
+    private readonly chartAccent = '#20201E';
+    private readonly chartGrid = '#ECECEA';
+    private readonly chartAxis = '#DEDED9';
 
     readonly vm$ = combineLatest({
         data: this.dashboard$,
@@ -151,7 +154,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
                 mode: 'lines',
                 x: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
                 y: [185000, 192000, 201000, 198000, 215000, 228000, 234000, 242000, 238000, 251000, 263000, 278000],
-                line: { color: '#FF4500', width: 2 },
+                line: { color: this.chartAccent, width: 2 },
                 hovertemplate: '<b>%{x}</b><br>$%{y:,.0f}<extra></extra>'
             }];
 
@@ -159,8 +162,8 @@ export class DashboardComponent implements OnInit, AfterViewInit {
                 margin: { t: 20, r: 20, b: 40, l: 60 },
                 plot_bgcolor: 'transparent',
                 paper_bgcolor: 'transparent',
-                xaxis: { showgrid: false, zeroline: false, showline: true, linecolor: '#E5E7EB', linewidth: 1 },
-                yaxis: { showgrid: true, gridcolor: '#F3F4F6', zeroline: false, showline: false, tickformat: '$,.0f' },
+                xaxis: { showgrid: false, zeroline: false, showline: true, linecolor: this.chartAxis, linewidth: 1 },
+                yaxis: { showgrid: true, gridcolor: this.chartGrid, zeroline: false, showline: false, tickformat: '$,.0f' },
                 hovermode: 'x unified',
                 showlegend: false
             };
@@ -171,7 +174,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
                 type: 'bar',
                 x: ['Sarah Johnson', 'Michael Chen', 'Emily Rodriguez', 'David Kim', 'Jessica Williams'],
                 y: [487000, 452000, 418000, 395000, 367000],
-                marker: { color: '#FF4500' },
+                marker: { color: this.chartAccent },
                 hovertemplate: '<b>%{x}</b><br>$%{y:,.0f}<extra></extra>'
             }];
 
@@ -179,8 +182,8 @@ export class DashboardComponent implements OnInit, AfterViewInit {
                 margin: { t: 20, r: 20, b: 80, l: 60 },
                 plot_bgcolor: 'transparent',
                 paper_bgcolor: 'transparent',
-                xaxis: { showgrid: false, zeroline: false, showline: true, linecolor: '#E5E7EB', linewidth: 1 },
-                yaxis: { showgrid: true, gridcolor: '#F3F4F6', zeroline: false, showline: false, tickformat: '$,.0f' },
+                xaxis: { showgrid: false, zeroline: false, showline: true, linecolor: this.chartAxis, linewidth: 1 },
+                yaxis: { showgrid: true, gridcolor: this.chartGrid, zeroline: false, showline: false, tickformat: '$,.0f' },
                 showlegend: false
             };
 

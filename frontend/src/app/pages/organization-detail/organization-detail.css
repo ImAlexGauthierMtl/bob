@@ -99,7 +99,7 @@
 .org-header__avatar {
     width: 4rem;
     height: 4rem;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: linear-gradient(135deg, #686862, #333330);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -125,7 +125,7 @@
 .org-header__name {
     font-size: 1.875rem;
     font-weight: var(--font-weight-light);
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
     color: var(--color-black);
     margin: 0;
     line-height: 1.2;
@@ -461,9 +461,9 @@
 }
 
 .activity-icon--call {
-    background-color: #dbeafe;
+    background-color: #ECECEA;
     /* Tailwind blue-100 */
-    color: #2563eb;
+    color: #333330;
     /* Tailwind blue-600 */
 }
 
@@ -1220,7 +1220,7 @@
 .profile-person-card__avatar {
     width: 2.5rem;
     height: 2.5rem;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: linear-gradient(135deg, #686862, #333330);
     display: flex;
     align-items: center;
     justify-content: center;

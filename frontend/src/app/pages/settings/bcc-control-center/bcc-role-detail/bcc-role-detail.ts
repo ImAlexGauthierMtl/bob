@@ -142,7 +142,7 @@ export class BccRoleDetailComponent implements OnInit {
 
     getPerspectiveColor(p: string): string {
         const colors: Record<string, string> = {
-            general: '#6B7280', ceo: '#8B5CF6', cfo: '#3B82F6',
+            general: '#6B7280', ceo: '#8B5CF6', cfo: '#686862',
             director: '#F59E0B', employee: '#10B981',
         };
         return colors[p] || '#6B7280';
@@ -222,7 +222,7 @@ export class BccRoleDetailComponent implements OnInit {
 
     getRegulationTypeColor(type: string): string {
         switch (type) {
-            case 'marketing': return '#3B82F6';
+            case 'marketing': return '#686862';
             case 'privacy': return '#8B5CF6';
             case 'professional': return '#F59E0B';
             case 'financial': return '#10B981';

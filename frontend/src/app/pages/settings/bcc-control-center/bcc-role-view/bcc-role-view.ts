@@ -125,7 +125,7 @@ export class BccRoleViewComponent implements OnInit {
     getFrequencyColor(freq: string): string {
         switch (freq) {
             case 'daily': return '#10B981';
-            case 'weekly': return '#3B82F6';
+            case 'weekly': return '#686862';
             case 'monthly': return '#8B5CF6';
             default: return '#6B7280';
         }

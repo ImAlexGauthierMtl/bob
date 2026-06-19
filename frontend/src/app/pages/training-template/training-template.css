@@ -98,7 +98,7 @@
 .training-header__title {
     font-size: 1.5rem;
     font-weight: 200;
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
     color: #000;
     margin: 0;
 }
@@ -340,8 +340,8 @@
 }
 
 .training-note--blue {
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
+    background: #F7F7F6;
+    border: 1px solid #DEDED9;
 }
 
 .training-note--green {
@@ -366,7 +366,7 @@
 }
 
 .training-note__dot--blue {
-    background: #60a5fa;
+    background: #8E8E86;
 }
 
 .training-note__dot--green {
@@ -455,8 +455,8 @@
 }
 
 .training-insight__icon--blue {
-    background: #dbeafe;
-    color: #2563eb;
+    background: #ECECEA;
+    color: #333330;
 }
 
 .training-insight__icon--green {
@@ -476,7 +476,7 @@
 }
 
 .training-insight__label--blue {
-    color: #2563eb;
+    color: #333330;
 }
 
 .training-insight__label--green {
@@ -538,8 +538,8 @@
 }
 
 .training-reminder--blue {
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
+    background: #F7F7F6;
+    border: 1px solid #DEDED9;
 }
 
 .training-reminder--green {
@@ -564,7 +564,7 @@
 }
 
 .training-reminder__dot--blue {
-    background: #3b82f6;
+    background: #686862;
 }
 
 .training-reminder__dot--green {
@@ -754,8 +754,8 @@
 }
 
 .training-card__icon--blue {
-    background: #dbeafe;
-    color: #2563eb;
+    background: #ECECEA;
+    color: #333330;
 }
 
 .training-card__icon--purple {

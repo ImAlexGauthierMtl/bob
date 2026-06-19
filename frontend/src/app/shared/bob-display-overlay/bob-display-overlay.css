@@ -71,15 +71,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--color-accent), #e03e00);
-    color: white;
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
     font-size: 0.875rem;
 }
 
 .bob-overlay__title {
     font-size: 1.125rem;
     font-weight: var(--font-weight-light);
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
 }
 
 .bob-overlay__subtitle {
@@ -147,7 +147,7 @@
 .bob-stat-card__value {
     font-size: 1.5rem;
     font-weight: var(--font-weight-light);
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
 }
 
 .bob-stat-card__trend {

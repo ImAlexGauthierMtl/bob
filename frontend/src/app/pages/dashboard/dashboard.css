@@ -22,7 +22,7 @@
 .page-title {
     font-size: 1.875rem;
     font-weight: var(--font-weight-light);
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
     color: var(--color-black);
 }
 
@@ -70,8 +70,9 @@
 }
 
 .state-banner--error {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
+    border-color: var(--color-red-500);
+    color: var(--color-red-600);
+    background: var(--color-red-100);
 }
 
 /* ── Metrics Grid ─────────────────────────────────────────── */

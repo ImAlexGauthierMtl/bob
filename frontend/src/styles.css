@@ -1,8 +1,8 @@
 /* =============================================================
-   Croo Digital Experience — Design System
-   Palette: Black + White + Accent #FF4500
-   Typography: Inter (200-700)
-   Style: Minimalist, square corners, generous spacing
+   Croo Digital Experience — UI Standard
+   Palette: warm neutral shell + black primary actions
+   Typography: system-first Inter stack
+   Style: compact, consistent, operator-focused
    ============================================================= */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap');
@@ -11,20 +11,26 @@
 
 :root {
   /* Colors */
-  --color-accent: #FF4500;
-  --color-accent-hover: rgba(255, 69, 0, 0.9);
-  --color-accent-10: rgba(255, 69, 0, 0.1);
+  --color-accent: #20201E;
+  --color-accent-hover: #000000;
+  --color-accent-10: rgba(32, 32, 30, 0.08);
+  --color-accent-20: rgba(32, 32, 30, 0.16);
+  --color-accent-soft: #ECECEA;
   --color-black: #000000;
   --color-white: #FFFFFF;
-  --color-gray-50: #F9FAFB;
-  --color-gray-100: #F3F4F6;
-  --color-gray-200: #E5E7EB;
-  --color-gray-300: #D1D5DB;
-  --color-gray-400: #9CA3AF;
-  --color-gray-500: #6B7280;
-  --color-gray-600: #4B5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1F2937;
+  --color-gray-50: #F7F7F6;
+  --color-gray-100: #ECECEA;
+  --color-gray-200: #DEDED9;
+  --color-gray-300: #C8C8C1;
+  --color-gray-400: #8E8E86;
+  --color-gray-500: #686862;
+  --color-gray-600: #4D4D49;
+  --color-gray-700: #333330;
+  --color-gray-800: #20201E;
+  --color-surface: #FBFBFA;
+  --color-surface-raised: #FFFFFF;
+  --color-shell: #F0F0EE;
+  --color-border: #DEDED9;
 
   /* Status Colors */
   --color-green-500: #22C55E;
@@ -36,9 +42,9 @@
   --color-red-500: #EF4444;
   --color-red-600: #DC2626;
   --color-red-100: #FEE2E2;
-  --color-blue-500: #3B82F6;
-  --color-blue-600: #2563EB;
-  --color-blue-100: #DBEAFE;
+  --color-blue-500: #686862;
+  --color-blue-600: #333330;
+  --color-blue-100: #ECECEA;
   --color-purple-500: #8B5CF6;
   --color-purple-600: #7C3AED;
   --color-purple-100: #EDE9FE;
@@ -64,6 +70,13 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
+  /* Shape & elevation */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --shadow-sm: 0 1px 2px rgba(32, 32, 30, 0.04);
+  --shadow-md: 0 8px 24px rgba(32, 32, 30, 0.08);
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-base: 200ms ease;
@@ -80,6 +93,10 @@
   padding: 0;
 }
 
+body * {
+  letter-spacing: 0 !important;
+}
+
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -91,8 +108,8 @@ html {
 body {
   font-family: var(--font-family);
   font-weight: var(--font-weight-regular);
-  color: var(--color-black);
-  background-color: var(--color-white);
+  color: var(--color-gray-800);
+  background-color: var(--color-shell);
   line-height: 1.5;
   height: 100%;
   overflow: hidden;
@@ -152,19 +169,19 @@ body {
 }
 
 .tracking-tight {
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
 }
 
 .tracking-wide {
-  letter-spacing: 0.025em;
+  letter-spacing: 0;
 }
 
 .tracking-wider {
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
 }
 
 .tracking-widest {
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
 }
 
 .uppercase {
@@ -181,11 +198,14 @@ body {
   font-family: var(--font-family);
   font-weight: var(--font-weight-medium);
   font-size: 0.875rem;
-  padding: var(--space-4) var(--space-6);
-  border: none;
+  min-height: 2.5rem;
+  padding: 0.625rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-base);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .btn-accent {
@@ -195,13 +215,14 @@ body {
 
 .btn-accent:hover {
   background-color: var(--color-accent-hover);
-  box-shadow: 0 4px 12px rgba(255, 69, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(32, 32, 30, 0.16);
 }
 
 .btn-outline {
   background-color: transparent;
   border: 1px solid var(--color-gray-200);
   color: var(--color-gray-600);
+  background-color: var(--color-white);
 }
 
 .btn-outline:hover {
@@ -216,16 +237,18 @@ body {
   font-family: var(--font-family);
   font-weight: var(--font-weight-light);
   font-size: 1rem;
-  color: var(--color-black);
-  padding: var(--space-4);
-  border: 1px solid var(--color-gray-200);
+  color: var(--color-gray-800);
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   background-color: var(--color-white);
   outline: none;
-  transition: border-color var(--transition-base);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
 }
 
 .input:focus {
   border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-10);
 }
 
 .input::placeholder {
@@ -263,7 +286,7 @@ a:hover {
   justify-content: space-between;
   padding: var(--space-4) var(--space-6);
   border-top: 1px solid var(--color-gray-100);
-  background: var(--color-gray-50);
+  background: var(--color-surface);
   font-size: 0.8125rem;
   color: var(--color-gray-500);
   gap: var(--space-4);
@@ -298,6 +321,7 @@ a:hover {
   color: var(--color-gray-700);
   background: var(--color-white);
   border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-3);
   cursor: pointer;
   outline: none;
@@ -332,8 +356,102 @@ a:hover {
   color: var(--color-gray-500);
   background: var(--color-white);
   border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-base);
+}
+
+/* ── Shared Application Components ───────────────────────── */
+
+.page-header {
+  border-bottom-color: var(--color-border) !important;
+}
+
+.page-title,
+.chart-card__title,
+.dialog__title {
+  letter-spacing: 0 !important;
+  color: var(--color-gray-800) !important;
+}
+
+.page-subtitle,
+.chart-card__subtitle {
+  color: var(--color-gray-500) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.metric-card,
+.chart-card,
+.table-card,
+.ai-insights,
+.content-card,
+.settings-card,
+.dialog,
+.result-card,
+.info-banner,
+.automation-card,
+.kb-card {
+  background: var(--color-surface-raised) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+.table-card__header,
+.dialog__header,
+.data-table th,
+.data-table td,
+.alert-item,
+.activity-item {
+  border-color: var(--color-border) !important;
+}
+
+.data-table thead {
+  background-color: var(--color-surface) !important;
+}
+
+.data-table tr:hover,
+.alert-item:hover,
+.activity-item:hover {
+  background-color: var(--color-gray-50) !important;
+}
+
+.search-box__input,
+.filter-btn,
+.filter-pill,
+.date-picker,
+.state-banner,
+input,
+select,
+textarea {
+  border-radius: var(--radius-md) !important;
+}
+
+.filter-pill--active,
+.table-pagination__btn--active,
+.status-badge--active,
+.status-badge.active {
+  background-color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+  color: var(--color-white) !important;
+}
+
+.status-badge,
+.counter-badge,
+.settings-nav__badge,
+.result-tag {
+  border-radius: var(--radius-sm) !important;
+  letter-spacing: 0 !important;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--color-accent-20);
+  outline-offset: 2px;
 }
 
 .table-pagination__btn:hover:not(:disabled) {

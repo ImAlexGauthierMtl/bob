@@ -795,8 +795,8 @@
 }
 
 .level-card__icon--blue {
-    background: var(--color-blue-100, #eff6ff);
-    color: var(--color-blue-600, #2563eb);
+    background: var(--color-blue-100, #F7F7F6);
+    color: var(--color-blue-600, #333330);
 }
 
 .level-card__icon--accent {

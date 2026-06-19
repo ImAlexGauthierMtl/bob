@@ -19,7 +19,7 @@ const STEP_TYPES: Record<string, StepTypeConfig> = {
     trigger: {
         label: 'Trigger',
         icon: 'fa-solid fa-bolt',
-        color: '#3b82f6',
+        color: '#686862',
         description: 'Entry point that starts the workflow',
     },
     ai_analysis: {

@@ -21,7 +21,7 @@
 .page-title {
     font-size: 1.875rem;
     font-weight: var(--font-weight-light);
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
 }
 
 .page-subtitle {
@@ -194,8 +194,8 @@
 }
 
 .service-tag[data-service="STT"] {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .service-tag[data-service="TTS"] {
@@ -444,7 +444,7 @@
 }
 
 .timeline__dot[data-service="STT"] {
-    background: #2563eb;
+    background: #333330;
 }
 
 .timeline__dot[data-service="TTS"] {
@@ -524,11 +524,11 @@
 }
 
 .timeline__block--user {
-    background: #eff6ff;
+    background: #F7F7F6;
 }
 
 .timeline__block--user .timeline__block-label {
-    color: #2563eb;
+    color: #333330;
 }
 
 .timeline__block--thinking {

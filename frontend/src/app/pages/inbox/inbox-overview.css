@@ -37,7 +37,7 @@
 .inbox-header__title {
     font-size: 1.5rem;
     font-weight: var(--font-weight-light);
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
     color: var(--color-black);
     margin-bottom: var(--space-1);
 }

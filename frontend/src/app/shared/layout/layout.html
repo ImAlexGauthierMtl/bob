@@ -39,19 +39,44 @@
             }
 
             <div class="sidebar__nav-main">
-                <a routerLink="/dashboard" routerLinkActive="sidebar__link--active" class="sidebar__link">Dashboard</a>
-                <a routerLink="/inbox" routerLinkActive="sidebar__link--active" class="sidebar__link" id="sidebar-inbox-link">Inbox</a>
+                <a routerLink="/dashboard" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a routerLink="/conversation" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                    <i class="fa-regular fa-comments"></i>
+                    <span>Conversation</span>
+                </a>
+                <a routerLink="/inbox" routerLinkActive="sidebar__link--active" class="sidebar__link" id="sidebar-inbox-link">
+                    <i class="fa-regular fa-envelope"></i>
+                    <span>Inbox</span>
+                </a>
                 <a routerLink="/organizations" routerLinkActive="sidebar__link--active"
-                    class="sidebar__link">Organizations</a>
-                <a routerLink="/contacts" routerLinkActive="sidebar__link--active" class="sidebar__link">Contacts</a>
+                    class="sidebar__link">
+                    <i class="fa-regular fa-building"></i>
+                    <span>Organizations</span>
+                </a>
+                <a routerLink="/contacts" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                    <i class="fa-regular fa-address-book"></i>
+                    <span>Contacts</span>
+                </a>
                 <a routerLink="/opportunities" routerLinkActive="sidebar__link--active"
-                    class="sidebar__link">Opportunities</a>
-                <a routerLink="/tasks" routerLinkActive="sidebar__link--active" class="sidebar__link">Activities</a>
-                <a routerLink="/analytics" routerLinkActive="sidebar__link--active" class="sidebar__link">Analytics</a>
+                    class="sidebar__link">
+                    <i class="fa-regular fa-handshake"></i>
+                    <span>Opportunities</span>
+                </a>
+                <a routerLink="/tasks" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Activities</span>
+                </a>
+                <a routerLink="/analytics" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
             </div>
 
             <div class="sidebar__section">
-                <p class="sidebar__section-title">Bob Assistant</p>
+                <p class="sidebar__section-title">Assistant</p>
                 <div class="sidebar__ai-card">
                     <div class="sidebar__ai-header">
                         <div class="sidebar__ai-icon">
@@ -66,10 +91,19 @@
                 </div>
 
                 <div class="sidebar__nav-secondary">
-                    <a routerLink="/team" class="sidebar__link sidebar__link--sm">Team</a>
-                    <a routerLink="/settings" class="sidebar__link sidebar__link--sm">Settings</a>
+                    <a routerLink="/team" class="sidebar__link sidebar__link--sm">
+                        <i class="fa-solid fa-users"></i>
+                        <span>Team</span>
+                    </a>
+                    <a routerLink="/settings" class="sidebar__link sidebar__link--sm">
+                        <i class="fa-solid fa-gear"></i>
+                        <span>Settings</span>
+                    </a>
                     <a routerLink="/template" routerLinkActive="sidebar__link--active"
-                        class="sidebar__link sidebar__link--sm">Training</a>
+                        class="sidebar__link sidebar__link--sm">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                        <span>Training</span>
+                    </a>
                 </div>
 
                 @if (isSuperAdmin) {

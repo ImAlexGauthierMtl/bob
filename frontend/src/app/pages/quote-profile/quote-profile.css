@@ -25,15 +25,15 @@
 .quote-icon-lg {
     width: 6rem;
     height: 6rem;
-    background: linear-gradient(135deg, #dbeafe, #eff6ff);
+    background: linear-gradient(135deg, #ECECEA, #F7F7F6);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #2563eb;
+    color: #333330;
     font-size: 2rem;
     flex-shrink: 0;
-    border: 2px solid #bfdbfe;
+    border: 2px solid #DEDED9;
 }
 
 .profile-info {
@@ -52,7 +52,7 @@
 .profile-name {
     font-size: 1.75rem;
     font-weight: var(--font-weight-light);
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
 }
 
 .stage-badge {
@@ -62,8 +62,8 @@
 }
 
 .stage-badge--blue {
-    background-color: #dbeafe;
-    color: #1d4ed8;
+    background-color: #ECECEA;
+    color: #20201E;
 }
 
 .profile-role {
@@ -308,8 +308,8 @@
 }
 
 .ai-intel--blue {
-    background: linear-gradient(to right, #eff6ff, var(--color-white));
-    border-color: #dbeafe;
+    background: linear-gradient(to right, #F7F7F6, var(--color-white));
+    border-color: #ECECEA;
 }
 
 .ai-intel__header {
@@ -356,7 +356,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
-    border-top: 1px solid #bfdbfe;
+    border-top: 1px solid #DEDED9;
     padding-top: 1rem;
 }
 
@@ -500,8 +500,8 @@
 }
 
 .breakdown-icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .breakdown-icon--green {
@@ -656,8 +656,8 @@
 }
 
 .cat-badge--blue {
-    background-color: #eff6ff;
-    color: #2563eb;
+    background-color: #F7F7F6;
+    color: #333330;
 }
 
 .cat-badge--green {
@@ -763,12 +763,12 @@
 }
 
 .info-banner--blue {
-    background-color: #eff6ff;
-    border: 1px solid #bfdbfe;
+    background-color: #F7F7F6;
+    border: 1px solid #DEDED9;
 }
 
 .info-banner--blue .info-banner__icon {
-    color: #2563eb;
+    color: #333330;
     font-size: 1.125rem;
     margin-top: 0.125rem;
 }
@@ -778,7 +778,7 @@
 }
 
 .info-banner--blue .info-banner__text {
-    color: #1d4ed8;
+    color: #20201E;
 }
 
 .info-banner--green {

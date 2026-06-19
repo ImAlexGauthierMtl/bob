@@ -104,7 +104,7 @@
 }
 
 .email-item--selected {
-    background-color: #eff6ff; /* blue-50 */
+    background-color: #F7F7F6; /* blue-50 */
     border-left-color: var(--color-accent);
 }
 

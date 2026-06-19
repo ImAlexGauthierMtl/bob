@@ -21,18 +21,19 @@
     font-family: var(--font-family);
     z-index: 1000;
     transition: all var(--transition-base);
-    box-shadow: 0 4px 16px rgba(255, 69, 0, 0.35);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(32, 32, 30, 0.18);
 }
 
 .bob-fab__text {
     font-size: 0.9rem;
     font-weight: var(--font-weight-bold, 700);
-    letter-spacing: 0.02em;
+    letter-spacing: 0;
 }
 
 .bob-fab:hover {
-    transform: scale(1.08);
-    box-shadow: 0 6px 24px rgba(255, 69, 0, 0.45);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 28px rgba(32, 32, 30, 0.24);
 }
 
 .bob-fab--open {
@@ -52,7 +53,7 @@
     height: 10px;
     background: #ef4444;
     border-radius: 50%;
-    border: 2px solid var(--color-accent);
+    border: 2px solid var(--color-white);
 }
 
 /* ── Panel ────────────────────────────────────────────────── */
@@ -1669,7 +1670,7 @@
 
 .bob-status-pill--progress {
     background: rgba(59, 130, 246, 0.1);
-    color: #2563eb;
+    color: #333330;
 }
 
 .bob-status-pill--done {
@@ -1687,7 +1688,7 @@
 .bob-activity-card {
     margin: 8px 0;
     border: 1px solid rgba(59, 130, 246, 0.2);
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid #686862;
     border-radius: 8px;
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.02), rgba(59, 130, 246, 0.06));
     padding: 14px 16px;
@@ -1705,7 +1706,7 @@
     width: 34px;
     height: 34px;
     border-radius: 8px;
-    background: #3b82f6;
+    background: #686862;
     color: #fff;
     display: flex;
     align-items: center;
@@ -1963,7 +1964,7 @@
     gap: 10px;
     padding: 12px 16px;
     border: 1px solid rgba(59, 130, 246, 0.2);
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid #686862;
     border-radius: 8px;
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(59, 130, 246, 0.06));
     animation: artifactSlideIn 0.3s ease-out;
@@ -1992,7 +1993,7 @@
     height: 28px;
     border-radius: 50%;
     background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
+    color: #686862;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2458,7 +2459,7 @@
 .bob-exp__header-title {
     font-size: 1.25rem;
     font-weight: var(--font-weight-light);
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
     color: var(--color-black);
     margin: 0;
 }

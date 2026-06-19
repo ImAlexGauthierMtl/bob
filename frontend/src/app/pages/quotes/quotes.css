@@ -28,7 +28,7 @@
 .page-title {
     font-size: 2.5rem;
     font-weight: 200;
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
 }
 
 .badge--muted {
@@ -294,8 +294,8 @@
 }
 
 .stat-icon--blue {
-    background-color: #eff6ff;
-    color: #2563eb;
+    background-color: #F7F7F6;
+    color: #333330;
 }
 
 .stat-icon--green {
@@ -318,7 +318,7 @@
 }
 
 .stat-label--blue {
-    color: #2563eb;
+    color: #333330;
 }
 
 .stat-label--green {
@@ -436,7 +436,7 @@
 }
 
 .cell-note--blue {
-    color: #2563eb;
+    color: #333330;
 }
 
 .cell-note--green {
@@ -533,9 +533,9 @@
 }
 
 .cat-badge--blue {
-    background-color: #eff6ff;
-    border: 1px solid #bfdbfe;
-    color: #1d4ed8;
+    background-color: #F7F7F6;
+    border: 1px solid #DEDED9;
+    color: #20201E;
 }
 
 .cat-badge--purple {
@@ -596,9 +596,9 @@
 }
 
 .status-badge--blue {
-    background-color: #eff6ff;
-    border: 1px solid #bfdbfe;
-    color: #1d4ed8;
+    background-color: #F7F7F6;
+    border: 1px solid #DEDED9;
+    color: #20201E;
 }
 
 .status-badge--green {
@@ -624,7 +624,7 @@
 }
 
 .status-badge--blue .status-dot {
-    background-color: #3b82f6;
+    background-color: #686862;
 }
 
 .status-badge--green .status-dot {
@@ -816,8 +816,8 @@
 }
 
 .rec-icon--blue {
-    background-color: #eff6ff;
-    color: #2563eb;
+    background-color: #F7F7F6;
+    color: #333330;
 }
 
 .rec-icon--red {
@@ -942,7 +942,7 @@
 }
 
 .bar-fill--blue {
-    background-color: #3b82f6;
+    background-color: #686862;
 }
 
 .bar-fill--purple {
@@ -1002,8 +1002,8 @@
 }
 
 .metric-row__icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .metric-row__icon--purple {
@@ -1031,7 +1031,7 @@
 }
 
 .metric-row__change--blue {
-    color: #2563eb;
+    color: #333330;
 }
 
 .metric-row__change--purple {

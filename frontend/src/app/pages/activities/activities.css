@@ -26,7 +26,7 @@
 .page-title {
     font-size: 2rem;
     font-weight: var(--font-weight-light);
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
 }
 
 .page-subtitle {
@@ -396,8 +396,8 @@
 }
 
 .activity-icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .activity-icon--green {
@@ -668,8 +668,8 @@
 }
 
 .type-badge--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .type-badge--green {
@@ -808,8 +808,8 @@
 }
 
 .stat-icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .stat-icon--green {
@@ -960,7 +960,7 @@
 }
 
 .chart-bar--blue {
-    background-color: #3b82f6;
+    background-color: #686862;
 }
 
 .chart-bar--pink {
@@ -1020,8 +1020,8 @@
 }
 
 .quickaction-icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .quickaction-icon--green {

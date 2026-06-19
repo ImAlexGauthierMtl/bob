@@ -26,7 +26,7 @@
 .page-title {
     font-size: 2.5rem;
     font-weight: 200;
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
 }
 
 .counter-badge {
@@ -238,8 +238,8 @@
 }
 
 .ai-stat-icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .ai-stat-icon--purple {
@@ -262,7 +262,7 @@
 }
 
 .ai-stat-badge--blue {
-    color: #2563eb;
+    color: #333330;
 }
 
 .ai-stat-badge--purple {
@@ -405,7 +405,7 @@
 }
 
 .company-icon--blue {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: linear-gradient(135deg, #686862, #333330);
 }
 
 .company-icon--purple {
@@ -453,9 +453,9 @@
 }
 
 .stage-badge--blue {
-    background-color: #eff6ff;
-    border: 1px solid #bfdbfe;
-    color: #1d4ed8;
+    background-color: #F7F7F6;
+    border: 1px solid #DEDED9;
+    color: #20201E;
 }
 
 .stage-badge--green {
@@ -481,7 +481,7 @@
 }
 
 .dot--blue {
-    background-color: #3b82f6;
+    background-color: #686862;
 }
 
 .dot--green {
@@ -742,8 +742,8 @@ tr:hover .row-action {
 }
 
 .ai-reco-icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .ai-reco-card__title {
@@ -836,7 +836,7 @@ tr:hover .row-action {
 }
 
 .pipeline-bar__fill--blue {
-    background-color: #3b82f6;
+    background-color: #686862;
 }
 
 .pipeline-bar__fill--yellow {
@@ -888,8 +888,8 @@ tr:hover .row-action {
 }
 
 .perf-icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .perf-icon--purple {
@@ -921,7 +921,7 @@ tr:hover .row-action {
 }
 
 .perf-change--blue {
-    color: #2563eb;
+    color: #333330;
 }
 
 .perf-change--purple {

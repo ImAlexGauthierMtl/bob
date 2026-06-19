@@ -41,7 +41,7 @@
 .bcc-header__name {
     font-size: 1.875rem;
     font-weight: var(--font-weight-light);
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
     color: var(--color-black);
     margin: 0;
     line-height: 1.2;
@@ -426,8 +426,8 @@
 /* ── Badge Variants ───────────────────────────────── */
 
 .stage-badge--alt {
-    background-color: #eff6ff;
-    color: #2563eb;
+    background-color: #F7F7F6;
+    color: #333330;
 }
 
 .stage-badge--kit {
@@ -648,7 +648,7 @@
 
 .cog-badge--domain {
     background: rgba(59, 130, 246, 0.08);
-    color: #3b82f6;
+    color: #686862;
     border: 1px solid rgba(59, 130, 246, 0.15);
 }
 

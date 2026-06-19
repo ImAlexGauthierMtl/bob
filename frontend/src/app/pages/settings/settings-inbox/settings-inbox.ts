@@ -47,7 +47,7 @@ export class SettingsInboxComponent {
 
     // Available colors for the BEM classes (e.g. inbox-nav__dot--blue)
     availableColors = [
-        { value: 'blue', label: 'Blue', hex: '#3b82f6' },
+        { value: 'blue', label: 'Blue', hex: '#686862' },
         { value: 'green', label: 'Green', hex: '#22c55e' },
         { value: 'purple', label: 'Purple', hex: '#a855f7' },
         { value: 'orange', label: 'Orange', hex: '#f97316' },

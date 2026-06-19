@@ -80,8 +80,8 @@
 }
 
 .info-banner--blue {
-    background: linear-gradient(135deg, #eff6ff, #e0e7ff);
-    border-color: #bfdbfe;
+    background: linear-gradient(135deg, #F7F7F6, #e0e7ff);
+    border-color: #DEDED9;
 }
 
 .info-banner--green {
@@ -327,8 +327,8 @@
 }
 
 .status-badge--blue {
-    background-color: #dbeafe;
-    color: #1d4ed8;
+    background-color: #ECECEA;
+    color: #20201E;
 }
 
 /* ── Radio Card ───────────────────────────────────────────── */
@@ -473,8 +473,8 @@
 }
 
 .integration-card__icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .integration-card__icon--purple {
@@ -483,8 +483,8 @@
 }
 
 .integration-card__icon--ms {
-    background-color: #eff6ff;
-    color: #2563eb;
+    background-color: #F7F7F6;
+    color: #333330;
 }
 
 .integration-card__icon--orange {
@@ -494,7 +494,7 @@
 
 .integration-card__icon--sf {
     background-color: #f0fdf4;
-    color: #3b82f6;
+    color: #686862;
 }
 
 .integration-card__icon--mc {
@@ -1705,8 +1705,8 @@
 }
 
 .cap-stat__icon--blue {
-    background: #eff6ff;
-    color: #2563eb;
+    background: #F7F7F6;
+    color: #333330;
 }
 
 .cap-stat__icon--purple {
@@ -1847,8 +1847,8 @@
 }
 
 .cap-badge--scope {
-    background: #eff6ff;
-    color: #2563eb;
+    background: #F7F7F6;
+    color: #333330;
 }
 
 .cap-badge--module {

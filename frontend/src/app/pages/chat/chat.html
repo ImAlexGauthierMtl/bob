@@ -1,18 +1,18 @@
 <div class="chat-page">
     <header class="chat-header">
         <div class="chat-header__icon">
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <i class="fa-regular fa-comments"></i>
         </div>
         <div>
-            <h1 class="chat-header__title">Bob</h1>
-            <p class="chat-header__subtitle">AI Assistant — Ask anything about your CRM</p>
+            <h1 class="chat-header__title">Conversation</h1>
+            <p class="chat-header__subtitle">Workspace de dialogue avec Bob</p>
         </div>
     </header>
 
     <div class="chat-messages" #messagesContainer>
         @if (!hasMessages() && !isLoading()) {
             <div class="chat-welcome">
-                <p class="chat-welcome__text">Type a message or ask Bob to help with organizations, contacts, opportunities, quotes, or activities.</p>
+                <p class="chat-welcome__text">Démarrez une conversation pour préparer un suivi, clarifier une fiche ou organiser une prochaine action.</p>
             </div>
         }
         @for (msg of messages(); track $index) {
@@ -41,15 +41,15 @@
     <div class="chat-input-wrap">
         <textarea
             class="chat-input"
-            placeholder="Ask Bob..."
+            placeholder="Demander à Bob..."
             [value]="inputText()"
             (input)="inputText.set($any($event.target).value)"
             (keydown)="onKeydown($event)"
             [disabled]="isLoading()"
             rows="1"
         ></textarea>
-        <button type="button" class="chat-send" (click)="send()" [disabled]="!inputText().trim() || isLoading()" title="Send">
-            <i class="fa-solid fa-paper-plane"></i>
+        <button type="button" class="chat-send" (click)="send()" [disabled]="!inputText().trim() || isLoading()" title="Envoyer">
+            <i class="fa-solid fa-arrow-up"></i>
         </button>
     </div>
 </div>

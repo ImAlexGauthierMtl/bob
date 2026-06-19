@@ -133,7 +133,7 @@ export class BccLibraryDetailComponent implements OnInit {
 
     getPerspectiveColor(p: string): string {
         const colors: Record<string, string> = {
-            general: '#6B7280', ceo: '#8B5CF6', cfo: '#3B82F6',
+            general: '#6B7280', ceo: '#8B5CF6', cfo: '#686862',
             director: '#F59E0B', employee: '#10B981',
         };
         return colors[p] || '#6B7280';

@@ -27,7 +27,7 @@
 .page-title {
     font-size: 2.5rem;
     font-weight: 200;
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
 }
 
 .counter-badge {
@@ -229,8 +229,8 @@
 }
 
 .ai-stat-icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .ai-stat-icon--green {
@@ -255,7 +255,7 @@
 }
 
 .ai-stat-badge--blue {
-    color: #2563eb;
+    color: #333330;
 }
 
 .ai-stat-badge--green {
@@ -424,7 +424,7 @@
 }
 
 .company-icon--blue {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: linear-gradient(135deg, #686862, #333330);
 }
 
 .company-icon--purple {
@@ -695,8 +695,8 @@ tr:hover .row-action {
 }
 
 .ai-reco-icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .ai-reco-card__title {

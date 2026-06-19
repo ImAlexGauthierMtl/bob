@@ -61,7 +61,7 @@
     border-radius: 50%;
 }
 
-.preview-dot--blue   { background-color: #3b82f6; }
+.preview-dot--blue   { background-color: #686862; }
 .preview-dot--green  { background-color: #22c55e; }
 .preview-dot--purple { background-color: #a855f7; }
 .preview-dot--orange { background-color: #f97316; }
@@ -74,7 +74,7 @@
     flex-shrink: 0;
 }
 
-.inbox-nav__dot--blue   { background-color: #3b82f6; }
+.inbox-nav__dot--blue   { background-color: #686862; }
 .inbox-nav__dot--green  { background-color: #22c55e; }
 .inbox-nav__dot--purple { background-color: #a855f7; }
 .inbox-nav__dot--orange { background-color: #f97316; }

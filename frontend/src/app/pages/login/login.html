@@ -1,113 +1,98 @@
-<div class="login-container">
-
-  <!-- Left Panel — Hero -->
-  <div class="login-hero">
-    <div class="hero-blob hero-blob--top"></div>
-    <div class="hero-blob hero-blob--bottom"></div>
-
-    <div class="hero-content">
-      <div class="hero-brand">
-        <img src="croo-logo.png" alt="Croo" class="hero-logo" />
-        <div class="hero-brand__divider"></div>
-        <div class="hero-brand__text">
-          <span class="hero-brand__line1">Digital</span>
-          <span class="hero-brand__line2">Experience</span>
-        </div>
+<main class="login-shell">
+  <section class="login-preview" aria-label="Croo Digital Experience">
+    <div class="login-brand">
+      <img src="croo-logo.png" alt="Croo" class="login-brand__logo" />
+      <div class="login-brand__divider"></div>
+      <div class="login-brand__text">
+        <span>Digital</span>
+        <strong>Experience</strong>
       </div>
-
-      <div class="hero-message">
-        <p class="hero-headline">Where Bob enhances<br>human productivity</p>
-        <p class="hero-description">Experience the perfect balance of aesthetics and functionality in a universal
-          business tool designed for the modern era.</p>
-      </div>
-
-      <div class="hero-features">
-        <div class="hero-feature">
-          <div class="hero-feature__bar"></div>
-          <div>
-            <p class="hero-feature__title">Intelligent Automation</p>
-            <p class="hero-feature__desc">AI-powered workflows that adapt to your business needs</p>
-          </div>
-        </div>
-
-        <div class="hero-feature">
-          <div class="hero-feature__bar"></div>
-          <div>
-            <p class="hero-feature__title">Unified Platform</p>
-            <p class="hero-feature__desc">CRM, ERP, and analytics in one seamless interface</p>
-          </div>
-        </div>
-
-        <div class="hero-feature">
-          <div class="hero-feature__bar"></div>
-          <div>
-            <p class="hero-feature__title">Real-time Insights</p>
-            <p class="hero-feature__desc">Data-driven decisions powered by advanced analytics</p>
-          </div>
-        </div>
-      </div>
-
     </div>
-  </div>
 
-  <!-- Right Panel — Form -->
-  <div class="login-form-panel">
-    <div class="login-form-wrapper">
+    <div class="preview-window">
+      <aside class="preview-sidebar">
+        <div class="preview-dot"></div>
+        <div class="preview-link preview-link--active">
+          <i class="fa-regular fa-comments"></i>
+          <span>Conversation</span>
+        </div>
+        <div class="preview-link">
+          <i class="fa-regular fa-envelope"></i>
+          <span>Inbox</span>
+        </div>
+        <div class="preview-link">
+          <i class="fa-regular fa-building"></i>
+          <span>Organizations</span>
+        </div>
+        <div class="preview-link">
+          <i class="fa-regular fa-address-book"></i>
+          <span>Contacts</span>
+        </div>
+      </aside>
 
-      <!-- Mobile Logo -->
+      <div class="preview-conversation">
+        <div class="preview-thread">
+          <div class="preview-message preview-message--user">Préparer le suivi client</div>
+          <div class="preview-message">Je peux résumer le contexte et proposer les prochaines actions.</div>
+          <div class="preview-message preview-message--user">Créer une tâche pour demain</div>
+        </div>
+        <div class="preview-composer">
+          <span>Demander à Bob...</span>
+          <i class="fa-solid fa-arrow-up"></i>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="login-panel">
+    <div class="login-card">
       <div class="login-mobile-brand">
         <img src="croo-logo.png" alt="Croo" class="login-mobile-logo" />
         <div class="login-mobile-brand__divider"></div>
         <div class="login-mobile-brand__text">
-          <span class="login-mobile-brand__line1">Digital</span>
-          <span class="login-mobile-brand__line2">Experience</span>
+          <span>Digital</span>
+          <strong>Experience</strong>
         </div>
       </div>
 
-      <!-- Header -->
-      <div class="login-header" id="login-header">
-        <h2 class="login-title">Welcome back</h2>
-        <p class="login-description">Enter your credentials to access your account</p>
-      </div>
+      <header class="login-header" id="login-header">
+        <p class="login-eyebrow">Workspace</p>
+        <h1 class="login-title">Connexion</h1>
+        <p class="login-description">Accédez à votre environnement Croo.</p>
+      </header>
 
-      <!-- Form -->
       <form class="login-form" id="login-form" (submit)="onSubmit($event)">
-
-        <!-- Email Field -->
         <div class="form-group" id="email-field">
-          <label for="email" class="form-label">Email Address</label>
+          <label for="email" class="form-label">Email</label>
           <div class="input-wrapper">
             <i class="fa-regular fa-envelope input-icon"></i>
             <input type="email" id="email" name="email" class="input input--with-icon"
-              placeholder="your.email@company.com" required autocomplete="email" [(ngModel)]="email" />
+              placeholder="nom@entreprise.com" required autocomplete="email" [(ngModel)]="email" />
           </div>
         </div>
 
-        <!-- Password Field -->
         <div class="form-group" id="password-field">
-          <label for="password" class="form-label">Password</label>
+          <label for="password" class="form-label">Mot de passe</label>
           <div class="input-wrapper">
             <i class="fa-solid fa-lock input-icon"></i>
             <input [type]="passwordVisible ? 'text' : 'password'" id="password" name="password"
-              class="input input--with-icon input--with-action" placeholder="Enter your password" required
+              class="input input--with-icon input--with-action" placeholder="Votre mot de passe" required
               autocomplete="current-password" [(ngModel)]="password" />
             <button type="button" class="input-action" (click)="togglePasswordVisibility()"
-              [attr.aria-label]="passwordVisible ? 'Hide password' : 'Show password'">
+              [attr.aria-label]="passwordVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'">
               <i [class]="passwordVisible ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye'"></i>
             </button>
           </div>
         </div>
 
-        <!-- Remember / Forgot -->
         <div class="login-options" id="remember-forgot">
           <label class="checkbox-label">
             <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" class="checkbox" />
-            <span>Remember me</span>
+            <span>Rester connecté</span>
           </label>
-          <a href="#" class="link-accent">Forgot password?</a>
+          <a href="#" class="link-accent">Mot de passe oublié</a>
         </div>
 
-        <!-- Error Message -->
         @if (errorMessage) {
         <div class="login-error" id="login-error">
           <i class="fa-solid fa-circle-exclamation"></i>
@@ -115,65 +100,33 @@
         </div>
         }
 
-        <!-- Submit -->
         <button type="submit" id="login-button" class="btn btn-accent btn-full" [disabled]="isLoading">
-          {{ isLoading ? 'Signing In...' : 'Sign In' }}
+          <span>{{ isLoading ? 'Connexion...' : 'Se connecter' }}</span>
         </button>
-
-        <!-- Divider -->
-        <div class="login-divider" id="divider">
-          <div class="login-divider__line"></div>
-          <span class="login-divider__text">Or continue with</span>
-        </div>
-
-        <!-- SSO Options -->
-        <div class="sso-options" id="sso-options">
-          <button type="button" class="btn-sso" (click)="signInWithGoogle()">
-            <i class="fa-brands fa-google"></i>
-            <span>Sign in with Google</span>
-          </button>
-
-          <button type="button" class="btn-sso" (click)="signInWithMicrosoft()">
-            <i class="fa-brands fa-microsoft"></i>
-            <span>Sign in with Microsoft</span>
-          </button>
-
-          <button type="button" class="btn-sso" (click)="signInWithBiometric()">
-            <i class="fa-solid fa-fingerprint"></i>
-            <span>Sign in with Biometric</span>
-          </button>
-        </div>
-
-        <!-- AI Hint -->
-        <div class="ai-hint" id="ai-assistant-hint">
-          <div class="ai-hint__icon">
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
-          </div>
-          <div>
-            <p class="ai-hint__title">AI-Powered Experience</p>
-            <p class="ai-hint__text">Once logged in, Bob will help you navigate, automate tasks, and
-              provide intelligent insights tailored to your workflow.</p>
-          </div>
-        </div>
-
       </form>
 
-      <!-- Signup Link -->
-      <div class="login-signup" id="signup-link">
-        <p>Don't have an account? <a href="#" class="link-accent">Create one now</a></p>
+      <div class="login-divider" id="divider">
+        <div class="login-divider__line"></div>
+        <span class="login-divider__text">Options d'accès</span>
+        <div class="login-divider__line"></div>
       </div>
 
-      <!-- Footer -->
-      <div class="login-footer" id="footer-links">
-        <div class="login-footer__links">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
-          <a href="#">Help Center</a>
-          <a href="#">Contact Support</a>
-        </div>
-        <p class="login-footer__copyright">© 2026 The Smart Crew. All rights reserved.</p>
-      </div>
+      <div class="sso-options" id="sso-options">
+        <button type="button" class="btn-sso" (click)="signInWithGoogle()">
+          <i class="fa-brands fa-google"></i>
+          <span>Google</span>
+        </button>
 
+        <button type="button" class="btn-sso" (click)="signInWithMicrosoft()">
+          <i class="fa-brands fa-microsoft"></i>
+          <span>Microsoft</span>
+        </button>
+
+        <button type="button" class="btn-sso" (click)="signInWithBiometric()">
+          <i class="fa-solid fa-fingerprint"></i>
+          <span>Biométrie</span>
+        </button>
+      </div>
     </div>
-  </div>
-</div>
+  </section>
+</main>

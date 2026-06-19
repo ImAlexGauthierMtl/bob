@@ -129,7 +129,7 @@ export class BccChildProfileComponent implements OnInit {
     }
 
     get typeColor(): string {
-        return this.entityType === 'department' ? '#3B82F6' : '#10B981';
+        return this.entityType === 'department' ? '#686862' : '#10B981';
     }
 
     get backUrl(): string {
@@ -146,7 +146,7 @@ export class BccChildProfileComponent implements OnInit {
 
     getPerspectiveColor(p: string): string {
         const colors: Record<string, string> = {
-            general: '#6B7280', ceo: '#8B5CF6', cfo: '#3B82F6',
+            general: '#6B7280', ceo: '#8B5CF6', cfo: '#686862',
             director: '#F59E0B', employee: '#10B981',
         };
         return colors[p] || '#6B7280';

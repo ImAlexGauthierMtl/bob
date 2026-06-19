@@ -52,7 +52,7 @@
 .kb-header__title {
     font-size: 36px;
     font-weight: 200;
-    letter-spacing: -0.5px;
+    letter-spacing: 0;
     color: #111;
 }
 
@@ -251,7 +251,7 @@
 /* ── AI Knowledge Assistant Banner ───────────────────────── */
 
 .kb-ai-banner {
-    background: linear-gradient(to right, #eff6ff, #f5f3ff, #fdf2f8);
+    background: linear-gradient(to right, #F7F7F6, #f5f3ff, #fdf2f8);
     border: 1px solid #c4b5fd;
     padding: 32px;
 }
@@ -326,7 +326,7 @@
 }
 
 .kb-ai-card__icon--blue {
-    color: #3b82f6;
+    color: #686862;
 }
 
 .kb-ai-card__title {
@@ -594,8 +594,8 @@
 }
 
 .kb-badge--blue {
-    background: #dbeafe;
-    color: #2563eb;
+    background: #ECECEA;
+    color: #333330;
 }
 
 .kb-badge--yellow {

@@ -32,7 +32,7 @@
 .profile-avatar {
     width: 4rem;
     height: 4rem;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: linear-gradient(135deg, #686862, #333330);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -60,7 +60,7 @@
 .profile-name {
     font-size: 1.875rem;
     font-weight: var(--font-weight-light);
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
     color: var(--color-black);
     margin: 0;
     line-height: 1.2;
@@ -422,8 +422,8 @@
 }
 
 .timeline-icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .timeline-icon--purple {
@@ -566,8 +566,8 @@
 }
 
 .interaction-icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .interaction-icon--green {
@@ -694,8 +694,8 @@
 }
 
 .opp-stage--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .opp-stage--yellow {
@@ -716,8 +716,8 @@
 }
 
 .opp-role-badge--blue {
-    background-color: #eff6ff;
-    color: #2563eb;
+    background-color: #F7F7F6;
+    color: #333330;
 }
 
 .opp-role-badge--purple {
@@ -912,8 +912,8 @@
 }
 
 .interaction-item__icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .interaction-item__icon--green {
@@ -1452,8 +1452,8 @@
 }
 
 .qtag--disc {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .qempty {

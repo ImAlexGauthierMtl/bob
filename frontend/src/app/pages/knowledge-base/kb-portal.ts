@@ -42,7 +42,7 @@ export class KBPortalComponent implements OnInit {
     };
 
     colorMap: Record<string, string> = {
-        'getting-started': '#3b82f6',
+        'getting-started': '#686862',
         'sales-crm': '#10b981',
         'ai-features': '#a855f7',
         'automation': '#f59e0b',

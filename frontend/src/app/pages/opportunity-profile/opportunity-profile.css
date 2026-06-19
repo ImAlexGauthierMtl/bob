@@ -50,9 +50,9 @@
 
 /* ── Stage Badge Variants ────────────────────────────────── */
 .stage-badge--blue {
-    background-color: #dbeafe;
+    background-color: #ECECEA;
     border: 1px solid #93c5fd;
-    color: #1d4ed8;
+    color: #20201E;
 }
 
 .stage-badge--yellow {
@@ -82,8 +82,8 @@
 }
 
 .priority-badge--blue {
-    background-color: #dbeafe;
-    color: #1d4ed8;
+    background-color: #ECECEA;
+    color: #20201E;
 }
 
 .priority-badge--yellow {
@@ -145,7 +145,7 @@
 .profile-name {
     font-size: 1.75rem;
     font-weight: 200;
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
 }
 
 .stage-badge {
@@ -757,8 +757,8 @@
 }
 
 .cat-badge--blue {
-    background-color: #dbeafe;
-    color: #1d4ed8;
+    background-color: #ECECEA;
+    color: #20201E;
 }
 
 .cat-badge--purple {
@@ -915,8 +915,8 @@
 }
 
 .role-badge--blue {
-    background-color: #eff6ff;
-    color: #1d4ed8;
+    background-color: #F7F7F6;
+    color: #20201E;
 }
 
 .role-badge--green {
@@ -1062,8 +1062,8 @@
 }
 
 .completed-icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .completed-icon--purple {
@@ -1114,8 +1114,8 @@
 }
 
 .doc-icon--blue {
-    background-color: #dbeafe;
-    color: #2563eb;
+    background-color: #ECECEA;
+    color: #333330;
 }
 
 .doc-icon--green {

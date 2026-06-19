@@ -82,7 +82,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             content: 'Parent organization specialized in Digital Transformation. You are part of the Digital Experience team, within the Sales department. Your mission: sell Croo Digital Experience, an AI-native CRM platform.',
             cards: [
                 { icon: 'fa-solid fa-building', iconColor: '#FF4500', iconBg: '#fff3ed', title: 'The Croo Group', desc: 'Parent Organization' },
-                { icon: 'fa-solid fa-users', iconColor: '#3b82f6', iconBg: '#dbeafe', title: 'Sales', desc: 'Department' },
+                { icon: 'fa-solid fa-users', iconColor: '#686862', iconBg: '#ECECEA', title: 'Sales', desc: 'Department' },
                 { icon: 'fa-solid fa-laptop', iconColor: '#8b5cf6', iconBg: '#f3e8ff', title: 'Digital Experience', desc: 'Team' },
                 { icon: 'fa-solid fa-user-tie', iconColor: '#10b981', iconBg: '#dcfce7', title: 'Sales Rep', desc: 'Your Role' },
             ],
@@ -94,7 +94,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             badge: 'Objectives',
             title: 'What You Will Learn',
             cards: [
-                { icon: 'fa-solid fa-compass', iconColor: '#3b82f6', iconBg: '#dbeafe', title: 'Navigation', desc: 'Navigate all CRM modules independently' },
+                { icon: 'fa-solid fa-compass', iconColor: '#686862', iconBg: '#ECECEA', title: 'Navigation', desc: 'Navigate all CRM modules independently' },
                 { icon: 'fa-solid fa-address-book', iconColor: '#10b981', iconBg: '#dcfce7', title: 'Management', desc: 'Create and manage contacts, organizations and opportunities' },
                 { icon: 'fa-solid fa-filter', iconColor: '#8b5cf6', iconBg: '#f3e8ff', title: 'Pipeline', desc: 'Configure and use pipeline stages effectively' },
                 { icon: 'fa-solid fa-robot', iconColor: '#f59e0b', iconBg: '#fef3c7', title: 'Bob AI', desc: 'Leverage Bob AI for your daily tasks' },
@@ -123,7 +123,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             title: 'CRM Certified — Croo Expert',
             subtitle: 'Validation Criteria',
             kpis: [
-                { label: 'Product Knowledge', value: 'Demo all modules independently', color: '#3b82f6' },
+                { label: 'Product Knowledge', value: 'Demo all modules independently', color: '#686862' },
                 { label: 'CRM Hygiene', value: 'Pipeline up to date 5 consecutive days', color: '#10b981' },
                 { label: 'Bob Usage', value: '3+ tasks completed with Bob AI', color: '#f59e0b' },
             ],
@@ -148,7 +148,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             badge: 'The 6 Modules',
             title: 'Platform Architecture',
             cards: [
-                { icon: 'fa-solid fa-address-book', iconColor: '#3b82f6', iconBg: '#dbeafe', title: 'Contacts', desc: 'Create, search, segment your contacts. CSV import.' },
+                { icon: 'fa-solid fa-address-book', iconColor: '#686862', iconBg: '#ECECEA', title: 'Contacts', desc: 'Create, search, segment your contacts. CSV import.' },
                 { icon: 'fa-solid fa-building', iconColor: '#8b5cf6', iconBg: '#f3e8ff', title: 'Organizations', desc: 'Link contacts to companies. Track hierarchy.' },
                 { icon: 'fa-solid fa-chart-line', iconColor: '#10b981', iconBg: '#dcfce7', title: 'Opportunities', desc: 'Full pipeline lifecycle, lead → close.' },
                 { icon: 'fa-solid fa-list-check', iconColor: '#f59e0b', iconBg: '#fef3c7', title: 'Tasks & Activities', desc: 'Follow-ups, call logs, activity management.' },
@@ -258,7 +258,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             cards: [
                 { icon: 'fa-solid fa-microphone', iconColor: '#FF4500', iconBg: '#fff3ed', title: 'Voice Mode', desc: 'Talk to Bob like a colleague. He understands context.' },
                 { icon: 'fa-solid fa-wand-magic-sparkles', iconColor: '#8b5cf6', iconBg: '#f3e8ff', title: 'Smart Suggestions', desc: 'Proactive recommendations based on your pipeline.' },
-                { icon: 'fa-solid fa-pen-to-square', iconColor: '#3b82f6', iconBg: '#dbeafe', title: 'Email Drafting', desc: 'Writes personalized CASL-compliant emails.' },
+                { icon: 'fa-solid fa-pen-to-square', iconColor: '#686862', iconBg: '#ECECEA', title: 'Email Drafting', desc: 'Writes personalized CASL-compliant emails.' },
                 { icon: 'fa-solid fa-chart-line', iconColor: '#10b981', iconBg: '#dcfce7', title: 'Pipeline Analysis', desc: 'Detects at-risk deals and opportunities.' },
             ],
             footerText: 'Bob AI — Croo Digital Experience',
@@ -314,7 +314,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             title: 'Assessment — Bob AI Usage',
             subtitle: 'Criteria for Mastering Bob',
             kpis: [
-                { label: 'Navigation', value: 'Access any module in < 3 sec', color: '#3b82f6' },
+                { label: 'Navigation', value: 'Access any module in < 3 sec', color: '#686862' },
                 { label: 'Data Entry', value: 'Create contact + opportunity in < 2 min', color: '#10b981' },
                 { label: 'Pipeline', value: '100% accuracy 5 consecutive days', color: '#8b5cf6' },
                 { label: 'Bob Usage', value: '3+ tasks with Bob AI', color: '#FF4500' },
@@ -356,7 +356,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             badge: 'Key Concepts',
             title: 'The 4 Pipeline Pillars',
             cards: [
-                { icon: 'fa-solid fa-user', iconColor: '#3b82f6', iconBg: '#dbeafe', title: 'Contact vs Org', desc: 'Contacts are people, orgs are companies. Always link both.' },
+                { icon: 'fa-solid fa-user', iconColor: '#686862', iconBg: '#ECECEA', title: 'Contact vs Org', desc: 'Contacts are people, orgs are companies. Always link both.' },
                 { icon: 'fa-solid fa-pen', iconColor: '#10b981', iconBg: '#dcfce7', title: 'Activity Logging', desc: 'Every call, email and meeting must be logged for AI analysis.' },
                 { icon: 'fa-solid fa-robot', iconColor: '#FF4500', iconBg: '#fff3ed', title: 'Bob AI', desc: 'Voice-first assistant that analyzes your pipeline and suggests actions.' },
                 { icon: 'fa-solid fa-filter', iconColor: '#8b5cf6', iconBg: '#f3e8ff', title: 'Pipeline Stages', desc: 'Lead → Qualified → Demo → Proposal → Negotiation → Closed.' },
@@ -405,7 +405,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             kpis: [
                 { label: 'Pipeline Accuracy', value: '100% deals up to date every morning', color: '#10b981' },
                 { label: 'Stale Deals', value: '0 deals > 7 days without activity', color: '#ef4444' },
-                { label: 'Notes Coverage', value: '100% of calls have notes within 24h', color: '#3b82f6' },
+                { label: 'Notes Coverage', value: '100% of calls have notes within 24h', color: '#686862' },
                 { label: 'Time to Complete', value: '< 15 minutes per session', color: '#f59e0b' },
             ],
             footerText: 'Pipeline Review — Success Metrics',
@@ -433,7 +433,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             subtitle: 'Are you ready for the next step?',
             kpis: [
                 { label: 'Daily Review', value: 'Pipeline review done 5 days in a row', color: '#10b981' },
-                { label: 'Data Quality', value: '100% of deals with up-to-date notes', color: '#3b82f6' },
+                { label: 'Data Quality', value: '100% of deals with up-to-date notes', color: '#686862' },
                 { label: 'Bob Usage', value: 'Used Bob for 3+ pipeline tasks', color: '#FF4500' },
                 { label: 'Stale Detection', value: 'No unflagged deal > 7 days', color: '#ef4444' },
             ],
@@ -458,7 +458,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             badge: 'Qualification Framework',
             title: 'BANT',
             cards: [
-                { icon: 'fa-solid fa-dollar-sign', iconColor: '#3b82f6', iconBg: '#dbeafe', title: 'Budget', desc: '$500-$5,000/month. Confirm allocated CRM budget.' },
+                { icon: 'fa-solid fa-dollar-sign', iconColor: '#686862', iconBg: '#ECECEA', title: 'Budget', desc: '$500-$5,000/month. Confirm allocated CRM budget.' },
                 { icon: 'fa-solid fa-user-tie', iconColor: '#8b5cf6', iconBg: '#f3e8ff', title: 'Authority', desc: 'VP Sales or CEO. Identify decision-makers.' },
                 { icon: 'fa-solid fa-bullseye', iconColor: '#10b981', iconBg: '#dcfce7', title: 'Need', desc: 'Manual processes slowing growth.' },
                 { icon: 'fa-solid fa-clock', iconColor: '#f59e0b', iconBg: '#fef3c7', title: 'Timeline', desc: 'Evaluating this quarter. Urgency confirmed.' },
@@ -487,7 +487,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             badge: 'Signal Detection',
             title: 'Signals to Watch For',
             cards: [
-                { icon: 'fa-solid fa-briefcase', iconColor: '#3b82f6', iconBg: '#dbeafe', title: 'Job Postings', desc: 'Company is hiring sales reps → needs tools.' },
+                { icon: 'fa-solid fa-briefcase', iconColor: '#686862', iconBg: '#ECECEA', title: 'Job Postings', desc: 'Company is hiring sales reps → needs tools.' },
                 { icon: 'fa-solid fa-money-bill-trend-up', iconColor: '#10b981', iconBg: '#dcfce7', title: 'New Funding', desc: 'Recent funding round → money to invest.' },
                 { icon: 'fa-solid fa-code', iconColor: '#8b5cf6', iconBg: '#f3e8ff', title: 'Tech Changes', desc: 'Changes in their technology stack.' },
                 { icon: 'fa-solid fa-comment-dots', iconColor: '#ef4444', iconBg: '#fee2e2', title: 'CRM Complaints', desc: 'CRM complaints on social media.' },
@@ -518,7 +518,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             title: 'Prospection KPIs',
             subtitle: 'Your Weekly Targets',
             kpis: [
-                { label: 'Touchpoints/Day', value: '20+ contacts per day', color: '#3b82f6' },
+                { label: 'Touchpoints/Day', value: '20+ contacts per day', color: '#686862' },
                 { label: 'Email Open Rate', value: '> 20%', color: '#10b981' },
                 { label: 'Reply Rate', value: '> 3%', color: '#8b5cf6' },
                 { label: 'Qualified Leads/Week', value: '5+', color: '#f59e0b' },
@@ -560,7 +560,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             badge: 'Templates',
             title: '5 Proven Email Templates',
             cards: [
-                { icon: 'fa-solid fa-paper-plane', iconColor: '#3b82f6', iconBg: '#dbeafe', title: 'Initial Outreach', desc: 'Personalized first contact based on research.' },
+                { icon: 'fa-solid fa-paper-plane', iconColor: '#686862', iconBg: '#ECECEA', title: 'Initial Outreach', desc: 'Personalized first contact based on research.' },
                 { icon: 'fa-solid fa-bolt', iconColor: '#f59e0b', iconBg: '#fef3c7', title: 'Trigger-based', desc: 'Triggered by an event (funding, job post).' },
                 { icon: 'fa-solid fa-trophy', iconColor: '#10b981', iconBg: '#dcfce7', title: 'Case Study', desc: 'Share concrete results from a similar client.' },
                 { icon: 'fa-solid fa-calculator', iconColor: '#8b5cf6', iconBg: '#f3e8ff', title: 'ROI Calculator', desc: 'Help the prospect calculate their potential ROI.' },
@@ -641,7 +641,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             subtitle: 'Your Benchmarks to Hit',
             kpis: [
                 { label: 'Open Rate', value: '> 20%', color: '#10b981' },
-                { label: 'Click Rate', value: '> 3%', color: '#3b82f6' },
+                { label: 'Click Rate', value: '> 3%', color: '#686862' },
                 { label: 'Reply Rate', value: '> 1%', color: '#8b5cf6' },
                 { label: 'Unsubscribe Rate', value: '< 0.5%', color: '#ef4444' },
                 { label: 'Bounce Rate', value: '< 2%', color: '#f59e0b' },
@@ -698,7 +698,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             content: 'ROI is the most powerful argument. Concretely calculate how much time and money Croo saves each representative.',
             kpis: [
                 { label: 'Time Saved / Rep / Week', value: '5-10 hours', color: '#10b981' },
-                { label: 'Cost per Hour', value: '$35-75', color: '#3b82f6' },
+                { label: 'Cost per Hour', value: '$35-75', color: '#686862' },
                 { label: 'Annual Savings (10 reps)', value: '$91K-$390K', color: '#8b5cf6' },
                 { label: 'Croo Investment', value: '$4,680-$5,880/year', color: '#FF4500' },
             ],
@@ -710,7 +710,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             badge: 'Objection Handling',
             title: 'Top 4 CRM Objections',
             cards: [
-                { icon: 'fa-solid fa-database', iconColor: '#3b82f6', iconBg: '#dbeafe', title: '"We already have a CRM"', desc: 'Yes, but does it have an integrated AI assistant that analyzes your pipeline?' },
+                { icon: 'fa-solid fa-database', iconColor: '#686862', iconBg: '#ECECEA', title: '"We already have a CRM"', desc: 'Yes, but does it have an integrated AI assistant that analyzes your pipeline?' },
                 { icon: 'fa-solid fa-dollar-sign', iconColor: '#ef4444', iconBg: '#fee2e2', title: '"It\'s too expensive"', desc: 'Let\'s calculate the cost of NOT changing. Cost of inaction.' },
                 { icon: 'fa-solid fa-users', iconColor: '#f59e0b', iconBg: '#fef3c7', title: '"The team won\'t adopt it"', desc: 'Bob makes adoption natural: voice-first, AI that does the work.' },
                 { icon: 'fa-solid fa-plug', iconColor: '#8b5cf6', iconBg: '#f3e8ff', title: '"We need X integration"', desc: 'Open API + integration marketplace. What tools do you use?' },
@@ -723,7 +723,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             badge: 'Pricing',
             title: 'Pricing Options',
             cards: [
-                { icon: 'fa-solid fa-calendar-days', iconColor: '#3b82f6', iconBg: '#dbeafe', title: 'Monthly', desc: '$49/user/month. Maximum flexibility, no commitment.' },
+                { icon: 'fa-solid fa-calendar-days', iconColor: '#686862', iconBg: '#ECECEA', title: 'Monthly', desc: '$49/user/month. Maximum flexibility, no commitment.' },
                 { icon: 'fa-solid fa-calendar-check', iconColor: '#10b981', iconBg: '#dcfce7', title: 'Annual', desc: '$39/user/month. 20% discount for annual commitment.' },
                 { icon: 'fa-solid fa-rocket', iconColor: '#8b5cf6', iconBg: '#f3e8ff', title: 'Onboarding', desc: 'Onboarding package included for contracts > 10 seats.' },
                 { icon: 'fa-solid fa-handshake', iconColor: '#FF4500', iconBg: '#fff3ed', title: 'Mutual Action Plan', desc: 'Shared timeline: trial → eval → decision → onboarding.' },
@@ -757,7 +757,7 @@ export class TrainingCrmMasteryComponent implements OnInit, OnDestroy {
             badge: 'Milestones',
             title: 'Your Progression Path',
             cards: [
-                { icon: 'fa-solid fa-certificate', iconColor: '#3b82f6', iconBg: '#dbeafe', title: 'CRM Certified', desc: 'Demo all modules, pipeline up to date 5 days, Bob 3+ tasks.' },
+                { icon: 'fa-solid fa-certificate', iconColor: '#686862', iconBg: '#ECECEA', title: 'CRM Certified', desc: 'Demo all modules, pipeline up to date 5 days, Bob 3+ tasks.' },
                 { icon: 'fa-solid fa-chart-line', iconColor: '#10b981', iconBg: '#dcfce7', title: 'First Pipeline Built', desc: '50+ qualified leads, 200+ touchpoints, 100% CASL compliant.' },
                 { icon: 'fa-solid fa-trophy', iconColor: '#f59e0b', iconBg: '#fef3c7', title: 'First Deal Closed', desc: '10+ demos, first contract signed, ARR > $5,000.' },
                 { icon: 'fa-solid fa-crown', iconColor: '#FF4500', iconBg: '#fff3ed', title: 'Quota Crusher', desc: '> 100% quota, 3x pipeline, 1+ upsell, mentoring a new rep.' },
