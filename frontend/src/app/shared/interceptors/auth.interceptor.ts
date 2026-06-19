@@ -16,7 +16,13 @@ const isAuthSessionRequest = (url: string): boolean => (
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
     const authService = inject(AuthService);
     const router = inject(Router);
-    const credentialRequest = req.withCredentials ? req : req.clone({ withCredentials: true });
+    const accessToken = authService.getAccessToken();
+    let credentialRequest = req.withCredentials ? req : req.clone({ withCredentials: true });
+    if (accessToken && !credentialRequest.headers.has('Authorization')) {
+        credentialRequest = credentialRequest.clone({
+            setHeaders: { Authorization: `Bearer ${accessToken}` },
+        });
+    }
 
     return next(credentialRequest).pipe(
         catchError((error: HttpErrorResponse) => {

@@ -1,5 +1,32 @@
 # API Contracts — Bob Conversion Slice
 
+## Auth B4F
+
+Exposed locally at `auth-b4f-api` and through the gateway as the auth surface.
+
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `GET /auth/me`
+- `GET /api/auth/v1/session`
+- `POST /api/auth/v1/refresh`
+- `POST /api/auth/v1/logout`
+
+Rules:
+
+- Production session authority remains Bob Cloud for tenants, licences, IAM,
+  RBAC and platform capabilities.
+- Local/dev mode accepts a valid local JWT issued by `/auth/login` as a
+  `Bearer` token for `GET /api/auth/v1/session`, returning an authenticated
+  `local-dev` session without requiring Bob Cloud availability.
+- Angular may call `/auth/login` only when its non-production environment has
+  `localAuthEnabled=true`; staging and production login must use the Bob Cloud
+  cookie/session path.
+- Angular must still call only `auth-b4f-api`; it must not call
+  `user-backend-api` or any internal backend directly.
+- The local/dev JWT fallback is disabled outside local/dev unless explicitly
+  enabled through `CDE_LOCAL_AUTH_ENABLED`.
+- `/api/auth/v1/session` without a local JWT continues to delegate to Bob Cloud.
+
 ## Bob Chat B4F
 
 Exposed through the gateway as `/api/bob-chat/v1`.

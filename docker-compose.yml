@@ -5,7 +5,7 @@ x-common-env: &common-env
   JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
   CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4300","http://localhost:4700","http://localhost:24200","http://127.0.0.1:4200","http://127.0.0.1:4300","http://127.0.0.1:4700","http://127.0.0.1:24200"]}
   CDE_LOCAL_BOB_SETTINGS_CAPABILITIES: ${CDE_LOCAL_BOB_SETTINGS_CAPABILITIES:-bob_settings.manage}
-  INGRESS_URL: ${INGRESS_URL:-http://localhost:4200}
+  INGRESS_URL: ${INGRESS_URL:-http://localhost:4700}
   REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
   EVENT_BUS_BACKEND: ${EVENT_BUS_BACKEND:-redis}
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://alloy:4317}
@@ -217,7 +217,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:4200","http://localhost:4300","http://localhost:4700","http://localhost:24200","http://127.0.0.1:4200","http://127.0.0.1:4300","http://127.0.0.1:4700","http://127.0.0.1:24200"]}
       CDE_LOCAL_BOB_SETTINGS_CAPABILITIES: ${CDE_LOCAL_BOB_SETTINGS_CAPABILITIES:-bob_settings.manage}
       CDE_LOCAL_AGENT_CONTROL_CAPABILITIES: ${CDE_LOCAL_AGENT_CONTROL_CAPABILITIES:-}
-      INGRESS_URL: ${INGRESS_URL:-http://localhost:4200}
+      INGRESS_URL: ${INGRESS_URL:-http://localhost:4700}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://alloy:4317}
       OTLP_URL: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://alloy:4317}
       PORT: 8008
@@ -789,7 +789,7 @@ services:
         limits:
           memory: 3g
     ports:
-      - "${FRONTEND_PORT:-4200}:4200"
+      - "${FRONTEND_PORT:-4700}:4200"
     volumes:
       - ./frontend:/app
       - /app/node_modules

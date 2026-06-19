@@ -296,7 +296,7 @@ def test_monitoring_endpoints(client):
 
 def test_bob_cloud_auth_routes_delegate_and_preserve_cookie(client):
     fake_bob_cloud = FakeBobCloudClient()
-    main.app.dependency_overrides[bob_cloud_auth_routes.get_bob_cloud_client] = lambda: fake_bob_cloud
+    main.app.dependency_overrides[bob_cloud_auth_routes.get_bob_cloud_client_for_request] = lambda: fake_bob_cloud
 
     session = client.get(
         "/api/auth/v1/session",
@@ -316,6 +316,54 @@ def test_bob_cloud_auth_routes_delegate_and_preserve_cookie(client):
     assert [call[0] for call in fake_bob_cloud.calls] == ["session", "refresh", "logout"]
 
 
+def test_local_dev_session_uses_local_jwt_without_bob_cloud(client, auth_headers, monkeypatch):
+    def broken_factory():
+        raise BobCloudModeError("Bob Cloud should not be required for local JWT sessions")
+
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.delenv("CDE_LOCAL_AUTH_ENABLED", raising=False)
+    monkeypatch.setattr(bob_cloud_auth_routes, "create_bob_cloud_client_from_env", broken_factory)
+
+    session = client.get("/api/auth/v1/session", headers=auth_headers)
+
+    assert session.status_code == 200
+    payload = session.json()
+    assert payload["authenticated"] is True
+    assert payload["source"] == "local-dev"
+    assert payload["user"]["email"] == "user@example.com"
+    assert payload["tenant"]["id"] == "tenant-1"
+    assert "admin" in payload["platform_roles"]
+    assert payload["permissions"] == ["users:manage"]
+
+
+def test_local_jwt_session_is_refused_outside_dev_without_flag(client, auth_headers, monkeypatch):
+    def broken_factory():
+        raise BobCloudModeError("BOB_CLOUD_API_URL is required when BOB_CLOUD_MODE=real")
+
+    monkeypatch.setenv("ENVIRONMENT", "staging")
+    monkeypatch.delenv("CDE_LOCAL_AUTH_ENABLED", raising=False)
+    monkeypatch.setattr(bob_cloud_auth_routes, "create_bob_cloud_client_from_env", broken_factory)
+
+    session = client.get("/api/auth/v1/session", headers=auth_headers)
+
+    assert session.status_code == 503
+    assert session.json()["detail"]["code"] == "bob_cloud_unconfigured"
+
+
+def test_local_jwt_session_can_be_explicitly_enabled_outside_dev(client, auth_headers, monkeypatch):
+    def broken_factory():
+        raise BobCloudModeError("Bob Cloud should not be required when local fallback is explicitly enabled")
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CDE_LOCAL_AUTH_ENABLED", "true")
+    monkeypatch.setattr(bob_cloud_auth_routes, "create_bob_cloud_client_from_env", broken_factory)
+
+    session = client.get("/api/auth/v1/session", headers=auth_headers)
+
+    assert session.status_code == 200
+    assert session.json()["source"] == "local-dev"
+
+
 def test_bob_cloud_auth_routes_map_bob_cloud_errors(client):
     class FailingBobCloudClient:
         async def get_session_response(self, forward_headers=None):
@@ -326,7 +374,7 @@ def test_bob_cloud_auth_routes_map_bob_cloud_errors(client):
                 method="GET",
             )
 
-    main.app.dependency_overrides[bob_cloud_auth_routes.get_bob_cloud_client] = lambda: FailingBobCloudClient()
+    main.app.dependency_overrides[bob_cloud_auth_routes.get_bob_cloud_client_for_request] = lambda: FailingBobCloudClient()
 
     response = client.get("/api/auth/v1/session")
 

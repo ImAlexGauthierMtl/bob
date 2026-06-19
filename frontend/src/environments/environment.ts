@@ -1,5 +1,6 @@
 export const environment = {
     production: false,
+    localAuthEnabled: true,
     apiUrl: 'http://localhost:8001',
     authApiUrl: 'http://localhost:8001',
     crmApiUrl: 'http://localhost:8002',

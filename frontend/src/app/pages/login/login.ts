@@ -29,7 +29,7 @@ export class LoginComponent {
                 }
             },
             error: () => {
-                // Stay on the login screen until Bob Cloud provides a session cookie.
+                // Stay on the login screen until local credentials or Bob Cloud provide a session.
             },
         });
     }
@@ -52,11 +52,11 @@ export class LoginComponent {
                 error: (err) => {
                     this.isLoading = false;
                     if (err.status === 401) {
-                        this.errorMessage = 'Session Bob Cloud requise. Connectez-vous via Bob Cloud puis réessayez.';
+                        this.errorMessage = 'Email ou mot de passe invalide.';
                     } else if (err.status === 429) {
                         this.errorMessage = 'Too many attempts. Please wait.';
                     } else {
-                        this.errorMessage = 'Session Bob Cloud indisponible. Please try again.';
+                        this.errorMessage = 'Connexion locale indisponible. Please try again.';
                     }
                 },
             });

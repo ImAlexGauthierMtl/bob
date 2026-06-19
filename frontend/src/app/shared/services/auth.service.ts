@@ -1,9 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap, catchError, throwError, map, of } from 'rxjs';
+import { BehaviorSubject, Observable, tap, catchError, throwError, map, of, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { LoginRequest, RegisterRequest, AuthSession, AuthUser } from '../models/auth.model';
+import { LoginRequest, RegisterRequest, AuthSession, AuthUser, TokenResponse } from '../models/auth.model';
+import { shouldUseLocalCredentialLogin } from './auth-mode';
 
 const AUTH_V1_URL = environment.authApiUrl.endsWith('/api/auth/v1')
     ? environment.authApiUrl
@@ -12,6 +13,8 @@ const AUTH_V1_URL = environment.authApiUrl.endsWith('/api/auth/v1')
 const LEGACY_AUTH_URL = environment.authApiUrl.endsWith('/api/auth/v1')
     ? environment.authApiUrl.replace(/\/api\/auth\/v1$/, '/auth')
     : `${environment.authApiUrl}/auth`;
+const ACCESS_TOKEN_KEY = 'cde.local.access_token';
+const REFRESH_TOKEN_KEY = 'cde.local.refresh_token';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -34,14 +37,23 @@ export class AuthService {
         setTimeout(() => this.ensureSession().subscribe({ error: () => this.clearSession() }), 0);
     }
 
-    login(_credentials: LoginRequest): Observable<AuthSession> {
-        return this.ensureSession().pipe(
-            tap((session) => {
-                if (!session.authenticated) {
-                    throw new Error('Bob Cloud session is not authenticated');
-                }
-            }),
+    login(credentials: LoginRequest): Observable<AuthSession> {
+        if (!this.isLocalCredentialLoginEnabled()) {
+            return this.ensureSession().pipe(
+                tap((session) => {
+                    if (!session.authenticated) {
+                        throw new Error('Bob Cloud session is not authenticated');
+                    }
+                }),
+                catchError((error) => throwError(() => error)),
+            );
+        }
+
+        return this.http.post<TokenResponse>(`${LEGACY_AUTH_URL}/login`, credentials, { withCredentials: true }).pipe(
+            tap((tokens) => this.storeTokens(tokens)),
+            switchMap(() => this.ensureSession()),
             catchError((error) => {
+                this.clearLocalTokens();
                 return throwError(() => error);
             }),
         );
@@ -52,6 +64,7 @@ export class AuthService {
     }
 
     logout(): void {
+        this.clearLocalTokens();
         this.http.post<AuthSession>(`${AUTH_V1_URL}/logout`, {}, { withCredentials: true }).subscribe({
             next: () => this.clearSessionAndRedirect(),
             error: () => this.clearSessionAndRedirect(),
@@ -82,6 +95,20 @@ export class AuthService {
     }
 
     refreshSession(): Observable<AuthSession> {
+        const refreshToken = this.getRefreshToken();
+        if (this.isLocalCredentialLoginEnabled() && refreshToken) {
+            return this.http
+                .post<TokenResponse>(`${LEGACY_AUTH_URL}/refresh`, { refresh_token: refreshToken }, { withCredentials: true })
+                .pipe(
+                    tap((tokens) => this.storeTokens(tokens)),
+                    switchMap(() => this.ensureSession()),
+                    catchError((error) => {
+                        this.clearSession();
+                        this.clearLocalTokens();
+                        return throwError(() => error);
+                    }),
+                );
+        }
         return this.http
             .post<AuthSession>(`${AUTH_V1_URL}/refresh`, {}, { withCredentials: true })
             .pipe(
@@ -112,6 +139,13 @@ export class AuthService {
         return this.currentUser$.value;
     }
 
+    getAccessToken(): string | null {
+        if (!this.isLocalCredentialLoginEnabled()) {
+            return null;
+        }
+        return localStorage.getItem(ACCESS_TOKEN_KEY);
+    }
+
     getCurrentUser(): Observable<AuthUser | null> {
         const cachedUser = this.currentUser$.value;
         if (cachedUser) {
@@ -124,6 +158,24 @@ export class AuthService {
         this.currentSession$.next(session);
         this.isAuthenticated$.next(!!session.authenticated);
         this.currentUser$.next(session.authenticated && session.user ? this.mapSessionUser(session) : null);
+    }
+
+    private getRefreshToken(): string | null {
+        return localStorage.getItem(REFRESH_TOKEN_KEY);
+    }
+
+    private storeTokens(tokens: TokenResponse): void {
+        localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
+        localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+    }
+
+    private clearLocalTokens(): void {
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+    }
+
+    private isLocalCredentialLoginEnabled(): boolean {
+        return shouldUseLocalCredentialLogin(environment);
     }
 
     private mapSessionUser(session: AuthSession): AuthUser {
