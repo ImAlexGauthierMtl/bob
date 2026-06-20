@@ -205,7 +205,12 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
         )
 
         if call.name == "bob_mcp_gateway":
-            return _execute_mcp_gateway(call=call, context=context, factory_adapter=self.factory_adapter)
+            return _execute_mcp_gateway(
+                call=call,
+                context=context,
+                metadata=metadata,
+                factory_adapter=self.factory_adapter,
+            )
 
         return RuntimeToolResult(
             call_id=call.id,
@@ -220,6 +225,7 @@ def _execute_mcp_gateway(
     *,
     call: RuntimeToolCall,
     context: InternalContext,
+    metadata: dict[str, Any],
     factory_adapter: FactorySupabaseAdapter,
 ) -> RuntimeToolResult:
     operation = str(call.arguments.get("operation") or "describe_family")
@@ -262,12 +268,18 @@ def _execute_mcp_gateway(
             metadata={"family": "mcp", "risk": "blocked", "operation": operation},
         )
 
-    if operation == "execute_capability" and risk != "read":
+    capability = _find_mcp_capability(
+        family=str(family["family"]),
+        capability=str(call.arguments.get("capability") or "").strip(),
+    )
+    effective_risk = _effective_capability_risk(call_risk=risk, capability=capability)
+
+    if operation == "execute_capability" and _risk_requires_confirmation(effective_risk):
         content = {
             "status": "confirmation_required",
             "family": family["family"],
             "capability": call.arguments.get("capability"),
-            "risk": risk,
+            "risk": effective_risk,
             "reason": "write_or_destructive_mcp_action_requires_explicit_confirmation_and_connector_binding",
             "policy": _mcp_policy(context=context),
         }
@@ -276,7 +288,7 @@ def _execute_mcp_gateway(
             name=call.name,
             status="requires_confirmation",
             content=json.dumps(content, ensure_ascii=False),
-            metadata={"family": family["family"], "risk": risk, "operation": operation},
+            metadata={"family": family["family"], "risk": effective_risk, "operation": operation},
         )
 
     if operation == "execute_capability" and family["family"] == "factory":
@@ -284,7 +296,16 @@ def _execute_mcp_gateway(
             call=call,
             context=context,
             factory_adapter=factory_adapter,
-            risk=risk,
+            risk=effective_risk,
+        )
+
+    if operation == "execute_capability" and family["family"] == "assistant-memory":
+        return _execute_assistant_memory_capability(
+            call=call,
+            context=context,
+            metadata=metadata,
+            capability=capability,
+            risk=effective_risk,
         )
 
     content = {
@@ -361,6 +382,27 @@ def _looks_like_mcp_capability(value: str) -> bool:
         family = value.split(".", 1)[0]
         return family in _MCP_FAMILIES_BY_NAME
     return False
+
+
+def _find_mcp_capability(*, family: str, capability: str) -> dict[str, Any] | None:
+    normalized = capability.removeprefix(f"{family}.").strip()
+    for item in mcp_capabilities_for_family(family):
+        if capability in {str(item["qualified_id"]), str(item["id"])}:
+            return item
+        if normalized in {str(item["id"]), str(item["qualified_id"])}:
+            return item
+    return None
+
+
+def _effective_capability_risk(*, call_risk: str, capability: dict[str, Any] | None) -> str:
+    capability_risk = str((capability or {}).get("risk") or "").strip().lower()
+    if capability_risk:
+        return capability_risk
+    return call_risk or "read"
+
+
+def _risk_requires_confirmation(risk: str) -> bool:
+    return risk not in {"read", "readonly"}
 
 
 def _execute_factory_capability(
@@ -457,6 +499,80 @@ def _execute_factory_capability(
     )
 
 
+def _execute_assistant_memory_capability(
+    *,
+    call: RuntimeToolCall,
+    context: InternalContext,
+    metadata: dict[str, Any],
+    capability: dict[str, Any] | None,
+    risk: str,
+) -> RuntimeToolResult:
+    capability_id = str((capability or {}).get("id") or call.arguments.get("capability") or "status")
+    capability_id = capability_id.removeprefix("assistant-memory.").strip()
+    memory_context = metadata.get("memory_context") if isinstance(metadata, dict) else None
+    memory_context = memory_context if isinstance(memory_context, dict) else {}
+
+    if risk != "read":
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="requires_confirmation",
+            content=_json_dumps(
+                {
+                    "status": "confirmation_required",
+                    "family": "assistant-memory",
+                    "capability": capability_id,
+                    "risk": risk,
+                    "reason": "assistant_memory_write_requires_explicit_confirmation",
+                    "policy": _mcp_policy(context=context),
+                }
+            ),
+            metadata={"family": "assistant-memory", "risk": risk, "operation": "execute_capability"},
+        )
+
+    if capability_id == "status":
+        content = _assistant_memory_status(memory_context=memory_context)
+    elif capability_id == "search":
+        content = _assistant_memory_search(
+            memory_context=memory_context,
+            query=str(call.arguments.get("query") or ""),
+            max_items=_bounded_int(call.arguments.get("limit"), default=5, minimum=1, maximum=20),
+        )
+    elif capability_id == "readback":
+        content = _assistant_memory_readback(
+            memory_context=memory_context,
+            max_items=_bounded_int(call.arguments.get("limit"), default=6, minimum=1, maximum=20),
+        )
+    else:
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="rejected",
+            content=_json_dumps(
+                {
+                    "error": "assistant_memory_capability_not_loaded",
+                    "capability": capability_id,
+                    "loaded_capabilities": ["status", "search", "readback"],
+                }
+            ),
+            metadata={"family": "assistant-memory", "risk": "blocked", "operation": "execute_capability"},
+        )
+
+    content["policy"] = _mcp_policy(context=context)
+    return RuntimeToolResult(
+        call_id=call.id,
+        name=call.name,
+        status="completed",
+        content=_json_dumps(content),
+        metadata={
+            "family": "assistant-memory",
+            "risk": "read",
+            "operation": "execute_capability",
+            "capability": capability_id,
+        },
+    )
+
+
 def _mcp_policy(*, context: InternalContext) -> dict[str, Any]:
     return {
         "tool_gating_required": True,
@@ -524,6 +640,82 @@ def _summarize_memory_context(*, memory_context: dict[str, Any], max_items: int)
         "degraded": degraded,
         "source": memory_context.get("source") or "agent-memory-backend-api",
     }
+
+
+def _assistant_memory_status(*, memory_context: dict[str, Any]) -> dict[str, Any]:
+    private = memory_context.get("private") if isinstance(memory_context.get("private"), list) else []
+    organization = memory_context.get("organization") if isinstance(memory_context.get("organization"), list) else []
+    degraded = memory_context.get("degraded") if isinstance(memory_context.get("degraded"), list) else []
+    return {
+        "status": "available",
+        "family": "assistant-memory",
+        "source": memory_context.get("source") or "agent-memory-backend-api",
+        "private_count": len(private),
+        "organization_count": len(organization),
+        "degraded": degraded[:5],
+        "read_capabilities": ["status", "search", "readback"],
+        "write_capabilities_require_confirmation": ["record-memory", "record-journal", "promote-candidate"],
+    }
+
+
+def _assistant_memory_readback(*, memory_context: dict[str, Any], max_items: int) -> dict[str, Any]:
+    return {
+        "status": "completed",
+        "family": "assistant-memory",
+        "source": memory_context.get("source") or "agent-memory-backend-api",
+        "items": _memory_items(memory_context=memory_context, max_items=max_items),
+    }
+
+
+def _assistant_memory_search(*, memory_context: dict[str, Any], query: str, max_items: int) -> dict[str, Any]:
+    normalized_query = " ".join(query.lower().split())
+    candidates = _memory_items(memory_context=memory_context, max_items=100)
+    if normalized_query:
+        matches = [
+            item
+            for item in candidates
+            if normalized_query in _memory_item_search_text(item)
+        ]
+    else:
+        matches = candidates
+    return {
+        "status": "completed",
+        "family": "assistant-memory",
+        "source": memory_context.get("source") or "agent-memory-backend-api",
+        "query": query,
+        "total_matching": len(matches),
+        "items": matches[:max_items],
+    }
+
+
+def _memory_items(*, memory_context: dict[str, Any], max_items: int) -> list[dict[str, Any]]:
+    private = memory_context.get("private") if isinstance(memory_context.get("private"), list) else []
+    organization = memory_context.get("organization") if isinstance(memory_context.get("organization"), list) else []
+    items: list[dict[str, Any]] = []
+    for scope, records in (("private", private), ("organization", organization)):
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            items.append(
+                {
+                    "scope": scope,
+                    "id": record.get("id"),
+                    "title": record.get("title"),
+                    "memory_type": record.get("memory_type"),
+                    "summary": record.get("summary") or record.get("content") or record.get("text"),
+                    "source": record.get("source"),
+                }
+            )
+            if len(items) >= max_items:
+                return items
+    return items
+
+
+def _memory_item_search_text(item: dict[str, Any]) -> str:
+    return " ".join(
+        str(item.get(field) or "").lower()
+        for field in ("id", "title", "memory_type", "summary", "source", "scope")
+    )
 
 
 def _bounded_int(value: Any, *, default: int, minimum: int, maximum: int) -> int:

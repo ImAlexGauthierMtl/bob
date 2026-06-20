@@ -900,8 +900,22 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
     )
     metadata = {
         "memory_context": {
-            "private": [{"id": "mem-1", "title": "Style", "memory_type": "preference"}],
-            "organization": [{"id": "org-1", "title": "Procedure", "memory_type": "procedure"}],
+            "private": [
+                {
+                    "id": "mem-1",
+                    "title": "Style",
+                    "memory_type": "preference",
+                    "summary": "Bob doit repondre en francais clair.",
+                }
+            ],
+            "organization": [
+                {
+                    "id": "org-1",
+                    "title": "Procedure",
+                    "memory_type": "procedure",
+                    "summary": "Factory passe par les queues de validation.",
+                }
+            ],
             "degraded": ["vector_unavailable"],
             "source": "agent-memory-backend-api",
         }
@@ -963,6 +977,61 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
         context=context,
         metadata=metadata,
     )
+    memory_status = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-memory-status",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "assistant-memory",
+                "capability": "assistant-memory.status",
+            },
+        ),
+        context=context,
+        metadata=metadata,
+    )
+    memory_search = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-memory-search",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "assistant-memory",
+                "capability": "assistant-memory.search",
+                "query": "Factory",
+                "limit": 2,
+            },
+        ),
+        context=context,
+        metadata=metadata,
+    )
+    memory_readback = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-memory-readback",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "assistant-memory",
+                "capability": "assistant-memory.readback",
+                "limit": 1,
+            },
+        ),
+        context=context,
+        metadata=metadata,
+    )
+    memory_write = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-memory-write",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "assistant-memory",
+                "capability": "assistant-memory.record-memory",
+            },
+        ),
+        context=context,
+        metadata=metadata,
+    )
 
     assert tools[0]["function"]["name"] == "bob_runtime_status"
     assert {tool["function"]["name"] for tool in tools} == {
@@ -981,6 +1050,15 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
     assert "slack.draft-send" in mcp_list.content
     assert mcp_write.status == "requires_confirmation"
     assert "write_or_destructive_mcp_action_requires_explicit_confirmation" in mcp_write.content
+    assert memory_status.status == "completed"
+    assert "\"private_count\": 1" in memory_status.content
+    assert memory_search.status == "completed"
+    assert "Factory passe par les queues" in memory_search.content
+    assert memory_readback.status == "completed"
+    assert "mem-1" in memory_readback.content
+    assert memory_write.status == "requires_confirmation"
+    assert memory_write.metadata["risk"] == "write-requested"
+    assert "write_or_destructive_mcp_action_requires_explicit_confirmation" in memory_write.content
     assert rejected.status == "rejected"
 
 
