@@ -111,6 +111,10 @@ class SequencedRuntimeProvider:
         return self.results[index]
 
 
+class ToolChoiceSequencedRuntimeProvider(SequencedRuntimeProvider):
+    supports_tool_choice = True
+
+
 class FailingRuntimeProvider:
     def __init__(self, *, fail_on_call: int, before_failure: RuntimeModelResult | None = None) -> None:
         self.fail_on_call = fail_on_call
@@ -966,6 +970,133 @@ async def test_runtime_pre_routes_external_mcp_intent_before_provider_response()
     assert any(step["label"] == "intent_router" for step in run.narration_steps)
     assert len(provider.messages) == 1
     assert any(message.get("role") == "tool" for message in provider.messages[0])
+
+
+@pytest.mark.asyncio
+async def test_tool_choice_provider_selects_mcp_tool_before_router_fallback():
+    repo = InMemoryAgentRuntimeRepository()
+    provider = ToolChoiceSequencedRuntimeProvider(
+        [
+            RuntimeModelResult(
+                content="",
+                provider="fireworks",
+                model="accounts/fireworks/models/kimi-k2p7-code",
+                mode="provider_fireworks",
+                tool_calls=[
+                    RuntimeToolCall(
+                        id="provider-tool-slack-draft",
+                        name="bob_mcp_gateway",
+                        arguments={
+                            "operation": "execute_capability",
+                            "family": "slack",
+                            "capability": "slack.draft-send",
+                            "query": "Prépare un message Slack pour l'équipe.",
+                            "risk": "draft",
+                        },
+                    )
+                ],
+            ),
+            RuntimeModelResult(
+                content="Brouillon préparé.",
+                provider="fireworks",
+                model="accounts/fireworks/models/kimi-k2p7-code",
+                mode="provider_fireworks",
+                raw_metadata={"phase": "final"},
+            ),
+        ]
+    )
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+
+    run = await use_cases.create_run(
+        context=InternalContext(
+            tenant_id="tenant-croo-local",
+            user_id="user-kimi-tool-first",
+            trace_id="e" * 32,
+            permissions=("bob_chat.use",),
+            roles=("admin",),
+        ),
+        session_id="session-kimi-tool-first",
+        input_message_id="msg-kimi-tool-first",
+        prompt="Prépare un message Slack pour l'équipe.",
+        channel="workspace",
+        metadata={},
+        idempotency_key="run-kimi-tool-first",
+    )
+
+    assert provider.calls == 2
+    assert run.actions[0]["tool"] == "bob_mcp_gateway"
+    assert run.actions[0]["status"] == "requires_confirmation"
+    assert run.actions[0]["metadata"]["family"] == "slack"
+    assert run.metadata["tool_loop"]["provider_iterations"] == 2
+    assert run.metadata["routing"] == []
+    assert not any(step["label"] == "intent_router" for step in run.narration_steps)
+    assert not any(message.get("role") == "tool" for message in provider.messages[0])
+    assert any(message.get("role") == "tool" for message in provider.messages[1])
+
+
+@pytest.mark.asyncio
+async def test_tool_choice_provider_falls_back_to_mcp_router_when_no_tool_call():
+    repo = InMemoryAgentRuntimeRepository()
+    provider = ToolChoiceSequencedRuntimeProvider(
+        [
+            RuntimeModelResult(
+                content="Je peux préparer ce message.",
+                provider="fireworks",
+                model="accounts/fireworks/models/kimi-k2p7-code",
+                mode="provider_fireworks",
+                raw_metadata={"phase": "first_pass"},
+            ),
+            RuntimeModelResult(
+                content="Brouillon préparé après routage.",
+                provider="fireworks",
+                model="accounts/fireworks/models/kimi-k2p7-code",
+                mode="provider_fireworks",
+                raw_metadata={"phase": "final"},
+            ),
+        ]
+    )
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+
+    run = await use_cases.create_run(
+        context=InternalContext(
+            tenant_id="tenant-croo-local",
+            user_id="user-kimi-router-fallback",
+            trace_id="a" * 32,
+            permissions=("bob_chat.use",),
+            roles=("admin",),
+        ),
+        session_id="session-kimi-router-fallback",
+        input_message_id="msg-kimi-router-fallback",
+        prompt="Prépare un message Slack pour l'équipe.",
+        channel="workspace",
+        metadata={},
+        idempotency_key="run-kimi-router-fallback",
+    )
+
+    assert provider.calls == 2
+    assert run.actions[0]["tool"] == "bob_mcp_gateway"
+    assert run.actions[0]["status"] == "requires_confirmation"
+    assert run.metadata["tool_loop"]["provider_iterations"] == 2
+    assert run.metadata["routing"] == [
+        {
+            "router": "mcp_intent",
+            "strategy": "after_provider_no_tool_call",
+            "tool": "bob_mcp_gateway",
+            "provider_first_mode": "provider_fireworks",
+            "provider_first_model": "accounts/fireworks/models/kimi-k2p7-code",
+        }
+    ]
+    assert any(step["label"] == "intent_router" for step in run.narration_steps)
+    assert not any(message.get("role") == "tool" for message in provider.messages[0])
+    assert any(message.get("role") == "tool" for message in provider.messages[1])
 
 
 @pytest.mark.asyncio

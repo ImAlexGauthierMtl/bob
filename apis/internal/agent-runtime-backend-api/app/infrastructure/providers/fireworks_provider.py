@@ -12,6 +12,8 @@ from app.domain import RuntimeModelResult, RuntimeToolCall
 
 
 class FireworksRuntimeProvider(RuntimeProviderPort):
+    supports_tool_choice = True
+
     def __init__(
         self,
         *,

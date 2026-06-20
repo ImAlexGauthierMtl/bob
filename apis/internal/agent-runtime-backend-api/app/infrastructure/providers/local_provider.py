@@ -10,6 +10,8 @@ from app.domain import RuntimeModelResult, RuntimeToolCall
 
 
 class LocalRuntimeProvider(RuntimeProviderPort):
+    supports_tool_choice = False
+
     def __init__(self) -> None:
         self.model = "bob-local-runtime"
 

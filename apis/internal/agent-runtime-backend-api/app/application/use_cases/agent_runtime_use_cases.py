@@ -154,7 +154,13 @@ class AgentRuntimeUseCases:
                 "visible": True,
             },
         ]
-        pre_routed_tool_call = _pre_routed_mcp_tool_call(prompt=prompt, tools=tools)
+        routing_events: list[dict[str, Any]] = []
+        provider_supports_tool_choice = _provider_supports_tool_choice(self.runtime_provider)
+        pre_routed_tool_call = (
+            None
+            if provider_supports_tool_choice
+            else _pre_routed_mcp_tool_call(prompt=prompt, tools=tools)
+        )
         if pre_routed_tool_call:
             final_result = RuntimeModelResult(
                 content="",
@@ -167,6 +173,13 @@ class AgentRuntimeUseCases:
                     "phase": "tool_selection",
                     "routing": "deterministic_mcp_intent",
                 },
+            )
+            routing_events.append(
+                {
+                    "router": "mcp_intent",
+                    "strategy": "before_provider",
+                    "tool": pre_routed_tool_call.name,
+                }
             )
             narration_steps.append(
                 {
@@ -184,6 +197,39 @@ class AgentRuntimeUseCases:
                 trace_id=context.trace_id,
             )
             provider_iterations = 1
+            if provider_supports_tool_choice and not final_result.tool_calls:
+                fallback_tool_call = _pre_routed_mcp_tool_call(prompt=prompt, tools=tools)
+                if fallback_tool_call:
+                    final_result = RuntimeModelResult(
+                        content="",
+                        provider="runtime_router",
+                        model="bob-mcp-intent-router",
+                        mode="runtime_mcp_intent_router_fallback",
+                        tool_calls=[fallback_tool_call],
+                        raw_metadata={
+                            "trace_id": context.trace_id,
+                            "phase": "tool_selection",
+                            "routing": "deterministic_mcp_intent_after_provider",
+                            "provider_first_mode": final_result.mode,
+                            "provider_first_model": final_result.model,
+                        },
+                    )
+                    narration_steps.append(
+                        {
+                            "label": "intent_router",
+                            "status": "complete",
+                            "visible": True,
+                        }
+                    )
+                    routing_events.append(
+                        {
+                            "router": "mcp_intent",
+                            "strategy": "after_provider_no_tool_call",
+                            "tool": fallback_tool_call.name,
+                            "provider_first_mode": final_result.raw_metadata.get("provider_first_mode"),
+                            "provider_first_model": final_result.raw_metadata.get("provider_first_model"),
+                        }
+                    )
         narration_steps[1]["status"] = "complete"
         tool_loop_limit_reached = False
         pending_confirmations: list[AgentConfirmation] = []
@@ -311,6 +357,7 @@ class AgentRuntimeUseCases:
                     "max_total_tool_calls": MAX_TOTAL_TOOL_CALLS,
                     "limit_reached": tool_loop_limit_reached,
                 },
+                "routing": routing_events,
                 "pending_confirmations": [
                     {
                         "id": confirmation.id,
@@ -569,6 +616,10 @@ def _pre_routed_mcp_tool_call(*, prompt: str, tools: list[dict[str, Any]]) -> Ru
             "risk": intent.risk,
         },
     )
+
+
+def _provider_supports_tool_choice(provider: RuntimeProviderPort) -> bool:
+    return bool(getattr(provider, "supports_tool_choice", False))
 
 
 def _tool_is_available(*, tools: list[dict[str, Any]], name: str) -> bool:
