@@ -842,6 +842,45 @@ async def test_runtime_tool_loop_caps_calls_per_turn_and_total_calls():
 
 
 @pytest.mark.asyncio
+async def test_runtime_pre_routes_external_mcp_intent_before_provider_response():
+    provider = CapturingRuntimeProvider()
+    use_cases = AgentRuntimeUseCases(
+        repo=InMemoryAgentRuntimeRepository(),
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+
+    run = await use_cases.create_run(
+        context=InternalContext(
+            tenant_id="tenant-croo-local",
+            user_id="user-alex-local",
+            trace_id="d" * 32,
+            permissions=("bob_chat.use",),
+            roles=("admin",),
+        ),
+        session_id="session-mcp-pre-route",
+        input_message_id="msg-mcp-pre-route",
+        prompt="Prépare un message Slack pour l'équipe.",
+        channel="workspace",
+        metadata={},
+        idempotency_key="run-mcp-pre-route",
+    )
+
+    assert run.status == "completed"
+    assert run.actions[0]["tool"] == "bob_mcp_gateway"
+    assert run.actions[0]["status"] == "requires_confirmation"
+    assert run.actions[0]["metadata"] == {
+        "family": "slack",
+        "risk": "draft",
+        "operation": "execute_capability",
+    }
+    assert run.metadata["tool_loop"]["provider_iterations"] == 1
+    assert any(step["label"] == "intent_router" for step in run.narration_steps)
+    assert len(provider.messages) == 1
+    assert any(message.get("role") == "tool" for message in provider.messages[0])
+
+
+@pytest.mark.asyncio
 async def test_runtime_degrades_cleanly_when_provider_fails_before_tools():
     repo = InMemoryAgentRuntimeRepository()
     provider = FailingRuntimeProvider(fail_on_call=1)

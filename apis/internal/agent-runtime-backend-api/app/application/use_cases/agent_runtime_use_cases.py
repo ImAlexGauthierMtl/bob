@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional, Protocol
 from uuid import uuid4
 
+from app.application.mcp_intent_router import infer_external_mcp_intent
 from app.application.ports import RuntimeProviderPort, RuntimeToolRegistryPort
 from app.application.runtime_catalog_defaults import default_runtime_settings
 from app.domain import (
@@ -21,6 +22,7 @@ from app.domain import (
     InternalContext,
     RuntimeCatalogItem,
     RuntimeModelResult,
+    RuntimeToolCall,
 )
 
 
@@ -142,14 +144,37 @@ class AgentRuntimeUseCases:
                 "visible": True,
             },
         ]
-        final_result = await _complete_provider_safely(
-            provider=self.runtime_provider,
-            messages=messages,
-            tools=tools,
-            trace_id=context.trace_id,
-        )
+        pre_routed_tool_call = _pre_routed_mcp_tool_call(prompt=prompt, tools=tools)
+        if pre_routed_tool_call:
+            final_result = RuntimeModelResult(
+                content="",
+                provider="runtime_router",
+                model="bob-mcp-intent-router",
+                mode="runtime_mcp_intent_router",
+                tool_calls=[pre_routed_tool_call],
+                raw_metadata={
+                    "trace_id": context.trace_id,
+                    "phase": "tool_selection",
+                    "routing": "deterministic_mcp_intent",
+                },
+            )
+            narration_steps.append(
+                {
+                    "label": "intent_router",
+                    "status": "complete",
+                    "visible": True,
+                }
+            )
+            provider_iterations = 0
+        else:
+            final_result = await _complete_provider_safely(
+                provider=self.runtime_provider,
+                messages=messages,
+                tools=tools,
+                trace_id=context.trace_id,
+            )
+            provider_iterations = 1
         narration_steps[1]["status"] = "complete"
-        provider_iterations = 1
         tool_loop_limit_reached = False
 
         while final_result.tool_calls:
@@ -436,6 +461,34 @@ def _build_messages(
             "content": prompt,
         },
     ]
+
+
+def _pre_routed_mcp_tool_call(*, prompt: str, tools: list[dict[str, Any]]) -> RuntimeToolCall | None:
+    if not _tool_is_available(tools=tools, name="bob_mcp_gateway"):
+        return None
+    intent = infer_external_mcp_intent(prompt)
+    if not intent:
+        return None
+    return RuntimeToolCall(
+        id=f"intent_tool_{intent.family.replace('-', '_')}_{intent.capability.split('.')[-1].replace('-', '_')}",
+        name="bob_mcp_gateway",
+        arguments={
+            "operation": "execute_capability",
+            "family": intent.family,
+            "capability": intent.capability,
+            "query": prompt,
+            "limit": intent.limit,
+            "risk": intent.risk,
+        },
+    )
+
+
+def _tool_is_available(*, tools: list[dict[str, Any]], name: str) -> bool:
+    for tool in tools:
+        function = tool.get("function") if isinstance(tool, dict) else None
+        if isinstance(function, dict) and function.get("name") == name:
+            return True
+    return False
 
 
 def _runtime_summary(tools: list[dict[str, Any]]) -> str:

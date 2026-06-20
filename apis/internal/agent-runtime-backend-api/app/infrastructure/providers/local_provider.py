@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.application.mcp_intent_router import infer_external_mcp_intent
 from app.application.ports import RuntimeProviderPort
 from app.domain import RuntimeModelResult, RuntimeToolCall
 
@@ -91,9 +92,8 @@ class LocalRuntimeProvider(RuntimeProviderPort):
                         ],
                         raw_metadata={"trace_id": trace_id, "phase": "tool_selection"},
                     )
-                external_write_capability = _infer_external_mcp_write_capability(prompt)
-                if external_write_capability:
-                    family, capability, risk = external_write_capability
+                external_intent = infer_external_mcp_intent(prompt)
+                if external_intent:
                     return RuntimeModelResult(
                         content="",
                         provider="local",
@@ -101,39 +101,18 @@ class LocalRuntimeProvider(RuntimeProviderPort):
                         mode="local_runtime",
                         tool_calls=[
                             RuntimeToolCall(
-                                id=f"local_tool_{family.replace('-', '_')}_{capability.split('.')[-1].replace('-', '_')}",
+                                id=(
+                                    f"local_tool_{external_intent.family.replace('-', '_')}_"
+                                    f"{external_intent.capability.split('.')[-1].replace('-', '_')}"
+                                ),
                                 name="bob_mcp_gateway",
                                 arguments={
                                     "operation": "execute_capability",
-                                    "family": family,
-                                    "capability": capability,
+                                    "family": external_intent.family,
+                                    "capability": external_intent.capability,
                                     "query": prompt,
-                                    "limit": 10,
-                                    "risk": risk,
-                                },
-                            )
-                        ],
-                        raw_metadata={"trace_id": trace_id, "phase": "tool_selection"},
-                    )
-                external_capability = _infer_external_mcp_read_capability(prompt)
-                if external_capability:
-                    family, capability = external_capability
-                    return RuntimeModelResult(
-                        content="",
-                        provider="local",
-                        model=self.model,
-                        mode="local_runtime",
-                        tool_calls=[
-                            RuntimeToolCall(
-                                id=f"local_tool_{family.replace('-', '_')}_{capability.split('.')[-1].replace('-', '_')}",
-                                name="bob_mcp_gateway",
-                                arguments={
-                                    "operation": "execute_capability",
-                                    "family": family,
-                                    "capability": capability,
-                                    "query": prompt,
-                                    "limit": 10,
-                                    "risk": "read",
+                                    "limit": external_intent.limit,
+                                    "risk": external_intent.risk,
                                 },
                             )
                         ],
@@ -335,223 +314,6 @@ def _infer_bob_control_center_capability(prompt: str) -> str:
     if any(token in normalized for token in ("role", "roles", "permission", "permissions", "rbac")):
         return "bob-control-center.roles-permissions"
     return "bob-control-center.agents-catalog"
-
-
-def _infer_external_mcp_read_capability(prompt: str) -> tuple[str, str] | None:
-    normalized = prompt.lower()
-    family = _infer_mcp_family(prompt)
-    if family in {"assistant-memory", "support-memory", "bob-control-center", "factory"}:
-        return None
-    if family == "slack":
-        if any(token in normalized for token in ("channel", "channels", "canal", "canaux", "user", "users", "utilisateur")):
-            return ("slack", "slack.channels-users")
-        return ("slack", "slack.messages-read-search")
-    if family == "teams":
-        if any(token in normalized for token in ("channel", "channels", "canal", "canaux", "chat", "equipe", "équipe")):
-            return ("teams", "teams.teams-channels-chats")
-        return ("teams", "teams.messages-read")
-    if family == "mail-calendar":
-        if any(token in normalized for token in ("calendar", "calendrier", "availability", "disponibilit")):
-            return ("mail-calendar", "mail-calendar.calendar-read-availability")
-        return ("mail-calendar", "mail-calendar.mail-read-search")
-    if family == "workspace-files":
-        if any(token in normalized for token in ("sheet", "sheets", "tableur")):
-            return ("workspace-files", "workspace-files.sheets-read")
-        if any(token in normalized for token in ("local", "fichier local", "local file")):
-            return ("workspace-files", "workspace-files.local-files")
-        return ("workspace-files", "workspace-files.drive-onedrive-read")
-    if family == "pipedream-supabase":
-        if "count" in normalized or "compte" in normalized:
-            return ("pipedream-supabase", "pipedream-supabase.count")
-        if any(token in normalized for token in ("option", "introspection", "schema", "schéma")):
-            return ("pipedream-supabase", "pipedream-supabase.options")
-        return ("pipedream-supabase", "pipedream-supabase.select")
-    if family == "gitlab-code":
-        if "branch" in normalized or "branche" in normalized:
-            return ("gitlab-code", "gitlab-code.branches")
-        if "tree" in normalized or "arborescence" in normalized:
-            return ("gitlab-code", "gitlab-code.tree")
-        if "file" in normalized or "fichier" in normalized:
-            return ("gitlab-code", "gitlab-code.files")
-        if "code" in normalized or "search" in normalized or "recherche" in normalized:
-            return ("gitlab-code", "gitlab-code.search-code")
-        return ("gitlab-code", "gitlab-code.projects")
-    if family == "browser":
-        if any(token in normalized for token in ("screenshot", "capture")):
-            return ("browser", "browser.screenshots")
-        if "session" in normalized or "auth" in normalized:
-            return ("browser", "browser.auth-session")
-        return ("browser", "browser.ui-state")
-    if family == "web-research":
-        if "source" in normalized or "citation" in normalized:
-            return ("web-research", "web-research.sources-citations")
-        if "data" in normalized or "calcul" in normalized or "donnée" in normalized:
-            return ("web-research", "web-research.data-calculations")
-        return ("web-research", "web-research.current-search")
-    if family == "zoho":
-        if "catalog" in normalized or "catalogue" in normalized:
-            return ("zoho", "zoho.billing-catalog")
-        return ("zoho", "zoho.billing-status-api")
-    if family == "croo-connect":
-        return ("croo-connect", "croo-connect.list-supported-apps")
-    if family == "skyswitch":
-        return ("skyswitch", "skyswitch.telco-connection")
-    return None
-
-
-def _infer_external_mcp_write_capability(prompt: str) -> tuple[str, str, str] | None:
-    normalized = prompt.lower()
-    family = _infer_mcp_family(prompt)
-    if family in {"assistant-memory", "support-memory", "bob-control-center", "factory"}:
-        return None
-    if family == "slack":
-        if _has_destructive_intent(normalized):
-            return ("slack", "slack.message-management", "destructive-confirmed")
-        if _has_draft_or_send_intent(normalized):
-            return ("slack", "slack.draft-send", "draft")
-    if family == "teams":
-        if _has_draft_or_send_intent(normalized):
-            return ("teams", "teams.draft-send", "draft")
-        if _has_management_intent(normalized):
-            return ("teams", "teams.management", "write-requested")
-    if family == "mail-calendar":
-        if any(token in normalized for token in ("calendar", "calendrier", "meeting", "rencontre", "rendez-vous", "event", "événement", "evenement")):
-            if _has_destructive_intent(normalized):
-                return ("mail-calendar", "mail-calendar.calendar-delete", "destructive-confirmed")
-            if _has_write_intent(normalized) or _has_draft_or_send_intent(normalized):
-                return ("mail-calendar", "mail-calendar.calendar-write", "write-requested")
-        if _has_destructive_intent(normalized) or any(token in normalized for token in ("archive", "archiver")):
-            return ("mail-calendar", "mail-calendar.mail-delete-archive", "destructive-confirmed")
-        if _has_draft_or_send_intent(normalized) or any(token in normalized for token in ("répond", "repond", "reply", "forward", "transfère", "transfere")):
-            return ("mail-calendar", "mail-calendar.mail-draft-send", "draft")
-    if family == "workspace-files":
-        if any(token in normalized for token in ("permission", "permissions", "partage", "share", "sharing", "acl", "accès", "acces")):
-            return ("workspace-files", "workspace-files.sharing-permissions", "destructive-confirmed")
-        if any(token in normalized for token in ("sheet", "sheets", "tableur", "spreadsheet")) and _has_write_intent(normalized):
-            return ("workspace-files", "workspace-files.sheets-write", "write-requested")
-    if family == "pipedream-supabase" and _has_write_intent(normalized):
-        return ("pipedream-supabase", "pipedream-supabase.write-rpc", "write-requested")
-    if family == "browser":
-        if _has_browser_interaction_intent(normalized):
-            return ("browser", "browser.interaction", "write-requested")
-    if family == "zoho":
-        if any(token in normalized for token in ("customer", "client", "subscription", "abonnement", "invoice", "facture", "payment", "paiement", "campaign", "campagne")):
-            if _has_write_intent(normalized) or _has_destructive_intent(normalized):
-                if any(token in normalized for token in ("subscription", "abonnement")):
-                    return ("zoho", "zoho.billing-subscriptions", "write-requested")
-                if any(token in normalized for token in ("invoice", "facture", "payment", "paiement")):
-                    return ("zoho", "zoho.billing-invoices-payments", "write-requested")
-                if any(token in normalized for token in ("campaign", "campagne")):
-                    return ("zoho", "zoho.crm-campaigns", "write-requested")
-                return ("zoho", "zoho.billing-customers", "write-requested")
-    if family == "skyswitch" and (_has_write_intent(normalized) or _has_draft_or_send_intent(normalized)):
-        if any(token in normalized for token in ("did", "dids", "number", "numéro", "numero")):
-            return ("skyswitch", "skyswitch.telco-dids", "write-requested")
-        if any(token in normalized for token in ("pbx", "subscriber", "user", "queue", "ivr", "voice")):
-            return ("skyswitch", "skyswitch.pbx-api", "write-requested")
-        return ("skyswitch", "skyswitch.telco-api", "write-requested")
-    return None
-
-
-def _has_draft_or_send_intent(normalized: str) -> bool:
-    return any(
-        token in normalized
-        for token in (
-            "prépare",
-            "prepare",
-            "brouillon",
-            "draft",
-            "envoie",
-            "envoyer",
-            "send",
-            "poste",
-            "post ",
-            "publie",
-            "publish",
-            "message à",
-            "message a",
-            "écris",
-            "ecris",
-            "compose",
-        )
-    )
-
-
-def _has_write_intent(normalized: str) -> bool:
-    return _has_draft_or_send_intent(normalized) or any(
-        token in normalized
-        for token in (
-            "crée",
-            "cree",
-            "create",
-            "ajoute",
-            "add",
-            "insert",
-            "update",
-            "met à jour",
-            "met a jour",
-            "modifie",
-            "modify",
-            "edit",
-            "upsert",
-            "réserve",
-            "reserve",
-            "écris",
-            "ecris",
-            "write",
-            "sauve",
-            "save",
-        )
-    )
-
-
-def _has_destructive_intent(normalized: str) -> bool:
-    return any(
-        token in normalized
-        for token in (
-            "supprime",
-            "delete",
-            "remove",
-            "retire",
-            "archive",
-            "archiver",
-            "cancel",
-            "annule",
-            "annuler",
-            "épingle",
-            "epingle",
-            "pin ",
-            "unpin",
-        )
-    )
-
-
-def _has_management_intent(normalized: str) -> bool:
-    return _has_write_intent(normalized) or _has_destructive_intent(normalized)
-
-
-def _has_browser_interaction_intent(normalized: str) -> bool:
-    return any(
-        token in normalized
-        for token in (
-            "clique",
-            "click",
-            "remplis",
-            "fill",
-            "saisis",
-            "type ",
-            "navigue",
-            "navigate",
-            "ouvre",
-            "open ",
-            "connecte",
-            "login",
-            "submit",
-            "soumet",
-            "interagis",
-            "interact",
-        )
-    )
 
 
 def _infer_memory_capability(prompt: str) -> tuple[str, str] | None:
