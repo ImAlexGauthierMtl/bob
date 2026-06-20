@@ -103,8 +103,10 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
             "bob_mcp_gateway": _function_tool(
                 name="bob_mcp_gateway",
                 description=(
-                    "Lit les familles MCP importees de croo-agentic, applique le gating de famille "
-                    "et retourne les capacites autorisees. N'execute pas d'action externe irreversible."
+                    "Selectionne et execute une capacite MCP controlee pour Slack, Teams, mail/calendrier, "
+                    "Factory, GitLab, fichiers, memoire, navigateur ou connecteurs externes. "
+                    "Les lectures retournent les donnees ou le contrat disponible; les brouillons, ecritures "
+                    "et actions destructives restent bloques par confirmation humaine."
                 ),
                 properties={
                     "operation": {
@@ -159,10 +161,21 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
                     },
                     "risk": {
                         "type": "string",
-                        "enum": ["read", "write", "destructive"],
-                        "description": "Risque de l'action demandee.",
+                        "enum": [
+                            "read",
+                            "draft",
+                            "write-requested",
+                            "destructive-confirmed",
+                            "write",
+                            "destructive",
+                        ],
+                        "description": (
+                            "Risque de la capacite demandee. Utiliser draft pour un brouillon, "
+                            "write-requested pour une ecriture et destructive-confirmed pour une action irreversible."
+                        ),
                     },
                 },
+                required=["operation"],
             ),
         }
         allowed_tool_names = _allowed_runtime_tool_names(metadata)
@@ -1286,17 +1299,26 @@ def _json_dumps(value: dict[str, Any]) -> str:
     return json.dumps(value, ensure_ascii=False, default=str)
 
 
-def _function_tool(*, name: str, description: str, properties: dict[str, Any]) -> dict[str, Any]:
+def _function_tool(
+    *,
+    name: str,
+    description: str,
+    properties: dict[str, Any],
+    required: list[str] | None = None,
+) -> dict[str, Any]:
+    parameters: dict[str, Any] = {
+        "type": "object",
+        "properties": properties,
+        "additionalProperties": False,
+    }
+    if required:
+        parameters["required"] = required
     return {
         "type": "function",
         "function": {
             "name": name,
             "description": description,
-            "parameters": {
-                "type": "object",
-                "properties": properties,
-                "additionalProperties": False,
-            },
+            "parameters": parameters,
         },
     }
 

@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from app.application.mcp_intent_router import infer_external_mcp_intent
 from app.application.ports import RuntimeProviderPort, RuntimeToolRegistryPort
-from app.application.runtime_catalog_defaults import default_runtime_settings
+from app.application.runtime_catalog_defaults import default_runtime_settings, mcp_capabilities_for_family
 from app.domain import (
     AgentConfirmation,
     AgentConfirmationResolution,
@@ -573,6 +573,7 @@ def _build_messages(
     memory_context = metadata.get("memory_context") if isinstance(metadata, dict) else None
     memory_summary = _safe_memory_summary(memory_context if isinstance(memory_context, dict) else {})
     runtime_summary = _runtime_summary(tools)
+    mcp_tool_selection = _mcp_tool_selection_summary(tools)
     agent_summary = _agent_runtime_summary(
         metadata.get("runtime_catalog") if isinstance(metadata, dict) else None
     )
@@ -584,10 +585,14 @@ def _build_messages(
                 "Tu peux utiliser uniquement les outils fournis au run. "
                 "Quand la demande vise la memoire privee, la memoire organisation, un playbook support "
                 "ou une famille MCP, utilise l'outil fourni plutot qu'une reponse estimee. "
+                "Si bob_mcp_gateway est disponible et que la demande vise une famille MCP, emets "
+                "un tool_call bob_mcp_gateway au premier tour avec operation=execute_capability, "
+                "family, capability et risk alignes au catalogue. "
                 "Tu ne reveles jamais de secret, tu verifies les donnees utiles et tu demandes une confirmation "
                 "avant toute action d'ecriture ou action irreversible. "
                 f"Canal actif: {channel}. Contexte memoire: {memory_summary} "
                 f"Catalogue agent: {agent_summary} "
+                f"Selection MCP: {mcp_tool_selection} "
                 f"Runtime: {runtime_summary}"
             ),
         },
@@ -749,6 +754,34 @@ def _runtime_summary(tools: list[dict[str, Any]]) -> str:
         f"provider={provider}, mode={provider_mode}, "
         f"modele_fireworks={fireworks_model}, outils={tools_summary}."
     )
+
+
+def _mcp_tool_selection_summary(tools: list[dict[str, Any]]) -> str:
+    if not _tool_is_available(tools=tools, name="bob_mcp_gateway"):
+        return "bob_mcp_gateway non expose."
+    examples = [
+        _capability_hint("slack", "draft-send"),
+        _capability_hint("slack", "messages-read-search"),
+        _capability_hint("teams", "draft-send"),
+        _capability_hint("mail-calendar", "mail-draft-send"),
+        _capability_hint("factory", "requests-queues"),
+        _capability_hint("gitlab-code", "files"),
+        _capability_hint("workspace-files", "local-files"),
+        _capability_hint("support-memory", "search"),
+    ]
+    guide = " | ".join(item for item in examples if item)
+    return (
+        "utilise operation=execute_capability; risk accepte read, draft, "
+        "write-requested, destructive-confirmed; exemples: "
+        f"{guide or 'catalogue indisponible'}."
+    )
+
+
+def _capability_hint(family: str, capability_id: str) -> str:
+    for item in mcp_capabilities_for_family(family):
+        if item.get("id") == capability_id:
+            return f"{family}.{capability_id}->risk={item.get('risk')}"
+    return ""
 
 
 def _agent_runtime_summary(runtime_catalog: Any) -> str:

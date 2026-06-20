@@ -718,6 +718,32 @@ async def test_selected_skill_and_tool_details_are_injected_in_runtime_prompt():
     assert "family=factory" in system_prompt
     assert "risk=read" in system_prompt
     assert "execution=internal_gateway" in system_prompt
+    assert "Selection MCP:" in system_prompt
+    assert "operation=execute_capability" in system_prompt
+    assert "slack.draft-send->risk=draft" in system_prompt
+    assert "factory.requests-queues->risk=read" in system_prompt
+
+
+def test_mcp_gateway_tool_schema_matches_catalog_risk_contract():
+    registry = LocalRuntimeToolRegistry()
+    tools = registry.list_tools(
+        prompt="Prepare un message Slack.",
+        context=InternalContext(
+            tenant_id="tenant-croo-local",
+            user_id="user-schema-contract",
+            trace_id="0" * 32,
+            permissions=("bob_chat.use",),
+            roles=("admin",),
+        ),
+        metadata={},
+    )
+    gateway = next(tool for tool in tools if tool["function"]["name"] == "bob_mcp_gateway")
+    parameters = gateway["function"]["parameters"]
+    risk_schema = parameters["properties"]["risk"]
+
+    assert parameters["required"] == ["operation"]
+    assert {"read", "draft", "write-requested", "destructive-confirmed"}.issubset(set(risk_schema["enum"]))
+    assert "brouillon" in risk_schema["description"]
 
 
 @pytest.mark.asyncio
