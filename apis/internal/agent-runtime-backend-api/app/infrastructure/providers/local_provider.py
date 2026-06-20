@@ -94,6 +94,15 @@ class LocalRuntimeProvider(RuntimeProviderPort):
                     )
                 external_intent = infer_external_mcp_intent(prompt)
                 if external_intent:
+                    arguments = {
+                        "operation": "execute_capability",
+                        "family": external_intent.family,
+                        "capability": external_intent.capability,
+                        "query": prompt,
+                        "limit": external_intent.limit,
+                        "risk": external_intent.risk,
+                    }
+                    arguments.update(external_intent.arguments or {})
                     return RuntimeModelResult(
                         content="",
                         provider="local",
@@ -106,14 +115,7 @@ class LocalRuntimeProvider(RuntimeProviderPort):
                                     f"{external_intent.capability.split('.')[-1].replace('-', '_')}"
                                 ),
                                 name="bob_mcp_gateway",
-                                arguments={
-                                    "operation": "execute_capability",
-                                    "family": external_intent.family,
-                                    "capability": external_intent.capability,
-                                    "query": prompt,
-                                    "limit": external_intent.limit,
-                                    "risk": external_intent.risk,
-                                },
+                                arguments=arguments,
                             )
                         ],
                         raw_metadata={"trace_id": trace_id, "phase": "tool_selection"},

@@ -2074,6 +2074,35 @@ async def test_local_provider_routes_external_read_capability_to_mcp_gateway():
 
 
 @pytest.mark.asyncio
+async def test_local_provider_routes_gitlab_file_arguments_to_mcp_gateway():
+    provider = LocalRuntimeProvider()
+    result = await provider.complete(
+        messages=[
+            {
+                "role": "user",
+                "content": (
+                    "Lis le fichier README.md dans le projet the-croo-group/app-cde-dev-01 "
+                    "branche main avec gitlab-code."
+                ),
+            }
+        ],
+        tools=[{"type": "function", "function": {"name": "bob_mcp_gateway"}}],
+        trace_id="a" * 32,
+    )
+
+    assert result.tool_calls
+    call = result.tool_calls[0]
+    assert call.name == "bob_mcp_gateway"
+    assert call.arguments["operation"] == "execute_capability"
+    assert call.arguments["family"] == "gitlab-code"
+    assert call.arguments["capability"] == "gitlab-code.files"
+    assert call.arguments["project_id"] == "the-croo-group/app-cde-dev-01"
+    assert call.arguments["path"] == "README.md"
+    assert call.arguments["ref"] == "main"
+    assert call.arguments["risk"] == "read"
+
+
+@pytest.mark.asyncio
 async def test_local_provider_keeps_external_teams_channels_read_only():
     provider = LocalRuntimeProvider()
     result = await provider.complete(

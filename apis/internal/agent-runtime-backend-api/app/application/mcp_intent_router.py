@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -11,6 +13,7 @@ class McpIntent:
     capability: str
     risk: str
     limit: int = 10
+    arguments: dict[str, Any] | None = None
 
 
 def infer_external_mcp_intent(prompt: str) -> McpIntent | None:
@@ -53,15 +56,16 @@ def _infer_external_mcp_read_intent(prompt: str) -> McpIntent | None:
             return McpIntent("pipedream-supabase", "pipedream-supabase.options", "read")
         return McpIntent("pipedream-supabase", "pipedream-supabase.select", "read")
     if family == "gitlab-code":
-        if "branch" in normalized or "branche" in normalized:
-            return McpIntent("gitlab-code", "gitlab-code.branches", "read")
-        if "tree" in normalized or "arborescence" in normalized:
-            return McpIntent("gitlab-code", "gitlab-code.tree", "read")
+        arguments = _infer_gitlab_arguments(prompt)
         if "file" in normalized or "fichier" in normalized:
-            return McpIntent("gitlab-code", "gitlab-code.files", "read")
+            return McpIntent("gitlab-code", "gitlab-code.files", "read", arguments=arguments)
         if "code" in normalized or "search" in normalized or "recherche" in normalized:
-            return McpIntent("gitlab-code", "gitlab-code.search-code", "read")
-        return McpIntent("gitlab-code", "gitlab-code.projects", "read")
+            return McpIntent("gitlab-code", "gitlab-code.search-code", "read", arguments=arguments)
+        if "tree" in normalized or "arborescence" in normalized:
+            return McpIntent("gitlab-code", "gitlab-code.tree", "read", arguments=arguments)
+        if "branch" in normalized or "branche" in normalized:
+            return McpIntent("gitlab-code", "gitlab-code.branches", "read", arguments=arguments)
+        return McpIntent("gitlab-code", "gitlab-code.projects", "read", arguments=arguments)
     if family == "browser":
         if any(token in normalized for token in ("screenshot", "capture")):
             return McpIntent("browser", "browser.screenshots", "read")
@@ -172,6 +176,40 @@ def _infer_mcp_family(prompt: str) -> str:
     if "recherche web" in normalized or "web research" in normalized or "web search" in normalized:
         return "web-research"
     return "factory"
+
+
+def _infer_gitlab_arguments(prompt: str) -> dict[str, Any]:
+    args: dict[str, Any] = {}
+    project_id = _first_regex_group(
+        prompt,
+        (
+            r"(?:project_id|projet|project)\s*[=:]?\s*([A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+|\d+)",
+            r"(?:dans|in)\s+([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)",
+        ),
+    )
+    path = _first_regex_group(
+        prompt,
+        (
+            r"(?:path|chemin|fichier|file)\s*[=:]?\s*([A-Za-z0-9_./-]+\.[A-Za-z0-9_-]+)",
+            r"\b([A-Za-z0-9_./-]+\.(?:py|ts|html|css|md|json|yaml|yml|toml|sql|txt))\b",
+        ),
+    )
+    ref = _first_regex_group(prompt, (r"(?:ref|branche|branch)\s*[=:]?\s*([A-Za-z0-9_./-]+)",))
+    if project_id:
+        args["project_id"] = project_id.rstrip(".,;")
+    if path:
+        args["path"] = path.rstrip(".,;")
+    if ref:
+        args["ref"] = ref.rstrip(".,;")
+    return args
+
+
+def _first_regex_group(value: str, patterns: tuple[str, ...]) -> str:
+    for pattern in patterns:
+        match = re.search(pattern, value, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).strip("'\"` ")
+    return ""
 
 
 def _has_draft_or_send_intent(normalized: str) -> bool:
