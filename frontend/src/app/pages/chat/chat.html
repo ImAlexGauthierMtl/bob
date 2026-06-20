@@ -1,27 +1,45 @@
 <div class="chat-page">
+    @let messages = (messages$ | async) || [];
+    @let isLoading = (isLoading$ | async) || false;
+    @let error = error$ | async;
+
     <header class="chat-header">
         <div class="chat-header__icon">
             <i class="fa-regular fa-comments"></i>
         </div>
-        <div>
+        <div class="chat-header__copy">
             <h1 class="chat-header__title">Conversation</h1>
             <p class="chat-header__subtitle">Workspace de dialogue avec Bob</p>
         </div>
+        @if (agents().length) {
+            <label class="chat-agent-picker">
+                <span>Agent</span>
+                <select
+                    [value]="selectedAgentId()"
+                    (change)="onAgentChange($any($event.target).value)"
+                    [disabled]="isLoading"
+                >
+                    @for (agent of agents(); track agent.id) {
+                        <option [value]="agent.id">{{ agent.name }}</option>
+                    }
+                </select>
+            </label>
+        }
     </header>
 
     <div class="chat-messages" #messagesContainer>
-        @if (!hasMessages() && !isLoading()) {
+        @if (!messages.length && !isLoading) {
             <div class="chat-welcome">
                 <p class="chat-welcome__text">Démarrez une conversation pour préparer un suivi, clarifier une fiche ou organiser une prochaine action.</p>
             </div>
         }
-        @for (msg of messages(); track $index) {
-            <div class="chat-message" [class.chat-message--user]="msg.role === 'user'" [class.chat-message--assistant]="msg.role === 'assistant'">
+        @for (msg of messages; track msg.id) {
+            <div class="chat-message" [class.chat-message--user]="msg.role === 'user'" [class.chat-message--assistant]="msg.role === 'bob'">
                 <div class="chat-message__content">
                     <div class="chat-message__bubble">
-                        {{ msg.content }}
+                        {{ msg.text }}
                     </div>
-                    @if (msg.role === 'assistant' && msg.toolSteps?.length) {
+                    @if (msg.role === 'bob' && msg.toolSteps?.length) {
                         <div class="chat-tool-steps" aria-label="Actions Bob">
                             @for (step of msg.toolSteps; track step.tool + step.status) {
                                 <span class="chat-tool-step">
@@ -34,7 +52,7 @@
                 </div>
             </div>
         }
-        @if (isLoading()) {
+        @if (isLoading) {
             <div class="chat-message chat-message--assistant">
                 <div class="chat-message__bubble chat-message__bubble--typing">
                     <span class="chat-dots"><span>.</span><span>.</span><span>.</span></span>
@@ -44,9 +62,9 @@
         <div #messagesEnd></div>
     </div>
 
-    @if (error()) {
+    @if (error) {
         <div class="chat-error">
-            {{ error() }}
+            {{ error }}
         </div>
     }
 
@@ -57,10 +75,10 @@
             [value]="inputText()"
             (input)="inputText.set($any($event.target).value)"
             (keydown)="onKeydown($event)"
-            [disabled]="isLoading()"
+            [disabled]="isLoading"
             rows="1"
         ></textarea>
-        <button type="button" class="chat-send" (click)="send()" [disabled]="!inputText().trim() || isLoading()" title="Envoyer">
+        <button type="button" class="chat-send" (click)="send()" [disabled]="!inputText().trim() || isLoading" title="Envoyer">
             <i class="fa-solid fa-arrow-up"></i>
         </button>
     </div>

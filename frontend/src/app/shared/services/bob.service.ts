@@ -34,10 +34,18 @@ export class BobService {
             .pipe(map((response) => response.items));
     }
 
-    chat(message: string, sessionId?: string, missionPrompt?: string, missionContext?: Record<string, unknown>, channel?: BobChannel): Observable<BobChatResponse> {
+    chat(
+        message: string,
+        sessionId?: string,
+        missionPrompt?: string,
+        missionContext?: Record<string, unknown>,
+        channel?: BobChannel,
+        agentId?: string,
+    ): Observable<BobChatResponse> {
         const body: BobChatRequest = { message };
         if (sessionId) body.session_id = sessionId;
         if (channel) body.channel = channel;
+        if (agentId) body.agent_id = agentId;
         if (missionPrompt || missionContext) {
             body.mission = {
                 prompt: missionPrompt,
