@@ -1149,6 +1149,7 @@ def test_run_creates_pending_confirmation_for_gated_mcp_action(client, runtime_r
     action = payload["actions"][0]
     confirmation_id = action["metadata"]["confirmation_id"]
     assert action["status"] == "requires_confirmation"
+    assert "Aucun message, connecteur ou outil externe n'a été exécuté" in payload["assistant_content"]
     assert confirmation_id.startswith("confirm_")
     assert payload["metadata"]["pending_confirmations"] == [
         {

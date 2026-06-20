@@ -279,6 +279,8 @@ class AgentRuntimeUseCases:
             assistant_content = _tool_loop_limit_content(prompt=prompt, executed_tools=len(tool_results))
         if not assistant_content:
             assistant_content = _fallback_assistant_content(prompt, channel)
+        if _has_pending_confirmation(tool_results):
+            assistant_content = _pending_confirmation_content(channel=channel)
         completed_at = _utc_now()
         run = AgentRun(
             id=run_id,
@@ -663,6 +665,23 @@ def _parse_json_object(value: Any) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return parsed if isinstance(parsed, dict) else {}
+
+
+def _has_pending_confirmation(tool_results: list[dict[str, Any]]) -> bool:
+    return any(item.get("status") == "requires_confirmation" for item in tool_results if isinstance(item, dict))
+
+
+def _pending_confirmation_content(*, channel: str) -> str:
+    if channel == "voice_phone":
+        return (
+            "J'ai préparé l'action demandée. Elle attend ta confirmation avant toute écriture externe. "
+            "Aucun message, connecteur ou outil externe n'a été exécuté pour l'instant."
+        )
+    return (
+        "J'ai préparé l'action demandée. Elle nécessite ta confirmation avant toute écriture externe. "
+        "Aucun message, connecteur ou outil externe n'a été exécuté pour l'instant. "
+        "Après confirmation, Bob affichera le statut réel de l'exécution ou du connecteur."
+    )
 
 
 def _runtime_summary(tools: list[dict[str, Any]]) -> str:
