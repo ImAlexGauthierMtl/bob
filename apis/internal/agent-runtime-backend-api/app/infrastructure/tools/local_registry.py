@@ -308,6 +308,15 @@ def _execute_mcp_gateway(
             risk=effective_risk,
         )
 
+    if operation == "execute_capability" and family["family"] == "support-memory":
+        return _execute_support_memory_capability(
+            call=call,
+            context=context,
+            metadata=metadata,
+            capability=capability,
+            risk=effective_risk,
+        )
+
     content = {
         "status": "ready_for_read",
         "family": family["family"],
@@ -573,6 +582,63 @@ def _execute_assistant_memory_capability(
     )
 
 
+def _execute_support_memory_capability(
+    *,
+    call: RuntimeToolCall,
+    context: InternalContext,
+    metadata: dict[str, Any],
+    capability: dict[str, Any] | None,
+    risk: str,
+) -> RuntimeToolResult:
+    capability_id = str((capability or {}).get("id") or call.arguments.get("capability") or "status")
+    capability_id = capability_id.removeprefix("support-memory.").strip()
+    memory_context = metadata.get("memory_context") if isinstance(metadata, dict) else None
+    memory_context = memory_context if isinstance(memory_context, dict) else {}
+
+    if capability_id == "status":
+        content = _support_memory_status(memory_context=memory_context)
+    elif capability_id == "search":
+        content = _support_memory_search(
+            memory_context=memory_context,
+            query=str(call.arguments.get("query") or ""),
+            max_items=_bounded_int(call.arguments.get("limit"), default=5, minimum=1, maximum=20),
+        )
+    elif capability_id == "playbook":
+        content = _support_memory_playbook(
+            memory_context=memory_context,
+            query=str(call.arguments.get("query") or ""),
+            max_items=_bounded_int(call.arguments.get("limit"), default=5, minimum=1, maximum=20),
+        )
+    else:
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="rejected",
+            content=_json_dumps(
+                {
+                    "error": "support_memory_capability_not_loaded",
+                    "capability": capability_id,
+                    "loaded_capabilities": ["status", "search", "playbook"],
+                }
+            ),
+            metadata={"family": "support-memory", "risk": "blocked", "operation": "execute_capability"},
+        )
+
+    content["policy"] = _mcp_policy(context=context)
+    return RuntimeToolResult(
+        call_id=call.id,
+        name=call.name,
+        status="completed",
+        content=_json_dumps(content),
+        metadata={
+            "family": "support-memory",
+            "risk": risk,
+            "operation": "execute_capability",
+            "capability": capability_id,
+        },
+    )
+
+
 def _mcp_policy(*, context: InternalContext) -> dict[str, Any]:
     return {
         "tool_gating_required": True,
@@ -716,6 +782,73 @@ def _memory_item_search_text(item: dict[str, Any]) -> str:
         str(item.get(field) or "").lower()
         for field in ("id", "title", "memory_type", "summary", "source", "scope")
     )
+
+
+def _support_memory_status(*, memory_context: dict[str, Any]) -> dict[str, Any]:
+    organization = memory_context.get("organization") if isinstance(memory_context.get("organization"), list) else []
+    degraded = memory_context.get("degraded") if isinstance(memory_context.get("degraded"), list) else []
+    playbooks = [
+        record
+        for record in organization
+        if isinstance(record, dict)
+        and str(record.get("memory_type") or "").lower() in {"playbook", "procedure", "runbook"}
+    ]
+    return {
+        "status": "available",
+        "family": "support-memory",
+        "source": memory_context.get("source") or "agent-memory-backend-api",
+        "organization_count": len(organization),
+        "playbook_count": len(playbooks),
+        "degraded": degraded[:5],
+        "read_capabilities": ["status", "search", "playbook"],
+        "write_capabilities_require_confirmation": ["propose-training", "review-pending"],
+    }
+
+
+def _support_memory_search(*, memory_context: dict[str, Any], query: str, max_items: int) -> dict[str, Any]:
+    normalized_query = " ".join(query.lower().split())
+    candidates = _organization_memory_items(memory_context=memory_context, max_items=100)
+    matches = [
+        item
+        for item in candidates
+        if not normalized_query or normalized_query in _memory_item_search_text(item)
+    ]
+    return {
+        "status": "completed",
+        "family": "support-memory",
+        "source": memory_context.get("source") or "agent-memory-backend-api",
+        "query": query,
+        "total_matching": len(matches),
+        "items": matches[:max_items],
+    }
+
+
+def _support_memory_playbook(*, memory_context: dict[str, Any], query: str, max_items: int) -> dict[str, Any]:
+    normalized_query = " ".join(query.lower().split())
+    playbooks = [
+        item
+        for item in _organization_memory_items(memory_context=memory_context, max_items=100)
+        if str(item.get("memory_type") or "").lower() in {"playbook", "procedure", "runbook"}
+    ]
+    matches = [
+        item
+        for item in playbooks
+        if not normalized_query or normalized_query in _memory_item_search_text(item)
+    ]
+    return {
+        "status": "completed",
+        "family": "support-memory",
+        "source": memory_context.get("source") or "agent-memory-backend-api",
+        "query": query,
+        "total_matching": len(matches),
+        "items": matches[:max_items],
+    }
+
+
+def _organization_memory_items(*, memory_context: dict[str, Any], max_items: int) -> list[dict[str, Any]]:
+    organization = memory_context.get("organization") if isinstance(memory_context.get("organization"), list) else []
+    scoped_context = {"private": [], "organization": organization}
+    return _memory_items(memory_context=scoped_context, max_items=max_items)
 
 
 def _bounded_int(value: Any, *, default: int, minimum: int, maximum: int) -> int:

@@ -1032,6 +1032,61 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
         context=context,
         metadata=metadata,
     )
+    support_status = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-support-status",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "support-memory",
+                "capability": "support-memory.status",
+            },
+        ),
+        context=context,
+        metadata=metadata,
+    )
+    support_search = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-support-search",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "support-memory",
+                "capability": "support-memory.search",
+                "query": "validation",
+                "limit": 2,
+            },
+        ),
+        context=context,
+        metadata=metadata,
+    )
+    support_playbook = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-support-playbook",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "support-memory",
+                "capability": "support-memory.playbook",
+                "query": "Factory",
+            },
+        ),
+        context=context,
+        metadata=metadata,
+    )
+    support_write = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-support-write",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "support-memory",
+                "capability": "support-memory.propose-training",
+            },
+        ),
+        context=context,
+        metadata=metadata,
+    )
 
     assert tools[0]["function"]["name"] == "bob_runtime_status"
     assert {tool["function"]["name"] for tool in tools} == {
@@ -1059,6 +1114,14 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
     assert memory_write.status == "requires_confirmation"
     assert memory_write.metadata["risk"] == "write-requested"
     assert "write_or_destructive_mcp_action_requires_explicit_confirmation" in memory_write.content
+    assert support_status.status == "completed"
+    assert "\"organization_count\": 1" in support_status.content
+    assert support_search.status == "completed"
+    assert "Factory passe par les queues" in support_search.content
+    assert support_playbook.status == "completed"
+    assert "\"playbook_count\": 1" in support_status.content
+    assert support_write.status == "requires_confirmation"
+    assert support_write.metadata["risk"] == "draft"
     assert rejected.status == "rejected"
 
 
