@@ -736,6 +736,10 @@ services:
       CROO_GITLAB_TOKEN: ${CROO_GITLAB_TOKEN:-${GITLAB_TOKEN:-${GLAB_TOKEN:-}}}
       CROO_GITLAB_TIMEOUT_SECONDS: ${CROO_GITLAB_TIMEOUT_SECONDS:-10}
       CROO_GITLAB_MAX_FILE_BYTES: ${CROO_GITLAB_MAX_FILE_BYTES:-16000}
+      BOB_LOCAL_WORKSPACE_ENABLED: ${BOB_LOCAL_WORKSPACE_ENABLED:-true}
+      BOB_LOCAL_WORKSPACE_ROOT: ${BOB_LOCAL_WORKSPACE_ROOT:-/workspace}
+      BOB_LOCAL_WORKSPACE_MAX_FILE_BYTES: ${BOB_LOCAL_WORKSPACE_MAX_FILE_BYTES:-16000}
+      BOB_LOCAL_WORKSPACE_MAX_SEARCH_FILES: ${BOB_LOCAL_WORKSPACE_MAX_SEARCH_FILES:-500}
       FACTORY_SUPABASE_DB_URL: ${FACTORY_SUPABASE_DB_URL:-}
       FACTORY_SUPABASE_CONNECT_TIMEOUT_SECONDS: ${FACTORY_SUPABASE_CONNECT_TIMEOUT_SECONDS:-10}
     ports:
@@ -748,6 +752,7 @@ services:
       - ./apis/internal/agent-runtime-backend-api/main.py:/app/main.py
       - ./apis/internal/agent-runtime-backend-api/alembic.ini:/app/alembic.ini
       - ./apis/internal/agent-runtime-backend-api/alembic:/app/alembic
+      - .:/workspace:ro
 
     depends_on:
       pgbouncer:

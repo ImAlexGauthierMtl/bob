@@ -25,6 +25,7 @@ from app.infrastructure.tools.factory_supabase_adapter import (
     FactorySupabaseAdapterError,
 )
 from app.infrastructure.tools.gitlab_read_adapter import GitLabReadAdapter, GitLabReadAdapterError
+from app.infrastructure.tools.local_workspace_adapter import LocalWorkspaceAdapter, LocalWorkspaceAdapterError
 from app.infrastructure.tools.local_registry import LocalRuntimeToolRegistry
 from app.presentation.routes import agent_runtime_routes
 from shared.infrastructure import InternalSessionContext, InternalSessionContextSigner
@@ -1828,6 +1829,116 @@ async def test_mcp_gateway_executes_gitlab_read_adapter_and_degrades_cleanly():
     assert write.status == "requires_confirmation"
 
 
+@pytest.mark.asyncio
+async def test_mcp_gateway_executes_local_workspace_adapter_and_blocks_secret_paths(tmp_path):
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "api-contracts.md").write_text("# API Contracts\nBob runtime local files.\n", encoding="utf-8")
+    (tmp_path / ".env").write_text("FIREWORKS_API_KEY=secret\n", encoding="utf-8")
+
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="user-alex-local",
+        trace_id="1" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+    adapter = LocalWorkspaceAdapter(root=tmp_path, enabled=True, max_file_bytes=20, max_search_files=20)
+    registry = LocalRuntimeToolRegistry(local_workspace_adapter=adapter)
+    read_file = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-local-file-read",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "workspace-files",
+                "capability": "workspace-files.local-files",
+                "path": "docs/api-contracts.md",
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={},
+    )
+    search = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-local-file-search",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "workspace-files",
+                "capability": "workspace-files.local-files",
+                "query": "API Contracts",
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={},
+    )
+    blocked = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-local-file-blocked",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "workspace-files",
+                "capability": "workspace-files.local-files",
+                "path": ".env",
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={},
+    )
+    gitlab_local = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-gitlab-local-code",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "gitlab-code",
+                "capability": "gitlab-code.local-code",
+                "path": "docs/api-contracts.md",
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={},
+    )
+    degraded = await LocalRuntimeToolRegistry(
+        local_workspace_adapter=LocalWorkspaceAdapter(root=tmp_path, enabled=False)
+    ).execute(
+        call=RuntimeToolCall(
+            id="call-local-file-disabled",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "workspace-files",
+                "capability": "workspace-files.local-files",
+                "path": "docs/api-contracts.md",
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={},
+    )
+
+    assert read_file.status == "completed"
+    read_content = json.loads(read_file.content)
+    assert read_content["operation"] == "read_file"
+    assert read_content["path"] == "docs/api-contracts.md"
+    assert read_content["content_truncated"] is True
+    assert "FIREWORKS_API_KEY" not in read_file.content
+    assert search.status == "completed"
+    assert "docs/api-contracts.md" in search.content
+    assert blocked.status == "degraded"
+    assert "local_workspace_path_blocked" in blocked.content
+    assert gitlab_local.status == "completed"
+    assert gitlab_local.metadata["family"] == "gitlab-code"
+    assert "local_workspace_adapter" in gitlab_local.content
+    assert degraded.status == "degraded"
+    assert "local_workspace_disabled" in degraded.content
+
+
 def test_provider_factory_selects_local_fireworks_and_rejects_missing_key(monkeypatch):
     monkeypatch.setenv("AGENT_RUNTIME_PROVIDER", "local")
     assert isinstance(provider_factory.create_runtime_provider(), LocalRuntimeProvider)
@@ -2026,6 +2137,33 @@ def test_gitlab_read_adapter_builds_bounded_read_requests(monkeypatch):
     assert missing_search.value.code == "gitlab_search_query_required"
 
 
+def test_local_workspace_adapter_scopes_paths_and_blocks_sensitive_files(tmp_path):
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "plan.md").write_text("Bob plan\n", encoding="utf-8")
+    (tmp_path / "docs" / "archive.bin").write_bytes(b"binary")
+    adapter = LocalWorkspaceAdapter(root=tmp_path, enabled=True, max_file_bytes=16, max_search_files=10)
+
+    listing = adapter.list_path(path="docs", limit=5)
+    readback = adapter.read_file(path="docs/plan.md")
+    search = adapter.search(query="Bob", path="docs", limit=5)
+
+    assert listing["items"][0]["path"] == "docs/archive.bin"
+    assert readback["content"] == "Bob plan\n"
+    assert search["matches"][0]["path"] == "docs/plan.md"
+
+    with pytest.raises(LocalWorkspaceAdapterError) as outside:
+        adapter.read_file(path="../outside.md")
+    assert outside.value.code == "local_workspace_path_outside_root"
+
+    with pytest.raises(LocalWorkspaceAdapterError) as blocked:
+        adapter.read_file(path="docs/runtime-secret.md")
+    assert blocked.value.code == "local_workspace_path_blocked"
+
+    with pytest.raises(LocalWorkspaceAdapterError) as file_type:
+        adapter.read_file(path="docs/archive.bin")
+    assert file_type.value.code == "local_workspace_file_type_not_allowed"
+
+
 @pytest.mark.asyncio
 async def test_local_provider_honors_explicit_factory_queue_capability():
     provider = LocalRuntimeProvider()
@@ -2099,6 +2237,30 @@ async def test_local_provider_routes_gitlab_file_arguments_to_mcp_gateway():
     assert call.arguments["project_id"] == "the-croo-group/app-cde-dev-01"
     assert call.arguments["path"] == "README.md"
     assert call.arguments["ref"] == "main"
+    assert call.arguments["risk"] == "read"
+
+
+@pytest.mark.asyncio
+async def test_local_provider_routes_local_file_arguments_to_workspace_gateway():
+    provider = LocalRuntimeProvider()
+    result = await provider.complete(
+        messages=[
+            {
+                "role": "user",
+                "content": "Lis le fichier local docs/api-contracts.md avec workspace-files.",
+            }
+        ],
+        tools=[{"type": "function", "function": {"name": "bob_mcp_gateway"}}],
+        trace_id="a" * 32,
+    )
+
+    assert result.tool_calls
+    call = result.tool_calls[0]
+    assert call.name == "bob_mcp_gateway"
+    assert call.arguments["operation"] == "execute_capability"
+    assert call.arguments["family"] == "workspace-files"
+    assert call.arguments["capability"] == "workspace-files.local-files"
+    assert call.arguments["path"] == "docs/api-contracts.md"
     assert call.arguments["risk"] == "read"
 
 

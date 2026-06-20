@@ -17,6 +17,7 @@ from app.infrastructure.tools.factory_supabase_adapter import (
     FactorySupabaseAdapterError,
 )
 from app.infrastructure.tools.gitlab_read_adapter import GitLabReadAdapter, GitLabReadAdapterError
+from app.infrastructure.tools.local_workspace_adapter import LocalWorkspaceAdapter, LocalWorkspaceAdapterError
 
 _MCP_FAMILIES_BY_NAME = {str(family["family"]): family for family in MCP_TOOL_FAMILIES}
 _MCP_CAPABILITY_IDS = {str(capability["qualified_id"]) for capability in default_mcp_capabilities()}
@@ -40,6 +41,8 @@ _GITLAB_EXECUTABLE_CAPABILITIES = {
     "tree",
     "files",
     "search-code",
+    "gitlab-code.local-code",
+    "local-code",
 }
 _MCP_CAPABILITY_IDS.update(_GITLAB_EXECUTABLE_CAPABILITIES)
 _CATALOG_TOOL_ALIASES = {
@@ -61,9 +64,11 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
         *,
         factory_adapter: FactorySupabaseAdapter | None = None,
         gitlab_adapter: GitLabReadAdapter | None = None,
+        local_workspace_adapter: LocalWorkspaceAdapter | None = None,
     ) -> None:
         self.factory_adapter = factory_adapter or FactorySupabaseAdapter.from_env()
         self.gitlab_adapter = gitlab_adapter or GitLabReadAdapter.from_env()
+        self.local_workspace_adapter = local_workspace_adapter or LocalWorkspaceAdapter.from_env()
 
     def list_tools(
         self,
@@ -240,6 +245,7 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
                 metadata=metadata,
                 factory_adapter=self.factory_adapter,
                 gitlab_adapter=self.gitlab_adapter,
+                local_workspace_adapter=self.local_workspace_adapter,
             )
 
         return RuntimeToolResult(
@@ -258,6 +264,7 @@ def _execute_mcp_gateway(
     metadata: dict[str, Any],
     factory_adapter: FactorySupabaseAdapter,
     gitlab_adapter: GitLabReadAdapter,
+    local_workspace_adapter: LocalWorkspaceAdapter,
 ) -> RuntimeToolResult:
     operation = str(call.arguments.get("operation") or "describe_family")
     family_name = str(call.arguments.get("family") or "").strip()
@@ -337,6 +344,17 @@ def _execute_mcp_gateway(
             call=call,
             context=context,
             gitlab_adapter=gitlab_adapter,
+            local_workspace_adapter=local_workspace_adapter,
+            capability=capability,
+            risk=effective_risk,
+            confirmed=confirmed,
+        )
+
+    if operation == "execute_capability" and family["family"] == "workspace-files":
+        return _execute_workspace_files_capability(
+            call=call,
+            context=context,
+            local_workspace_adapter=local_workspace_adapter,
             capability=capability,
             risk=effective_risk,
             confirmed=confirmed,
@@ -596,6 +614,7 @@ def _execute_gitlab_code_capability(
     call: RuntimeToolCall,
     context: InternalContext,
     gitlab_adapter: GitLabReadAdapter,
+    local_workspace_adapter: LocalWorkspaceAdapter,
     capability: dict[str, Any] | None,
     risk: str,
     confirmed: bool = False,
@@ -632,7 +651,13 @@ def _execute_gitlab_code_capability(
         )
 
     try:
-        if capability_id == "projects":
+        if capability_id == "local-code":
+            content = _execute_local_workspace_read(
+                adapter=local_workspace_adapter,
+                call=call,
+                default_operation="read_or_list",
+            )
+        elif capability_id == "projects":
             content = gitlab_adapter.list_projects(
                 query=str(call.arguments.get("query") or ""),
                 limit=_bounded_int(call.arguments.get("limit"), default=20, minimum=1, maximum=100),
@@ -671,11 +696,19 @@ def _execute_gitlab_code_capability(
                     {
                         "error": "gitlab_capability_not_loaded",
                         "capability": capability_id,
-                        "loaded_capabilities": ["projects", "branches", "tree", "files", "search-code"],
+                        "loaded_capabilities": ["projects", "branches", "tree", "files", "search-code", "local-code"],
                     }
                 ),
                 metadata={"family": "gitlab-code", "risk": "blocked", "operation": "execute_capability"},
             )
+    except LocalWorkspaceAdapterError as exc:
+        return _local_workspace_degraded_result(
+            call=call,
+            context=context,
+            family_name="gitlab-code",
+            capability_id=capability_id,
+            error_code=exc.code,
+        )
     except GitLabReadAdapterError as exc:
         return RuntimeToolResult(
             call_id=call.id,
@@ -696,7 +729,7 @@ def _execute_gitlab_code_capability(
 
     content["policy"] = _mcp_policy(context=context)
     content["external_connector_bound"] = True
-    content["execution_mode"] = "gitlab_read_adapter"
+    content["execution_mode"] = "local_workspace_adapter" if capability_id == "local-code" else "gitlab_read_adapter"
     return RuntimeToolResult(
         call_id=call.id,
         name=call.name,
@@ -709,6 +742,128 @@ def _execute_gitlab_code_capability(
             "capability": capability_id,
             "external_connector_bound": True,
         },
+    )
+
+
+def _execute_workspace_files_capability(
+    *,
+    call: RuntimeToolCall,
+    context: InternalContext,
+    local_workspace_adapter: LocalWorkspaceAdapter,
+    capability: dict[str, Any] | None,
+    risk: str,
+    confirmed: bool = False,
+) -> RuntimeToolResult:
+    capability_id = str((capability or {}).get("id") or call.arguments.get("capability") or "local-files")
+    capability_id = capability_id.removeprefix("workspace-files.").strip()
+    if risk != "read" and confirmed:
+        return _confirmed_connector_pending_result(
+            call=call,
+            context=context,
+            family_name="workspace-files",
+            capability_id=capability_id,
+            risk=risk,
+            next_gateway_step="bind_workspace_write_adapter_after_human_approval",
+        )
+
+    if risk != "read":
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="requires_confirmation",
+            content=_json_dumps(
+                {
+                    "status": "confirmation_required",
+                    "family": "workspace-files",
+                    "capability": capability_id,
+                    "risk": risk,
+                    "reason": "workspace_files_write_or_sharing_requires_explicit_confirmation_and_adapter_readback",
+                    "policy": _mcp_policy(context=context),
+                }
+            ),
+            metadata={"family": "workspace-files", "risk": risk, "operation": "execute_capability"},
+        )
+
+    if capability_id != "local-files":
+        return _execute_external_mcp_read_contract(
+            call=call,
+            context=context,
+            family=_MCP_FAMILIES_BY_NAME["workspace-files"],
+            capability=capability,
+            risk=risk,
+        )
+
+    try:
+        content = _execute_local_workspace_read(
+            adapter=local_workspace_adapter,
+            call=call,
+            default_operation="read_or_list",
+        )
+    except LocalWorkspaceAdapterError as exc:
+        return _local_workspace_degraded_result(
+            call=call,
+            context=context,
+            family_name="workspace-files",
+            capability_id=capability_id,
+            error_code=exc.code,
+        )
+
+    content["policy"] = _mcp_policy(context=context)
+    content["external_connector_bound"] = True
+    content["execution_mode"] = "local_workspace_adapter"
+    return RuntimeToolResult(
+        call_id=call.id,
+        name=call.name,
+        status="completed",
+        content=_json_dumps(content),
+        metadata={
+            "family": "workspace-files",
+            "risk": "read",
+            "operation": "execute_capability",
+            "capability": capability_id,
+            "external_connector_bound": True,
+        },
+    )
+
+
+def _execute_local_workspace_read(
+    *,
+    adapter: LocalWorkspaceAdapter,
+    call: RuntimeToolCall,
+    default_operation: str,
+) -> dict[str, Any]:
+    operation = str(call.arguments.get("local_operation") or call.arguments.get("file_operation") or default_operation)
+    path = str(call.arguments.get("path") or "")
+    query = str(call.arguments.get("query") or "")
+    limit = _bounded_int(call.arguments.get("limit"), default=20, minimum=1, maximum=100)
+    if operation == "search" or (query.strip() and not path.strip()):
+        return adapter.search(query=query, path=path, limit=limit)
+    return adapter.list_path(path=path, limit=limit)
+
+
+def _local_workspace_degraded_result(
+    *,
+    call: RuntimeToolCall,
+    context: InternalContext,
+    family_name: str,
+    capability_id: str,
+    error_code: str,
+) -> RuntimeToolResult:
+    return RuntimeToolResult(
+        call_id=call.id,
+        name=call.name,
+        status="degraded",
+        content=_json_dumps(
+            {
+                "error": error_code,
+                "family": family_name,
+                "capability": capability_id,
+                "external_connector_bound": False,
+                "execution_mode": "local_workspace_adapter",
+                "policy": _mcp_policy(context=context),
+            }
+        ),
+        metadata={"family": family_name, "risk": "read", "operation": "execute_capability"},
     )
 
 
@@ -1122,6 +1277,8 @@ def _normalize_gitlab_capability(capability: str) -> str:
     normalized = capability.removeprefix("gitlab-code.").strip()
     if normalized == "gitlab-code":
         return "projects"
+    if normalized == "local-files":
+        return "local-code"
     return normalized
 
 

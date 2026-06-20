@@ -44,11 +44,12 @@ def _infer_external_mcp_read_intent(prompt: str) -> McpIntent | None:
             return McpIntent("mail-calendar", "mail-calendar.calendar-read-availability", "read")
         return McpIntent("mail-calendar", "mail-calendar.mail-read-search", "read")
     if family == "workspace-files":
+        arguments = _infer_workspace_file_arguments(prompt)
         if any(token in normalized for token in ("sheet", "sheets", "tableur")):
-            return McpIntent("workspace-files", "workspace-files.sheets-read", "read")
+            return McpIntent("workspace-files", "workspace-files.sheets-read", "read", arguments=arguments)
         if any(token in normalized for token in ("local", "fichier local", "local file")):
-            return McpIntent("workspace-files", "workspace-files.local-files", "read")
-        return McpIntent("workspace-files", "workspace-files.drive-onedrive-read", "read")
+            return McpIntent("workspace-files", "workspace-files.local-files", "read", arguments=arguments)
+        return McpIntent("workspace-files", "workspace-files.drive-onedrive-read", "read", arguments=arguments)
     if family == "pipedream-supabase":
         if "count" in normalized or "compte" in normalized:
             return McpIntent("pipedream-supabase", "pipedream-supabase.count", "read")
@@ -201,6 +202,20 @@ def _infer_gitlab_arguments(prompt: str) -> dict[str, Any]:
         args["path"] = path.rstrip(".,;")
     if ref:
         args["ref"] = ref.rstrip(".,;")
+    return args
+
+
+def _infer_workspace_file_arguments(prompt: str) -> dict[str, Any]:
+    args: dict[str, Any] = {}
+    path = _first_regex_group(
+        prompt,
+        (
+            r"(?:path|chemin|fichier local|local file|fichier|file)\s*[=:]?\s*([A-Za-z0-9_./-]+\.[A-Za-z0-9_-]+)",
+            r"\b([A-Za-z0-9_./-]+\.(?:py|ts|html|css|md|json|yaml|yml|toml|sql|txt))\b",
+        ),
+    )
+    if path:
+        args["path"] = path.rstrip(".,;")
     return args
 
 
