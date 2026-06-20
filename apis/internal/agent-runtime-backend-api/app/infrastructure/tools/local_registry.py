@@ -327,6 +327,15 @@ def _execute_mcp_gateway(
             risk=effective_risk,
         )
 
+    if operation == "execute_capability":
+        return _execute_external_mcp_read_contract(
+            call=call,
+            context=context,
+            family=family,
+            capability=capability,
+            risk=effective_risk,
+        )
+
     content = {
         "status": "ready_for_read",
         "family": family["family"],
@@ -721,6 +730,76 @@ def _execute_bob_control_center_capability(
             "capability": capability_id,
         },
     )
+
+
+def _execute_external_mcp_read_contract(
+    *,
+    call: RuntimeToolCall,
+    context: InternalContext,
+    family: dict[str, Any],
+    capability: dict[str, Any] | None,
+    risk: str,
+) -> RuntimeToolResult:
+    family_name = str(family["family"])
+    selected_capability = capability or _first_read_capability(family_name)
+    if not selected_capability:
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="rejected",
+            content=_json_dumps(
+                {
+                    "error": "mcp_read_capability_not_loaded",
+                    "family": family_name,
+                    "capability": call.arguments.get("capability"),
+                    "policy": _mcp_policy(context=context),
+                }
+            ),
+            metadata={"family": family_name, "risk": "blocked", "operation": "execute_capability"},
+        )
+
+    capability_id = str(selected_capability["id"])
+    content = {
+        "status": "connector_binding_required",
+        "family": family_name,
+        "capability": capability_id,
+        "qualified_id": selected_capability.get("qualified_id"),
+        "title": selected_capability.get("title"),
+        "risk": risk,
+        "source": "agent-runtime-backend-api",
+        "servers": family.get("servers") or [],
+        "skill": selected_capability.get("skill"),
+        "capability_path": selected_capability.get("capability_path"),
+        "mcp_tools": selected_capability.get("tools") or [],
+        "external_connector_bound": False,
+        "execution_mode": "contract_only_until_adapter_bound",
+        "request": {
+            "query": call.arguments.get("query") or "",
+            "limit": _bounded_int(call.arguments.get("limit"), default=10, minimum=1, maximum=100),
+        },
+        "next_gateway_step": f"bind_{family_name.replace('-', '_')}_mcp_server_adapter",
+        "policy": _mcp_policy(context=context),
+    }
+    return RuntimeToolResult(
+        call_id=call.id,
+        name=call.name,
+        status="completed",
+        content=_json_dumps(content),
+        metadata={
+            "family": family_name,
+            "risk": "read",
+            "operation": "execute_capability",
+            "capability": capability_id,
+            "external_connector_bound": False,
+        },
+    )
+
+
+def _first_read_capability(family: str) -> dict[str, Any] | None:
+    for item in mcp_capabilities_for_family(family):
+        if str(item.get("risk") or "").strip().lower() in {"read", "readonly"}:
+            return item
+    return None
 
 
 def _mcp_policy(*, context: InternalContext) -> dict[str, Any]:

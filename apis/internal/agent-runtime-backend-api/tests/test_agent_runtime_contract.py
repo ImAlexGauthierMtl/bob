@@ -1180,6 +1180,37 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
         context=context,
         metadata=metadata,
     )
+    slack_read_contract = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-slack-read-contract",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "slack",
+                "capability": "slack.messages-read-search",
+                "query": "conversion Bob",
+                "limit": 3,
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata=metadata,
+    )
+    slack_draft_contract = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-slack-draft-contract",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "slack",
+                "capability": "slack.draft-send",
+                "query": "Prépare un message Slack.",
+                "risk": "draft",
+            },
+        ),
+        context=context,
+        metadata=metadata,
+    )
 
     assert tools[0]["function"]["name"] == "bob_runtime_status"
     assert {tool["function"]["name"] for tool in tools} == {
@@ -1215,6 +1246,28 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
     assert "\"playbook_count\": 1" in support_status.content
     assert support_write.status == "requires_confirmation"
     assert support_write.metadata["risk"] == "draft"
+    assert slack_read_contract.status == "completed"
+    assert slack_read_contract.metadata == {
+        "family": "slack",
+        "risk": "read",
+        "operation": "execute_capability",
+        "capability": "messages-read-search",
+        "external_connector_bound": False,
+    }
+    slack_content = json.loads(slack_read_contract.content)
+    assert slack_content["status"] == "connector_binding_required"
+    assert slack_content["qualified_id"] == "slack.messages-read-search"
+    assert slack_content["servers"] == ["pipedream-slack"]
+    assert slack_content["mcp_tools"] == ["pipedream-slack"]
+    assert slack_content["request"] == {"query": "conversion Bob", "limit": 3}
+    assert slack_content["policy"]["writes_require_confirmation"] is True
+    assert slack_draft_contract.status == "requires_confirmation"
+    assert slack_draft_contract.metadata == {
+        "family": "slack",
+        "risk": "draft",
+        "operation": "execute_capability",
+    }
+    assert "write_or_destructive_mcp_action_requires_explicit_confirmation" in slack_draft_contract.content
     assert rejected.status == "rejected"
 
 
@@ -1519,6 +1572,199 @@ async def test_local_provider_honors_explicit_factory_queue_capability():
     assert result.tool_calls[0].arguments["operation"] == "execute_capability"
     assert result.tool_calls[0].arguments["capability"] == "requests-queues.list_queue_by_project"
     assert result.tool_calls[0].arguments["status"] == "NEW"
+
+
+@pytest.mark.asyncio
+async def test_local_provider_routes_external_read_capability_to_mcp_gateway():
+    provider = LocalRuntimeProvider()
+    result = await provider.complete(
+        messages=[
+            {
+                "role": "user",
+                "content": "Lis les messages Slack récents sur la conversion Bob.",
+            }
+        ],
+        tools=[{"type": "function", "function": {"name": "bob_mcp_gateway"}}],
+        trace_id="a" * 32,
+    )
+
+    assert result.tool_calls
+    call = result.tool_calls[0]
+    assert call.name == "bob_mcp_gateway"
+    assert call.arguments["operation"] == "execute_capability"
+    assert call.arguments["family"] == "slack"
+    assert call.arguments["capability"] == "slack.messages-read-search"
+    assert call.arguments["query"] == "Lis les messages Slack récents sur la conversion Bob."
+    assert call.arguments["risk"] == "read"
+
+
+@pytest.mark.asyncio
+async def test_local_provider_keeps_external_teams_channels_read_only():
+    provider = LocalRuntimeProvider()
+    result = await provider.complete(
+        messages=[
+            {
+                "role": "user",
+                "content": "Liste les canaux Teams.",
+            }
+        ],
+        tools=[{"type": "function", "function": {"name": "bob_mcp_gateway"}}],
+        trace_id="a" * 32,
+    )
+
+    assert result.tool_calls
+    call = result.tool_calls[0]
+    assert call.name == "bob_mcp_gateway"
+    assert call.arguments["operation"] == "execute_capability"
+    assert call.arguments["family"] == "teams"
+    assert call.arguments["capability"] == "teams.teams-channels-chats"
+    assert call.arguments["query"] == "Liste les canaux Teams."
+    assert call.arguments["risk"] == "read"
+
+
+@pytest.mark.asyncio
+async def test_local_provider_routes_external_draft_intent_to_confirmation_gated_mcp_capability():
+    provider = LocalRuntimeProvider()
+    result = await provider.complete(
+        messages=[
+            {
+                "role": "user",
+                "content": "Prépare un message Slack pour l'équipe.",
+            }
+        ],
+        tools=[{"type": "function", "function": {"name": "bob_mcp_gateway"}}],
+        trace_id="a" * 32,
+    )
+
+    assert result.tool_calls
+    call = result.tool_calls[0]
+    assert call.name == "bob_mcp_gateway"
+    assert call.arguments["operation"] == "execute_capability"
+    assert call.arguments["family"] == "slack"
+    assert call.arguments["capability"] == "slack.draft-send"
+    assert call.arguments["query"] == "Prépare un message Slack pour l'équipe."
+    assert call.arguments["risk"] == "draft"
+
+    gated = await LocalRuntimeToolRegistry().execute(
+        call=call,
+        context=InternalContext(
+            tenant_id="tenant-croo-local",
+            user_id="user-alex-local",
+            trace_id="d" * 32,
+            permissions=("bob_chat.use",),
+            roles=("admin",),
+        ),
+        metadata={},
+    )
+
+    assert gated.status == "requires_confirmation"
+    assert gated.metadata == {
+        "family": "slack",
+        "risk": "draft",
+        "operation": "execute_capability",
+    }
+    assert "write_or_destructive_mcp_action_requires_explicit_confirmation" in gated.content
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("prompt", "family", "capability", "risk"),
+    [
+        (
+            "Envoie un courriel de suivi au client.",
+            "mail-calendar",
+            "mail-calendar.mail-draft-send",
+            "draft",
+        ),
+        (
+            "Crée une rencontre calendrier avec le client.",
+            "mail-calendar",
+            "mail-calendar.calendar-write",
+            "write-requested",
+        ),
+        (
+            "Supprime le rendez-vous calendrier du client.",
+            "mail-calendar",
+            "mail-calendar.calendar-delete",
+            "destructive-confirmed",
+        ),
+        (
+            "Envoie un message Teams à l'équipe.",
+            "teams",
+            "teams.draft-send",
+            "draft",
+        ),
+        (
+            "Ajoute un canal Teams pour le projet.",
+            "teams",
+            "teams.management",
+            "write-requested",
+        ),
+        (
+            "Supprime le message Slack épinglé.",
+            "slack",
+            "slack.message-management",
+            "destructive-confirmed",
+        ),
+        (
+            "Ajoute une ligne dans le Google Sheet validation.",
+            "workspace-files",
+            "workspace-files.sheets-write",
+            "write-requested",
+        ),
+        (
+            "Partage le fichier Drive validation avec l'équipe.",
+            "workspace-files",
+            "workspace-files.sharing-permissions",
+            "destructive-confirmed",
+        ),
+        (
+            "Update Supabase avec le statut validé.",
+            "pipedream-supabase",
+            "pipedream-supabase.write-rpc",
+            "write-requested",
+        ),
+        (
+            "Clique le bouton connexion dans Chrome.",
+            "browser",
+            "browser.interaction",
+            "write-requested",
+        ),
+        (
+            "Crée un client Zoho Billing.",
+            "zoho",
+            "zoho.billing-customers",
+            "write-requested",
+        ),
+        (
+            "Réserve un DID SkySwitch.",
+            "skyswitch",
+            "skyswitch.telco-dids",
+            "write-requested",
+        ),
+    ],
+)
+async def test_local_provider_routes_external_write_families_to_confirmation_gated_mcp_capabilities(
+    prompt,
+    family,
+    capability,
+    risk,
+):
+    provider = LocalRuntimeProvider()
+    result = await provider.complete(
+        messages=[{"role": "user", "content": prompt}],
+        tools=[{"type": "function", "function": {"name": "bob_mcp_gateway"}}],
+        trace_id="a" * 32,
+    )
+
+    assert result.tool_calls
+    call = result.tool_calls[0]
+    assert call.name == "bob_mcp_gateway"
+    assert call.arguments["operation"] == "execute_capability"
+    assert call.arguments["family"] == family
+    assert call.arguments["capability"] == capability
+    assert call.arguments["query"] == prompt
+    assert call.arguments["risk"] == risk
 
 
 @pytest.mark.asyncio
