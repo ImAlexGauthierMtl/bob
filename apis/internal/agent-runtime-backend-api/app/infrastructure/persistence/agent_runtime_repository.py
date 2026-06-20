@@ -43,6 +43,53 @@ class AgentRuntimeRepository:
         self.db.refresh(model)
         return _run_from_model(model)
 
+    def create_run_with_confirmations(
+        self,
+        *,
+        run: AgentRun,
+        confirmations: list[AgentConfirmation],
+    ) -> AgentRun:
+        run_model = AgentRunModel(
+            id=run.id,
+            tenant_id=run.tenant_id,
+            user_id=run.user_id,
+            session_id=run.session_id,
+            input_message_id=run.input_message_id,
+            status=run.status,
+            mode=run.mode,
+            trace_id=run.trace_id,
+            assistant_content=run.assistant_content,
+            metadata_=run.metadata,
+            narration_steps=run.narration_steps,
+            actions=run.actions,
+            artifacts=run.artifacts,
+            idempotency_key=run.idempotency_key,
+            created_at=run.created_at,
+            completed_at=run.completed_at,
+            cancelled_at=run.cancelled_at,
+        )
+        self.db.add(run_model)
+        for confirmation in confirmations:
+            self.db.add(
+                AgentConfirmationModel(
+                    id=confirmation.id,
+                    run_id=confirmation.run_id,
+                    tenant_id=confirmation.tenant_id,
+                    user_id=confirmation.user_id,
+                    status=confirmation.status,
+                    label=confirmation.label,
+                    created_at=confirmation.created_at,
+                    resolved_at=confirmation.resolved_at,
+                )
+            )
+        try:
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
+        self.db.refresh(run_model)
+        return _run_from_model(run_model)
+
     def get_run(
         self,
         *,

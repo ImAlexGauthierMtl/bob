@@ -15,6 +15,17 @@ class InMemoryAgentRuntimeRepository:
         self.runs[run.id] = run
         return run
 
+    def create_run_with_confirmations(
+        self,
+        *,
+        run: AgentRun,
+        confirmations: list[AgentConfirmation],
+    ) -> AgentRun:
+        self.runs[run.id] = run
+        for confirmation in confirmations:
+            self.confirmations[confirmation.id] = confirmation
+        return run
+
     def get_run(self, *, run_id: str, tenant_id: str, user_id: str) -> AgentRun | None:
         run = self.runs.get(run_id)
         if not run or run.tenant_id != tenant_id or run.user_id != user_id:

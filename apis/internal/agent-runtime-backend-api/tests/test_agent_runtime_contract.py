@@ -124,6 +124,12 @@ class FailingRuntimeProvider:
         )
 
 
+class FailingAtomicConfirmationRepository(InMemoryAgentRuntimeRepository):
+    def create_run_with_confirmations(self, *, run, confirmations):
+        assert confirmations
+        raise RuntimeError("atomic_confirmation_write_failed")
+
+
 def test_monitoring_endpoints_do_not_require_internal_context(client):
     for path in ["/health", "/readiness", "/liveness", "/startup", "/metrics"]:
         response = client.get(path)
@@ -843,9 +849,10 @@ async def test_runtime_tool_loop_caps_calls_per_turn_and_total_calls():
 
 @pytest.mark.asyncio
 async def test_runtime_pre_routes_external_mcp_intent_before_provider_response():
+    repo = InMemoryAgentRuntimeRepository()
     provider = CapturingRuntimeProvider()
     use_cases = AgentRuntimeUseCases(
-        repo=InMemoryAgentRuntimeRepository(),
+        repo=repo,
         runtime_provider=provider,
         tool_registry=LocalRuntimeToolRegistry(),
     )
@@ -873,11 +880,52 @@ async def test_runtime_pre_routes_external_mcp_intent_before_provider_response()
         "family": "slack",
         "risk": "draft",
         "operation": "execute_capability",
+        "confirmation_id": run.actions[0]["metadata"]["confirmation_id"],
     }
+    confirmation_id = run.actions[0]["metadata"]["confirmation_id"]
+    confirmation = repo.get_confirmation(
+        confirmation_id=confirmation_id,
+        run_id=run.id,
+        tenant_id="tenant-croo-local",
+        user_id="user-alex-local",
+    )
+    assert confirmation is not None
+    assert confirmation.status == "pending"
+    assert confirmation.label == run.metadata["pending_confirmations"][0]["label"]
     assert run.metadata["tool_loop"]["provider_iterations"] == 1
     assert any(step["label"] == "intent_router" for step in run.narration_steps)
     assert len(provider.messages) == 1
     assert any(message.get("role") == "tool" for message in provider.messages[0])
+
+
+@pytest.mark.asyncio
+async def test_runtime_does_not_persist_run_when_confirmation_write_fails():
+    repo = FailingAtomicConfirmationRepository()
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=CapturingRuntimeProvider(),
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+
+    with pytest.raises(RuntimeError, match="atomic_confirmation_write_failed"):
+        await use_cases.create_run(
+            context=InternalContext(
+                tenant_id="tenant-croo-local",
+                user_id="user-alex-local",
+                trace_id="d" * 32,
+                permissions=("bob_chat.use",),
+                roles=("admin",),
+            ),
+            session_id="session-mcp-atomic",
+            input_message_id="msg-mcp-atomic",
+            prompt="Prépare un message Slack pour l'équipe.",
+            channel="workspace",
+            metadata={},
+            idempotency_key="run-mcp-atomic",
+        )
+
+    assert repo.runs == {}
+    assert repo.confirmations == {}
 
 
 @pytest.mark.asyncio
@@ -1018,6 +1066,55 @@ def test_confirmation_resolution_contract(client, runtime_repo):
     assert repeated.json()["detail"] == {"code": "confirmation_already_resolved"}
     assert missing.status_code == 404
     assert missing.json()["detail"] == {"code": "confirmation_not_found"}
+
+
+def test_run_creates_pending_confirmation_for_gated_mcp_action(client, runtime_repo):
+    created = client.post(
+        "/internal/agent-runtime/v1/runs",
+        json={
+            **run_body(),
+            "prompt": "Prépare un message Slack pour l'équipe.",
+            "input_message_id": "msg-slack-confirmation",
+        },
+        headers={**signed_headers(), "Idempotency-Key": "slack-confirmation-run"},
+    )
+
+    assert created.status_code == 201
+    payload = created.json()
+    action = payload["actions"][0]
+    confirmation_id = action["metadata"]["confirmation_id"]
+    assert action["status"] == "requires_confirmation"
+    assert confirmation_id.startswith("confirm_")
+    assert payload["metadata"]["pending_confirmations"] == [
+        {
+            "id": confirmation_id,
+            "status": "pending",
+            "label": payload["metadata"]["pending_confirmations"][0]["label"],
+        }
+    ]
+
+    confirmed = client.post(
+        f"/internal/agent-runtime/v1/runs/{payload['id']}/confirmations/{confirmation_id}/confirm",
+        headers=signed_headers(),
+    )
+
+    assert confirmed.status_code == 200
+    assert confirmed.json()["id"] == confirmation_id
+    assert confirmed.json()["status"] == "confirmed"
+
+    replay = client.post(
+        "/internal/agent-runtime/v1/runs",
+        json={
+            **run_body(),
+            "prompt": "Prépare un autre message Slack.",
+            "input_message_id": "msg-slack-confirmation-replay",
+        },
+        headers={**signed_headers(), "Idempotency-Key": "slack-confirmation-run"},
+    )
+
+    assert replay.status_code == 201
+    assert replay.json()["id"] == payload["id"]
+    assert set(runtime_repo.confirmations) == {confirmation_id}
 
 
 @pytest.mark.asyncio

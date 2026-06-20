@@ -35,6 +35,14 @@ class AgentRuntimeRepositoryPort(Protocol):
     def create_run(self, *, run: AgentRun) -> AgentRun:
         ...
 
+    def create_run_with_confirmations(
+        self,
+        *,
+        run: AgentRun,
+        confirmations: list[AgentConfirmation],
+    ) -> AgentRun:
+        ...
+
     def get_run(
         self,
         *,
@@ -124,6 +132,7 @@ class AgentRuntimeUseCases:
             return existing
 
         now = _utc_now()
+        run_id = f"run_{uuid4().hex}"
         runtime_catalog = await self.resolve_runtime_catalog(context=context, metadata=metadata)
         run_metadata = {
             **metadata,
@@ -176,6 +185,7 @@ class AgentRuntimeUseCases:
             provider_iterations = 1
         narration_steps[1]["status"] = "complete"
         tool_loop_limit_reached = False
+        pending_confirmations: list[AgentConfirmation] = []
 
         while final_result.tool_calls:
             if provider_iterations >= MAX_TOOL_ITERATIONS or len(tool_results) >= MAX_TOTAL_TOOL_CALLS:
@@ -214,13 +224,30 @@ class AgentRuntimeUseCases:
                     context=context,
                     metadata=run_metadata,
                 )
+                action_metadata = dict(tool_result.metadata)
+                if tool_result.status == "requires_confirmation":
+                    confirmation = AgentConfirmation(
+                        id=f"confirm_{uuid4().hex}",
+                        run_id=run_id,
+                        tenant_id=context.tenant_id,
+                        user_id=context.user_id,
+                        status="pending",
+                        label=_confirmation_label(
+                            tool=tool_result.name,
+                            content=tool_result.content,
+                            metadata=action_metadata,
+                        ),
+                        created_at=_utc_now(),
+                    )
+                    pending_confirmations.append(confirmation)
+                    action_metadata["confirmation_id"] = confirmation.id
                 tool_results.append(
                     {
                         "id": tool_result.call_id,
                         "tool": tool_result.name,
                         "status": tool_result.status,
                         "content": tool_result.content,
-                        "metadata": tool_result.metadata,
+                        "metadata": action_metadata,
                     }
                 )
                 messages.append(
@@ -253,7 +280,7 @@ class AgentRuntimeUseCases:
             assistant_content = _fallback_assistant_content(prompt, channel)
         completed_at = _utc_now()
         run = AgentRun(
-            id=f"run_{uuid4().hex}",
+            id=run_id,
             tenant_id=context.tenant_id,
             user_id=context.user_id,
             session_id=session_id,
@@ -281,6 +308,14 @@ class AgentRuntimeUseCases:
                     "max_total_tool_calls": MAX_TOTAL_TOOL_CALLS,
                     "limit_reached": tool_loop_limit_reached,
                 },
+                "pending_confirmations": [
+                    {
+                        "id": confirmation.id,
+                        "status": confirmation.status,
+                        "label": confirmation.label,
+                    }
+                    for confirmation in pending_confirmations
+                ],
                 "runtime": final_result.raw_metadata,
             },
             narration_steps=[
@@ -294,7 +329,10 @@ class AgentRuntimeUseCases:
             actions=tool_results,
             artifacts=[],
         )
-        return self.repo.create_run(run=run)
+        return self.repo.create_run_with_confirmations(
+            run=run,
+            confirmations=pending_confirmations,
+        )
 
     async def resolve_runtime_catalog(
         self,
@@ -489,6 +527,24 @@ def _tool_is_available(*, tools: list[dict[str, Any]], name: str) -> bool:
         if isinstance(function, dict) and function.get("name") == name:
             return True
     return False
+
+
+def _confirmation_label(*, tool: str, content: str, metadata: dict[str, Any]) -> str:
+    parsed: dict[str, Any] = {}
+    try:
+        raw = json.loads(content)
+        if isinstance(raw, dict):
+            parsed = raw
+    except json.JSONDecodeError:
+        parsed = {}
+    family = str(metadata.get("family") or parsed.get("family") or "tool")
+    capability = str(parsed.get("capability") or metadata.get("capability") or "")
+    risk = str(metadata.get("risk") or parsed.get("risk") or "write")
+    label_parts = [tool, family]
+    if capability:
+        label_parts.append(capability)
+    label_parts.append(risk)
+    return _compact_text(" / ".join(label_parts), 160)
 
 
 def _runtime_summary(tools: list[dict[str, Any]]) -> str:
