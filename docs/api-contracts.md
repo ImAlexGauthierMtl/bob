@@ -51,6 +51,9 @@ Rules:
 - Delegate conversation persistence to `conversation-backend-api`.
 - Delegate memory context retrieval to `agent-memory-backend-api`.
 - Delegate run creation to `agent-runtime-backend-api`.
+- Normalize runtime `narration_steps` before returning them to Angular. Public
+  steps expose only `label`, `kind`, `status` and `safe_to_show`; internal
+  runtime fields such as `visible` remain backend-only.
 - Never expose the signed internal context to the frontend.
 
 ## Agent Control B4F

@@ -255,7 +255,14 @@ def test_create_message_validates_identity_and_delegates_conversation_runtime(
     assert payload["run"]["status"] == "completed"
     assert payload["run"]["mode"] == "local_runtime"
     assert payload["run"]["trace_id"] == "a" * 32
-    assert payload["narration_steps"] == [{"label": "demande_recue", "status": "complete"}]
+    assert payload["narration_steps"] == [
+        {
+            "label": "demande_recue",
+            "kind": "validate",
+            "status": "complete",
+            "safe_to_show": True,
+        }
+    ]
     assert "internal_session_context" not in payload
     assert fake_identity.calls[0]["headers"]["cookie"] == "bob_cloud_session=abc"
     assert fake_conversation.calls[0] == ("create_session", "signed-internal-context")
@@ -266,6 +273,59 @@ def test_create_message_validates_identity_and_delegates_conversation_runtime(
     assert fake_runtime.calls[0][5]["agent_id"] == "agent-bob-orchestrator"
     assert fake_runtime.calls[0][5]["memory_context"]["private"][0]["id"] == "mem-1"
     assert fake_runtime.calls[0][6] == "msg-1:run"
+
+
+def test_create_message_maps_runtime_narration_to_public_frontend_contract(
+    client,
+    fake_runtime,
+):
+    async def create_run_with_visible_steps(**kwargs):
+        return {
+            "id": "run-local-steps",
+            "session_id": kwargs["session_id"],
+            "input_message_id": kwargs["input_message_id"],
+            "status": "completed",
+            "mode": "provider_fireworks",
+            "trace_id": kwargs["security_context"].trace_id,
+            "assistant_content": "Bob confirme son runtime.",
+            "narration_steps": [
+                {"label": "provider_runtime", "status": "complete", "visible": True},
+                {"label": "outil_bob_runtime_status", "status": "completed", "visible": True},
+                {"label": "secret_interne", "status": "complete", "visible": False},
+            ],
+            "actions": [],
+            "artifacts": [],
+        }
+
+    fake_runtime.create_run = create_run_with_visible_steps
+
+    response = client.post(
+        "/api/bob-chat/v1/messages",
+        json={"message": "Confirme ton runtime"},
+        headers={"Idempotency-Key": "msg-narration-contract"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["narration_steps"] == [
+        {
+            "label": "provider_runtime",
+            "kind": "validate",
+            "status": "complete",
+            "safe_to_show": True,
+        },
+        {
+            "label": "outil_bob_runtime_status",
+            "kind": "lookup",
+            "status": "completed",
+            "safe_to_show": True,
+        },
+        {
+            "label": "secret_interne",
+            "kind": "lookup",
+            "status": "complete",
+            "safe_to_show": False,
+        },
+    ]
 
 
 def test_gateway_rewritten_internal_paths_are_supported(

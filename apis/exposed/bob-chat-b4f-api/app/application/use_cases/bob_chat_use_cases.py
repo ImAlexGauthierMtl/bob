@@ -203,7 +203,7 @@ class BobChatUseCases:
                 "trace_id": runtime_run["trace_id"],
             },
             "actions": runtime_run.get("actions", []),
-            "narration_steps": runtime_run.get("narration_steps", []),
+            "narration_steps": _public_narration_steps(runtime_run.get("narration_steps", [])),
             "artifacts": runtime_run.get("artifacts", []),
         }
         self.idempotency_store.store(dedupe_key, payload_hash, response)
@@ -303,3 +303,37 @@ def _agent_id_payload(command: BobChatMessageCommand) -> str | None:
             if value:
                 return str(value)
     return None
+
+
+def _public_narration_steps(raw_steps: Any) -> list[dict[str, Any]]:
+    if not isinstance(raw_steps, list):
+        return []
+    public_steps: list[dict[str, Any]] = []
+    for raw_step in raw_steps:
+        if not isinstance(raw_step, Mapping):
+            continue
+        label = str(raw_step.get("label") or "").strip()
+        if not label:
+            continue
+        safe_to_show = raw_step.get("safe_to_show")
+        if safe_to_show is None:
+            safe_to_show = raw_step.get("visible", True)
+        public_steps.append(
+            {
+                "label": label,
+                "kind": str(raw_step.get("kind") or _narration_kind(label)),
+                "status": str(raw_step.get("status") or "complete"),
+                "safe_to_show": bool(safe_to_show),
+            }
+        )
+    return public_steps
+
+
+def _narration_kind(label: str) -> str:
+    if label.startswith("outil_"):
+        return "lookup"
+    if label in {"provider_runtime", "demande_recue"}:
+        return "validate"
+    if label == "reponse_complete":
+        return "summarize"
+    return "lookup"

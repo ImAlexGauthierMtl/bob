@@ -8,6 +8,7 @@ import { BobService } from './bob.service';
 export interface ChatMessage {
     role: 'user' | 'assistant';
     content: string;
+    toolSteps?: { tool: string; status: string }[];
 }
 
 export interface ChatRequest {
@@ -17,6 +18,7 @@ export interface ChatRequest {
 export interface ChatResponse {
     reply: string;
     sessionId: string;
+    toolSteps?: { tool: string; status: string }[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -34,6 +36,7 @@ export class ChatService {
             map((response) => ({
                 reply: response.response,
                 sessionId: response.session_id,
+                toolSteps: response.tool_steps,
             })),
         );
     }

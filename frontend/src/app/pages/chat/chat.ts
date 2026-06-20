@@ -44,7 +44,10 @@ export class ChatComponent implements AfterViewChecked {
         this.chat.send(text, this.sessionId).subscribe({
             next: (res) => {
                 this.sessionId = res.sessionId;
-                this.messages.update((m) => [...m, { role: 'assistant', content: res.reply }]);
+                this.messages.update((m) => [
+                    ...m,
+                    { role: 'assistant', content: res.reply, toolSteps: res.toolSteps },
+                ]);
                 this.isLoading.set(false);
             },
             error: (err) => {

@@ -12,6 +12,7 @@ describe('ChatService', () => {
                 session_id: 'chat_1',
                 turn_count: 1,
                 actions: [],
+                tool_steps: [{ tool: 'outil_bob_runtime_status', status: 'completed' }],
             })),
         } as unknown as BobService;
         const service = new ChatService(bob);
@@ -30,6 +31,7 @@ describe('ChatService', () => {
         expect(response).toEqual({
             reply: 'Bonjour depuis Bob.',
             sessionId: 'chat_1',
+            toolSteps: [{ tool: 'outil_bob_runtime_status', status: 'completed' }],
         });
     });
 });
