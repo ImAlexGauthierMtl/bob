@@ -1,14 +1,19 @@
 from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
+import httpx
 import pytest
 
 import main
 from app.application.use_cases.agent_runtime_use_cases import AgentRuntimeUseCases
-from app.domain import AgentConfirmation
+from app.domain import AgentConfirmation, InternalContext, RuntimeToolCall
 from app.infrastructure.persistence.in_memory_agent_runtime_repository import (
     InMemoryAgentRuntimeRepository,
 )
+from app.infrastructure.providers import factory as provider_factory
+from app.infrastructure.providers.fireworks_provider import FireworksRuntimeProvider, _to_tool_call
+from app.infrastructure.providers.local_provider import LocalRuntimeProvider
+from app.infrastructure.tools.local_registry import LocalRuntimeToolRegistry
 from app.presentation.routes import agent_runtime_routes
 from shared.infrastructure import InternalSessionContext, InternalSessionContextSigner
 
@@ -20,7 +25,11 @@ def runtime_repo():
 
 @pytest.fixture()
 def client(runtime_repo):
-    use_cases = AgentRuntimeUseCases(repo=runtime_repo)
+    use_cases = AgentRuntimeUseCases(
+        repo=runtime_repo,
+        runtime_provider=LocalRuntimeProvider(),
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
     main.app.dependency_overrides[agent_runtime_routes.get_agent_runtime_use_cases] = lambda: use_cases
     with TestClient(main.app) as test_client:
         yield test_client
@@ -84,10 +93,14 @@ def test_create_run_and_fetch_it(client):
     payload = created.json()
     assert payload["id"].startswith("run_")
     assert payload["status"] == "completed"
-    assert payload["mode"] == "contract_seed"
+    assert payload["mode"] == "local_runtime"
     assert payload["trace_id"] == "c" * 32
-    assert "Bob a pris en charge" in payload["assistant_content"]
+    assert "runtime agentique CDE" in payload["assistant_content"]
     assert payload["narration_steps"][0]["label"] == "demande_recue"
+    assert payload["metadata"]["provider"] == "local"
+    assert payload["metadata"]["model"] == "bob-local-runtime"
+    assert payload["metadata"]["tool_calls"][0]["tool"] == "bob_runtime_status"
+    assert payload["actions"][0]["tool"] == "bob_runtime_status"
 
     fetched = client.get(
         f"/internal/agent-runtime/v1/runs/{payload['id']}",
@@ -189,6 +202,141 @@ def test_confirmation_resolution_contract(client, runtime_repo):
     assert repeated.json()["detail"] == {"code": "confirmation_already_resolved"}
     assert missing.status_code == 404
     assert missing.json()["detail"] == {"code": "confirmation_not_found"}
+
+
+@pytest.mark.asyncio
+async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools():
+    registry = LocalRuntimeToolRegistry()
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="user-alex-local",
+        trace_id="d" * 32,
+        permissions=("bob_chat.use",),
+        roles=("admin",),
+    )
+    metadata = {
+        "memory_context": {
+            "private": [{"id": "mem-1", "title": "Style", "memory_type": "preference"}],
+            "organization": [{"id": "org-1", "title": "Procedure", "memory_type": "procedure"}],
+            "degraded": ["vector_unavailable"],
+            "source": "agent-memory-backend-api",
+        }
+    }
+
+    tools = registry.list_tools(prompt="Quel est ton runtime?", context=context, metadata=metadata)
+    runtime_status = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-runtime",
+            name="bob_runtime_status",
+            arguments={"include_tools": False},
+        ),
+        context=context,
+        metadata=metadata,
+    )
+    memory_summary = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-memory",
+            name="bob_memory_context_summary",
+            arguments={"max_items": 1},
+        ),
+        context=context,
+        metadata=metadata,
+    )
+    rejected = await registry.execute(
+        call=RuntimeToolCall(id="call-bad", name="missing_tool", arguments={}),
+        context=context,
+        metadata=metadata,
+    )
+
+    assert tools[0]["function"]["name"] == "bob_runtime_status"
+    assert runtime_status.status == "completed"
+    assert "available_tool_families" not in runtime_status.content
+    assert memory_summary.status == "completed"
+    assert "mem-1" in memory_summary.content
+    assert rejected.status == "rejected"
+
+
+def test_provider_factory_selects_local_fireworks_and_rejects_missing_key(monkeypatch):
+    monkeypatch.setenv("AGENT_RUNTIME_PROVIDER", "local")
+    assert isinstance(provider_factory.create_runtime_provider(), LocalRuntimeProvider)
+
+    monkeypatch.setenv("AGENT_RUNTIME_PROVIDER", "fireworks")
+    monkeypatch.delenv("FIREWORKS_API_KEY", raising=False)
+    with pytest.raises(RuntimeError):
+        provider_factory.create_runtime_provider()
+
+    monkeypatch.setenv("FIREWORKS_API_KEY", "test-key")
+    provider = provider_factory.create_runtime_provider()
+    assert isinstance(provider, FireworksRuntimeProvider)
+
+
+@pytest.mark.asyncio
+async def test_fireworks_provider_maps_chat_completion_tool_calls(monkeypatch):
+    class FakeAsyncClient:
+        def __init__(self, timeout):
+            self.timeout = timeout
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def post(self, url, json=None, headers=None):
+            assert url == "https://fireworks.example/chat/completions"
+            assert headers["Authorization"] == "Bearer key"
+            assert json["model"] == "accounts/fireworks/models/kimi-k2p7-code"
+            assert json["tool_choice"] == "auto"
+            return httpx.Response(
+                200,
+                request=httpx.Request("POST", url),
+                json={
+                    "choices": [
+                        {
+                            "finish_reason": "tool_calls",
+                            "message": {
+                                "content": "",
+                                "tool_calls": [
+                                    {
+                                        "id": "tool-1",
+                                        "function": {
+                                            "name": "bob_runtime_status",
+                                            "arguments": "{\"include_tools\": true}",
+                                        },
+                                    }
+                                ],
+                            },
+                        }
+                    ],
+                    "usage": {"prompt_tokens": 10},
+                },
+            )
+
+    monkeypatch.setattr("app.infrastructure.providers.fireworks_provider.httpx.AsyncClient", FakeAsyncClient)
+    provider = FireworksRuntimeProvider(
+        api_key="key",
+        base_url="https://fireworks.example",
+        model="accounts/fireworks/models/kimi-k2p7-code",
+        temperature=0.1,
+        top_p=0.8,
+        timeout_seconds=12,
+    )
+
+    result = await provider.complete(
+        messages=[{"role": "user", "content": "Bonjour"}],
+        tools=[{"type": "function", "function": {"name": "bob_runtime_status", "parameters": {}}}],
+        trace_id="e" * 32,
+    )
+    invalid_arguments = _to_tool_call(
+        index=2,
+        raw_tool_call={"function": {"name": "bad_args", "arguments": "{not-json"}},
+    )
+
+    assert result.mode == "provider_fireworks"
+    assert result.tool_calls[0].name == "bob_runtime_status"
+    assert result.tool_calls[0].arguments == {"include_tools": True}
+    assert result.raw_metadata["usage"]["prompt_tokens"] == 10
+    assert invalid_arguments.arguments == {"raw": "{not-json"}
 
 
 def test_python_package_contract_loads_runtime_components():

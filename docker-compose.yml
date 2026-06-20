@@ -288,6 +288,7 @@ services:
     environment:
       <<: [*common-env, *backend-urls]
       PORT: 8005
+      AGENT_RUNTIME_PROVIDER: ${AGENT_RUNTIME_PROVIDER:-auto}
     ports:
       - "${PLATFORM_B4F_API_PORT:-8005}:8005"
     healthcheck:
@@ -724,6 +725,13 @@ services:
       PORT: 9013
       INTERNAL_SESSION_SECRET: ${INTERNAL_SESSION_SECRET:-dev-internal-session-secret-not-for-production}
       INTERNAL_SESSION_KID: ${INTERNAL_SESSION_KID:-internal-session-dev}
+      AGENT_RUNTIME_PROVIDER: ${AGENT_RUNTIME_PROVIDER:-auto}
+      FIREWORKS_API_KEY: ${FIREWORKS_API_KEY:-}
+      FIREWORKS_BASE_URL: ${FIREWORKS_BASE_URL:-https://api.fireworks.ai/inference/v1}
+      FIREWORKS_MODEL: ${FIREWORKS_MODEL:-accounts/fireworks/models/kimi-k2p7-code}
+      FIREWORKS_TEMPERATURE: ${FIREWORKS_TEMPERATURE:-0.1}
+      FIREWORKS_TOP_P: ${FIREWORKS_TOP_P:-0.8}
+      FIREWORKS_TIMEOUT_SECONDS: ${FIREWORKS_TIMEOUT_SECONDS:-60}
     ports:
       - "${AGENT_RUNTIME_BACKEND_API_PORT:-9013}:9013"
     healthcheck:

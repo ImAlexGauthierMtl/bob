@@ -23,6 +23,11 @@ export const selectBobAssistantSettingsOptions = createSelector(
     }),
 );
 
+export const selectBobAssistantRuntimeSettings = createSelector(
+    selectBobAssistantSettingsState,
+    (state) => state.runtime,
+);
+
 export const selectBobAssistantSettingsLoading = createSelector(
     selectBobAssistantSettingsState,
     (state) => state.loading,
@@ -31,6 +36,11 @@ export const selectBobAssistantSettingsLoading = createSelector(
 export const selectBobAssistantSettingsSaving = createSelector(
     selectBobAssistantSettingsState,
     (state) => state.saving,
+);
+
+export const selectBobAssistantRuntimeSaving = createSelector(
+    selectBobAssistantSettingsState,
+    (state) => state.runtimeSaving,
 );
 
 export const selectBobAssistantSettingsNotice = createSelector(

@@ -350,6 +350,54 @@ def test_bob_settings_gateway_rewritten_internal_paths_are_supported(client):
     assert fake_bob_cloud.calls[0][0] == "tenants"
 
 
+def test_bob_runtime_settings_catalog_and_mutations(client):
+    headers = {
+        "Authorization": "Bearer local-admin-token",
+        "X-CDE-Capabilities": "bob_settings.manage",
+    }
+
+    catalog = client.get("/api/bob-settings/v1/runtime", headers=headers)
+    agent = client.post(
+        "/api/bob-settings/v1/runtime/agents",
+        json={"name": "Bob QA", "description": "Agent de verification"},
+        headers={**headers, "Idempotency-Key": "agent-1"},
+    )
+    skill = client.post(
+        "/api/bob-settings/v1/runtime/skills",
+        json={"name": "Review Discipline", "scope": "shared_clean"},
+        headers={**headers, "Idempotency-Key": "skill-1"},
+    )
+    tool = client.post(
+        "/api/bob-settings/v1/runtime/tools",
+        json={"name": "factory_status", "family": "factory", "risk": "read"},
+        headers={**headers, "Idempotency-Key": "tool-1"},
+    )
+    replay = client.post(
+        "/api/bob-settings/v1/runtime/tools",
+        json={"name": "factory_status", "family": "factory", "risk": "read"},
+        headers={**headers, "Idempotency-Key": "tool-1"},
+    )
+    missing_name = client.post(
+        "/api/bob-settings/v1/runtime/skills",
+        json={"description": "bad"},
+        headers={**headers, "Idempotency-Key": "skill-bad"},
+    )
+
+    assert catalog.status_code == 200
+    assert catalog.json()["providers"][0]["status"] == "runtime_backend_managed"
+    assert catalog.json()["providers"][0]["model"] == "accounts/fireworks/models/kimi-k2p7-code"
+    assert catalog.json()["agents"][0]["name"] == "Bob Orchestrator"
+    assert agent.status_code == 201
+    assert agent.json()["item"]["name"] == "Bob QA"
+    assert skill.status_code == 201
+    assert skill.json()["item"]["name"] == "Review Discipline"
+    assert tool.status_code == 201
+    assert tool.json()["item"]["family"] == "factory"
+    assert replay.json() == tool.json()
+    assert missing_name.status_code == 422
+    assert missing_name.json()["detail"] == {"code": "name_required"}
+
+
 def test_bob_settings_security_mutations_require_idempotency_key(client):
     fake_bob_cloud = FakeBobCloudClient()
     main.app.dependency_overrides[bob_settings_security_routes.get_bob_cloud_client] = lambda: fake_bob_cloud

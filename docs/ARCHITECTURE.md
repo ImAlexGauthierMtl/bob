@@ -232,7 +232,7 @@ croo-digital-experience/
 | **Micro-Frontends** | Angular 19, TypeScript |
 | **B4F** | FastAPI (Python) |
 | **Backend** | FastAPI (Python), Event Bus |
-| **AI/ML** | LangGraph, Groq, DashScope, OpenRouter |
+| **AI/ML** | Runtime agentique Bob, Fireworks, Groq, DashScope, OpenRouter |
 | **Base de données** | PostgreSQL 16 |
 | **Containerisation** | Docker Compose |
 | **Communication** | Microsoft 365 Graph API |

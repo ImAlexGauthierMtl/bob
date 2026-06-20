@@ -45,6 +45,57 @@ export interface BobVoiceSettingsResponse {
     source?: string;
 }
 
+export interface BobRuntimeProvider {
+    id: string;
+    name: string;
+    provider: string;
+    model: string;
+    status: string;
+    enabled: boolean;
+}
+
+export interface BobRuntimeAgent {
+    id: string;
+    name: string;
+    description: string;
+    provider_id: string;
+    status: string;
+    skills: string[];
+    tools: string[];
+}
+
+export interface BobRuntimeSkill {
+    id: string;
+    name: string;
+    description: string;
+    status: string;
+    scope: string;
+}
+
+export interface BobRuntimeTool {
+    id: string;
+    name: string;
+    family: string;
+    risk: string;
+    status: string;
+    description: string;
+}
+
+export interface BobRuntimeSettingsResponse {
+    providers: BobRuntimeProvider[];
+    active_provider: string;
+    agents: BobRuntimeAgent[];
+    skills: BobRuntimeSkill[];
+    tools: BobRuntimeTool[];
+    memory: Record<string, string>;
+    source?: string;
+}
+
+export interface BobRuntimeCreateResponse<T> {
+    item: T;
+    runtime: BobRuntimeSettingsResponse;
+}
+
 @Injectable({ providedIn: 'root' })
 export class BobAssistantSettingsService {
     private http = inject(HttpClient);
@@ -71,6 +122,34 @@ export class BobAssistantSettingsService {
             `${this.baseUrl}/voice`,
             { voice },
             { headers: this.idempotencyHeaders('voice') },
+        );
+    }
+
+    getRuntime(): Observable<BobRuntimeSettingsResponse> {
+        return this.http.get<BobRuntimeSettingsResponse>(`${this.baseUrl}/runtime`);
+    }
+
+    createRuntimeAgent(payload: Partial<BobRuntimeAgent> & { name: string }): Observable<BobRuntimeCreateResponse<BobRuntimeAgent>> {
+        return this.http.post<BobRuntimeCreateResponse<BobRuntimeAgent>>(
+            `${this.baseUrl}/runtime/agents`,
+            payload,
+            { headers: this.idempotencyHeaders('runtime-agent') },
+        );
+    }
+
+    createRuntimeSkill(payload: Partial<BobRuntimeSkill> & { name: string }): Observable<BobRuntimeCreateResponse<BobRuntimeSkill>> {
+        return this.http.post<BobRuntimeCreateResponse<BobRuntimeSkill>>(
+            `${this.baseUrl}/runtime/skills`,
+            payload,
+            { headers: this.idempotencyHeaders('runtime-skill') },
+        );
+    }
+
+    createRuntimeTool(payload: Partial<BobRuntimeTool> & { name: string }): Observable<BobRuntimeCreateResponse<BobRuntimeTool>> {
+        return this.http.post<BobRuntimeCreateResponse<BobRuntimeTool>>(
+            `${this.baseUrl}/runtime/tools`,
+            payload,
+            { headers: this.idempotencyHeaders('runtime-tool') },
         );
     }
 

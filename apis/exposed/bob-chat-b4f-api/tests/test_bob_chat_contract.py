@@ -146,7 +146,7 @@ class FakeRuntimeClient:
             "session_id": session_id,
             "input_message_id": input_message_id,
             "status": "completed",
-            "mode": "contract_seed",
+            "mode": "local_runtime",
             "trace_id": security_context.trace_id,
             "assistant_content": f"Runtime Bob: {prompt}",
             "narration_steps": [{"label": "demande_recue", "status": "complete"}],
@@ -249,7 +249,7 @@ def test_create_message_validates_identity_and_delegates_conversation_runtime(
     assert payload["session"]["turn_count"] == 1
     assert payload["run"]["id"] == "run-local-1"
     assert payload["run"]["status"] == "completed"
-    assert payload["run"]["mode"] == "contract_seed"
+    assert payload["run"]["mode"] == "local_runtime"
     assert payload["run"]["trace_id"] == "a" * 32
     assert payload["narration_steps"] == [{"label": "demande_recue", "status": "complete"}]
     assert "internal_session_context" not in payload
@@ -671,7 +671,7 @@ async def test_agent_runtime_backend_client_delegates_signed_run_call():
                 json={
                     "id": "run-1",
                     "status": "completed",
-                    "mode": "contract_seed",
+                    "mode": "local_runtime",
                     "trace_id": headers["X-Trace-Id"],
                     "assistant_content": "Runtime Bob",
                     "narration_steps": [],

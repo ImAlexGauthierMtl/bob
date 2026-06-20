@@ -6,6 +6,9 @@ from app.domain.entities import (
     AgentRuntimeError,
     AgentRuntimeNotFoundError,
     InternalContext,
+    RuntimeModelResult,
+    RuntimeToolCall,
+    RuntimeToolResult,
 )
 
 __all__ = [
@@ -14,4 +17,7 @@ __all__ = [
     "AgentRuntimeError",
     "AgentRuntimeNotFoundError",
     "InternalContext",
+    "RuntimeModelResult",
+    "RuntimeToolCall",
+    "RuntimeToolResult",
 ]

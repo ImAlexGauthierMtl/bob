@@ -9,6 +9,8 @@ from app.application.use_cases.agent_runtime_use_cases import AgentRuntimeUseCas
 from app.domain import InternalContext
 from app.infrastructure.database import get_db
 from app.infrastructure.persistence.agent_runtime_repository import AgentRuntimeRepository
+from app.infrastructure.providers.factory import create_runtime_provider
+from app.infrastructure.tools.local_registry import LocalRuntimeToolRegistry
 
 
 def get_internal_context(request: Request) -> InternalContext:
@@ -28,4 +30,8 @@ def get_internal_context(request: Request) -> InternalContext:
 
 
 def get_agent_runtime_use_cases(db: Session = Depends(get_db)) -> AgentRuntimeUseCases:
-    return AgentRuntimeUseCases(repo=AgentRuntimeRepository(db))
+    return AgentRuntimeUseCases(
+        repo=AgentRuntimeRepository(db),
+        runtime_provider=create_runtime_provider(),
+        tool_registry=LocalRuntimeToolRegistry(),
+    )

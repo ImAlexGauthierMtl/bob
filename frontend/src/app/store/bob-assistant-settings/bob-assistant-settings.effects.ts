@@ -4,12 +4,17 @@ import { catchError, forkJoin, map, mergeMap, of, switchMap } from 'rxjs';
 import { BobAssistantSettingsService } from '../../shared/services/bob-assistant-settings.service';
 import { errorMessage } from '../remote-state';
 import {
+    createBobRuntimeAgent,
+    createBobRuntimeSkill,
+    createBobRuntimeTool,
     loadBobAssistantSettings,
     loadBobAssistantSettingsFailure,
     loadBobAssistantSettingsSuccess,
     saveBobAssistantSettings,
     saveBobAssistantSettingsFailure,
     saveBobAssistantSettingsSuccess,
+    updateBobRuntimeSettingsFailure,
+    updateBobRuntimeSettingsSuccess,
 } from './bob-assistant-settings.actions';
 
 @Injectable()
@@ -24,13 +29,15 @@ export class BobAssistantSettingsEffects {
                 forkJoin({
                     conversation: this.service.getConversation(),
                     voice: this.service.getVoice(),
+                    runtime: this.service.getRuntime(),
                 }).pipe(
-                    map(({ conversation, voice }) => loadBobAssistantSettingsSuccess({
+                    map(({ conversation, voice, runtime }) => loadBobAssistantSettingsSuccess({
                         personality: conversation.personality,
                         voice: voice.voice,
                         availableTones: conversation.available_tones,
                         availableLanguages: conversation.available_languages,
                         availableVoices: voice.available_voices,
+                        runtime,
                     })),
                     catchError((error) => of(loadBobAssistantSettingsFailure({ error: errorMessage(error) }))),
                 ),
@@ -54,6 +61,51 @@ export class BobAssistantSettingsEffects {
                         availableVoices: voiceSettings.available_voices,
                     })),
                     catchError((error) => of(saveBobAssistantSettingsFailure({ error: errorMessage(error) }))),
+                ),
+            ),
+        ),
+    );
+
+    createRuntimeAgent$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(createBobRuntimeAgent),
+            mergeMap(({ agent }) =>
+                this.service.createRuntimeAgent(agent).pipe(
+                    map(({ runtime }) => updateBobRuntimeSettingsSuccess({
+                        runtime,
+                        notice: 'Agent added',
+                    })),
+                    catchError((error) => of(updateBobRuntimeSettingsFailure({ error: errorMessage(error) }))),
+                ),
+            ),
+        ),
+    );
+
+    createRuntimeSkill$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(createBobRuntimeSkill),
+            mergeMap(({ skill }) =>
+                this.service.createRuntimeSkill(skill).pipe(
+                    map(({ runtime }) => updateBobRuntimeSettingsSuccess({
+                        runtime,
+                        notice: 'Skill added',
+                    })),
+                    catchError((error) => of(updateBobRuntimeSettingsFailure({ error: errorMessage(error) }))),
+                ),
+            ),
+        ),
+    );
+
+    createRuntimeTool$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(createBobRuntimeTool),
+            mergeMap(({ tool }) =>
+                this.service.createRuntimeTool(tool).pipe(
+                    map(({ runtime }) => updateBobRuntimeSettingsSuccess({
+                        runtime,
+                        notice: 'Tool added',
+                    })),
+                    catchError((error) => of(updateBobRuntimeSettingsFailure({ error: errorMessage(error) }))),
                 ),
             ),
         ),

@@ -2,16 +2,22 @@ import { createReducer, on } from '@ngrx/store';
 import {
     BobConversationPersonality,
     BobLanguageOption,
+    BobRuntimeSettingsResponse,
     BobVoiceOption,
     BobVoiceSettings,
 } from '../../shared/services/bob-assistant-settings.service';
 import {
+    createBobRuntimeAgent,
+    createBobRuntimeSkill,
+    createBobRuntimeTool,
     loadBobAssistantSettings,
     loadBobAssistantSettingsFailure,
     loadBobAssistantSettingsSuccess,
     saveBobAssistantSettings,
     saveBobAssistantSettingsFailure,
     saveBobAssistantSettingsSuccess,
+    updateBobRuntimeSettingsFailure,
+    updateBobRuntimeSettingsSuccess,
 } from './bob-assistant-settings.actions';
 
 export interface BobAssistantSettingsState {
@@ -20,8 +26,10 @@ export interface BobAssistantSettingsState {
     availableTones: string[];
     availableLanguages: BobLanguageOption[];
     availableVoices: BobVoiceOption[];
+    runtime: BobRuntimeSettingsResponse | null;
     loading: boolean;
     saving: boolean;
+    runtimeSaving: boolean;
     error: string | null;
     notice: string | null;
 }
@@ -32,8 +40,10 @@ export const initialBobAssistantSettingsState: BobAssistantSettingsState = {
     availableTones: [],
     availableLanguages: [],
     availableVoices: [],
+    runtime: null,
     loading: false,
     saving: false,
+    runtimeSaving: false,
     error: null,
     notice: null,
 };
@@ -65,5 +75,24 @@ export const bobAssistantSettingsReducer = createReducer(
         saving: false,
         error,
         notice: 'Error saving settings',
+    })),
+    on(createBobRuntimeAgent, createBobRuntimeSkill, createBobRuntimeTool, (state) => ({
+        ...state,
+        runtimeSaving: true,
+        error: null,
+        notice: null,
+    })),
+    on(updateBobRuntimeSettingsSuccess, (state, { runtime, notice }) => ({
+        ...state,
+        runtime,
+        runtimeSaving: false,
+        error: null,
+        notice,
+    })),
+    on(updateBobRuntimeSettingsFailure, (state, { error }) => ({
+        ...state,
+        runtimeSaving: false,
+        error,
+        notice: 'Runtime settings error',
     })),
 );

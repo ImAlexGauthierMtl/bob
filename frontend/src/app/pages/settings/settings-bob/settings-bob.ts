@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
@@ -6,10 +7,18 @@ import { Subscription } from 'rxjs';
 import {
     BobConversationPersonality,
     BobLanguageOption,
+    BobRuntimeAgent,
+    BobRuntimeProvider,
+    BobRuntimeSettingsResponse,
+    BobRuntimeSkill,
+    BobRuntimeTool,
     BobVoiceOption,
     BobVoiceSettings,
 } from '../../../shared/services/bob-assistant-settings.service';
 import {
+    createBobRuntimeAgent,
+    createBobRuntimeSkill,
+    createBobRuntimeTool,
     loadBobAssistantSettings,
     saveBobAssistantSettings,
 } from '../../../store/bob-assistant-settings/bob-assistant-settings.actions';
@@ -18,6 +27,8 @@ import {
     selectBobAssistantSettingsNotice,
     selectBobAssistantSettingsOptions,
     selectBobAssistantSettingsPersonality,
+    selectBobAssistantRuntimeSettings,
+    selectBobAssistantRuntimeSaving,
     selectBobAssistantSettingsSaving,
     selectBobAssistantSettingsVoice,
 } from '../../../store/bob-assistant-settings/bob-assistant-settings.selectors';
@@ -25,7 +36,7 @@ import {
 @Component({
     selector: 'croo-settings-bob',
     standalone: true,
-    imports: [RouterLink, FormsModule],
+    imports: [CommonModule, RouterLink, FormsModule],
     templateUrl: './settings-bob.html',
     styleUrls: ['../settings-shared.css', './settings-bob.css'],
 })
@@ -33,6 +44,7 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
     private store = inject(Store);
     private subscriptions = new Subscription();
     private savingSignal = this.store.selectSignal(selectBobAssistantSettingsSaving);
+    private runtimeSavingSignal = this.store.selectSignal(selectBobAssistantRuntimeSaving);
 
     // Personality
     tone = 'professional';
@@ -53,11 +65,28 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
     availableLanguages: BobLanguageOption[] = [];
     private isLoadingVoices = false;
 
+    // Runtime
+    runtimeProviders: BobRuntimeProvider[] = [];
+    runtimeAgents: BobRuntimeAgent[] = [];
+    runtimeSkills: BobRuntimeSkill[] = [];
+    runtimeTools: BobRuntimeTool[] = [];
+    runtimeMemory: Record<string, string> = {};
+    runtimeLoading = false;
+    runtimeMessage = '';
+    newAgentName = '';
+    newSkillName = '';
+    newToolName = '';
+    newToolFamily = 'custom';
+
     // UI state
     saveMessage = '';
 
     get isSaving(): boolean {
         return this.savingSignal();
+    }
+
+    get isRuntimeSaving(): boolean {
+        return this.runtimeSavingSignal();
     }
 
     ngOnInit(): void {
@@ -79,6 +108,14 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
             }),
         );
         this.subscriptions.add(
+            this.store.select(selectBobAssistantRuntimeSettings).subscribe((runtime) => {
+                if (runtime) {
+                    this.applyRuntimeSettings(runtime);
+                    this.runtimeLoading = false;
+                }
+            }),
+        );
+        this.subscriptions.add(
             this.store.select(selectBobAssistantSettingsNotice).subscribe((notice) => {
                 if (notice) this.flashMessage(notice);
             }),
@@ -88,7 +125,7 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
                 if (error) this.flashMessage(error);
             }),
         );
-        this.store.dispatch(loadBobAssistantSettings());
+        this.loadRuntimeSettings();
     }
 
     ngOnDestroy(): void {
@@ -110,6 +147,44 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
 
     selectVoice(voiceId: string): void {
         this.selectedVoice = voiceId;
+    }
+
+    loadRuntimeSettings(): void {
+        this.runtimeLoading = true;
+        this.store.dispatch(loadBobAssistantSettings());
+    }
+
+    createAgent(): void {
+        const name = this.newAgentName.trim();
+        if (!name) return;
+        this.store.dispatch(createBobRuntimeAgent({ agent: {
+            name,
+            description: 'Agent ajoute depuis CDE Settings',
+        } }));
+        this.newAgentName = '';
+    }
+
+    createSkill(): void {
+        const name = this.newSkillName.trim();
+        if (!name) return;
+        this.store.dispatch(createBobRuntimeSkill({ skill: {
+            name,
+            description: 'Skill ajoute depuis CDE Settings',
+            scope: 'shared_clean',
+        } }));
+        this.newSkillName = '';
+    }
+
+    createTool(): void {
+        const name = this.newToolName.trim();
+        if (!name) return;
+        this.store.dispatch(createBobRuntimeTool({ tool: {
+            name,
+            family: this.newToolFamily || 'custom',
+            risk: 'read',
+            description: 'Tool ajoute depuis CDE Settings',
+        } }));
+        this.newToolName = '';
     }
 
     getSelectedVoiceName(): string {
@@ -193,6 +268,14 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
             speed: this.voiceSpeed,
             auto_listen: this.autoListen,
         };
+    }
+
+    private applyRuntimeSettings(settings: BobRuntimeSettingsResponse): void {
+        this.runtimeProviders = settings.providers;
+        this.runtimeAgents = settings.agents;
+        this.runtimeSkills = settings.skills;
+        this.runtimeTools = settings.tools;
+        this.runtimeMemory = settings.memory || {};
     }
 
     private flashMessage(message: string): void {

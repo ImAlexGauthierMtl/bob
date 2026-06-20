@@ -157,6 +157,125 @@
         </div>
     </div>
 
+    <!-- ═══ RUNTIME SECTION ══════════════════════════════════ -->
+
+    <div class="settings-section">
+        <div class="settings-section__header">
+            <div>
+                <h4 class="settings-section__title">
+                    <i class="fa-solid fa-microchip"></i> Runtime
+                </h4>
+                <p class="settings-section__desc">Providers, agents, skills, tools, memory, RAG and vectors.</p>
+            </div>
+            <button class="btn btn--outline bob-icon-btn" (click)="loadRuntimeSettings()" [disabled]="runtimeLoading"
+                title="Refresh runtime settings">
+                <i class="fa-solid" [class.fa-rotate]="!runtimeLoading" [class.fa-spinner]="runtimeLoading"
+                    [class.fa-spin]="runtimeLoading"></i>
+            </button>
+        </div>
+
+        @if (runtimeMessage) {
+        <div class="bob-session-note">
+            <i class="fa-solid fa-circle-info"></i>
+            {{ runtimeMessage }}
+        </div>
+        }
+
+        <div class="bob-runtime-grid">
+            <section class="bob-runtime-block">
+                <h5>Providers</h5>
+                @for (provider of runtimeProviders; track provider.id) {
+                <div class="bob-runtime-row">
+                    <div>
+                        <strong>{{ provider.name }}</strong>
+                        <span>{{ provider.model }}</span>
+                    </div>
+                    <em [class.bob-status-ok]="provider.status === 'runtime_backend_managed' || provider.status === 'configured'">{{ provider.status }}</em>
+                </div>
+                }
+            </section>
+
+            <section class="bob-runtime-block">
+                <h5>Memory</h5>
+                @for (entry of runtimeMemory | keyvalue; track entry.key) {
+                <div class="bob-runtime-row bob-runtime-row--stack">
+                    <strong>{{ entry.key }}</strong>
+                    <span>{{ entry.value }}</span>
+                </div>
+                }
+            </section>
+        </div>
+
+        <div class="bob-runtime-grid bob-runtime-grid--three">
+            <section class="bob-runtime-block">
+                <div class="bob-runtime-block__head">
+                    <h5>Agents</h5>
+                    <span>{{ runtimeAgents.length }}</span>
+                </div>
+                <div class="bob-inline-form">
+                    <input class="form-input" type="text" placeholder="Agent name" [(ngModel)]="newAgentName" />
+                    <button class="btn btn-accent bob-icon-btn" (click)="createAgent()" [disabled]="isRuntimeSaving"
+                        title="Add agent">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+                @for (agent of runtimeAgents; track agent.id) {
+                <div class="bob-runtime-row bob-runtime-row--stack">
+                    <strong>{{ agent.name }}</strong>
+                    <span>{{ agent.status }} · {{ agent.provider_id }}</span>
+                </div>
+                }
+            </section>
+
+            <section class="bob-runtime-block">
+                <div class="bob-runtime-block__head">
+                    <h5>Skills</h5>
+                    <span>{{ runtimeSkills.length }}</span>
+                </div>
+                <div class="bob-inline-form">
+                    <input class="form-input" type="text" placeholder="Skill name" [(ngModel)]="newSkillName" />
+                    <button class="btn btn-accent bob-icon-btn" (click)="createSkill()" [disabled]="isRuntimeSaving"
+                        title="Add skill">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+                @for (skill of runtimeSkills; track skill.id) {
+                <div class="bob-runtime-row bob-runtime-row--stack">
+                    <strong>{{ skill.name }}</strong>
+                    <span>{{ skill.status }} · {{ skill.scope }}</span>
+                </div>
+                }
+            </section>
+
+            <section class="bob-runtime-block">
+                <div class="bob-runtime-block__head">
+                    <h5>Tools</h5>
+                    <span>{{ runtimeTools.length }}</span>
+                </div>
+                <div class="bob-inline-form bob-inline-form--tool">
+                    <input class="form-input" type="text" placeholder="Tool name" [(ngModel)]="newToolName" />
+                    <select class="form-input" [(ngModel)]="newToolFamily">
+                        <option value="custom">custom</option>
+                        <option value="memory">memory</option>
+                        <option value="support">support</option>
+                        <option value="workspace">workspace</option>
+                        <option value="factory">factory</option>
+                    </select>
+                    <button class="btn btn-accent bob-icon-btn" (click)="createTool()" [disabled]="isRuntimeSaving"
+                        title="Add tool">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+                @for (tool of runtimeTools; track tool.id) {
+                <div class="bob-runtime-row bob-runtime-row--stack">
+                    <strong>{{ tool.name }}</strong>
+                    <span>{{ tool.family }} · {{ tool.risk }} · {{ tool.status }}</span>
+                </div>
+                }
+            </section>
+        </div>
+    </div>
+
     <!-- ═══ CAPABILITIES LINK ════════════════════════════════ -->
 
     <div class="settings-section">

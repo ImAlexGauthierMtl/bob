@@ -49,18 +49,18 @@ export class BobService {
             channel: channel || 'compact',
         };
 
-        return this.sendMessageV1(body).pipe(map((response) => this.toLegacyChatResponse(response)));
+        return this.sendMessageV1(body).pipe(map((response) => this.toBobChatResponse(response)));
     }
 
     listSessions(): Observable<BobSessionInfo[]> {
-        return this.listSessionsV1().pipe(map((sessions) => sessions.map((session) => this.toLegacySessionInfo(session))));
+        return this.listSessionsV1().pipe(map((sessions) => sessions.map((session) => this.toBobSessionInfo(session))));
     }
 
     deleteSession(sessionId: string): Observable<void> {
         return this.http.delete<void>(`${API_URL}/sessions/${sessionId}`);
     }
 
-    private toLegacyChatResponse(response: BobChatV1Response): BobChatResponse {
+    private toBobChatResponse(response: BobChatV1Response): BobChatResponse {
         const artifact = this.firstArtifact(response.artifacts);
         return {
             response: response.message.content,
@@ -75,7 +75,7 @@ export class BobService {
         };
     }
 
-    private toLegacySessionInfo(session: BobChatV1Session): BobSessionInfo {
+    private toBobSessionInfo(session: BobChatV1Session): BobSessionInfo {
         return {
             session_id: session.id,
             user_id: '',

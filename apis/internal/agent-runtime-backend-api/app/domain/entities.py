@@ -49,6 +49,32 @@ class AgentConfirmation:
     resolved_at: Optional[datetime] = None
 
 
+@dataclass(frozen=True)
+class RuntimeToolCall:
+    id: str
+    name: str
+    arguments: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class RuntimeModelResult:
+    content: str
+    provider: str
+    model: str
+    mode: str
+    tool_calls: list[RuntimeToolCall] = field(default_factory=list)
+    raw_metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class RuntimeToolResult:
+    call_id: str
+    name: str
+    status: str
+    content: str
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
 class AgentRuntimeError(Exception):
     def __init__(self, code: str) -> None:
         super().__init__(code)

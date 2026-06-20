@@ -131,6 +131,10 @@ Exposed through the gateway as `/api/bob-settings/v1` and implemented by
 - `PUT /api/bob-settings/v1/conversation`
 - `GET /api/bob-settings/v1/voice`
 - `PUT /api/bob-settings/v1/voice`
+- `GET /api/bob-settings/v1/runtime`
+- `POST /api/bob-settings/v1/runtime/agents`
+- `POST /api/bob-settings/v1/runtime/skills`
+- `POST /api/bob-settings/v1/runtime/tools`
 - `GET /api/bob-settings/v1/security/tenants`
 - `PATCH /api/bob-settings/v1/security/tenants/{tenant_id}`
 - `GET /api/bob-settings/v1/security/licenses`
@@ -144,13 +148,16 @@ Exposed through the gateway as `/api/bob-settings/v1` and implemented by
 Rules:
 
 - Angular uses `bobSettingsApiUrl` intentionally for Bob preferences, local
-  tenants, licences, users and RBAC management.
+  runtime catalog, tenants, licences, users and RBAC management.
 - The Kubernetes gateway rewrites `/api/bob-settings/v1/*` to `/*` before the
   request reaches `platform-b4f-api`; the B4F keeps both the public
   `/api/bob-settings/v1/*` routes and rewritten internal `/*` or `/security/*`
   routes covered by tests.
 - Conversation and voice preferences are CDE-local until a dedicated
   preference backend is selected.
+- Runtime catalog settings expose safe provider, agent, skill, tool, memory,
+  RAG and vector controls. They never expose provider keys, raw tool secrets or
+  internal signed session contexts.
 - Tenant, licence, user and RBAC attribution is delegated to Bob Cloud when
   configured, with a local/stub mode for CDE development and demonstration.
 - Mutations require `Idempotency-Key`.
@@ -191,7 +198,17 @@ Rules:
 - Require `Idempotency-Key` on run creation.
 - Own the `agent_runtime` PostgreSQL schema through Alembic migrations.
 - Avoid application startup DDL.
-- Keep provider, memory and tool details behind the runtime contract; frontend receives only safe run status, narration, actions and artifacts.
+- Runtime provider selection is controlled by environment. `auto` uses
+  Fireworks when `FIREWORKS_API_KEY` is present, otherwise the deterministic
+  local runtime is used for dev/CI.
+- Fireworks uses the OpenAI-compatible chat completions API with model
+  `accounts/fireworks/models/kimi-k2p7-code` unless overridden by
+  `FIREWORKS_MODEL`.
+- Tool calls are selected from the controlled runtime registry and persisted as
+  audited run actions. Unknown tools are rejected by the registry.
+- Keep provider, memory and tool execution details behind the runtime
+  contract; frontend receives only safe run status, narration, actions and
+  artifacts.
 
 ## Agent Memory Backend
 

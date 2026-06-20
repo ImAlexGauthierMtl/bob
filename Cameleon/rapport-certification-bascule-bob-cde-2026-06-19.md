@@ -100,7 +100,7 @@ Conformite perimetre Bob:
 - `auth-b4f-api` revalide: 11 tests passent, couverture 93.98%.
 - Le smoke effectue reste local/mocke; un smoke staging avec Bob Cloud reel doit
   confirmer les cookies cross-domain, expirations et refus session.
-- Les mentions LibreChat restantes sont dans les documents de migration,
+- Les mentions de l'ancienne base chat restantes sont dans les documents de migration,
   matrices et revues, pas dans le runtime visible.
 
 ## Decision
