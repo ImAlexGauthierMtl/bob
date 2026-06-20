@@ -588,6 +588,7 @@ def _build_messages(
                 "Si bob_mcp_gateway est disponible et que la demande vise une famille MCP, emets "
                 "un tool_call bob_mcp_gateway au premier tour avec operation=execute_capability, "
                 "family, capability et risk alignes au catalogue. "
+                "N'appelle bob_runtime_status que pour une demande de statut, diagnostic ou etat runtime. "
                 "Tu ne reveles jamais de secret, tu verifies les donnees utiles et tu demandes une confirmation "
                 "avant toute action d'ecriture ou action irreversible. "
                 f"Canal actif: {channel}. Contexte memoire: {memory_summary} "

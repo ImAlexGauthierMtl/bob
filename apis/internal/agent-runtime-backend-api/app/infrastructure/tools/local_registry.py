@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from app.application.mcp_intent_router import infer_external_mcp_intent
 from app.application.runtime_catalog_defaults import (
     MCP_TOOL_FAMILIES,
     default_mcp_capabilities,
@@ -181,11 +182,12 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
         allowed_tool_names = _allowed_runtime_tool_names(metadata)
         if allowed_tool_names is None:
             allowed_tool_names = set(available_tools)
-        return [
+        tools = [
             tool
             for name, tool in available_tools.items()
             if name in allowed_tool_names
         ]
+        return _prioritize_tools_for_prompt(prompt=prompt, tools=tools)
 
     async def execute(
         self,
@@ -454,6 +456,20 @@ def _allowed_runtime_tool_names(metadata: dict[str, Any]) -> set[str] | None:
             continue
         allowed.update(_catalog_tool_aliases(tool))
     return allowed
+
+
+def _prioritize_tools_for_prompt(*, prompt: str, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not infer_external_mcp_intent(prompt):
+        return tools
+    return sorted(
+        tools,
+        key=lambda tool: 0 if _function_tool_name(tool) == "bob_mcp_gateway" else 1,
+    )
+
+
+def _function_tool_name(tool: dict[str, Any]) -> str:
+    function = tool.get("function") if isinstance(tool, dict) else None
+    return str(function.get("name") or "") if isinstance(function, dict) else ""
 
 
 def _catalog_tool_aliases(tool: dict[str, Any]) -> set[str]:

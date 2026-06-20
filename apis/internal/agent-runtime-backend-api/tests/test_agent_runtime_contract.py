@@ -722,6 +722,7 @@ async def test_selected_skill_and_tool_details_are_injected_in_runtime_prompt():
     assert "operation=execute_capability" in system_prompt
     assert "slack.draft-send->risk=draft" in system_prompt
     assert "factory.requests-queues->risk=read" in system_prompt
+    assert "bob_runtime_status que pour une demande de statut, diagnostic ou etat runtime" in system_prompt
 
 
 def test_mcp_gateway_tool_schema_matches_catalog_risk_contract():
@@ -741,6 +742,7 @@ def test_mcp_gateway_tool_schema_matches_catalog_risk_contract():
     parameters = gateway["function"]["parameters"]
     risk_schema = parameters["properties"]["risk"]
 
+    assert tools[0]["function"]["name"] == "bob_mcp_gateway"
     assert parameters["required"] == ["operation"]
     assert {"read", "draft", "write-requested", "destructive-confirmed"}.issubset(set(risk_schema["enum"]))
     assert "brouillon" in risk_schema["description"]
