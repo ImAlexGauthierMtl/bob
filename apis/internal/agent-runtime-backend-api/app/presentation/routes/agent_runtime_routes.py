@@ -188,7 +188,7 @@ async def _resolve_confirmation(
     use_cases: AgentRuntimeUseCases,
 ) -> ConfirmationResponse:
     try:
-        confirmation = await use_cases.resolve_confirmation(
+        resolution = await use_cases.resolve_confirmation(
             context=context,
             run_id=run_id,
             confirmation_id=confirmation_id,
@@ -198,4 +198,4 @@ async def _resolve_confirmation(
         raise HTTPException(status_code=404, detail={"code": exc.code}) from exc
     except AgentRuntimeError as exc:
         raise HTTPException(status_code=409, detail={"code": exc.code}) from exc
-    return ConfirmationResponse.from_domain(confirmation)
+    return ConfirmationResponse.from_resolution(resolution)

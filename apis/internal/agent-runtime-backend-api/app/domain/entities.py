@@ -50,6 +50,13 @@ class AgentConfirmation:
 
 
 @dataclass(frozen=True)
+class AgentConfirmationResolution:
+    confirmation: AgentConfirmation
+    execution: Optional[dict[str, Any]] = None
+    run: Optional[AgentRun] = None
+
+
+@dataclass(frozen=True)
 class RuntimeToolCall:
     id: str
     name: str

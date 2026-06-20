@@ -130,6 +130,13 @@ export interface BobChatConfirmationResponse {
     label: string;
     created_at: string;
     resolved_at?: string | null;
+    execution?: BobChatAction | null;
+    run?: {
+        id: string;
+        status: string;
+        mode?: string;
+        trace_id?: string;
+    } | null;
 }
 
 export interface BobSessionInfo {

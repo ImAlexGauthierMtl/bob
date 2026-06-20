@@ -230,6 +230,12 @@
     color: #b91c1c;
 }
 
+.chat-confirmation__execution {
+    margin: 0.35rem 0 0;
+    font-size: 0.75rem;
+    color: var(--color-gray-600);
+}
+
 .chat-confirmation__actions {
     display: flex;
     align-items: center;

@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.domain import AgentConfirmation, AgentRun
+from app.domain import AgentConfirmation, AgentConfirmationResolution, AgentRun
 
 
 class RunCreateRequest(BaseModel):
@@ -61,9 +61,17 @@ class ConfirmationResponse(BaseModel):
     label: str
     created_at: datetime
     resolved_at: datetime | None = None
+    execution: dict[str, Any] | None = None
+    run: RunResponse | None = None
 
     @classmethod
-    def from_domain(cls, confirmation: AgentConfirmation) -> "ConfirmationResponse":
+    def from_domain(
+        cls,
+        confirmation: AgentConfirmation,
+        *,
+        execution: dict[str, Any] | None = None,
+        run: AgentRun | None = None,
+    ) -> "ConfirmationResponse":
         return cls(
             id=confirmation.id,
             run_id=confirmation.run_id,
@@ -71,6 +79,16 @@ class ConfirmationResponse(BaseModel):
             label=confirmation.label,
             created_at=confirmation.created_at,
             resolved_at=confirmation.resolved_at,
+            execution=execution,
+            run=RunResponse.from_domain(run) if run else None,
+        )
+
+    @classmethod
+    def from_resolution(cls, resolution: AgentConfirmationResolution) -> "ConfirmationResponse":
+        return cls.from_domain(
+            resolution.confirmation,
+            execution=resolution.execution,
+            run=resolution.run,
         )
 
 

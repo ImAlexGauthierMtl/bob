@@ -192,10 +192,12 @@ export const bobChatReducer = createReducer(
             error: undefined,
         }),
     })),
-    on(resolveBobChatActionSuccess, (state, { messageId, confirmationId, status }) => ({
+    on(resolveBobChatActionSuccess, (state, { messageId, confirmationId, status, executionStatus, executionLabel }) => ({
         ...state,
         messages: updateConfirmation(state.messages, messageId, confirmationId, {
             status,
+            executionStatus,
+            executionLabel,
             error: undefined,
         }),
     })),

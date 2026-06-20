@@ -117,6 +117,8 @@ export class BobChatEffects {
                         messageId,
                         confirmationId,
                         status: this.toConfirmationStatus(response),
+                        executionStatus: response.execution?.status,
+                        executionLabel: this.toExecutionLabel(response),
                     })),
                     catchError((error) => of(resolveBobChatActionFailure({
                         messageId,
@@ -137,6 +139,8 @@ export class BobChatEffects {
                         messageId,
                         confirmationId,
                         status: this.toConfirmationStatus(response),
+                        executionStatus: response.execution?.status,
+                        executionLabel: this.toExecutionLabel(response),
                     })),
                     catchError((error) => of(resolveBobChatActionFailure({
                         messageId,
@@ -264,6 +268,26 @@ export class BobChatEffects {
 
     private toConfirmationStatus(response: BobChatConfirmationResponse): 'confirmed' | 'cancelled' {
         return response.status === 'cancelled' ? 'cancelled' : 'confirmed';
+    }
+
+    private toExecutionLabel(response: BobChatConfirmationResponse): string | undefined {
+        const status = response.execution?.status;
+        if (!status) {
+            return undefined;
+        }
+        if (status === 'completed') {
+            return 'Action exécutée';
+        }
+        if (status === 'confirmed_pending_connector') {
+            return 'Confirmée; connecteur à brancher';
+        }
+        if (status === 'degraded') {
+            return 'Confirmée; résultat partiel';
+        }
+        if (status === 'rejected') {
+            return 'Confirmée; action refusée par la règle';
+        }
+        return `Résultat: ${status.replace(/_/g, ' ')}`;
     }
 
     private toSessionSummary(session: BobChatV1Session): BobChatSessionSummary {

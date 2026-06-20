@@ -16,6 +16,7 @@ from app.application.ports import RuntimeProviderPort, RuntimeToolRegistryPort
 from app.application.runtime_catalog_defaults import default_runtime_settings
 from app.domain import (
     AgentConfirmation,
+    AgentConfirmationResolution,
     AgentRun,
     AgentRuntimeError,
     AgentRuntimeNotFoundError,
@@ -390,7 +391,7 @@ class AgentRuntimeUseCases:
         run_id: str,
         confirmation_id: str,
         decision: str,
-    ) -> AgentConfirmation:
+    ) -> AgentConfirmationResolution:
         confirmation = self.repo.get_confirmation(
             confirmation_id=confirmation_id,
             run_id=run_id,
@@ -401,12 +402,59 @@ class AgentRuntimeUseCases:
             raise AgentRuntimeNotFoundError("confirmation_not_found")
         if confirmation.status != "pending":
             raise AgentRuntimeError("confirmation_already_resolved")
-        return self.repo.update_confirmation(
+        updated_run: AgentRun | None = None
+        execution_action: dict[str, Any] | None = None
+        if decision == "confirmed":
+            run = await self.get_run(context=context, run_id=run_id)
+            source_action = _confirmation_source_action(run=run, confirmation_id=confirmation_id)
+            if source_action:
+                execution_result = await self.tool_registry.execute(
+                    call=_confirmed_tool_call(source_action=source_action, confirmation_id=confirmation_id),
+                    context=context,
+                    metadata=run.metadata,
+                )
+                execution_action = {
+                    "id": execution_result.call_id,
+                    "tool": execution_result.name,
+                    "status": execution_result.status,
+                    "content": execution_result.content,
+                    "metadata": {
+                        **execution_result.metadata,
+                        "confirmation_id": confirmation_id,
+                        "confirmed_from_action_id": source_action.get("id"),
+                    },
+                }
+                updated_run = self.repo.update_run(
+                    run=replace(
+                        run,
+                        metadata=_metadata_with_resolved_confirmation(
+                            metadata=run.metadata,
+                            confirmation_id=confirmation_id,
+                            decision=decision,
+                            execution=execution_action,
+                        ),
+                        narration_steps=[
+                            *run.narration_steps,
+                            {
+                                "label": "action_confirmee",
+                                "status": execution_result.status,
+                                "visible": True,
+                            },
+                        ],
+                        actions=[*run.actions, execution_action],
+                    )
+                )
+        updated_confirmation = self.repo.update_confirmation(
             confirmation=replace(
                 confirmation,
                 status=decision,
                 resolved_at=_utc_now(),
             )
+        )
+        return AgentConfirmationResolution(
+            confirmation=updated_confirmation,
+            execution=execution_action,
+            run=updated_run,
         )
 
     async def get_runtime_settings(self, *, context: InternalContext) -> dict[str, Any]:
@@ -545,6 +593,76 @@ def _confirmation_label(*, tool: str, content: str, metadata: dict[str, Any]) ->
         label_parts.append(capability)
     label_parts.append(risk)
     return _compact_text(" / ".join(label_parts), 160)
+
+
+def _confirmation_source_action(*, run: AgentRun, confirmation_id: str) -> dict[str, Any] | None:
+    for action in run.actions:
+        metadata = action.get("metadata") if isinstance(action, dict) else None
+        if isinstance(metadata, dict) and metadata.get("confirmation_id") == confirmation_id:
+            return action
+    return None
+
+
+def _confirmed_tool_call(*, source_action: dict[str, Any], confirmation_id: str) -> RuntimeToolCall:
+    content = _parse_json_object(source_action.get("content"))
+    metadata = source_action.get("metadata") if isinstance(source_action.get("metadata"), dict) else {}
+    family = str(metadata.get("family") or content.get("family") or "")
+    capability = str(metadata.get("capability") or content.get("capability") or "")
+    request = content.get("request") if isinstance(content.get("request"), dict) else {}
+    arguments: dict[str, Any] = {
+        "operation": str(metadata.get("operation") or content.get("operation") or "execute_capability"),
+        "family": family,
+        "capability": capability,
+        "risk": str(metadata.get("risk") or content.get("risk") or "write"),
+        "query": content.get("query") or request.get("query") or "",
+        "confirmed": True,
+        "confirmation_id": confirmation_id,
+    }
+    for key in ("limit", "offset", "project_id", "request_id", "status"):
+        if key in request:
+            arguments[key] = request[key]
+    return RuntimeToolCall(
+        id=f"confirmed_{confirmation_id}",
+        name=str(source_action.get("tool") or "bob_mcp_gateway"),
+        arguments={key: value for key, value in arguments.items() if value not in {None, ""}},
+    )
+
+
+def _metadata_with_resolved_confirmation(
+    *,
+    metadata: dict[str, Any],
+    confirmation_id: str,
+    decision: str,
+    execution: dict[str, Any] | None,
+) -> dict[str, Any]:
+    pending = metadata.get("pending_confirmations") if isinstance(metadata, dict) else None
+    resolved_pending = []
+    for item in pending if isinstance(pending, list) else []:
+        if isinstance(item, dict) and item.get("id") == confirmation_id:
+            resolved_pending.append({**item, "status": decision})
+        elif isinstance(item, dict):
+            resolved_pending.append(item)
+    executions = metadata.get("confirmed_executions") if isinstance(metadata, dict) else None
+    return {
+        **metadata,
+        "pending_confirmations": resolved_pending,
+        "confirmed_executions": [
+            *(executions if isinstance(executions, list) else []),
+            *([execution] if execution else []),
+        ],
+    }
+
+
+def _parse_json_object(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if not isinstance(value, str):
+        return {}
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
 
 
 def _runtime_summary(tools: list[dict[str, Any]]) -> str:

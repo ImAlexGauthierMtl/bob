@@ -1166,6 +1166,13 @@ def test_run_creates_pending_confirmation_for_gated_mcp_action(client, runtime_r
     assert confirmed.status_code == 200
     assert confirmed.json()["id"] == confirmation_id
     assert confirmed.json()["status"] == "confirmed"
+    assert confirmed.json()["execution"]["status"] == "confirmed_pending_connector"
+    assert confirmed.json()["execution"]["metadata"]["confirmed_from_action_id"] == action["id"]
+    assert confirmed.json()["run"]["id"] == payload["id"]
+    assert confirmed.json()["run"]["actions"][-1]["status"] == "confirmed_pending_connector"
+    updated_run = runtime_repo.runs[payload["id"]]
+    assert updated_run.metadata["pending_confirmations"][0]["status"] == "confirmed"
+    assert updated_run.metadata["confirmed_executions"][0]["metadata"]["confirmation_id"] == confirmation_id
 
     replay = client.post(
         "/internal/agent-runtime/v1/runs",
@@ -1412,6 +1419,23 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
         context=context,
         metadata=metadata,
     )
+    slack_confirmed_contract = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-slack-draft-confirmed",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "slack",
+                "capability": "slack.draft-send",
+                "query": "Prépare un message Slack.",
+                "risk": "draft",
+                "confirmed": True,
+                "confirmation_id": "confirm-test",
+            },
+        ),
+        context=context,
+        metadata=metadata,
+    )
 
     assert tools[0]["function"]["name"] == "bob_runtime_status"
     assert {tool["function"]["name"] for tool in tools} == {
@@ -1469,6 +1493,11 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
         "operation": "execute_capability",
     }
     assert "write_or_destructive_mcp_action_requires_explicit_confirmation" in slack_draft_contract.content
+    assert slack_confirmed_contract.status == "confirmed_pending_connector"
+    slack_confirmed_content = json.loads(slack_confirmed_contract.content)
+    assert slack_confirmed_content["status"] == "confirmed_pending_connector"
+    assert slack_confirmed_content["next_gateway_step"] == "bind_slack_mcp_server_adapter"
+    assert slack_confirmed_contract.metadata["confirmed"] is True
     assert rejected.status == "rejected"
 
 

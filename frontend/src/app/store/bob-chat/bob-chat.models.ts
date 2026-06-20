@@ -57,6 +57,8 @@ export interface BobChatActionConfirmationView {
     family?: string;
     capability?: string;
     risk?: string;
+    executionStatus?: string;
+    executionLabel?: string;
     error?: string;
 }
 

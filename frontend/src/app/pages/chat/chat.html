@@ -71,6 +71,9 @@
                                         @if (confirmation.error) {
                                             <p class="chat-confirmation__error">{{ confirmation.error }}</p>
                                         }
+                                        @if (confirmation.executionLabel) {
+                                            <p class="chat-confirmation__execution">{{ confirmation.executionLabel }}</p>
+                                        }
                                     </div>
                                     <div class="chat-confirmation__actions">
                                         @if (confirmation.status === 'pending' || confirmation.status === 'failed') {

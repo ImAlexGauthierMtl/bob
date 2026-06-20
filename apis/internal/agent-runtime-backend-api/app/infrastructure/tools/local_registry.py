@@ -274,8 +274,9 @@ def _execute_mcp_gateway(
         capability=str(call.arguments.get("capability") or "").strip(),
     )
     effective_risk = _effective_capability_risk(call_risk=risk, capability=capability)
+    confirmed = bool(call.arguments.get("confirmed") is True or call.arguments.get("confirmation_id"))
 
-    if operation == "execute_capability" and _risk_requires_confirmation(effective_risk):
+    if operation == "execute_capability" and _risk_requires_confirmation(effective_risk) and not confirmed:
         content = {
             "status": "confirmation_required",
             "family": family["family"],
@@ -298,6 +299,7 @@ def _execute_mcp_gateway(
             context=context,
             factory_adapter=factory_adapter,
             risk=effective_risk,
+            confirmed=confirmed,
         )
 
     if operation == "execute_capability" and family["family"] == "assistant-memory":
@@ -307,6 +309,7 @@ def _execute_mcp_gateway(
             metadata=metadata,
             capability=capability,
             risk=effective_risk,
+            confirmed=confirmed,
         )
 
     if operation == "execute_capability" and family["family"] == "support-memory":
@@ -316,6 +319,7 @@ def _execute_mcp_gateway(
             metadata=metadata,
             capability=capability,
             risk=effective_risk,
+            confirmed=confirmed,
         )
 
     if operation == "execute_capability" and family["family"] == "bob-control-center":
@@ -325,9 +329,18 @@ def _execute_mcp_gateway(
             metadata=metadata,
             capability=capability,
             risk=effective_risk,
+            confirmed=confirmed,
         )
 
     if operation == "execute_capability":
+        if _risk_requires_confirmation(effective_risk) and confirmed:
+            return _execute_confirmed_mcp_contract(
+                call=call,
+                context=context,
+                family=family,
+                capability=capability,
+                risk=effective_risk,
+            )
         return _execute_external_mcp_read_contract(
             call=call,
             context=context,
@@ -439,10 +452,21 @@ def _execute_factory_capability(
     context: InternalContext,
     factory_adapter: FactorySupabaseAdapter,
     risk: str,
+    confirmed: bool = False,
 ) -> RuntimeToolResult:
     capability = _normalize_factory_capability(
         str(call.arguments.get("capability") or "requests-queues.list_queue_by_project").strip()
     )
+    if risk != "read" and confirmed:
+        return _confirmed_connector_pending_result(
+            call=call,
+            context=context,
+            family_name="factory",
+            capability_id=capability,
+            risk=risk,
+            next_gateway_step="bind_factory_write_adapter_and_readback",
+        )
+
     if risk != "read":
         return RuntimeToolResult(
             call_id=call.id,
@@ -534,11 +558,22 @@ def _execute_assistant_memory_capability(
     metadata: dict[str, Any],
     capability: dict[str, Any] | None,
     risk: str,
+    confirmed: bool = False,
 ) -> RuntimeToolResult:
     capability_id = str((capability or {}).get("id") or call.arguments.get("capability") or "status")
     capability_id = capability_id.removeprefix("assistant-memory.").strip()
     memory_context = metadata.get("memory_context") if isinstance(metadata, dict) else None
     memory_context = memory_context if isinstance(memory_context, dict) else {}
+
+    if risk != "read" and confirmed:
+        return _confirmed_connector_pending_result(
+            call=call,
+            context=context,
+            family_name="assistant-memory",
+            capability_id=capability_id,
+            risk=risk,
+            next_gateway_step="bind_agent_memory_write_adapter",
+        )
 
     if risk != "read":
         return RuntimeToolResult(
@@ -608,11 +643,21 @@ def _execute_support_memory_capability(
     metadata: dict[str, Any],
     capability: dict[str, Any] | None,
     risk: str,
+    confirmed: bool = False,
 ) -> RuntimeToolResult:
     capability_id = str((capability or {}).get("id") or call.arguments.get("capability") or "status")
     capability_id = capability_id.removeprefix("support-memory.").strip()
     memory_context = metadata.get("memory_context") if isinstance(metadata, dict) else None
     memory_context = memory_context if isinstance(memory_context, dict) else {}
+    if risk != "read" and confirmed:
+        return _confirmed_connector_pending_result(
+            call=call,
+            context=context,
+            family_name="support-memory",
+            capability_id=capability_id,
+            risk=risk,
+            next_gateway_step="bind_organization_memory_write_adapter",
+        )
 
     if capability_id == "status":
         content = _support_memory_status(memory_context=memory_context)
@@ -665,11 +710,22 @@ def _execute_bob_control_center_capability(
     metadata: dict[str, Any],
     capability: dict[str, Any] | None,
     risk: str,
+    confirmed: bool = False,
 ) -> RuntimeToolResult:
     capability_id = str((capability or {}).get("id") or call.arguments.get("capability") or "agents-catalog")
     capability_id = capability_id.removeprefix("bob-control-center.").strip()
     runtime_catalog = metadata.get("runtime_catalog") if isinstance(metadata, dict) else None
     runtime_catalog = runtime_catalog if isinstance(runtime_catalog, dict) else {}
+
+    if risk != "read" and confirmed:
+        return _confirmed_connector_pending_result(
+            call=call,
+            context=context,
+            family_name="bob-control-center",
+            capability_id=capability_id,
+            risk=risk,
+            next_gateway_step="bind_settings_mutation_adapter",
+        )
 
     if risk != "read":
         return RuntimeToolResult(
@@ -795,9 +851,86 @@ def _execute_external_mcp_read_contract(
     )
 
 
+def _execute_confirmed_mcp_contract(
+    *,
+    call: RuntimeToolCall,
+    context: InternalContext,
+    family: dict[str, Any],
+    capability: dict[str, Any] | None,
+    risk: str,
+) -> RuntimeToolResult:
+    family_name = str(family["family"])
+    selected_capability = capability or _first_non_read_capability(family_name)
+    capability_id = str((selected_capability or {}).get("id") or call.arguments.get("capability") or "unknown")
+    return _confirmed_connector_pending_result(
+        call=call,
+        context=context,
+        family_name=family_name,
+        capability_id=capability_id,
+        risk=risk,
+        next_gateway_step=f"bind_{family_name.replace('-', '_')}_mcp_server_adapter",
+        extra={
+            "qualified_id": (selected_capability or {}).get("qualified_id"),
+            "title": (selected_capability or {}).get("title"),
+            "servers": family.get("servers") or [],
+            "skill": (selected_capability or {}).get("skill") or family.get("skill"),
+            "mcp_tools": (selected_capability or {}).get("tools") or [],
+            "request": {
+                "query": call.arguments.get("query") or "",
+                "limit": _bounded_int(call.arguments.get("limit"), default=10, minimum=1, maximum=100),
+            },
+        },
+    )
+
+
+def _confirmed_connector_pending_result(
+    *,
+    call: RuntimeToolCall,
+    context: InternalContext,
+    family_name: str,
+    capability_id: str,
+    risk: str,
+    next_gateway_step: str,
+    extra: dict[str, Any] | None = None,
+) -> RuntimeToolResult:
+    content = {
+        "status": "confirmed_pending_connector",
+        "family": family_name,
+        "capability": capability_id,
+        "risk": risk,
+        "confirmed_by_user": context.user_id,
+        "external_connector_bound": False,
+        "execution_mode": "confirmed_contract_pending_adapter",
+        "next_gateway_step": next_gateway_step,
+        "policy": _mcp_policy(context=context),
+        **(extra or {}),
+    }
+    return RuntimeToolResult(
+        call_id=call.id,
+        name=call.name,
+        status="confirmed_pending_connector",
+        content=_json_dumps(content),
+        metadata={
+            "family": family_name,
+            "risk": risk,
+            "operation": "execute_capability",
+            "capability": capability_id,
+            "external_connector_bound": False,
+            "confirmed": True,
+        },
+    )
+
+
 def _first_read_capability(family: str) -> dict[str, Any] | None:
     for item in mcp_capabilities_for_family(family):
         if str(item.get("risk") or "").strip().lower() in {"read", "readonly"}:
+            return item
+    return None
+
+
+def _first_non_read_capability(family: str) -> dict[str, Any] | None:
+    for item in mcp_capabilities_for_family(family):
+        if str(item.get("risk") or "").strip().lower() not in {"read", "readonly"}:
             return item
     return None
 

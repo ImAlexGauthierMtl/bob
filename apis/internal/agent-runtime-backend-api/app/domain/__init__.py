@@ -2,6 +2,7 @@
 
 from app.domain.entities import (
     AgentConfirmation,
+    AgentConfirmationResolution,
     AgentRun,
     AgentRuntimeError,
     AgentRuntimeNotFoundError,
@@ -14,6 +15,7 @@ from app.domain.entities import (
 
 __all__ = [
     "AgentConfirmation",
+    "AgentConfirmationResolution",
     "AgentRun",
     "AgentRuntimeError",
     "AgentRuntimeNotFoundError",

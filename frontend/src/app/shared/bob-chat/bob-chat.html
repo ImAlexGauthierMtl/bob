@@ -660,6 +660,9 @@
                                 @if (confirmation.error) {
                                 <p class="bob-confirmation__error">{{ confirmation.error }}</p>
                                 }
+                                @if (confirmation.executionLabel) {
+                                <p class="bob-confirmation__execution">{{ confirmation.executionLabel }}</p>
+                                }
                             </div>
                             <div class="bob-confirmation__actions">
                                 @if (confirmation.status === 'pending' || confirmation.status === 'failed') {

@@ -82,7 +82,13 @@ export const cancelBobChatAction = createAction(
 );
 export const resolveBobChatActionSuccess = createAction(
     '[Bob Chat] Resolve action success',
-    props<{ messageId: string; confirmationId: string; status: BobChatConfirmationStatus }>(),
+    props<{
+        messageId: string;
+        confirmationId: string;
+        status: BobChatConfirmationStatus;
+        executionStatus?: string;
+        executionLabel?: string;
+    }>(),
 );
 export const resolveBobChatActionFailure = createAction(
     '[Bob Chat] Resolve action failure',
