@@ -32,9 +32,70 @@ DEFAULT_AGENTS: list[dict[str, Any]] = [
         "description": "Agent principal CDE pour conversation, memoire et appels outils controles.",
         "provider_id": "fireworks-kimi",
         "status": "active",
-        "skills": ["skill-routing", "skill-memory"],
+        "skills": [
+            "skill-routing",
+            "skill-memory",
+            "skill-mcp-capability-routing",
+            "skill-context-engineering",
+            "skill-using-agent-skills",
+            "skill-source-driven-development",
+        ],
         "tools": ["tool-runtime-status", "tool-memory-summary", "tool-mcp-gateway"],
     }
+]
+
+CROO_AGENTIC_AGENT_SKILL_IMPORTS: list[tuple[str, str, str]] = [
+    ("api-and-interface-design", "Api And Interface Design", "api-and-interface-design.md"),
+    ("bob-le-prospecteur", "Bob Le Prospecteur", "bob-le-prospecteur.md"),
+    ("browser-testing-with-devtools", "Browser Testing With Devtools", "browser-testing-with-devtools.md"),
+    ("ci-cd-and-automation", "Ci Cd And Automation", "ci-cd-and-automation.md"),
+    ("code-review-and-quality", "Code Review And Quality", "code-review-and-quality.md"),
+    ("code-simplification", "Code Simplification", "code-simplification.md"),
+    ("context-engineering", "Context Engineering", "context-engineering.md"),
+    ("croo-connect-account-routing", "Croo Connect Account Routing", "croo-connect-account-routing.md"),
+    ("croo-gitlab-readonly-routing", "Croo Gitlab Readonly Routing", "croo-gitlab-readonly-routing.md"),
+    ("debugging-and-error-recovery", "Debugging And Error Recovery", "debugging-and-error-recovery.md"),
+    ("deprecation-and-migration", "Deprecation And Migration", "deprecation-and-migration.md"),
+    ("documentation-and-adrs", "Documentation And Adrs", "documentation-and-adrs.md"),
+    ("doubt-driven-development", "Doubt Driven Development", "doubt-driven-development.md"),
+    ("email-triage-routing", "Email Triage Routing", "email-triage-routing.md"),
+    ("execute-code-research-routing", "Execute Code Research Routing", "execute-code-research-routing.md"),
+    ("factory-certification-matrix", "Factory Certification Matrix", "factory-certification-matrix.md"),
+    ("factory-client-validation-zoho", "Factory Client Validation Zoho", "factory-client-validation-zoho.md"),
+    ("factory-cursor-cloud-fanout", "Factory Cursor Cloud Fanout", "factory-cursor-cloud-fanout.md"),
+    ("factory-master-correction", "Factory Master Correction", "factory-master-correction.md"),
+    ("factory-po-learning-review", "Factory Po Learning Review", "factory-po-learning-review.md"),
+    ("factory-po-unit-cycle", "Factory Po Unit Cycle", "factory-po-unit-cycle.md"),
+    ("factory-structure-resolution", "Factory Structure Resolution", "factory-structure-resolution.md"),
+    ("factory", "Factory", "factory.md"),
+    ("frontend-ui-engineering", "Frontend Ui Engineering", "frontend-ui-engineering.md"),
+    ("git-workflow-and-versioning", "Git Workflow And Versioning", "git-workflow-and-versioning.md"),
+    ("google-workspace-routing", "Google Workspace Routing", "google-workspace-routing.md"),
+    ("idea-refine", "Idea Refine", "idea-refine.md"),
+    ("incremental-implementation", "Incremental Implementation", "incremental-implementation.md"),
+    ("interview-me", "Interview Me", "interview-me.md"),
+    ("mcp-capability-routing", "Mcp Capability Routing", "mcp-capability-routing.md"),
+    ("microsoft-365-routing", "Microsoft 365 Routing", "microsoft-365-routing.md"),
+    ("observability-and-instrumentation", "Observability And Instrumentation", "observability-and-instrumentation.md"),
+    ("performance-optimization", "Performance Optimization", "performance-optimization.md"),
+    ("pipedream-supabase-routing", "Pipedream Supabase Routing", "pipedream-supabase-routing.md"),
+    ("planning-and-task-breakdown", "Planning And Task Breakdown", "planning-and-task-breakdown.md"),
+    ("prospecting-data-sources-routing", "Prospecting Data Sources Routing", "prospecting-data-sources-routing.md"),
+    ("security-and-hardening", "Security And Hardening", "security-and-hardening.md"),
+    ("shipping-and-launch", "Shipping And Launch", "shipping-and-launch.md"),
+    ("skyswitch-netsapiens-pbx-support", "Skyswitch Netsapiens Pbx Support", "skyswitch-netsapiens-pbx-support.md"),
+    ("skyswitch-telco-support", "Skyswitch Telco Support", "skyswitch-telco-support.md"),
+    ("source-driven-development", "Source Driven Development", "source-driven-development.md"),
+    ("spec-driven-development", "Spec Driven Development", "spec-driven-development.md"),
+    ("support-client-identification", "Support Client Identification", "support-client-identification.md"),
+    ("support-memory-review", "Support Memory Review", "support-memory-review.md"),
+    ("support-ticket-zoho-desk", "Support Ticket Zoho Desk", "support-ticket-zoho-desk.md"),
+    ("support-zoho-billing", "Support Zoho Billing", "support-zoho-billing.md"),
+    ("support-zoho-books", "Support Zoho Books", "support-zoho-books.md"),
+    ("support-zoho-crm", "Support Zoho Crm", "support-zoho-crm.md"),
+    ("test-driven-development", "Test Driven Development", "test-driven-development.md"),
+    ("using-agent-skills", "Using Agent Skills", "using-agent-skills.md"),
+    ("web-search-source-policy", "Web Search Source Policy", "web-search-source-policy.md"),
 ]
 
 DEFAULT_SKILLS: list[dict[str, Any]] = [
@@ -301,7 +362,7 @@ def default_runtime_settings(*, active_provider: str = "auto") -> dict[str, Any]
         "providers": deepcopy(DEFAULT_PROVIDERS),
         "active_provider": active_provider,
         "agents": deepcopy(DEFAULT_AGENTS),
-        "skills": deepcopy(DEFAULT_SKILLS),
+        "skills": [*deepcopy(DEFAULT_SKILLS), *default_agent_skills()],
         "tools": [*deepcopy(DEFAULT_RUNTIME_TOOLS), *default_mcp_tools(), *default_mcp_capability_tools()],
         "memory": deepcopy(DEFAULT_MEMORY),
         "mcp": {
@@ -314,6 +375,20 @@ def default_runtime_settings(*, active_provider: str = "auto") -> dict[str, Any]
         },
         "source": "agent-runtime-backend-api",
     }
+
+
+def default_agent_skills() -> list[dict[str, Any]]:
+    return [
+        {
+            "id": f"skill-{slug}",
+            "name": title,
+            "description": f"Skill Bob importe du catalogue agentique Croo: {title}.",
+            "status": "catalog",
+            "scope": "agent_skill",
+            "source": f"croo-agentic/agent-skills/{filename}",
+        }
+        for slug, title, filename in CROO_AGENTIC_AGENT_SKILL_IMPORTS
+    ]
 
 
 def default_mcp_families() -> list[dict[str, Any]]:

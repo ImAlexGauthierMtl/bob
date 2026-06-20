@@ -179,6 +179,12 @@ def test_runtime_settings_expose_backend_catalog_and_mcp_families(client):
     payload = response.json()
     assert payload["source"] == "agent-runtime-backend-api"
     assert payload["providers"][0]["model"] == "accounts/fireworks/models/kimi-k2p7-code"
+    skill_ids = {skill["id"] for skill in payload["skills"]}
+    assert len(payload["skills"]) >= 50
+    assert "skill-mcp-capability-routing" in skill_ids
+    assert "skill-source-driven-development" in skill_ids
+    default_agent = next(agent for agent in payload["agents"] if agent["id"] == "agent-bob-orchestrator")
+    assert "skill-mcp-capability-routing" in default_agent["skills"]
     assert payload["mcp"]["tool_gating_required"] is True
     assert "assistant-memory" in {family["family"] for family in payload["mcp"]["families"]}
     assert "slack.draft-send" in {capability["qualified_id"] for capability in payload["mcp"]["capabilities"]}
@@ -189,6 +195,8 @@ def test_runtime_settings_expose_backend_catalog_and_mcp_families(client):
     factory_family = next(family for family in payload["mcp"]["families"] if family["family"] == "factory")
     assert factory_family["capability_count"] >= 9
     assert any(item["file"] == "requests-queues.md" for item in factory_family["capability_items"])
+    legacy_agent_name = "".join(("libre", "chat"))
+    assert legacy_agent_name not in str(payload).lower()
 
 
 def test_runtime_settings_catalog_mutations_are_scoped_and_idempotent(client):

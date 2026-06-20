@@ -214,6 +214,10 @@ Rules:
 - `POST /internal/agent-runtime/v1/settings/agents`
 - `POST /internal/agent-runtime/v1/settings/skills`
 - `POST /internal/agent-runtime/v1/settings/tools`
+- Runtime settings expose the Bob agent skill catalog imported from
+  `croo-agentic` as safe metadata (`id`, `name`, `description`, `scope`,
+  `source`, `status`). These entries are selectable when admins compose a Bob
+  agent in Settings and are injected into run metadata when that agent is used.
 - Runtime settings include the imported Croo agentic MCP catalog as safe
   metadata: family, skill path, capability index, server names and per-capability
   entries with `qualified_id`, risk level, capability file and expected MCP
