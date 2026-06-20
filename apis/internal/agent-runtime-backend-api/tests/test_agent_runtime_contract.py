@@ -111,6 +111,22 @@ def test_create_run_and_fetch_it(client):
     assert fetched.json() == payload
 
 
+def test_create_run_can_call_mcp_gateway_for_tool_family(client):
+    created = client.post(
+        "/internal/agent-runtime/v1/runs",
+        json={**run_body(), "prompt": "Charge la famille MCP Factory et decris ses capacites."},
+        headers={**signed_headers(), "Idempotency-Key": "mcp-gateway-run"},
+    )
+
+    assert created.status_code == 201
+    payload = created.json()
+    assert payload["metadata"]["tool_calls"][0]["tool"] == "bob_mcp_gateway"
+    assert payload["actions"][0]["metadata"]["family"] == "factory"
+    assert payload["actions"][0]["metadata"]["operation"] == "describe_family"
+    assert "factory-supabase" in payload["actions"][0]["content"]
+    assert "bob_mcp_gateway" in payload["assistant_content"]
+
+
 def test_run_idempotency_replays_same_run(client):
     first = client.post(
         "/internal/agent-runtime/v1/runs",
@@ -162,6 +178,7 @@ def test_runtime_settings_expose_backend_catalog_and_mcp_families(client):
     assert payload["mcp"]["tool_gating_required"] is True
     assert "assistant-memory" in {family["family"] for family in payload["mcp"]["families"]}
     assert "factory" in {tool["family"] for tool in payload["tools"]}
+    assert "bob_mcp_gateway" in {tool["name"] for tool in payload["tools"]}
 
 
 def test_runtime_settings_catalog_mutations_are_scoped_and_idempotent(client):
@@ -299,12 +316,44 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
         context=context,
         metadata=metadata,
     )
+    mcp_gateway = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-mcp",
+            name="bob_mcp_gateway",
+            arguments={"operation": "describe_family", "family": "factory", "risk": "read"},
+        ),
+        context=context,
+        metadata=metadata,
+    )
+    mcp_write = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-mcp-write",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "factory",
+                "capability": "review.write",
+                "risk": "write",
+            },
+        ),
+        context=context,
+        metadata=metadata,
+    )
 
     assert tools[0]["function"]["name"] == "bob_runtime_status"
+    assert {tool["function"]["name"] for tool in tools} == {
+        "bob_runtime_status",
+        "bob_memory_context_summary",
+        "bob_mcp_gateway",
+    }
     assert runtime_status.status == "completed"
     assert "available_tool_families" not in runtime_status.content
     assert memory_summary.status == "completed"
     assert "mem-1" in memory_summary.content
+    assert mcp_gateway.status == "completed"
+    assert "factory-supabase" in mcp_gateway.content
+    assert mcp_write.status == "requires_confirmation"
+    assert "write_or_destructive_mcp_action_requires_explicit_confirmation" in mcp_write.content
     assert rejected.status == "rejected"
 
 

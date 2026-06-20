@@ -33,7 +33,7 @@ DEFAULT_AGENTS: list[dict[str, Any]] = [
         "provider_id": "fireworks-kimi",
         "status": "active",
         "skills": ["skill-routing", "skill-memory"],
-        "tools": ["tool-runtime-status", "tool-memory-summary"],
+        "tools": ["tool-runtime-status", "tool-memory-summary", "tool-mcp-gateway"],
     }
 ]
 
@@ -74,6 +74,15 @@ DEFAULT_RUNTIME_TOOLS: list[dict[str, Any]] = [
         "status": "active",
         "execution": "internal",
         "description": "Resume le contexte memoire deja fourni au runtime.",
+    },
+    {
+        "id": "tool-mcp-gateway",
+        "name": "bob_mcp_gateway",
+        "family": "mcp",
+        "risk": "read",
+        "status": "active",
+        "execution": "internal_gateway",
+        "description": "Lit le catalogue MCP croo-agentic et applique le gating de famille avant execution.",
     },
 ]
 
@@ -211,8 +220,8 @@ def default_mcp_tools() -> list[dict[str, Any]]:
             "family": family["family"],
             "risk": "gated",
             "status": "catalog",
-            "execution": "mcp_gateway_pending",
-            "description": "Famille MCP importee du contrat croo-agentic; execution active apres gating et connecteur.",
+            "execution": "mcp_gateway_catalog",
+            "description": "Famille MCP importee du contrat croo-agentic; lecture active via bob_mcp_gateway, actions externes gatees.",
             "skill": family["skill"],
             "capabilities": family["capabilities"],
             "servers": list(family["servers"]),

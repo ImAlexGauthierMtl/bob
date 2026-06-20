@@ -210,9 +210,11 @@ Rules:
 - `POST /internal/agent-runtime/v1/settings/skills`
 - `POST /internal/agent-runtime/v1/settings/tools`
 - Runtime settings include the imported Croo agentic MCP family catalog as
-  safe metadata: family, skill path, capability index and server names. MCP
-  execution remains gated and backend-owned; catalog exposure does not expose
-  secrets or enable writes by itself.
+  safe metadata: family, skill path, capability index and server names. Read
+  execution is gated through the internal `bob_mcp_gateway` runtime tool, which
+  can list or describe loaded families and persists the result as an audited run
+  action. External connector execution and writes remain blocked until the
+  matching MCP adapter is bound and an explicit confirmation is resolved.
 - Runtime provider selection is controlled by environment. `auto` uses
   Fireworks when `FIREWORKS_API_KEY` is present, otherwise the deterministic
   local runtime is used for dev/CI.
@@ -220,7 +222,8 @@ Rules:
   `accounts/fireworks/models/kimi-k2p7-code` unless overridden by
   `FIREWORKS_MODEL`.
 - Tool calls are selected from the controlled runtime registry and persisted as
-  audited run actions. Unknown tools are rejected by the registry.
+  audited run actions. Unknown tools and unloaded MCP families are rejected by
+  the registry.
 - Keep provider, memory and tool execution details behind the runtime
   contract; frontend receives only safe run status, narration, actions and
   artifacts.

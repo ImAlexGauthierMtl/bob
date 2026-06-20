@@ -20,6 +20,26 @@ class LocalRuntimeProvider(RuntimeProviderPort):
         trace_id: str,
     ) -> RuntimeModelResult:
         if tools and not _has_tool_result(messages):
+            prompt = _last_user_prompt(messages)
+            if _needs_mcp_gateway(prompt):
+                return RuntimeModelResult(
+                    content="",
+                    provider="local",
+                    model=self.model,
+                    mode="local_runtime",
+                    tool_calls=[
+                        RuntimeToolCall(
+                            id="local_tool_mcp_gateway",
+                            name="bob_mcp_gateway",
+                            arguments={
+                                "operation": "describe_family",
+                                "family": _infer_mcp_family(prompt),
+                                "risk": "read",
+                            },
+                        )
+                    ],
+                    raw_metadata={"trace_id": trace_id, "phase": "tool_selection"},
+                )
             return RuntimeModelResult(
                 content="",
                 provider="local",
@@ -61,8 +81,54 @@ def _last_user_prompt(messages: list[dict[str, Any]]) -> str:
     return ""
 
 
+def _needs_mcp_gateway(prompt: str) -> bool:
+    normalized = prompt.lower()
+    return any(
+        token in normalized
+        for token in (
+            "mcp",
+            "factory",
+            "zoho",
+            "slack",
+            "teams",
+            "gitlab",
+            "browser",
+            "skyswitch",
+            "capabilit",
+            "famille",
+        )
+    )
+
+
+def _infer_mcp_family(prompt: str) -> str:
+    normalized = prompt.lower()
+    for family in (
+        "assistant-memory",
+        "support-memory",
+        "croo-connect",
+        "mail-calendar",
+        "workspace-files",
+        "pipedream-supabase",
+        "gitlab-code",
+        "web-research",
+        "skyswitch",
+        "factory",
+        "zoho",
+        "slack",
+        "teams",
+        "browser",
+    ):
+        if family in normalized or family.replace("-", " ") in normalized:
+            return family
+    return "factory"
+
+
 def _tool_readback(messages: list[dict[str, Any]]) -> str:
-    tool_messages = [str(message.get("content") or "") for message in messages if message.get("role") == "tool"]
+    tool_messages = [
+        f"{message.get('name') or 'tool'}={message.get('content') or ''}"
+        for message in messages
+        if message.get("role") == "tool"
+    ]
     if not tool_messages:
         return "aucun outil requis"
     return " | ".join(item[:240] for item in tool_messages)
