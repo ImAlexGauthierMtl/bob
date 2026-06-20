@@ -200,6 +200,52 @@ class FakeBobCloudClient:
         return {"id": membership_id, **payload}
 
 
+class FakeAgentRuntimeClient:
+    def __init__(self):
+        self.calls = []
+        self.runtime = {
+            "providers": [
+                {
+                    "id": "fireworks-kimi",
+                    "name": "Fireworks Kimi K2.7 Code",
+                    "provider": "fireworks",
+                    "model": "accounts/fireworks/models/kimi-k2p7-code",
+                    "status": "runtime_backend_managed",
+                    "enabled": True,
+                }
+            ],
+            "active_provider": "auto",
+            "agents": [{"id": "agent-bob-orchestrator", "name": "Bob Orchestrator"}],
+            "skills": [],
+            "tools": [{"id": "tool-mcp-factory", "name": "factory", "family": "factory"}],
+            "memory": {"rag": "Postgres source de verite, Milvus reconstructible"},
+            "mcp": {"tool_gating_required": True, "families": [{"family": "factory"}]},
+            "source": "agent-runtime-backend-api",
+        }
+        self.replays = {}
+
+    async def get_settings(self, *, headers=None):
+        self.calls.append(("get_settings", dict(headers or {})))
+        return self.runtime
+
+    async def create_catalog_item(self, *, collection, data, headers=None):
+        self.calls.append(("create_catalog_item", collection, data, dict(headers or {})))
+        if not data.get("name"):
+            raise bob_settings_preferences_routes.HTTPException(
+                status_code=422,
+                detail={"code": "name_required"},
+            )
+        key = headers.get("Idempotency-Key") if headers else None
+        if key and key in self.replays:
+            return self.replays[key]
+        item = {"id": f"{collection[:-1]}-fake", "status": "draft", **data}
+        self.runtime[collection].append(item)
+        response = {"item": item, "runtime": self.runtime}
+        if key:
+            self.replays[key] = response
+        return response
+
+
 @pytest.fixture()
 def client(monkeypatch):
     main.app.dependency_overrides[workflow_routes.get_current_user] = lambda: {"user_id": "user-1"}
@@ -208,6 +254,7 @@ def client(monkeypatch):
     main.app.dependency_overrides[overview_routes.get_current_user] = lambda: {"user_id": "user-1", "tenant_id": "tenant-1"}
     monkeypatch.setattr(workflow_routes, "workflow_client", FakeWorkflowClient())
     monkeypatch.setattr(usage_routes, "usage_client", FakeUsageClient())
+    monkeypatch.setattr(bob_settings_preferences_routes, "agent_runtime_client", FakeAgentRuntimeClient())
     monkeypatch.setattr(
         overview_routes,
         "overview_service",
@@ -351,6 +398,7 @@ def test_bob_settings_gateway_rewritten_internal_paths_are_supported(client):
 
 
 def test_bob_runtime_settings_catalog_and_mutations(client):
+    fake_runtime = bob_settings_preferences_routes.agent_runtime_client
     headers = {
         "Authorization": "Bearer local-admin-token",
         "X-CDE-Capabilities": "bob_settings.manage",
@@ -396,6 +444,10 @@ def test_bob_runtime_settings_catalog_and_mutations(client):
     assert replay.json() == tool.json()
     assert missing_name.status_code == 422
     assert missing_name.json()["detail"] == {"code": "name_required"}
+    assert fake_runtime.calls[0][0] == "get_settings"
+    assert "X-Session-Context" in fake_runtime.calls[0][1]
+    assert fake_runtime.calls[1][0] == "create_catalog_item"
+    assert fake_runtime.calls[1][3]["Idempotency-Key"] == "agent-1"
 
 
 def test_bob_settings_security_mutations_require_idempotency_key(client):

@@ -147,14 +147,17 @@ Exposed through the gateway as `/api/bob-settings/v1` and implemented by
 
 Rules:
 
-- Angular uses `bobSettingsApiUrl` intentionally for Bob preferences, local
-  runtime catalog, tenants, licences, users and RBAC management.
+- Angular uses `bobSettingsApiUrl` intentionally for Bob preferences, runtime
+  catalog, tenants, licences, users and RBAC management.
 - The Kubernetes gateway rewrites `/api/bob-settings/v1/*` to `/*` before the
   request reaches `platform-b4f-api`; the B4F keeps both the public
   `/api/bob-settings/v1/*` routes and rewritten internal `/*` or `/security/*`
   routes covered by tests.
 - Conversation and voice preferences are CDE-local until a dedicated
   preference backend is selected.
+- Runtime catalog reads and mutations are delegated to
+  `agent-runtime-backend-api` with a signed internal session context. The B4F
+  does not own or persist provider, agent, skill or tool runtime catalog data.
 - Runtime catalog settings expose safe provider, agent, skill, tool, memory,
   RAG and vector controls. They never expose provider keys, raw tool secrets or
   internal signed session contexts.
@@ -198,6 +201,18 @@ Rules:
 - Require `Idempotency-Key` on run creation.
 - Own the `agent_runtime` PostgreSQL schema through Alembic migrations.
 - Avoid application startup DDL.
+- Own runtime catalog persistence through `agent_runtime.runtime_catalog_items`.
+  This catalog stores tenant/user-scoped admin-created agents, skills and tools
+  with idempotent creation keys. It is combined with backend defaults at read
+  time.
+- `GET /internal/agent-runtime/v1/settings`
+- `POST /internal/agent-runtime/v1/settings/agents`
+- `POST /internal/agent-runtime/v1/settings/skills`
+- `POST /internal/agent-runtime/v1/settings/tools`
+- Runtime settings include the imported Croo agentic MCP family catalog as
+  safe metadata: family, skill path, capability index and server names. MCP
+  execution remains gated and backend-owned; catalog exposure does not expose
+  secrets or enable writes by itself.
 - Runtime provider selection is controlled by environment. `auto` uses
   Fireworks when `FIREWORKS_API_KEY` is present, otherwise the deterministic
   local runtime is used for dev/CI.

@@ -149,6 +149,58 @@ def test_run_scope_is_tenant_and_user_bound(client):
     assert foreign_tenant.status_code == 404
 
 
+def test_runtime_settings_expose_backend_catalog_and_mcp_families(client):
+    response = client.get(
+        "/internal/agent-runtime/v1/settings",
+        headers=signed_headers(),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source"] == "agent-runtime-backend-api"
+    assert payload["providers"][0]["model"] == "accounts/fireworks/models/kimi-k2p7-code"
+    assert payload["mcp"]["tool_gating_required"] is True
+    assert "assistant-memory" in {family["family"] for family in payload["mcp"]["families"]}
+    assert "factory" in {tool["family"] for tool in payload["tools"]}
+
+
+def test_runtime_settings_catalog_mutations_are_scoped_and_idempotent(client):
+    headers = {**signed_headers(user_id="user-settings-a"), "Idempotency-Key": "tool-create-1"}
+    first = client.post(
+        "/internal/agent-runtime/v1/settings/tools",
+        json={"name": "factory_status", "family": "factory", "risk": "read"},
+        headers=headers,
+    )
+    replay = client.post(
+        "/internal/agent-runtime/v1/settings/tools",
+        json={"name": "factory_status", "family": "factory", "risk": "read"},
+        headers=headers,
+    )
+    conflict = client.post(
+        "/internal/agent-runtime/v1/settings/tools",
+        json={"name": "factory_status_changed", "family": "factory", "risk": "read"},
+        headers=headers,
+    )
+    scoped = client.get(
+        "/internal/agent-runtime/v1/settings",
+        headers=signed_headers(user_id="user-settings-b"),
+    )
+    missing_name = client.post(
+        "/internal/agent-runtime/v1/settings/skills",
+        json={"description": "bad"},
+        headers={**signed_headers(user_id="user-settings-a"), "Idempotency-Key": "bad-skill"},
+    )
+
+    assert first.status_code == 201
+    assert first.json()["item"]["name"] == "factory_status"
+    assert replay.status_code == 201
+    assert replay.json() == first.json()
+    assert conflict.status_code == 409
+    assert conflict.json()["detail"] == {"code": "idempotency_conflict"}
+    assert "factory_status" not in {tool["name"] for tool in scoped.json()["tools"]}
+    assert missing_name.status_code == 422
+
+
 def test_completed_run_is_not_cancelable(client):
     created = client.post(
         "/internal/agent-runtime/v1/runs",

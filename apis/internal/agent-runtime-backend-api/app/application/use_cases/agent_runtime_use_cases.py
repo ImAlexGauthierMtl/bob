@@ -3,18 +3,22 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import os
 from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Any, Optional, Protocol
 from uuid import uuid4
 
 from app.application.ports import RuntimeProviderPort, RuntimeToolRegistryPort
+from app.application.runtime_catalog_defaults import default_runtime_settings
 from app.domain import (
     AgentConfirmation,
     AgentRun,
     AgentRuntimeError,
     AgentRuntimeNotFoundError,
     InternalContext,
+    RuntimeCatalogItem,
 )
 
 
@@ -56,6 +60,28 @@ class AgentRuntimeRepositoryPort(Protocol):
     def update_confirmation(self, *, confirmation: AgentConfirmation) -> AgentConfirmation:
         ...
 
+    def list_catalog_items(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        collection: str,
+    ) -> list[RuntimeCatalogItem]:
+        ...
+
+    def get_catalog_item_by_idempotency_key(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        collection: str,
+        idempotency_key: str,
+    ) -> Optional[RuntimeCatalogItem]:
+        ...
+
+    def create_catalog_item(self, *, item: RuntimeCatalogItem) -> RuntimeCatalogItem:
+        ...
+
 
 class AgentRuntimeUseCases:
     def __init__(
@@ -90,7 +116,7 @@ class AgentRuntimeUseCases:
 
         now = _utc_now()
         tools = self.tool_registry.list_tools(prompt=prompt, context=context, metadata=metadata)
-        messages = _build_messages(prompt=prompt, channel=channel, metadata=metadata)
+        messages = _build_messages(prompt=prompt, channel=channel, metadata=metadata, tools=tools)
         tool_results: list[dict[str, Any]] = []
         narration_steps = [
             {
@@ -252,10 +278,73 @@ class AgentRuntimeUseCases:
             )
         )
 
+    async def get_runtime_settings(self, *, context: InternalContext) -> dict[str, Any]:
+        settings = default_runtime_settings(
+            active_provider=os.environ.get("AGENT_RUNTIME_PROVIDER", "auto"),
+        )
+        for collection in ("agents", "skills", "tools"):
+            custom_items = self.repo.list_catalog_items(
+                tenant_id=context.tenant_id,
+                user_id=context.user_id,
+                collection=collection,
+            )
+            settings[collection].extend(item.payload for item in custom_items)
+        return settings
 
-def _build_messages(*, prompt: str, channel: str, metadata: dict[str, Any]) -> list[dict[str, Any]]:
+    async def create_runtime_catalog_item(
+        self,
+        *,
+        context: InternalContext,
+        collection: str,
+        payload: dict[str, Any],
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        if collection not in {"agents", "skills", "tools"}:
+            raise AgentRuntimeError("runtime_collection_invalid")
+        payload_hash = _request_payload_hash(collection=collection, payload=payload)
+        item_payload = _catalog_payload(collection=collection, payload=payload)
+        existing = self.repo.get_catalog_item_by_idempotency_key(
+            tenant_id=context.tenant_id,
+            user_id=context.user_id,
+            collection=collection,
+            idempotency_key=idempotency_key,
+        )
+        if existing:
+            if existing.payload_hash != payload_hash:
+                raise AgentRuntimeError("idempotency_conflict")
+            return {
+                "item": existing.payload,
+                "runtime": await self.get_runtime_settings(context=context),
+            }
+
+        item = RuntimeCatalogItem(
+            id=item_payload["id"],
+            tenant_id=context.tenant_id,
+            user_id=context.user_id,
+            collection=collection,
+            name=item_payload["name"],
+            payload=item_payload,
+            payload_hash=payload_hash,
+            idempotency_key=idempotency_key,
+            created_at=_utc_now(),
+        )
+        created = self.repo.create_catalog_item(item=item)
+        return {
+            "item": created.payload,
+            "runtime": await self.get_runtime_settings(context=context),
+        }
+
+
+def _build_messages(
+    *,
+    prompt: str,
+    channel: str,
+    metadata: dict[str, Any],
+    tools: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     memory_context = metadata.get("memory_context") if isinstance(metadata, dict) else None
     memory_summary = _safe_memory_summary(memory_context if isinstance(memory_context, dict) else {})
+    runtime_summary = _runtime_summary(tools)
     return [
         {
             "role": "system",
@@ -264,7 +353,8 @@ def _build_messages(*, prompt: str, channel: str, metadata: dict[str, Any]) -> l
                 "Tu peux utiliser uniquement les outils fournis au run. "
                 "Tu ne reveles jamais de secret, tu verifies les donnees utiles et tu demandes une confirmation "
                 "avant toute action d'ecriture ou action irreversible. "
-                f"Canal actif: {channel}. Contexte memoire: {memory_summary}"
+                f"Canal actif: {channel}. Contexte memoire: {memory_summary} "
+                f"Runtime: {runtime_summary}"
             ),
         },
         {
@@ -272,6 +362,22 @@ def _build_messages(*, prompt: str, channel: str, metadata: dict[str, Any]) -> l
             "content": prompt,
         },
     ]
+
+
+def _runtime_summary(tools: list[dict[str, Any]]) -> str:
+    provider_mode = os.environ.get("AGENT_RUNTIME_PROVIDER", "auto").strip().lower() or "auto"
+    fireworks_model = os.environ.get("FIREWORKS_MODEL", "accounts/fireworks/models/kimi-k2p7-code")
+    provider = "fireworks" if provider_mode in {"auto", "fireworks"} and os.environ.get("FIREWORKS_API_KEY") else "local"
+    tool_names = []
+    for tool in tools[:8]:
+        function = tool.get("function") if isinstance(tool, dict) else None
+        if isinstance(function, dict) and function.get("name"):
+            tool_names.append(str(function["name"]))
+    tools_summary = ", ".join(tool_names) if tool_names else "aucun outil fourni"
+    return (
+        f"provider={provider}, mode={provider_mode}, "
+        f"modele_fireworks={fireworks_model}, outils={tools_summary}."
+    )
 
 
 def _safe_memory_summary(memory_context: dict[str, Any]) -> str:
@@ -295,3 +401,54 @@ def _fallback_assistant_content(prompt: str, channel: str) -> str:
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _catalog_payload(*, collection: str, payload: dict[str, Any]) -> dict[str, Any]:
+    name = str(payload.get("name") or "").strip()
+    if not name:
+        raise AgentRuntimeError("name_required")
+    item_id = str(payload.get("id") or f"{collection[:-1]}-{uuid4().hex[:10]}")
+    defaults: dict[str, Any]
+    if collection == "agents":
+        defaults = {
+            "description": "",
+            "provider_id": "fireworks-kimi",
+            "status": "draft",
+            "skills": [],
+            "tools": [],
+        }
+    elif collection == "skills":
+        defaults = {
+            "description": "",
+            "status": "draft",
+            "scope": "shared_clean",
+        }
+    else:
+        defaults = {
+            "description": "",
+            "family": "custom",
+            "risk": "read",
+            "status": "draft",
+            "execution": "mcp_gateway_pending",
+        }
+    return {
+        "id": item_id,
+        "name": name,
+        **defaults,
+        **{key: value for key, value in payload.items() if value is not None},
+        "id": item_id,
+        "name": name,
+    }
+
+
+def _payload_hash(payload: dict[str, Any]) -> str:
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _request_payload_hash(*, collection: str, payload: dict[str, Any]) -> str:
+    normalized = {
+        "collection": collection,
+        "payload": {key: value for key, value in payload.items() if value is not None},
+    }
+    return _payload_hash(normalized)

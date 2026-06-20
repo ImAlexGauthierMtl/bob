@@ -72,3 +72,23 @@ class ConfirmationResponse(BaseModel):
             created_at=confirmation.created_at,
             resolved_at=confirmation.resolved_at,
         )
+
+
+class RuntimeCatalogItemCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=180)
+    id: str | None = Field(default=None, max_length=64)
+    description: str | None = None
+    provider_id: str | None = None
+    status: str | None = None
+    skills: list[str] | None = None
+    tools: list[str] | None = None
+    scope: str | None = None
+    family: str | None = None
+    risk: str | None = None
+    execution: str | None = None
+    servers: list[str] | None = None
+    skill: str | None = None
+    capabilities: str | None = None
+
+    def to_payload(self) -> dict[str, Any]:
+        return self.model_dump(exclude_none=True)

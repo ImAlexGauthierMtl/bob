@@ -191,5 +191,25 @@ class UsageClient:
         return resp.json()
 
 
+class AgentRuntimeClient:
+    def __init__(self):
+        self._client = create_service_client("agent-runtime~backend-api")
+
+    async def get_settings(self, *, headers=None):
+        resp = await self._client.get("/internal/agent-runtime/v1/settings", headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def create_catalog_item(self, *, collection, data, headers=None):
+        resp = await self._client.post(
+            f"/internal/agent-runtime/v1/settings/{collection}",
+            json=data,
+            headers=headers,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+
 workflow_client = WorkflowClient()
 usage_client = UsageClient()
+agent_runtime_client = AgentRuntimeClient()

@@ -6,10 +6,11 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.domain import AgentConfirmation, AgentRun
+from app.domain import AgentConfirmation, AgentRun, RuntimeCatalogItem
 from app.infrastructure.persistence.models.agent_runtime import (
     AgentConfirmationModel,
     AgentRunModel,
+    RuntimeCatalogItemModel,
 )
 
 
@@ -118,6 +119,62 @@ class AgentRuntimeRepository:
         self.db.refresh(model)
         return _confirmation_from_model(model)
 
+    def list_catalog_items(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        collection: str,
+    ) -> list[RuntimeCatalogItem]:
+        models = (
+            self.db.query(RuntimeCatalogItemModel)
+            .filter(
+                RuntimeCatalogItemModel.tenant_id == tenant_id,
+                RuntimeCatalogItemModel.user_id == user_id,
+                RuntimeCatalogItemModel.collection == collection,
+            )
+            .order_by(RuntimeCatalogItemModel.created_at.asc(), RuntimeCatalogItemModel.id.asc())
+            .all()
+        )
+        return [_catalog_item_from_model(model) for model in models]
+
+    def get_catalog_item_by_idempotency_key(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        collection: str,
+        idempotency_key: str,
+    ) -> RuntimeCatalogItem | None:
+        model = (
+            self.db.query(RuntimeCatalogItemModel)
+            .filter(
+                RuntimeCatalogItemModel.tenant_id == tenant_id,
+                RuntimeCatalogItemModel.user_id == user_id,
+                RuntimeCatalogItemModel.collection == collection,
+                RuntimeCatalogItemModel.idempotency_key == idempotency_key,
+            )
+            .one_or_none()
+        )
+        return _catalog_item_from_model(model) if model else None
+
+    def create_catalog_item(self, *, item: RuntimeCatalogItem) -> RuntimeCatalogItem:
+        model = RuntimeCatalogItemModel(
+            id=item.id,
+            tenant_id=item.tenant_id,
+            user_id=item.user_id,
+            collection=item.collection,
+            name=item.name,
+            payload=item.payload,
+            payload_hash=item.payload_hash,
+            idempotency_key=item.idempotency_key,
+            created_at=item.created_at,
+        )
+        self.db.add(model)
+        self.db.commit()
+        self.db.refresh(model)
+        return _catalog_item_from_model(model)
+
 
 def _run_from_model(model: AgentRunModel) -> AgentRun:
     return AgentRun(
@@ -151,4 +208,18 @@ def _confirmation_from_model(model: AgentConfirmationModel) -> AgentConfirmation
         label=model.label,
         created_at=model.created_at,
         resolved_at=model.resolved_at,
+    )
+
+
+def _catalog_item_from_model(model: RuntimeCatalogItemModel) -> RuntimeCatalogItem:
+    return RuntimeCatalogItem(
+        id=model.id,
+        tenant_id=model.tenant_id,
+        user_id=model.user_id,
+        collection=model.collection,
+        name=model.name,
+        payload=model.payload or {},
+        payload_hash=model.payload_hash,
+        idempotency_key=model.idempotency_key,
+        created_at=model.created_at,
     )

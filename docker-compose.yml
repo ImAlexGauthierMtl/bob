@@ -740,6 +740,7 @@ services:
     volumes:
       - ./apis/internal/agent-runtime-backend-api/app:/app/app
       - ./apis/internal/agent-runtime-backend-api/main.py:/app/main.py
+      - ./apis/internal/agent-runtime-backend-api/alembic.ini:/app/alembic.ini
       - ./apis/internal/agent-runtime-backend-api/alembic:/app/alembic
 
     depends_on:

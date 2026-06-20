@@ -75,6 +75,19 @@ class RuntimeToolResult:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class RuntimeCatalogItem:
+    id: str
+    tenant_id: str
+    user_id: str
+    collection: str
+    name: str
+    payload: dict[str, Any]
+    payload_hash: str
+    created_at: datetime
+    idempotency_key: Optional[str] = None
+
+
 class AgentRuntimeError(Exception):
     def __init__(self, code: str) -> None:
         super().__init__(code)

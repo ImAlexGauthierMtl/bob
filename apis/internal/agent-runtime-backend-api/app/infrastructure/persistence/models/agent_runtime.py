@@ -48,3 +48,18 @@ class AgentConfirmationModel(Base):
     label = Column(String(160), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
     resolved_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class RuntimeCatalogItemModel(Base):
+    __tablename__ = "runtime_catalog_items"
+    __table_args__ = {"schema": SCHEMA_NAME}
+
+    id = Column(String(64), primary_key=True, default=generate_uuid)
+    tenant_id = Column(String(64), nullable=False, index=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    collection = Column(String(30), nullable=False, index=True)
+    name = Column(String(180), nullable=False, index=True)
+    payload = Column(JSON, nullable=False, default=dict)
+    payload_hash = Column(String(64), nullable=False)
+    idempotency_key = Column(String(180), nullable=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)

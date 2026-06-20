@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
-import os
 import hashlib
 import json
+import os
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
-from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+import httpx
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+
+from app.infrastructure.clients.platform_clients import agent_runtime_client
+from shared.infrastructure import InternalSessionContext, InternalSessionContextSigner
 
 
 router = APIRouter()
@@ -76,83 +79,8 @@ _VOICE_DEFAULTS: dict[str, Any] = {
     "source": "cde-local",
 }
 
-_RUNTIME_DEFAULTS: dict[str, Any] = {
-    "providers": [
-        {
-            "id": "fireworks-kimi",
-            "name": "Fireworks Kimi K2.7 Code",
-            "provider": "fireworks",
-            "model": "accounts/fireworks/models/kimi-k2p7-code",
-            "status": "runtime_backend_managed",
-            "enabled": True,
-        },
-        {
-            "id": "local-runtime",
-            "name": "Bob Local Runtime",
-            "provider": "local",
-            "model": "bob-local-runtime",
-            "status": "dev_fallback",
-            "enabled": True,
-        },
-    ],
-    "active_provider": "auto",
-    "agents": [
-        {
-            "id": "agent-bob-orchestrator",
-            "name": "Bob Orchestrator",
-            "description": "Agent principal CDE pour conversation, memoire et appels outils controles.",
-            "provider_id": "fireworks-kimi",
-            "status": "active",
-            "skills": ["skill-routing", "skill-memory"],
-            "tools": ["tool-runtime-status", "tool-memory-summary"],
-        }
-    ],
-    "skills": [
-        {
-            "id": "skill-routing",
-            "name": "Tool Routing",
-            "description": "Selectionne les familles d'outils exposees au run selon le contexte.",
-            "status": "active",
-            "scope": "shared_clean",
-        },
-        {
-            "id": "skill-memory",
-            "name": "Memory Readback",
-            "description": "Resume et verifie la memoire privee et organisationnelle transmise par Bob Chat.",
-            "status": "active",
-            "scope": "shared_clean",
-        },
-    ],
-    "tools": [
-        {
-            "id": "tool-runtime-status",
-            "name": "bob_runtime_status",
-            "family": "runtime",
-            "risk": "read",
-            "status": "active",
-            "description": "Confirme l'etat runtime, les droits et les familles d'outils disponibles.",
-        },
-        {
-            "id": "tool-memory-summary",
-            "name": "bob_memory_context_summary",
-            "family": "memory",
-            "risk": "read",
-            "status": "active",
-            "description": "Resume le contexte memoire deja fourni au runtime.",
-        },
-    ],
-    "memory": {
-        "private_user": "tenant_id + user_id obligatoire",
-        "organization": "promotion humaine avant usage durable",
-        "rag": "Postgres source de verite, Milvus reconstructible",
-        "vector_index": "ACL revalidees apres recherche vectorielle",
-    },
-    "source": "cde-local",
-}
-
 _CONVERSATION_SETTINGS_BY_ACTOR: dict[str, dict[str, Any]] = {}
 _VOICE_SETTINGS_BY_ACTOR: dict[str, dict[str, Any]] = {}
-_RUNTIME_SETTINGS_BY_ACTOR: dict[str, dict[str, Any]] = {}
 _IDEMPOTENCY_REPLAYS: dict[tuple[str, str, str], dict[str, Any]] = {}
 
 
@@ -330,72 +258,68 @@ async def update_voice_settings(
 
 @router.get("/runtime")
 async def get_runtime_settings(
+    request: Request,
     authorization: str | None = Header(None, alias="Authorization"),
 ) -> dict[str, Any]:
-    settings = _runtime_settings_for_actor(_actor_key_from_authorization(authorization))
-    return deepcopy(settings)
+    return await _runtime_backend_call(
+        "get_settings",
+        request=request,
+        authorization=authorization,
+        capabilities=set(),
+    )
 
 
 @router.post("/runtime/agents", status_code=status.HTTP_201_CREATED)
 async def create_runtime_agent(
     payload: dict[str, Any],
+    request: Request,
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
     principal: LocalSettingsPrincipal = Depends(_require_settings_mutation_permission),
 ) -> dict[str, Any]:
-    return _append_runtime_item(
-        scope="runtime-agent",
+    return await _runtime_backend_call(
+        "create_catalog_item",
+        request=request,
+        authorization=request.headers.get("authorization"),
+        capabilities=principal.capabilities,
         collection="agents",
         payload=payload,
-        principal=principal,
         idempotency_key=idempotency_key,
-        defaults={
-            "description": "",
-            "provider_id": "fireworks-kimi",
-            "status": "draft",
-            "skills": [],
-            "tools": [],
-        },
     )
 
 
 @router.post("/runtime/skills", status_code=status.HTTP_201_CREATED)
 async def create_runtime_skill(
     payload: dict[str, Any],
+    request: Request,
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
     principal: LocalSettingsPrincipal = Depends(_require_settings_mutation_permission),
 ) -> dict[str, Any]:
-    return _append_runtime_item(
-        scope="runtime-skill",
+    return await _runtime_backend_call(
+        "create_catalog_item",
+        request=request,
+        authorization=request.headers.get("authorization"),
+        capabilities=principal.capabilities,
         collection="skills",
         payload=payload,
-        principal=principal,
         idempotency_key=idempotency_key,
-        defaults={
-            "description": "",
-            "status": "draft",
-            "scope": "shared_clean",
-        },
     )
 
 
 @router.post("/runtime/tools", status_code=status.HTTP_201_CREATED)
 async def create_runtime_tool(
     payload: dict[str, Any],
+    request: Request,
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
     principal: LocalSettingsPrincipal = Depends(_require_settings_mutation_permission),
 ) -> dict[str, Any]:
-    return _append_runtime_item(
-        scope="runtime-tool",
+    return await _runtime_backend_call(
+        "create_catalog_item",
+        request=request,
+        authorization=request.headers.get("authorization"),
+        capabilities=principal.capabilities,
         collection="tools",
         payload=payload,
-        principal=principal,
         idempotency_key=idempotency_key,
-        defaults={
-            "description": "",
-            "family": "custom",
-            "risk": "read",
-            "status": "draft",
-        },
     )
 
 
@@ -403,44 +327,93 @@ def _clean_dict(payload: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in payload.items() if value is not None}
 
 
-def _runtime_settings_for_actor(actor_key: str) -> dict[str, Any]:
-    settings = _settings_for_actor(
-        _RUNTIME_SETTINGS_BY_ACTOR,
-        _RUNTIME_DEFAULTS,
-        actor_key,
-    )
-    settings["active_provider"] = os.environ.get("AGENT_RUNTIME_PROVIDER", settings["active_provider"])
-    return settings
-
-
-def _append_runtime_item(
+async def _runtime_backend_call(
+    method: str,
     *,
-    scope: str,
-    collection: str,
-    payload: dict[str, Any],
-    principal: LocalSettingsPrincipal,
-    idempotency_key: str,
-    defaults: dict[str, Any],
+    request: Request,
+    authorization: str | None,
+    capabilities: set[str],
+    collection: str | None = None,
+    payload: dict[str, Any] | None = None,
+    idempotency_key: str | None = None,
 ) -> dict[str, Any]:
-    replay = _get_idempotency_replay(scope, principal, idempotency_key, payload)
-    if replay:
-        return replay
-
-    name = str(payload.get("name") or "").strip()
-    if not name:
+    headers = _runtime_backend_headers(
+        request=request,
+        authorization=authorization,
+        capabilities=capabilities,
+        idempotency_key=idempotency_key,
+    )
+    try:
+        if method == "get_settings":
+            return await agent_runtime_client.get_settings(headers=headers)
+        if method == "create_catalog_item" and collection and payload is not None:
+            return await agent_runtime_client.create_catalog_item(
+                collection=collection,
+                data=payload,
+                headers=headers,
+            )
+    except httpx.HTTPStatusError as exc:
+        detail = _safe_backend_detail(exc.response)
+        raise HTTPException(status_code=exc.response.status_code, detail=detail) from exc
+    except httpx.HTTPError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"code": "name_required"},
-        )
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "agent_runtime_backend_unavailable", "message": str(exc)},
+        ) from exc
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail={"code": "runtime_backend_call_invalid"},
+    )
 
-    settings = _runtime_settings_for_actor(principal.actor_key)
-    item = {
-        "id": str(payload.get("id") or f"{collection[:-1]}-{uuid4().hex[:10]}"),
-        "name": name,
-        **defaults,
-        **_clean_dict(payload),
+
+def _runtime_backend_headers(
+    *,
+    request: Request,
+    authorization: str | None,
+    capabilities: set[str],
+    idempotency_key: str | None,
+) -> dict[str, str]:
+    trace_id = request.headers.get("x-trace-id") or hashlib.sha256(
+        f"{authorization or 'anonymous'}:{request.url.path}".encode("utf-8")
+    ).hexdigest()[:32]
+    context = InternalSessionContext(
+        tenant_id=request.headers.get("x-tenant-id") or "tenant-croo-local",
+        user_id=_actor_key_from_authorization(authorization).replace(":", "-")[:64],
+        session_id="bob-settings-local",
+        trace_id=trace_id,
+        permissions=tuple(sorted(capabilities)),
+        entitlements=("bob_settings.manage",) if capabilities else (),
+        roles=("admin",) if "admin" in capabilities else (),
+    )
+    headers = {
+        "X-Session-Context": _internal_session_signer().issue(context),
+        "X-Trace-Id": trace_id,
     }
-    settings[collection].append(item)
-    response = {"item": deepcopy(item), "runtime": deepcopy(settings)}
-    _store_idempotency_replay(scope, principal, idempotency_key, payload, response)
-    return response
+    if idempotency_key:
+        headers["Idempotency-Key"] = idempotency_key
+    return headers
+
+
+def _internal_session_signer() -> InternalSessionContextSigner:
+    secret = os.environ.get("INTERNAL_SESSION_SECRET", "")
+    if not secret and _is_development():
+        secret = "dev-internal-session-secret-not-for-production"
+    if not secret:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "internal_session_secret_missing"},
+        )
+    return InternalSessionContextSigner(
+        secret,
+        kid=os.environ.get("INTERNAL_SESSION_KID", "internal-session-dev"),
+    )
+
+
+def _safe_backend_detail(response: httpx.Response) -> Any:
+    if not response.content:
+        return {"code": "agent_runtime_backend_error"}
+    try:
+        payload = response.json()
+    except ValueError:
+        return {"code": "agent_runtime_backend_error", "message": response.text}
+    return payload.get("detail", payload)
