@@ -115,8 +115,13 @@ class AgentRuntimeUseCases:
             return existing
 
         now = _utc_now()
-        tools = self.tool_registry.list_tools(prompt=prompt, context=context, metadata=metadata)
-        messages = _build_messages(prompt=prompt, channel=channel, metadata=metadata, tools=tools)
+        runtime_catalog = await self.resolve_runtime_catalog(context=context, metadata=metadata)
+        run_metadata = {
+            **metadata,
+            "runtime_catalog": runtime_catalog,
+        }
+        tools = self.tool_registry.list_tools(prompt=prompt, context=context, metadata=run_metadata)
+        messages = _build_messages(prompt=prompt, channel=channel, metadata=run_metadata, tools=tools)
         tool_results: list[dict[str, Any]] = []
         narration_steps = [
             {
@@ -159,7 +164,7 @@ class AgentRuntimeUseCases:
                 tool_result = await self.tool_registry.execute(
                     call=tool_call,
                     context=context,
-                    metadata=metadata,
+                    metadata=run_metadata,
                 )
                 tool_results.append(
                     {
@@ -207,7 +212,7 @@ class AgentRuntimeUseCases:
             completed_at=completed_at,
             idempotency_key=idempotency_key,
             metadata={
-                **metadata,
+                **run_metadata,
                 "channel": channel,
                 "provider": final_result.provider,
                 "model": final_result.model,
@@ -229,6 +234,33 @@ class AgentRuntimeUseCases:
             artifacts=[],
         )
         return self.repo.create_run(run=run)
+
+    async def resolve_runtime_catalog(
+        self,
+        *,
+        context: InternalContext,
+        metadata: dict[str, Any],
+    ) -> dict[str, Any]:
+        settings = await self.get_runtime_settings(context=context)
+        requested_agent_id = _requested_agent_id(metadata)
+        agent = _find_catalog_entry(settings["agents"], requested_agent_id)
+        selection_status = "requested"
+        if agent is None:
+            agent = _default_active_agent(settings["agents"])
+            selection_status = "defaulted" if not requested_agent_id else "requested_not_found"
+
+        skill_ids = _entry_ids(agent.get("skills") if isinstance(agent, dict) else [])
+        tool_ids = _entry_ids(agent.get("tools") if isinstance(agent, dict) else [])
+        skills = _entries_by_ids(settings["skills"], skill_ids)
+        selected_tools = _entries_by_ids(settings["tools"], tool_ids)
+
+        return {
+            "requested_agent_id": requested_agent_id,
+            "selection_status": selection_status,
+            "agent": _public_catalog_entry(agent),
+            "skills": [_public_catalog_entry(skill) for skill in skills],
+            "tools": [_public_catalog_entry(tool) for tool in selected_tools],
+        }
 
     async def get_run(self, *, context: InternalContext, run_id: str) -> AgentRun:
         run = self.repo.get_run(
@@ -345,6 +377,9 @@ def _build_messages(
     memory_context = metadata.get("memory_context") if isinstance(metadata, dict) else None
     memory_summary = _safe_memory_summary(memory_context if isinstance(memory_context, dict) else {})
     runtime_summary = _runtime_summary(tools)
+    agent_summary = _agent_runtime_summary(
+        metadata.get("runtime_catalog") if isinstance(metadata, dict) else None
+    )
     return [
         {
             "role": "system",
@@ -354,6 +389,7 @@ def _build_messages(
                 "Tu ne reveles jamais de secret, tu verifies les donnees utiles et tu demandes une confirmation "
                 "avant toute action d'ecriture ou action irreversible. "
                 f"Canal actif: {channel}. Contexte memoire: {memory_summary} "
+                f"Catalogue agent: {agent_summary} "
                 f"Runtime: {runtime_summary}"
             ),
         },
@@ -378,6 +414,30 @@ def _runtime_summary(tools: list[dict[str, Any]]) -> str:
         f"provider={provider}, mode={provider_mode}, "
         f"modele_fireworks={fireworks_model}, outils={tools_summary}."
     )
+
+
+def _agent_runtime_summary(runtime_catalog: Any) -> str:
+    if not isinstance(runtime_catalog, dict):
+        return "agent non resolu."
+    agent = runtime_catalog.get("agent") if isinstance(runtime_catalog.get("agent"), dict) else {}
+    skills = runtime_catalog.get("skills") if isinstance(runtime_catalog.get("skills"), list) else []
+    tools = runtime_catalog.get("tools") if isinstance(runtime_catalog.get("tools"), list) else []
+    skill_names = _catalog_names(skills)
+    tool_names = _catalog_names(tools)
+    return (
+        f"agent={agent.get('name') or 'Bob'} ({agent.get('id') or 'unknown'}), "
+        f"selection={runtime_catalog.get('selection_status') or 'unknown'}, "
+        f"skills={skill_names or 'aucun'}, tools={tool_names or 'aucun'}."
+    )
+
+
+def _catalog_names(entries: list[Any]) -> str:
+    names = [
+        str(entry.get("name") or entry.get("id"))
+        for entry in entries
+        if isinstance(entry, dict) and (entry.get("name") or entry.get("id"))
+    ]
+    return ", ".join(names[:10])
 
 
 def _safe_memory_summary(memory_context: dict[str, Any]) -> str:
@@ -439,6 +499,89 @@ def _catalog_payload(*, collection: str, payload: dict[str, Any]) -> dict[str, A
         "id": item_id,
         "name": name,
     }
+
+
+def _requested_agent_id(metadata: dict[str, Any]) -> str | None:
+    for key in ("agent_id", "bob_agent_id"):
+        value = metadata.get(key)
+        if value:
+            return str(value)
+    client_context = metadata.get("client_context")
+    if isinstance(client_context, dict):
+        for key in ("agent_id", "bob_agent_id"):
+            value = client_context.get(key)
+            if value:
+                return str(value)
+    mission = metadata.get("mission")
+    mission_context = mission.get("context") if isinstance(mission, dict) else None
+    if isinstance(mission_context, dict):
+        for key in ("agent_id", "bob_agent_id"):
+            value = mission_context.get(key)
+            if value:
+                return str(value)
+    return None
+
+
+def _find_catalog_entry(entries: list[dict[str, Any]], entry_id: str | None) -> dict[str, Any] | None:
+    if not entry_id:
+        return None
+    normalized = entry_id.strip().lower()
+    for entry in entries:
+        if str(entry.get("id") or "").lower() == normalized:
+            return entry
+        if str(entry.get("name") or "").lower() == normalized:
+            return entry
+    return None
+
+
+def _default_active_agent(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    for entry in entries:
+        if entry.get("status") == "active":
+            return entry
+    return entries[0] if entries else {"id": "agent-bob-orchestrator", "name": "Bob Orchestrator"}
+
+
+def _entry_ids(value: Any) -> set[str]:
+    if not isinstance(value, list):
+        return set()
+    return {str(item).strip() for item in value if str(item).strip()}
+
+
+def _entries_by_ids(entries: list[dict[str, Any]], entry_ids: set[str]) -> list[dict[str, Any]]:
+    if not entry_ids:
+        return []
+    lowered = {entry_id.lower() for entry_id in entry_ids}
+    return [
+        entry
+        for entry in entries
+        if str(entry.get("id") or "").lower() in lowered
+        or str(entry.get("name") or "").lower() in lowered
+    ]
+
+
+def _public_catalog_entry(entry: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(entry, dict):
+        return {}
+    public_keys = {
+        "id",
+        "name",
+        "description",
+        "provider_id",
+        "status",
+        "skills",
+        "tools",
+        "scope",
+        "family",
+        "risk",
+        "execution",
+        "servers",
+        "skill",
+        "capabilities",
+        "capability_id",
+        "capability_file",
+        "mcp_tools",
+    }
+    return {key: value for key, value in entry.items() if key in public_keys}
 
 
 def _payload_hash(payload: dict[str, Any]) -> str:

@@ -73,6 +73,14 @@
         <header class="bob-exp__header">
             <h2 class="bob-exp__header-title">{{ activeTitle }}</h2>
             <div class="bob-exp__header-actions">
+                <label class="bob-exp__agent-select">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <select [(ngModel)]="selectedAgentId" [disabled]="isLoading || availableAgents.length === 0">
+                        @for (agent of availableAgents; track agent.id) {
+                        <option [value]="agent.id">{{ agent.name }}</option>
+                        }
+                    </select>
+                </label>
                 <button class="bob-exp__header-btn" title="Share">
                     <i class="fa-solid fa-share-nodes"></i>
                 </button>

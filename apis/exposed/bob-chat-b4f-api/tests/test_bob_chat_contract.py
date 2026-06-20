@@ -236,7 +236,11 @@ def test_create_message_validates_identity_and_delegates_conversation_runtime(
 ):
     response = client.post(
         "/api/bob-chat/v1/messages",
-        json={"message": "Montre mes suivis prioritaires", "client_context": {"route": "/opportunities"}},
+        json={
+            "message": "Montre mes suivis prioritaires",
+            "agent_id": "agent-bob-orchestrator",
+            "client_context": {"route": "/opportunities"},
+        },
         headers={"Idempotency-Key": "msg-1", "Cookie": "bob_cloud_session=abc", "X-Trace-Id": "a" * 32},
     )
 
@@ -259,6 +263,7 @@ def test_create_message_validates_identity_and_delegates_conversation_runtime(
     assert fake_memory.calls[0] == ("build_context", "Montre mes suivis prioritaires", "signed-internal-context")
     assert fake_runtime.calls[0][0] == "create_run"
     assert fake_runtime.calls[0][2] == "msg-1"
+    assert fake_runtime.calls[0][5]["agent_id"] == "agent-bob-orchestrator"
     assert fake_runtime.calls[0][5]["memory_context"]["private"][0]["id"] == "mem-1"
     assert fake_runtime.calls[0][6] == "msg-1:run"
 

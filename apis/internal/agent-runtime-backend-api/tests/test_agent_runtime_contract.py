@@ -224,8 +224,68 @@ def test_runtime_settings_catalog_mutations_are_scoped_and_idempotent(client):
     assert replay.json() == first.json()
     assert conflict.status_code == 409
     assert conflict.json()["detail"] == {"code": "idempotency_conflict"}
-    assert "factory_status" not in {tool["name"] for tool in scoped.json()["tools"]}
+    assert "factory_status" in {tool["name"] for tool in scoped.json()["tools"]}
     assert missing_name.status_code == 422
+
+
+def test_run_resolves_selected_agent_skills_and_tools_from_runtime_settings(client):
+    settings_headers = signed_headers(user_id="user-runtime-settings-admin")
+    run_headers = signed_headers(user_id="user-runtime-chat")
+    skill = client.post(
+        "/internal/agent-runtime/v1/settings/skills",
+        json={
+            "id": "skill-cde-sales-context",
+            "name": "CDE Sales Context",
+            "description": "Qualification client depuis CDE.",
+        },
+        headers={**settings_headers, "Idempotency-Key": "skill-cde-sales-context"},
+    )
+    tool = client.post(
+        "/internal/agent-runtime/v1/settings/tools",
+        json={
+            "id": "tool-cde-factory-read",
+            "name": "factory.requests-queues",
+            "family": "factory",
+            "risk": "read",
+        },
+        headers={**settings_headers, "Idempotency-Key": "tool-cde-factory-read"},
+    )
+    agent = client.post(
+        "/internal/agent-runtime/v1/settings/agents",
+        json={
+            "id": "agent-cde-sales",
+            "name": "Bob Sales",
+            "description": "Agent de suivi commercial CDE.",
+            "provider_id": "fireworks-kimi",
+            "status": "active",
+            "skills": ["skill-cde-sales-context"],
+            "tools": ["tool-cde-factory-read"],
+        },
+        headers={**settings_headers, "Idempotency-Key": "agent-cde-sales"},
+    )
+
+    created = client.post(
+        "/internal/agent-runtime/v1/runs",
+        json={
+            **run_body(),
+            "metadata": {
+                "source": "bob-chat-b4f-api",
+                "agent_id": "agent-cde-sales",
+            },
+        },
+        headers={**run_headers, "Idempotency-Key": "selected-agent-run"},
+    )
+
+    assert skill.status_code == 201
+    assert tool.status_code == 201
+    assert agent.status_code == 201
+    assert created.status_code == 201
+    runtime_catalog = created.json()["metadata"]["runtime_catalog"]
+    assert runtime_catalog["requested_agent_id"] == "agent-cde-sales"
+    assert runtime_catalog["selection_status"] == "requested"
+    assert runtime_catalog["agent"]["id"] == "agent-cde-sales"
+    assert [item["id"] for item in runtime_catalog["skills"]] == ["skill-cde-sales-context"]
+    assert [item["id"] for item in runtime_catalog["tools"]] == ["tool-cde-factory-read"]
 
 
 def test_completed_run_is_not_cancelable(client):

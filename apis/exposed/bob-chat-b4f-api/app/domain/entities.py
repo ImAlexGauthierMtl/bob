@@ -24,6 +24,7 @@ class BobChatMessageCommand:
     channel: str
     mission: Optional[BobChatMission]
     client_context: dict[str, Any]
+    agent_id: Optional[str] = None
 
 
 @dataclass(frozen=True)

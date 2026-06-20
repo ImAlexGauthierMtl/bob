@@ -27,6 +27,7 @@ class BobChatMessageRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=12000)
     session_id: Optional[str] = None
     channel: str = DEFAULT_CHANNEL
+    agent_id: Optional[str] = Field(default=None, max_length=180)
     mission: Optional[BobChatMissionPayload] = None
     client_context: dict[str, Any] = Field(default_factory=dict)
 
@@ -45,6 +46,7 @@ class BobChatMessageRequest(BaseModel):
                 else None
             ),
             client_context=self.client_context,
+            agent_id=self.agent_id,
         )
 
 

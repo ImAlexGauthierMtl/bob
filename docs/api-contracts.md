@@ -44,6 +44,9 @@ Rules:
   `/api/bob-chat/v1/*` routes and rewritten internal `/*` routes covered by
   tests.
 - Require `Idempotency-Key` on message creation.
+- Accept optional `agent_id` on message creation. When provided, Bob Chat B4F
+  forwards it inside the internal runtime metadata so the Agent Runtime can
+  resolve the selected Bob agent and its associated skills/tools.
 - Issue `X-Session-Context` for internal backend calls.
 - Delegate conversation persistence to `conversation-backend-api`.
 - Delegate memory context retrieval to `agent-memory-backend-api`.
@@ -202,9 +205,11 @@ Rules:
 - Own the `agent_runtime` PostgreSQL schema through Alembic migrations.
 - Avoid application startup DDL.
 - Own runtime catalog persistence through `agent_runtime.runtime_catalog_items`.
-  This catalog stores tenant/user-scoped admin-created agents, skills and tools
-  with idempotent creation keys. It is combined with backend defaults at read
-  time.
+  This catalog stores admin-created agents, skills and tools inside the tenant.
+  Reads are tenant-wide so an agent created in Bob Settings is available to Bob
+  Chat runtime execution for the same tenant. Idempotent creation keys remain
+  attached to the creator/request context. The catalog is combined with backend
+  defaults at read time.
 - `GET /internal/agent-runtime/v1/settings`
 - `POST /internal/agent-runtime/v1/settings/agents`
 - `POST /internal/agent-runtime/v1/settings/skills`
@@ -231,6 +236,10 @@ Rules:
 - Fireworks uses the OpenAI-compatible chat completions API with model
   `accounts/fireworks/models/kimi-k2p7-code` unless overridden by
   `FIREWORKS_MODEL`.
+- Run creation resolves `metadata.agent_id` or `metadata.client_context.agent_id`
+  against runtime settings. The resolved `runtime_catalog` is stored in run
+  metadata with the public agent, skills, tools and selection status. If no
+  agent is requested, the active default Bob agent is used.
 - Tool calls are selected from the controlled runtime registry and persisted as
   audited run actions. Unknown tools and unloaded MCP families are rejected by
   the registry.

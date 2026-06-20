@@ -74,7 +74,6 @@ class InMemoryAgentRuntimeRepository:
             item
             for item in self.catalog_items.values()
             if item.tenant_id == tenant_id
-            and item.user_id == user_id
             and item.collection == collection
         ]
 

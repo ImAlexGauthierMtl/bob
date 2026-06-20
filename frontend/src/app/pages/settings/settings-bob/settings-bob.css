@@ -317,6 +317,48 @@
     grid-template-columns: minmax(0, 1fr) minmax(6rem, 0.55fr) 2.5rem;
 }
 
+.bob-agent-compose {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0.65rem 0 0.75rem;
+}
+
+.bob-agent-compose p {
+    margin: 0 0 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6F6F68;
+    text-transform: uppercase;
+}
+
+.bob-agent-compose__list {
+    max-height: 10rem;
+    overflow: auto;
+    border: 1px solid #EFEFEB;
+    border-radius: 6px;
+    padding: 0.35rem;
+}
+
+.bob-agent-compose__list label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    padding: 0.35rem;
+    font-size: 0.72rem;
+    color: #20201E;
+}
+
+.bob-agent-compose__list input {
+    flex: 0 0 auto;
+    margin-top: 0.1rem;
+}
+
+.bob-agent-compose__list span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
 .bob-mcp-family-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -387,6 +429,10 @@
 
     .bob-icon-btn {
         width: 100%;
+    }
+
+    .bob-agent-compose {
+        grid-template-columns: 1fr;
     }
 
     .bob-mcp-family-grid {

@@ -4,6 +4,7 @@ import { Subscription } from 'rxjs';
 import { Store } from '@ngrx/store';
 import { AuthService } from '../services/auth.service';
 import { BobActionService, BobAction, BobMission } from '../services/bob-action.service';
+import { BobRuntimeAgent } from '../services/bob-assistant-settings.service';
 import { PipecatClient, RTVIEvent } from '@pipecat-ai/client-js';
 import { WebSocketTransport } from '@pipecat-ai/websocket-transport';
 import {
@@ -17,6 +18,8 @@ import {
     setBobChatMission,
     startNewBobChatConversation,
 } from '../../store/bob-chat/bob-chat.actions';
+import { loadBobAssistantSettings } from '../../store/bob-assistant-settings/bob-assistant-settings.actions';
+import { selectBobAssistantRuntimeSettings } from '../../store/bob-assistant-settings/bob-assistant-settings.selectors';
 import { BobChatMessageView, BobChatSessionSummary } from '../../store/bob-chat/bob-chat.models';
 import {
     selectBobChatActiveTitle,
@@ -57,6 +60,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     private missionSub!: Subscription;
     private missionUpdateSub?: Subscription;
     private messagesSub?: Subscription;
+    private subscriptions = new Subscription();
     private readonly messagesSignal = this.store.selectSignal(selectBobChatMessages);
     private readonly sessionGroupsSignal = this.store.selectSignal(selectBobChatSessionGroups);
     private readonly sessionIdSignal = this.store.selectSignal(selectBobChatSessionId);
@@ -67,6 +71,8 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
     isExpanded = false;
     message = '';
     hasUnread = true;
+    availableAgents: BobRuntimeAgent[] = [];
+    selectedAgentId = 'agent-bob-orchestrator';
     private shouldScrollToBottom = false;
 
     // ── Expanded sidebar state ──────────────────────────
@@ -135,6 +141,18 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
                 previousMessageCount = messages.length;
             }
         });
+        this.subscriptions.add(
+            this.store.select(selectBobAssistantRuntimeSettings).subscribe((runtime) => {
+                this.availableAgents = runtime?.agents || [];
+                if (
+                    this.availableAgents.length > 0 &&
+                    !this.availableAgents.some((agent) => agent.id === this.selectedAgentId)
+                ) {
+                    this.selectedAgentId = this.availableAgents.find((agent) => agent.status === 'active')?.id
+                        || this.availableAgents[0].id;
+                }
+            }),
+        );
 
         this.missionSub = this.bobActionService.mission$.subscribe((mission: BobMission) => {
             this.startMission(mission);
@@ -164,6 +182,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         if (this.missionSub) this.missionSub.unsubscribe();
         if (this.missionUpdateSub) this.missionUpdateSub.unsubscribe();
         if (this.messagesSub) this.messagesSub.unsubscribe();
+        this.subscriptions.unsubscribe();
     }
 
     toggle(): void {
@@ -188,6 +207,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
         this.shouldScrollToBottom = true;
         if (this.isExpanded) {
             this.loadSessions();
+            this.store.dispatch(loadBobAssistantSettings());
         }
     }
 
@@ -242,6 +262,7 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
             loadingMessageId: this.createMessageId('loading'),
             text: userMsg,
             channel: this.isExpanded ? 'workspace' : 'compact',
+            agentId: this.selectedAgentId,
         }));
     }
 

@@ -66,6 +66,7 @@ export class BobChatEffects {
                     message: action.text,
                     session_id: sessionId,
                     channel: action.channel,
+                    agent_id: action.agentId,
                     mission: mission.prompt || mission.context
                         ? {
                             prompt: mission.prompt,

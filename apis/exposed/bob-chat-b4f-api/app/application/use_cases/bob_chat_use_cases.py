@@ -168,6 +168,7 @@ class BobChatUseCases:
             channel=command.channel,
             metadata={
                 "client_context": command.client_context,
+                "agent_id": _agent_id_payload(command),
                 "mission": _mission_payload(command),
                 "memory_context": memory_context,
             },
@@ -286,3 +287,19 @@ def _mission_payload(command: BobChatMessageCommand) -> dict[str, Any] | None:
         "prompt": command.mission.prompt,
         "context": command.mission.context or {},
     }
+
+
+def _agent_id_payload(command: BobChatMessageCommand) -> str | None:
+    if command.agent_id:
+        return command.agent_id
+    for key in ("agent_id", "bob_agent_id"):
+        value = command.client_context.get(key)
+        if value:
+            return str(value)
+    mission_context = command.mission.context if command.mission else None
+    if isinstance(mission_context, dict):
+        for key in ("agent_id", "bob_agent_id"):
+            value = mission_context.get(key)
+            if value:
+                return str(value)
+    return None

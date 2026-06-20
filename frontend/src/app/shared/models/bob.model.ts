@@ -6,6 +6,7 @@ export interface BobChatRequest {
     message: string;
     session_id?: string;
     channel?: BobChannel;
+    agent_id?: string;
     mission?: {
         id?: string;
         prompt?: string;

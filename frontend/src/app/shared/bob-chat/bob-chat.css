@@ -2470,6 +2470,40 @@
     gap: var(--space-3);
 }
 
+.bob-exp__agent-select {
+    height: 40px;
+    min-width: 13rem;
+    max-width: 18rem;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-gray-200);
+    background: var(--color-white);
+    color: var(--color-gray-600);
+}
+
+.bob-exp__agent-select i {
+    font-size: 0.75rem;
+    color: var(--color-gray-400);
+}
+
+.bob-exp__agent-select select {
+    min-width: 0;
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: var(--font-family);
+    font-size: 0.78rem;
+    color: var(--color-gray-700);
+}
+
+.bob-exp__agent-select select:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 .bob-exp__header-btn {
     width: 40px;
     height: 40px;
@@ -2785,6 +2819,23 @@
     font-size: 0.875rem;
     padding: var(--space-1);
     transition: color var(--transition-base);
+}
+
+@media (max-width: 900px) {
+    .bob-exp__header {
+        align-items: flex-start;
+        gap: var(--space-4);
+    }
+
+    .bob-exp__header-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .bob-exp__agent-select {
+        min-width: 12rem;
+        max-width: 100%;
+    }
 }
 
 .bob-exp__input-icon:hover {

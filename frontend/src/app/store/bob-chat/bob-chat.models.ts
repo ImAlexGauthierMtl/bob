@@ -88,4 +88,5 @@ export interface BobChatSendRequest {
     loadingMessageId: string;
     text: string;
     channel: BobChannel;
+    agentId?: string;
 }

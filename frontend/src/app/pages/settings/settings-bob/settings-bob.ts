@@ -78,6 +78,8 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
     runtimeLoading = false;
     runtimeMessage = '';
     newAgentName = '';
+    selectedAgentSkillIds: string[] = [];
+    selectedAgentToolIds: string[] = [];
     newSkillName = '';
     newToolName = '';
     newToolFamily = 'custom';
@@ -171,8 +173,12 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
         this.store.dispatch(createBobRuntimeAgent({ agent: {
             name,
             description: 'Agent ajoute depuis CDE Settings',
+            skills: [...this.selectedAgentSkillIds],
+            tools: [...this.selectedAgentToolIds],
         } }));
         this.newAgentName = '';
+        this.selectedAgentSkillIds = [];
+        this.selectedAgentToolIds = [];
     }
 
     createSkill(): void {
@@ -234,6 +240,26 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
 
     toneName(tone: string): string {
         return tone.charAt(0).toUpperCase() + tone.slice(1);
+    }
+
+    isAgentSkillSelected(skillId: string): boolean {
+        return this.selectedAgentSkillIds.includes(skillId);
+    }
+
+    toggleAgentSkill(skillId: string, checked: boolean): void {
+        this.selectedAgentSkillIds = checked
+            ? Array.from(new Set([...this.selectedAgentSkillIds, skillId]))
+            : this.selectedAgentSkillIds.filter((id) => id !== skillId);
+    }
+
+    isAgentToolSelected(toolId: string): boolean {
+        return this.selectedAgentToolIds.includes(toolId);
+    }
+
+    toggleAgentTool(toolId: string, checked: boolean): void {
+        this.selectedAgentToolIds = checked
+            ? Array.from(new Set([...this.selectedAgentToolIds, toolId]))
+            : this.selectedAgentToolIds.filter((id) => id !== toolId);
     }
 
     private refreshVoicesForLanguage(): void {

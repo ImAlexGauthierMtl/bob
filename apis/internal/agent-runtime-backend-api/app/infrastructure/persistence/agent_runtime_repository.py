@@ -130,7 +130,6 @@ class AgentRuntimeRepository:
             self.db.query(RuntimeCatalogItemModel)
             .filter(
                 RuntimeCatalogItemModel.tenant_id == tenant_id,
-                RuntimeCatalogItemModel.user_id == user_id,
                 RuntimeCatalogItemModel.collection == collection,
             )
             .order_by(RuntimeCatalogItemModel.created_at.asc(), RuntimeCatalogItemModel.id.asc())

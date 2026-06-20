@@ -254,10 +254,37 @@
                         <i class="fa-solid fa-plus"></i>
                     </button>
                 </div>
+                <div class="bob-agent-compose">
+                    <div>
+                        <p>Skills</p>
+                        <div class="bob-agent-compose__list">
+                            @for (skill of runtimeSkills; track skill.id) {
+                            <label>
+                                <input type="checkbox" [checked]="isAgentSkillSelected(skill.id)"
+                                    (change)="toggleAgentSkill(skill.id, $any($event.target).checked)" />
+                                <span>{{ skill.name }}</span>
+                            </label>
+                            }
+                        </div>
+                    </div>
+                    <div>
+                        <p>Tools</p>
+                        <div class="bob-agent-compose__list">
+                            @for (tool of runtimeTools; track tool.id) {
+                            <label>
+                                <input type="checkbox" [checked]="isAgentToolSelected(tool.id)"
+                                    (change)="toggleAgentTool(tool.id, $any($event.target).checked)" />
+                                <span>{{ tool.name }}</span>
+                            </label>
+                            }
+                        </div>
+                    </div>
+                </div>
                 @for (agent of runtimeAgents; track agent.id) {
                 <div class="bob-runtime-row bob-runtime-row--stack">
                     <strong>{{ agent.name }}</strong>
                     <span>{{ agent.status }} · {{ agent.provider_id }}</span>
+                    <span>{{ (agent.skills || []).length }} skills · {{ (agent.tools || []).length }} tools</span>
                 </div>
                 }
             </section>
