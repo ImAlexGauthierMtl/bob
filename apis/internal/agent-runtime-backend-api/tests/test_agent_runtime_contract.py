@@ -103,6 +103,26 @@ class SequencedRuntimeProvider:
         return self.results[index]
 
 
+class FailingRuntimeProvider:
+    def __init__(self, *, fail_on_call: int, before_failure: RuntimeModelResult | None = None) -> None:
+        self.fail_on_call = fail_on_call
+        self.before_failure = before_failure
+        self.calls = 0
+
+    async def complete(self, *, messages, tools, trace_id):
+        self.calls += 1
+        if self.calls == self.fail_on_call:
+            raise RuntimeError("fireworks token=should-not-leak")
+        if self.before_failure is not None:
+            return self.before_failure
+        return RuntimeModelResult(
+            content="Provider OK",
+            provider="failing-test",
+            model="failing-test-model",
+            mode="failing_test",
+        )
+
+
 def test_monitoring_endpoints_do_not_require_internal_context(client):
     for path in ["/health", "/readiness", "/liveness", "/startup", "/metrics"]:
         response = client.get(path)
@@ -726,6 +746,91 @@ async def test_runtime_tool_loop_caps_calls_per_turn_and_total_calls():
     assert run.metadata["tool_loop"]["executed_tool_calls"] == 12
     assert run.metadata["tool_loop"]["max_total_tool_calls"] == 12
     assert run.metadata["tool_loop"]["limit_reached"] is True
+
+
+@pytest.mark.asyncio
+async def test_runtime_degrades_cleanly_when_provider_fails_before_tools():
+    repo = InMemoryAgentRuntimeRepository()
+    provider = FailingRuntimeProvider(fail_on_call=1)
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="user-provider-failure",
+        trace_id="1" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+
+    run = await use_cases.create_run(
+        context=context,
+        session_id="session-provider-failure",
+        input_message_id="msg-provider-failure",
+        prompt="Reponds avec Fireworks.",
+        channel="workspace",
+        metadata={"source": "bob-chat-b4f-api"},
+        idempotency_key="run-provider-failure",
+    )
+
+    assert run.status == "completed"
+    assert run.mode == "provider_degraded"
+    assert run.metadata["provider"] == "runtime_provider"
+    assert run.metadata["runtime"]["provider_error"] == "RuntimeError"
+    assert run.metadata["tool_loop"]["executed_tool_calls"] == 0
+    assert "fournisseur LLM" in run.assistant_content
+    assert "should-not-leak" not in run.assistant_content
+
+
+@pytest.mark.asyncio
+async def test_runtime_preserves_tool_results_when_provider_fails_after_tool_call():
+    repo = InMemoryAgentRuntimeRepository()
+    provider = FailingRuntimeProvider(
+        fail_on_call=2,
+        before_failure=RuntimeModelResult(
+            content="",
+            provider="fireworks",
+            model="accounts/fireworks/models/kimi-k2p7-code",
+            mode="provider_fireworks",
+            tool_calls=[
+                RuntimeToolCall(
+                    id="call-runtime-status-before-failure",
+                    name="bob_runtime_status",
+                    arguments={"include_tools": False},
+                )
+            ],
+        ),
+    )
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="user-provider-failure-after-tool",
+        trace_id="2" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+
+    run = await use_cases.create_run(
+        context=context,
+        session_id="session-provider-failure-after-tool",
+        input_message_id="msg-provider-failure-after-tool",
+        prompt="Verifie le runtime puis reponds.",
+        channel="workspace",
+        metadata={"source": "bob-chat-b4f-api"},
+        idempotency_key="run-provider-failure-after-tool",
+    )
+
+    assert run.mode == "provider_degraded"
+    assert [action["tool"] for action in run.actions] == ["bob_runtime_status"]
+    assert run.metadata["tool_loop"]["executed_tool_calls"] == 1
+    assert run.metadata["runtime"]["provider_error"] == "RuntimeError"
+    assert "should-not-leak" not in run.assistant_content
 
 
 def test_completed_run_is_not_cancelable(client):

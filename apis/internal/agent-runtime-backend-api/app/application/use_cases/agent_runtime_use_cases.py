@@ -20,6 +20,7 @@ from app.domain import (
     AgentRuntimeNotFoundError,
     InternalContext,
     RuntimeCatalogItem,
+    RuntimeModelResult,
 )
 
 
@@ -141,7 +142,8 @@ class AgentRuntimeUseCases:
                 "visible": True,
             },
         ]
-        final_result = await self.runtime_provider.complete(
+        final_result = await _complete_provider_safely(
+            provider=self.runtime_provider,
             messages=messages,
             tools=tools,
             trace_id=context.trace_id,
@@ -211,7 +213,8 @@ class AgentRuntimeUseCases:
                         "visible": True,
                     }
                 )
-            final_result = await self.runtime_provider.complete(
+            final_result = await _complete_provider_safely(
+                provider=self.runtime_provider,
                 messages=messages,
                 tools=tools,
                 trace_id=context.trace_id,
@@ -657,6 +660,31 @@ def _public_catalog_entry(entry: dict[str, Any] | None) -> dict[str, Any]:
         "source",
     }
     return {key: value for key, value in entry.items() if key in public_keys}
+
+
+async def _complete_provider_safely(
+    *,
+    provider: RuntimeProviderPort,
+    messages: list[dict[str, Any]],
+    tools: list[dict[str, Any]],
+    trace_id: str,
+) -> RuntimeModelResult:
+    try:
+        return await provider.complete(messages=messages, tools=tools, trace_id=trace_id)
+    except Exception as exc:
+        return RuntimeModelResult(
+            content=(
+                "Bob ne peut pas joindre le fournisseur LLM pour le moment. "
+                "Le runtime a conserve la trace et les resultats d'outils deja disponibles."
+            ),
+            provider="runtime_provider",
+            model="unknown",
+            mode="provider_degraded",
+            raw_metadata={
+                "trace_id": trace_id,
+                "provider_error": type(exc).__name__,
+            },
+        )
 
 
 def _payload_hash(payload: dict[str, Any]) -> str:
