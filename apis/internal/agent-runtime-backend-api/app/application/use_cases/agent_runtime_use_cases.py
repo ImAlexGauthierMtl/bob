@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import hashlib
 import os
+import re
 from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Any, Optional, Protocol
@@ -422,22 +423,54 @@ def _agent_runtime_summary(runtime_catalog: Any) -> str:
     agent = runtime_catalog.get("agent") if isinstance(runtime_catalog.get("agent"), dict) else {}
     skills = runtime_catalog.get("skills") if isinstance(runtime_catalog.get("skills"), list) else []
     tools = runtime_catalog.get("tools") if isinstance(runtime_catalog.get("tools"), list) else []
-    skill_names = _catalog_names(skills)
-    tool_names = _catalog_names(tools)
+    agent_name = _compact_text(str(agent.get("name") or "Bob"), 80)
+    agent_id = _compact_text(str(agent.get("id") or "unknown"), 80)
+    selection_status = _compact_text(str(runtime_catalog.get("selection_status") or "unknown"), 80)
+    skill_details = _catalog_detail_lines(skills, fields=("description", "scope", "source"))
+    tool_details = _catalog_detail_lines(tools, fields=("description", "family", "risk", "execution", "capability_id"))
     return (
-        f"agent={agent.get('name') or 'Bob'} ({agent.get('id') or 'unknown'}), "
-        f"selection={runtime_catalog.get('selection_status') or 'unknown'}, "
-        f"skills={skill_names or 'aucun'}, tools={tool_names or 'aucun'}."
+        f"agent={agent_name} ({agent_id}), "
+        f"selection={selection_status}, "
+        f"skills={skill_details or 'aucun'}, tools={tool_details or 'aucun'}."
     )
 
 
-def _catalog_names(entries: list[Any]) -> str:
-    names = [
-        str(entry.get("name") or entry.get("id"))
-        for entry in entries
-        if isinstance(entry, dict) and (entry.get("name") or entry.get("id"))
-    ]
-    return ", ".join(names[:10])
+def _catalog_detail_lines(entries: list[Any], *, fields: tuple[str, ...]) -> str:
+    lines: list[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        name = _compact_text(str(entry.get("name") or entry.get("id") or ""), 80)
+        if not name:
+            continue
+        details = [
+            f"{field}={_compact_text(str(entry[field]), 160)}"
+            for field in fields
+            if entry.get(field)
+        ]
+        lines.append(f"{name} ({'; '.join(details)})" if details else name)
+    return " | ".join(lines[:8])
+
+
+def _compact_text(value: str, limit: int) -> str:
+    compacted = " ".join(_redact_catalog_secrets(value).split())
+    if len(compacted) <= limit:
+        return compacted
+    return f"{compacted[: max(0, limit - 3)]}..."
+
+
+def _redact_catalog_secrets(value: str) -> str:
+    redacted = re.sub(
+        r"(?i)\b(api[_-]?key|token|secret|password|passwd)\s*[:=]\s*[^,\s;]+",
+        lambda match: f"{match.group(1)}=[redacted]",
+        value,
+    )
+    redacted = re.sub(
+        r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]+",
+        "Bearer [redacted]",
+        redacted,
+    )
+    return re.sub(r"\b(?:sk|fw)_[A-Za-z0-9_-]{8,}\b", "[redacted]", redacted)
 
 
 def _safe_memory_summary(memory_context: dict[str, Any]) -> str:
@@ -580,6 +613,7 @@ def _public_catalog_entry(entry: dict[str, Any] | None) -> dict[str, Any]:
         "capability_id",
         "capability_file",
         "mcp_tools",
+        "source",
     }
     return {key: value for key, value in entry.items() if key in public_keys}
 

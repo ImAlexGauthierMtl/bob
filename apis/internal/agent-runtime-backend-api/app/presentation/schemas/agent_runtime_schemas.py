@@ -89,6 +89,7 @@ class RuntimeCatalogItemCreateRequest(BaseModel):
     servers: list[str] | None = None
     skill: str | None = None
     capabilities: str | None = None
+    source: str | None = Field(default=None, max_length=240)
 
     def to_payload(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True)

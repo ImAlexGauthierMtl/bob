@@ -6,7 +6,7 @@ import pytest
 
 import main
 from app.application.use_cases.agent_runtime_use_cases import AgentRuntimeUseCases
-from app.domain import AgentConfirmation, InternalContext, RuntimeToolCall
+from app.domain import AgentConfirmation, InternalContext, RuntimeModelResult, RuntimeToolCall
 from app.infrastructure.persistence.in_memory_agent_runtime_repository import (
     InMemoryAgentRuntimeRepository,
 )
@@ -68,6 +68,23 @@ def run_body():
         "channel": "workspace",
         "metadata": {"source": "bob-chat-b4f-api"},
     }
+
+
+class CapturingRuntimeProvider:
+    def __init__(self) -> None:
+        self.messages = []
+        self.tools = []
+
+    async def complete(self, *, messages, tools, trace_id):
+        self.messages.append(messages)
+        self.tools.append(tools)
+        return RuntimeModelResult(
+            content="Captured prompt",
+            provider="capture",
+            model="capture-model",
+            mode="capture_runtime",
+            raw_metadata={"trace_id": trace_id},
+        )
 
 
 def test_monitoring_endpoints_do_not_require_internal_context(client):
@@ -341,6 +358,157 @@ def test_selected_agent_tools_gate_runtime_tool_calls(client):
     assert payload["metadata"]["tool_calls"][0]["tool"] == "bob_mcp_gateway"
     assert payload["actions"][0]["metadata"]["family"] == "factory"
     assert "bob_runtime_status" not in {call["tool"] for call in payload["metadata"]["tool_calls"]}
+
+
+def test_http_catalog_source_and_redaction_reach_runtime_prompt():
+    repo = InMemoryAgentRuntimeRepository()
+    provider = CapturingRuntimeProvider()
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+    main.app.dependency_overrides[agent_runtime_routes.get_agent_runtime_use_cases] = lambda: use_cases
+    try:
+        with TestClient(main.app) as test_client:
+            headers = signed_headers(user_id="user-http-skill-prompt")
+            skill = test_client.post(
+                "/internal/agent-runtime/v1/settings/skills",
+                json={
+                    "id": "skill-http-follow-up",
+                    "name": "HTTP Follow-up",
+                    "description": "Guide le suivi client. token=should-not-leak",
+                    "scope": "shared_clean",
+                    "source": "croo-agentic/skills/http-follow-up.md",
+                },
+                headers={**headers, "Idempotency-Key": "skill-http-follow-up"},
+            )
+            tool = test_client.post(
+                "/internal/agent-runtime/v1/settings/tools",
+                json={
+                    "id": "tool-http-factory",
+                    "name": "factory.requests-queues",
+                    "description": "Lit Factory avec api_key=hidden-value",
+                    "family": "factory",
+                    "risk": "read",
+                    "execution": "internal_gateway",
+                },
+                headers={**headers, "Idempotency-Key": "tool-http-factory"},
+            )
+            agent = test_client.post(
+                "/internal/agent-runtime/v1/settings/agents",
+                json={
+                    "id": "agent-http-follow-up",
+                    "name": "Bob HTTP Follow-up token=agent-leak",
+                    "status": "active",
+                    "skills": ["skill-http-follow-up"],
+                    "tools": ["tool-http-factory"],
+                },
+                headers={**headers, "Idempotency-Key": "agent-http-follow-up"},
+            )
+            run = test_client.post(
+                "/internal/agent-runtime/v1/runs",
+                json={
+                    **run_body(),
+                    "metadata": {
+                        "source": "bob-chat-b4f-api",
+                        "agent_id": "agent-http-follow-up",
+                    },
+                },
+                headers={**headers, "Idempotency-Key": "run-http-follow-up"},
+            )
+    finally:
+        main.app.dependency_overrides.clear()
+
+    assert skill.status_code == 201
+    assert tool.status_code == 201
+    assert agent.status_code == 201
+    assert run.status_code == 201
+    system_prompt = provider.messages[0][0]["content"]
+    assert "agent=Bob HTTP Follow-up token=[redacted] (agent-http-follow-up)" in system_prompt
+    assert "source=croo-agentic/skills/http-follow-up.md" in system_prompt
+    assert "token=[redacted]" in system_prompt
+    assert "api_key=[redacted]" in system_prompt
+    assert "should-not-leak" not in system_prompt
+    assert "hidden-value" not in system_prompt
+    assert "agent-leak" not in system_prompt
+
+
+@pytest.mark.asyncio
+async def test_selected_skill_and_tool_details_are_injected_in_runtime_prompt():
+    repo = InMemoryAgentRuntimeRepository()
+    provider = CapturingRuntimeProvider()
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="user-skill-prompt",
+        trace_id="a" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+
+    await use_cases.create_runtime_catalog_item(
+        context=context,
+        collection="skills",
+        payload={
+            "id": "skill-cde-follow-up",
+            "name": "CDE Follow-up",
+            "description": "Qualifie le prochain suivi client avec source et date.",
+            "scope": "shared_clean",
+            "source": "croo-agentic/skills/follow-up.md",
+        },
+        idempotency_key="skill-cde-follow-up",
+    )
+    await use_cases.create_runtime_catalog_item(
+        context=context,
+        collection="tools",
+        payload={
+            "id": "tool-factory-queue",
+            "name": "factory.requests-queues",
+            "description": "Lit les demandes Factory par queue et projet.",
+            "family": "factory",
+            "risk": "read",
+            "execution": "internal_gateway",
+        },
+        idempotency_key="tool-factory-queue",
+    )
+    await use_cases.create_runtime_catalog_item(
+        context=context,
+        collection="agents",
+        payload={
+            "id": "agent-cde-follow-up",
+            "name": "Bob Follow-up",
+            "status": "active",
+            "skills": ["skill-cde-follow-up"],
+            "tools": ["tool-factory-queue"],
+        },
+        idempotency_key="agent-cde-follow-up",
+    )
+
+    run = await use_cases.create_run(
+        context=context,
+        session_id="session-skill-prompt",
+        input_message_id="msg-skill-prompt",
+        prompt="Prepare le suivi et verifie la queue Factory.",
+        channel="workspace",
+        metadata={"source": "bob-chat-b4f-api", "agent_id": "agent-cde-follow-up"},
+        idempotency_key="run-skill-prompt",
+    )
+
+    system_prompt = provider.messages[0][0]["content"]
+    assert run.mode == "capture_runtime"
+    assert "agent=Bob Follow-up (agent-cde-follow-up)" in system_prompt
+    assert "CDE Follow-up" in system_prompt
+    assert "Qualifie le prochain suivi client avec source et date." in system_prompt
+    assert "source=croo-agentic/skills/follow-up.md" in system_prompt
+    assert "factory.requests-queues" in system_prompt
+    assert "family=factory" in system_prompt
+    assert "risk=read" in system_prompt
+    assert "execution=internal_gateway" in system_prompt
 
 
 def test_completed_run_is_not_cancelable(client):
