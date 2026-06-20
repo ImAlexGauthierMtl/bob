@@ -11,6 +11,8 @@ import {
     addBobChatMessage,
     addBobChatToolStep,
     appendBobChatTranscript,
+    cancelBobChatAction,
+    confirmBobChatAction,
     deleteBobChatSession,
     loadBobChatSessions,
     selectBobChatSession,
@@ -20,7 +22,11 @@ import {
 } from '../../store/bob-chat/bob-chat.actions';
 import { loadBobAssistantSettings } from '../../store/bob-assistant-settings/bob-assistant-settings.actions';
 import { selectBobAssistantRuntimeSettings } from '../../store/bob-assistant-settings/bob-assistant-settings.selectors';
-import { BobChatMessageView, BobChatSessionSummary } from '../../store/bob-chat/bob-chat.models';
+import {
+    BobChatActionConfirmationView,
+    BobChatMessageView,
+    BobChatSessionSummary,
+} from '../../store/bob-chat/bob-chat.models';
 import {
     selectBobChatActiveTitle,
     selectBobChatLoading,
@@ -223,6 +229,28 @@ export class BobChatComponent implements OnInit, AfterViewChecked, OnDestroy {
             title: session.title || `Session #${session.id.slice(0, 8)}`,
         }));
         this.shouldScrollToBottom = true;
+    }
+
+    confirmAction(message: BobChatMessageView, confirmation: BobChatActionConfirmationView): void {
+        if (confirmation.status !== 'pending' && confirmation.status !== 'failed') {
+            return;
+        }
+        this.store.dispatch(confirmBobChatAction({
+            messageId: message.id,
+            runId: confirmation.runId,
+            confirmationId: confirmation.confirmationId,
+        }));
+    }
+
+    cancelAction(message: BobChatMessageView, confirmation: BobChatActionConfirmationView): void {
+        if (confirmation.status !== 'pending' && confirmation.status !== 'failed') {
+            return;
+        }
+        this.store.dispatch(cancelBobChatAction({
+            messageId: message.id,
+            runId: confirmation.runId,
+            confirmationId: confirmation.confirmationId,
+        }));
     }
 
     deleteSession(session: BobChatSessionSummary, event: Event): void {

@@ -117,6 +117,8 @@ class FakeConversationClient:
 class FakeRuntimeClient:
     def __init__(self):
         self.calls = []
+        self.confirmation_status = 200
+        self.confirmation_detail = None
 
     async def create_run(
         self,
@@ -152,6 +154,71 @@ class FakeRuntimeClient:
             "narration_steps": [{"label": "demande_recue", "status": "complete"}],
             "actions": [],
             "artifacts": [],
+        }
+
+    async def confirm_confirmation(
+        self,
+        *,
+        run_id,
+        confirmation_id,
+        security_context,
+    ):
+        return await self._resolve_confirmation(
+            decision="confirmed",
+            run_id=run_id,
+            confirmation_id=confirmation_id,
+            security_context=security_context,
+        )
+
+    async def cancel_confirmation(
+        self,
+        *,
+        run_id,
+        confirmation_id,
+        security_context,
+    ):
+        return await self._resolve_confirmation(
+            decision="cancelled",
+            run_id=run_id,
+            confirmation_id=confirmation_id,
+            security_context=security_context,
+        )
+
+    async def _resolve_confirmation(
+        self,
+        *,
+        decision,
+        run_id,
+        confirmation_id,
+        security_context,
+    ):
+        self.calls.append(
+            (
+                f"{decision}_confirmation",
+                run_id,
+                confirmation_id,
+                security_context.internal_session_context,
+            )
+        )
+        if self.confirmation_status == 404:
+            raise BobChatNotFoundError(
+                "runtime_resource_not_found",
+                status_code=404,
+                detail=self.confirmation_detail or {"code": "runtime_resource_not_found"},
+            )
+        if self.confirmation_status != 200:
+            raise BobChatIntegrationError(
+                "runtime_confirmation_rejected",
+                status_code=self.confirmation_status,
+                detail=self.confirmation_detail or {"code": "runtime_confirmation_rejected"},
+            )
+        return {
+            "id": confirmation_id,
+            "run_id": run_id,
+            "status": decision,
+            "label": "Envoyer le brouillon Slack",
+            "created_at": "2026-06-19T00:00:00Z",
+            "resolved_at": "2026-06-19T00:01:00Z",
         }
 
 
@@ -424,6 +491,67 @@ def test_sessions_routes_delegate_to_conversation_backend(client, fake_conversat
     assert deleted.status_code == 204
     assert missing.status_code == 404
     assert missing.json()["detail"]["code"] == "session_not_found"
+
+
+def test_confirmation_routes_delegate_to_runtime_with_signed_context(client, fake_runtime):
+    confirmed = client.post(
+        "/api/bob-chat/v1/runs/run-local-1/confirmations/confirm-1/confirm",
+        headers={"Idempotency-Key": "confirm-key-1", "X-Trace-Id": "b" * 32},
+    )
+    cancelled = client.post(
+        "/api/bob-chat/v1/runs/run-local-1/confirmations/confirm-2/cancel",
+        headers={"Idempotency-Key": "cancel-key-1", "X-Trace-Id": "c" * 32},
+    )
+
+    assert confirmed.status_code == 200
+    assert confirmed.json()["status"] == "confirmed"
+    assert cancelled.status_code == 200
+    assert cancelled.json()["status"] == "cancelled"
+    assert fake_runtime.calls[-2] == (
+        "confirmed_confirmation",
+        "run-local-1",
+        "confirm-1",
+        "signed-internal-context",
+    )
+    assert fake_runtime.calls[-1] == (
+        "cancelled_confirmation",
+        "run-local-1",
+        "confirm-2",
+        "signed-internal-context",
+    )
+
+
+def test_confirmation_route_replays_same_idempotency_key(client, fake_runtime):
+    path = "/api/bob-chat/v1/runs/run-local-1/confirmations/confirm-1/confirm"
+    headers = {"Idempotency-Key": "confirm-replay"}
+
+    first = client.post(path, headers=headers)
+    second = client.post(path, headers=headers)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json() == second.json()
+    confirm_calls = [call for call in fake_runtime.calls if call[0] == "confirmed_confirmation"]
+    assert len(confirm_calls) == 1
+
+
+def test_confirmation_routes_require_idempotency_key(client):
+    response = client.post("/api/bob-chat/v1/runs/run-local-1/confirmations/confirm-1/confirm")
+
+    assert response.status_code == 422
+
+
+def test_confirmation_routes_map_runtime_errors(client, fake_runtime):
+    fake_runtime.confirmation_status = 404
+    fake_runtime.confirmation_detail = {"code": "confirmation_not_found"}
+
+    missing = client.post(
+        "/api/bob-chat/v1/runs/run-local-1/confirmations/missing/confirm",
+        headers={"Idempotency-Key": "confirm-missing"},
+    )
+
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == {"code": "confirmation_not_found"}
 
 
 def test_bob_cloud_configuration_error_is_mapped():
@@ -770,6 +898,48 @@ async def test_agent_runtime_backend_client_delegates_signed_run_call():
     assert http_client.calls[0][2]["input_message_id"] == "msg-1"
     assert http_client.calls[0][3]["X-Session-Context"] == "signed"
     assert http_client.calls[0][3]["Idempotency-Key"] == "idem-run"
+
+
+@pytest.mark.asyncio
+async def test_agent_runtime_backend_client_delegates_confirmation_resolution():
+    class HTTPClient:
+        def __init__(self):
+            self.calls = []
+
+        async def post(self, path, json=None, headers=None):
+            self.calls.append(("post", path, json, headers))
+            return httpx.Response(
+                200,
+                json={
+                    "id": "confirm-1",
+                    "run_id": "run-1",
+                    "status": "confirmed",
+                    "label": "Envoyer le brouillon Slack",
+                    "created_at": "2026-06-19T00:00:00Z",
+                    "resolved_at": "2026-06-19T00:01:00Z",
+                },
+            )
+
+    http_client = HTTPClient()
+    client_adapter = AgentRuntimeBackendClient(client=http_client)
+    security_context = BobChatSecurityContext(
+        tenant_id="tenant-croo-local",
+        user_id="user-alex-local",
+        session_id="sess",
+        trace_id="f" * 32,
+        internal_session_context="signed",
+    )
+
+    resolved = await client_adapter.confirm_confirmation(
+        run_id="run-1",
+        confirmation_id="confirm-1",
+        security_context=security_context,
+    )
+
+    assert resolved["id"] == "confirm-1"
+    assert http_client.calls[0][1] == "/internal/agent-runtime/v1/runs/run-1/confirmations/confirm-1/confirm"
+    assert http_client.calls[0][3]["X-Session-Context"] == "signed"
+    assert http_client.calls[0][3]["X-Trace-Id"] == "f" * 32
 
 
 @pytest.mark.asyncio

@@ -2674,6 +2674,146 @@
     margin: 1em 0;
 }
 
+/* Pending agent action confirmations */
+.bob-confirmations {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+}
+
+.bob-confirmation {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--color-gray-200);
+    background: var(--color-gray-25, #fafafa);
+    min-height: 4.5rem;
+}
+
+.bob-confirmation__icon {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-accent);
+    background: var(--color-accent-soft);
+}
+
+.bob-confirmation__body {
+    min-width: 0;
+}
+
+.bob-confirmation__eyebrow {
+    margin: 0 0 0.2rem;
+    font-size: 0.65rem;
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+}
+
+.bob-confirmation__label {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.bob-confirmation__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0.35rem 0 0;
+    font-size: 0.7rem;
+    color: var(--color-gray-500);
+}
+
+.bob-confirmation__meta span {
+    padding: 0.1rem 0.35rem;
+    border: 1px solid var(--color-gray-200);
+    background: var(--color-white);
+}
+
+.bob-confirmation__error {
+    margin: 0.35rem 0 0;
+    font-size: 0.72rem;
+    color: #b91c1c;
+}
+
+.bob-confirmation__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    white-space: nowrap;
+}
+
+.bob-confirmation__btn {
+    min-height: 2rem;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--color-gray-200);
+    background: var(--color-white);
+    font-family: var(--font-family);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+}
+
+.bob-confirmation__btn--primary {
+    background: var(--color-gray-900);
+    border-color: var(--color-gray-900);
+    color: var(--color-white);
+}
+
+.bob-confirmation__btn--secondary {
+    color: var(--color-gray-600);
+}
+
+.bob-confirmation__state {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+    text-transform: capitalize;
+}
+
+.bob-confirmation--confirmed {
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+
+.bob-confirmation--confirmed .bob-confirmation__icon {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.bob-confirmation--cancelled,
+.bob-confirmation--failed {
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
+.bob-confirmation--cancelled .bob-confirmation__icon,
+.bob-confirmation--failed .bob-confirmation__icon {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+@media (max-width: 760px) {
+    .bob-confirmation {
+        grid-template-columns: 2rem minmax(0, 1fr);
+    }
+
+    .bob-confirmation__actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+    }
+}
+
 /* Message Actions */
 .bob-exp__msg-actions {
     display: flex;

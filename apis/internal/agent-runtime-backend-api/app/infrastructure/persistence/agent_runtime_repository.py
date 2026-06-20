@@ -68,21 +68,22 @@ class AgentRuntimeRepository:
             completed_at=run.completed_at,
             cancelled_at=run.cancelled_at,
         )
-        self.db.add(run_model)
-        for confirmation in confirmations:
-            self.db.add(
-                AgentConfirmationModel(
-                    id=confirmation.id,
-                    run_id=confirmation.run_id,
-                    tenant_id=confirmation.tenant_id,
-                    user_id=confirmation.user_id,
-                    status=confirmation.status,
-                    label=confirmation.label,
-                    created_at=confirmation.created_at,
-                    resolved_at=confirmation.resolved_at,
-                )
-            )
         try:
+            self.db.add(run_model)
+            self.db.flush()
+            for confirmation in confirmations:
+                self.db.add(
+                    AgentConfirmationModel(
+                        id=confirmation.id,
+                        run_id=confirmation.run_id,
+                        tenant_id=confirmation.tenant_id,
+                        user_id=confirmation.user_id,
+                        status=confirmation.status,
+                        label=confirmation.label,
+                        created_at=confirmation.created_at,
+                        resolved_at=confirmation.resolved_at,
+                    )
+                )
             self.db.commit()
         except Exception:
             self.db.rollback()

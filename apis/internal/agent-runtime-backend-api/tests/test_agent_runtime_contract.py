@@ -8,7 +8,12 @@ import pytest
 
 import main
 from app.application.use_cases.agent_runtime_use_cases import AgentRuntimeUseCases
-from app.domain import AgentConfirmation, InternalContext, RuntimeModelResult, RuntimeToolCall
+from app.domain import AgentConfirmation, AgentRun, InternalContext, RuntimeModelResult, RuntimeToolCall
+from app.infrastructure.persistence.agent_runtime_repository import AgentRuntimeRepository
+from app.infrastructure.persistence.models.agent_runtime import (
+    AgentConfirmationModel,
+    AgentRunModel,
+)
 from app.infrastructure.persistence.in_memory_agent_runtime_repository import (
     InMemoryAgentRuntimeRepository,
 )
@@ -128,6 +133,26 @@ class FailingAtomicConfirmationRepository(InMemoryAgentRuntimeRepository):
     def create_run_with_confirmations(self, *, run, confirmations):
         assert confirmations
         raise RuntimeError("atomic_confirmation_write_failed")
+
+
+class RecordingRuntimeSession:
+    def __init__(self) -> None:
+        self.events = []
+
+    def add(self, model) -> None:
+        self.events.append(("add", model.__class__.__name__, model.id))
+
+    def flush(self) -> None:
+        self.events.append(("flush",))
+
+    def commit(self) -> None:
+        self.events.append(("commit",))
+
+    def rollback(self) -> None:
+        self.events.append(("rollback",))
+
+    def refresh(self, model) -> None:
+        self.events.append(("refresh", model.__class__.__name__, model.id))
 
 
 def test_monitoring_endpoints_do_not_require_internal_context(client):
@@ -926,6 +951,46 @@ async def test_runtime_does_not_persist_run_when_confirmation_write_fails():
 
     assert repo.runs == {}
     assert repo.confirmations == {}
+
+
+def test_sql_repository_flushes_run_before_confirmations():
+    session = RecordingRuntimeSession()
+    repo = AgentRuntimeRepository(session)
+    now = datetime(2026, 6, 20, tzinfo=timezone.utc)
+    run = AgentRun(
+        id="run-parent",
+        tenant_id="tenant-croo-local",
+        user_id="user-alex-local",
+        session_id="session-parent",
+        input_message_id="msg-parent",
+        status="completed",
+        mode="fireworks_kimi_runtime",
+        trace_id="d" * 32,
+        assistant_content="Confirmation requested",
+        created_at=now,
+        completed_at=now,
+        metadata={},
+    )
+    confirmation = AgentConfirmation(
+        id="confirm-child",
+        run_id=run.id,
+        tenant_id=run.tenant_id,
+        user_id=run.user_id,
+        status="pending",
+        label="bob_mcp_gateway / slack / slack.draft-send / draft",
+        created_at=now,
+    )
+
+    created = repo.create_run_with_confirmations(run=run, confirmations=[confirmation])
+
+    assert created.id == run.id
+    assert session.events[:4] == [
+        ("add", AgentRunModel.__name__, run.id),
+        ("flush",),
+        ("add", AgentConfirmationModel.__name__, confirmation.id),
+        ("commit",),
+    ]
+    assert ("rollback",) not in session.events
 
 
 @pytest.mark.asyncio

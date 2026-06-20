@@ -40,6 +40,49 @@ class AgentRuntimeBackendClient:
         )
         return _json(response)
 
+    async def confirm_confirmation(
+        self,
+        *,
+        run_id: str,
+        confirmation_id: str,
+        security_context: BobChatSecurityContext,
+    ) -> dict[str, Any]:
+        return await self._resolve_confirmation(
+            run_id=run_id,
+            confirmation_id=confirmation_id,
+            decision="confirm",
+            security_context=security_context,
+        )
+
+    async def cancel_confirmation(
+        self,
+        *,
+        run_id: str,
+        confirmation_id: str,
+        security_context: BobChatSecurityContext,
+    ) -> dict[str, Any]:
+        return await self._resolve_confirmation(
+            run_id=run_id,
+            confirmation_id=confirmation_id,
+            decision="cancel",
+            security_context=security_context,
+        )
+
+    async def _resolve_confirmation(
+        self,
+        *,
+        run_id: str,
+        confirmation_id: str,
+        decision: str,
+        security_context: BobChatSecurityContext,
+    ) -> dict[str, Any]:
+        response = await self._call(
+            "post",
+            f"/internal/agent-runtime/v1/runs/{run_id}/confirmations/{confirmation_id}/{decision}",
+            security_context=security_context,
+        )
+        return _json(response)
+
     async def _call(
         self,
         method: str,

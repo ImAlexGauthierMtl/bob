@@ -6,7 +6,16 @@ import { Subscription } from 'rxjs';
 import { BobRuntimeAgent } from '../../shared/services/bob-assistant-settings.service';
 import { loadBobAssistantSettings } from '../../store/bob-assistant-settings/bob-assistant-settings.actions';
 import { selectBobAssistantRuntimeSettings } from '../../store/bob-assistant-settings/bob-assistant-settings.selectors';
-import { sendBobChatMessage, startNewBobChatConversation } from '../../store/bob-chat/bob-chat.actions';
+import {
+    cancelBobChatAction,
+    confirmBobChatAction,
+    sendBobChatMessage,
+    startNewBobChatConversation,
+} from '../../store/bob-chat/bob-chat.actions';
+import {
+    BobChatActionConfirmationView,
+    BobChatMessageView,
+} from '../../store/bob-chat/bob-chat.models';
 import { selectBobChatError, selectBobChatLoading, selectBobChatMessages } from '../../store/bob-chat/bob-chat.selectors';
 
 @Component({
@@ -88,6 +97,28 @@ export class ChatComponent implements AfterViewChecked, OnDestroy, OnInit {
     onAgentChange(agentId: string): void {
         this.selectedAgentId.set(agentId);
         this.store.dispatch(startNewBobChatConversation());
+    }
+
+    confirmAction(message: BobChatMessageView, confirmation: BobChatActionConfirmationView): void {
+        if (confirmation.status !== 'pending' && confirmation.status !== 'failed') {
+            return;
+        }
+        this.store.dispatch(confirmBobChatAction({
+            messageId: message.id,
+            runId: confirmation.runId,
+            confirmationId: confirmation.confirmationId,
+        }));
+    }
+
+    cancelAction(message: BobChatMessageView, confirmation: BobChatActionConfirmationView): void {
+        if (confirmation.status !== 'pending' && confirmation.status !== 'failed') {
+            return;
+        }
+        this.store.dispatch(cancelBobChatAction({
+            messageId: message.id,
+            runId: confirmation.runId,
+            confirmationId: confirmation.confirmationId,
+        }));
     }
 
     private createMessageId(prefix: string): string {

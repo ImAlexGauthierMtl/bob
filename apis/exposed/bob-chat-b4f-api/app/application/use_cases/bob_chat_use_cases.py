@@ -88,6 +88,24 @@ class AgentRuntimeClientPort(Protocol):
     ) -> dict[str, Any]:
         ...
 
+    async def confirm_confirmation(
+        self,
+        *,
+        run_id: str,
+        confirmation_id: str,
+        security_context: BobChatSecurityContext,
+    ) -> dict[str, Any]:
+        ...
+
+    async def cancel_confirmation(
+        self,
+        *,
+        run_id: str,
+        confirmation_id: str,
+        security_context: BobChatSecurityContext,
+    ) -> dict[str, Any]:
+        ...
+
 
 class AgentMemoryClientPort(Protocol):
     async def build_context(
@@ -248,6 +266,93 @@ class BobChatUseCases:
             security_context=security_context,
         )
 
+    async def confirm_action(
+        self,
+        *,
+        run_id: str,
+        confirmation_id: str,
+        idempotency_key: str,
+        forward_headers: Any,
+        trace_id: str,
+    ) -> dict[str, Any]:
+        return await self._resolve_action(
+            decision="confirm",
+            run_id=run_id,
+            confirmation_id=confirmation_id,
+            idempotency_key=idempotency_key,
+            forward_headers=forward_headers,
+            trace_id=trace_id,
+        )
+
+    async def cancel_action(
+        self,
+        *,
+        run_id: str,
+        confirmation_id: str,
+        idempotency_key: str,
+        forward_headers: Any,
+        trace_id: str,
+    ) -> dict[str, Any]:
+        return await self._resolve_action(
+            decision="cancel",
+            run_id=run_id,
+            confirmation_id=confirmation_id,
+            idempotency_key=idempotency_key,
+            forward_headers=forward_headers,
+            trace_id=trace_id,
+        )
+
+    async def _resolve_action(
+        self,
+        *,
+        decision: str,
+        run_id: str,
+        confirmation_id: str,
+        idempotency_key: str,
+        forward_headers: Any,
+        trace_id: str,
+    ) -> dict[str, Any]:
+        security_context = await self.identity_provider.resolve(
+            forward_headers=forward_headers,
+            trace_id=trace_id,
+        )
+        payload_hash = _confirmation_payload_hash(
+            run_id=run_id,
+            confirmation_id=confirmation_id,
+            decision=decision,
+        )
+        dedupe_key = (
+            f"{security_context.tenant_id}:{security_context.user_id}:"
+            f"POST:/api/bob-chat/v1/runs/{run_id}/confirmations/{confirmation_id}/{decision}:"
+            f"{idempotency_key}"
+        )
+
+        try:
+            existing_response = self.idempotency_store.get(dedupe_key, payload_hash)
+        except IdempotencyConflictError as exc:
+            raise BobChatError(
+                "idempotency_conflict",
+                status_code=409,
+                detail={"code": "idempotency_conflict"},
+            ) from exc
+        if existing_response:
+            return existing_response
+
+        if decision == "confirm":
+            response = await self.runtime_client.confirm_confirmation(
+                run_id=run_id,
+                confirmation_id=confirmation_id,
+                security_context=security_context,
+            )
+        else:
+            response = await self.runtime_client.cancel_confirmation(
+                run_id=run_id,
+                confirmation_id=confirmation_id,
+                security_context=security_context,
+            )
+        self.idempotency_store.store(dedupe_key, payload_hash, response)
+        return response
+
     async def _ensure_session(
         self,
         command: BobChatMessageCommand,
@@ -273,6 +378,19 @@ class BobChatUseCases:
 def _payload_hash(command: BobChatMessageCommand) -> str:
     encoded = json.dumps(
         asdict(command),
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _confirmation_payload_hash(*, run_id: str, confirmation_id: str, decision: str) -> str:
+    encoded = json.dumps(
+        {
+            "confirmation_id": confirmation_id,
+            "decision": decision,
+            "run_id": run_id,
+        },
         sort_keys=True,
         separators=(",", ":"),
     ).encode()

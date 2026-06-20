@@ -4,12 +4,16 @@ import {
     addBobChatToolStep,
     appendBobChatTranscript,
     attachBobChatArtifact,
+    cancelBobChatAction,
+    confirmBobChatAction,
     deleteBobChatSession,
     deleteBobChatSessionFailure,
     deleteBobChatSessionSuccess,
     loadBobChatSessions,
     loadBobChatSessionsFailure,
     loadBobChatSessionsSuccess,
+    resolveBobChatActionFailure,
+    resolveBobChatActionSuccess,
     selectBobChatSession,
     sendBobChatMessage,
     sendBobChatMessageFailure,
@@ -181,6 +185,28 @@ export const bobChatReducer = createReducer(
             message.id === messageId ? { ...message, artifact } : message,
         ),
     })),
+    on(confirmBobChatAction, cancelBobChatAction, (state, { messageId, confirmationId }) => ({
+        ...state,
+        messages: updateConfirmation(state.messages, messageId, confirmationId, {
+            status: 'resolving',
+            error: undefined,
+        }),
+    })),
+    on(resolveBobChatActionSuccess, (state, { messageId, confirmationId, status }) => ({
+        ...state,
+        messages: updateConfirmation(state.messages, messageId, confirmationId, {
+            status,
+            error: undefined,
+        }),
+    })),
+    on(resolveBobChatActionFailure, (state, { messageId, confirmationId, error }) => ({
+        ...state,
+        messages: updateConfirmation(state.messages, messageId, confirmationId, {
+            status: 'failed',
+            error,
+        }),
+        error,
+    })),
 );
 
 function welcomeMessage(): BobChatMessageView {
@@ -217,4 +243,26 @@ function findLastBobMessageIndex(messages: BobChatMessageView[]): number {
         }
     }
     return -1;
+}
+
+function updateConfirmation(
+    messages: BobChatMessageView[],
+    messageId: string,
+    confirmationId: string,
+    patch: Partial<NonNullable<BobChatMessageView['confirmations']>[number]>,
+): BobChatMessageView[] {
+    return messages.map((message) => {
+        if (message.id !== messageId || !message.confirmations) {
+            return message;
+        }
+
+        return {
+            ...message,
+            confirmations: message.confirmations.map((confirmation) =>
+                confirmation.confirmationId === confirmationId
+                    ? { ...confirmation, ...patch }
+                    : confirmation,
+            ),
+        };
+    });
 }

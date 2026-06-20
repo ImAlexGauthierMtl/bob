@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import {
     BobArtifact,
     BobChannel,
+    BobChatConfirmationResponse,
     BobChatRequest,
     BobChatResponse,
     BobChatV1Response,
@@ -66,6 +67,30 @@ export class BobService {
 
     deleteSession(sessionId: string): Observable<void> {
         return this.http.delete<void>(`${API_URL}/sessions/${sessionId}`);
+    }
+
+    confirmAction(runId: string, confirmationId: string): Observable<BobChatConfirmationResponse> {
+        return this.http.post<BobChatConfirmationResponse>(
+            `${API_URL}/runs/${runId}/confirmations/${confirmationId}/confirm`,
+            {},
+            {
+                headers: new HttpHeaders({
+                    'Idempotency-Key': this.createIdempotencyKey(),
+                }),
+            },
+        );
+    }
+
+    cancelAction(runId: string, confirmationId: string): Observable<BobChatConfirmationResponse> {
+        return this.http.post<BobChatConfirmationResponse>(
+            `${API_URL}/runs/${runId}/confirmations/${confirmationId}/cancel`,
+            {},
+            {
+                headers: new HttpHeaders({
+                    'Idempotency-Key': this.createIdempotencyKey(),
+                }),
+            },
+        );
     }
 
     private toBobChatResponse(response: BobChatV1Response): BobChatResponse {

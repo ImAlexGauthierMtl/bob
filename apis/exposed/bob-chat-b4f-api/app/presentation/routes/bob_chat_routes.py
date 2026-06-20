@@ -114,6 +114,46 @@ async def delete_session(
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
+@router.post("/runs/{run_id}/confirmations/{confirmation_id}/confirm")
+async def confirm_action(
+    run_id: str,
+    confirmation_id: str,
+    request: Request,
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    use_cases: BobChatUseCases = Depends(get_bob_chat_use_cases),
+) -> dict[str, Any]:
+    try:
+        return await use_cases.confirm_action(
+            run_id=run_id,
+            confirmation_id=confirmation_id,
+            idempotency_key=idempotency_key,
+            forward_headers=request.headers,
+            trace_id=_trace_id(request),
+        )
+    except BobChatError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.post("/runs/{run_id}/confirmations/{confirmation_id}/cancel")
+async def cancel_action(
+    run_id: str,
+    confirmation_id: str,
+    request: Request,
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    use_cases: BobChatUseCases = Depends(get_bob_chat_use_cases),
+) -> dict[str, Any]:
+    try:
+        return await use_cases.cancel_action(
+            run_id=run_id,
+            confirmation_id=confirmation_id,
+            idempotency_key=idempotency_key,
+            forward_headers=request.headers,
+            trace_id=_trace_id(request),
+        )
+    except BobChatError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
 def _trace_id(request: Request) -> str:
     raw = request.headers.get("x-trace-id") or request.headers.get("x-request-id") or uuid4().hex
     normalized = "".join(character for character in raw.lower() if character.isalnum())

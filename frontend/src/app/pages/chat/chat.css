@@ -176,6 +176,105 @@
     font-size: 0.6875rem;
 }
 
+.chat-confirmations {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.chat-confirmation {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 4rem;
+    padding: 0.75rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-gray-50);
+}
+
+.chat-confirmation__eyebrow {
+    margin: 0 0 0.2rem;
+    font-size: 0.65rem;
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+}
+
+.chat-confirmation__label {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-800);
+    overflow-wrap: anywhere;
+}
+
+.chat-confirmation__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0.35rem 0 0;
+    font-size: 0.7rem;
+    color: var(--color-gray-500);
+}
+
+.chat-confirmation__meta span {
+    padding: 0.1rem 0.35rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-raised);
+}
+
+.chat-confirmation__error {
+    margin: 0.35rem 0 0;
+    font-size: 0.75rem;
+    color: #b91c1c;
+}
+
+.chat-confirmation__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.chat-confirmation__btn {
+    min-height: 2rem;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-raised);
+    color: var(--color-gray-600);
+    font-family: var(--font-family);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+}
+
+.chat-confirmation__btn--primary {
+    background: var(--color-gray-900);
+    border-color: var(--color-gray-900);
+    color: var(--color-white);
+}
+
+.chat-confirmation__state {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+    text-transform: capitalize;
+}
+
+.chat-confirmation--confirmed {
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+
+.chat-confirmation--cancelled,
+.chat-confirmation--failed {
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
 .chat-dots span {
     animation: chat-dot 1.4s infinite;
 }
@@ -281,5 +380,13 @@
     .chat-agent-picker {
         width: 100%;
         min-width: 0;
+    }
+
+    .chat-confirmation {
+        grid-template-columns: 1fr;
+    }
+
+    .chat-confirmation__actions {
+        justify-content: flex-end;
     }
 }

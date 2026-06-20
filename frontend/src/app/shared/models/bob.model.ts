@@ -20,6 +20,9 @@ export interface BobChatAction {
     page?: string;
     entity?: string;
     name?: string;
+    status?: string;
+    content?: string;
+    metadata?: Record<string, unknown>;
 }
 
 export interface BobArtifactField {
@@ -118,6 +121,15 @@ export interface BobChatV1Response {
 
 export interface BobChatV1SessionList {
     items: BobChatV1Session[];
+}
+
+export interface BobChatConfirmationResponse {
+    id: string;
+    run_id: string;
+    status: 'pending' | 'confirmed' | 'cancelled' | string;
+    label: string;
+    created_at: string;
+    resolved_at?: string | null;
 }
 
 export interface BobSessionInfo {

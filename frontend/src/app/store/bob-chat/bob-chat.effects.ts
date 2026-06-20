@@ -5,6 +5,7 @@ import { catchError, map, mergeMap, of, switchMap, tap, withLatestFrom } from 'r
 import {
     BobArtifact,
     BobChatAction,
+    BobChatConfirmationResponse,
     BobChatV1Response,
     BobChatV1Session,
 } from '../../shared/models/bob.model';
@@ -15,14 +16,19 @@ import {
     deleteBobChatSession,
     deleteBobChatSessionFailure,
     deleteBobChatSessionSuccess,
+    cancelBobChatAction,
+    confirmBobChatAction,
     loadBobChatSessions,
     loadBobChatSessionsFailure,
     loadBobChatSessionsSuccess,
+    resolveBobChatActionFailure,
+    resolveBobChatActionSuccess,
     sendBobChatMessage,
     sendBobChatMessageFailure,
     sendBobChatMessageSuccess,
 } from './bob-chat.actions';
 import {
+    BobChatActionConfirmationView,
     BobChatArtifactView,
     BobChatMessageView,
     BobChatSendSuccessPayload,
@@ -102,6 +108,46 @@ export class BobChatEffects {
         { dispatch: false },
     );
 
+    confirmAction$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(confirmBobChatAction),
+            mergeMap(({ messageId, runId, confirmationId }) =>
+                this.bobService.confirmAction(runId, confirmationId).pipe(
+                    map((response) => resolveBobChatActionSuccess({
+                        messageId,
+                        confirmationId,
+                        status: this.toConfirmationStatus(response),
+                    })),
+                    catchError((error) => of(resolveBobChatActionFailure({
+                        messageId,
+                        confirmationId,
+                        error: errorMessage(error),
+                    }))),
+                ),
+            ),
+        ),
+    );
+
+    cancelAction$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(cancelBobChatAction),
+            mergeMap(({ messageId, runId, confirmationId }) =>
+                this.bobService.cancelAction(runId, confirmationId).pipe(
+                    map((response) => resolveBobChatActionSuccess({
+                        messageId,
+                        confirmationId,
+                        status: this.toConfirmationStatus(response),
+                    })),
+                    catchError((error) => of(resolveBobChatActionFailure({
+                        messageId,
+                        confirmationId,
+                        error: errorMessage(error),
+                    }))),
+                ),
+            ),
+        ),
+    );
+
     deleteSession$ = createEffect(() =>
         this.actions$.pipe(
             ofType(deleteBobChatSession),
@@ -146,7 +192,78 @@ export class BobChatEffects {
                 ?.filter((step) => step.safe_to_show)
                 .map((step) => ({ tool: step.label, status: step.status })),
             artifact: this.toArtifactView(this.firstArtifact(response.artifacts)),
+            confirmations: this.toConfirmations(response),
         };
+    }
+
+    private toConfirmations(response: BobChatV1Response): BobChatActionConfirmationView[] {
+        return (response.actions || [])
+            .filter((action) => action.status === 'requires_confirmation' && this.confirmationId(action))
+            .map((action) => {
+                const metadata = action.metadata || {};
+                return {
+                    confirmationId: String(metadata['confirmation_id']),
+                    runId: response.run.id,
+                    label: this.confirmationLabel(action),
+                    status: 'pending',
+                    family: this.familyLabel(metadata['family']),
+                    capability: this.capabilityLabel(metadata['capability']),
+                    risk: this.riskLabel(metadata['risk']),
+                };
+            });
+    }
+
+    private confirmationId(action: BobChatAction): string | undefined {
+        const id = action.metadata?.['confirmation_id'];
+        return typeof id === 'string' && id.length > 0 ? id : undefined;
+    }
+
+    private confirmationLabel(action: BobChatAction): string {
+        const metadata = action.metadata || {};
+        const label = metadata['label'] || this.capabilityLabel(metadata['capability']) || action.name;
+        return typeof label === 'string' && label.trim() ? label : 'Confirmer l’action Bob';
+    }
+
+    private familyLabel(value: unknown): string | undefined {
+        const family = typeof value === 'string' ? value : '';
+        const labels: Record<string, string> = {
+            'assistant-memory': 'Mémoire privée',
+            browser: 'Navigateur',
+            calendar: 'Calendrier',
+            factory: 'Factory',
+            mail: 'Courriel',
+            slack: 'Slack',
+            support: 'Mémoire organisation',
+            teams: 'Teams',
+            workspace: 'Workspace',
+            zoho: 'Zoho',
+        };
+        return labels[family] || undefined;
+    }
+
+    private capabilityLabel(value: unknown): string | undefined {
+        const capability = typeof value === 'string' ? value : '';
+        const normalized = capability.replace(/[-_.]+/g, ' ').trim();
+        if (!normalized) {
+            return undefined;
+        }
+        return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+    }
+
+    private riskLabel(value: unknown): string | undefined {
+        const risk = typeof value === 'string' ? value : '';
+        const labels: Record<string, string> = {
+            destructive: 'Action sensible',
+            draft: 'Brouillon',
+            read: 'Lecture',
+            write: 'Écriture',
+            'write-requested': 'Écriture',
+        };
+        return labels[risk] || undefined;
+    }
+
+    private toConfirmationStatus(response: BobChatConfirmationResponse): 'confirmed' | 'cancelled' {
+        return response.status === 'cancelled' ? 'cancelled' : 'confirmed';
     }
 
     private toSessionSummary(session: BobChatV1Session): BobChatSessionSummary {

@@ -629,6 +629,61 @@
                     }
                     <div class="bob-exp__msg-text" [innerHTML]="msg.text | markdown"></div>
 
+                    @if (msg.confirmations && msg.confirmations.length > 0) {
+                    <div class="bob-confirmations">
+                        @for (confirmation of msg.confirmations; track confirmation.confirmationId) {
+                        <section class="bob-confirmation"
+                            [class.bob-confirmation--confirmed]="confirmation.status === 'confirmed'"
+                            [class.bob-confirmation--cancelled]="confirmation.status === 'cancelled'"
+                            [class.bob-confirmation--failed]="confirmation.status === 'failed'">
+                            <div class="bob-confirmation__icon">
+                                @if (confirmation.status === 'confirmed') {
+                                <i class="fa-solid fa-circle-check"></i>
+                                } @else if (confirmation.status === 'cancelled') {
+                                <i class="fa-solid fa-ban"></i>
+                                } @else if (confirmation.status === 'failed') {
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                } @else {
+                                <i class="fa-solid fa-shield-halved"></i>
+                                }
+                            </div>
+                            <div class="bob-confirmation__body">
+                                <p class="bob-confirmation__eyebrow">Action Bob en attente</p>
+                                <p class="bob-confirmation__label">{{ confirmation.label }}</p>
+                                @if (confirmation.family || confirmation.capability || confirmation.risk) {
+                                <p class="bob-confirmation__meta">
+                                    @if (confirmation.family) { <span>{{ confirmation.family }}</span> }
+                                    @if (confirmation.capability) { <span>{{ confirmation.capability }}</span> }
+                                    @if (confirmation.risk) { <span>{{ confirmation.risk }}</span> }
+                                </p>
+                                }
+                                @if (confirmation.error) {
+                                <p class="bob-confirmation__error">{{ confirmation.error }}</p>
+                                }
+                            </div>
+                            <div class="bob-confirmation__actions">
+                                @if (confirmation.status === 'pending' || confirmation.status === 'failed') {
+                                <button class="bob-confirmation__btn bob-confirmation__btn--secondary"
+                                    (click)="cancelAction(msg, confirmation)">Annuler</button>
+                                <button class="bob-confirmation__btn bob-confirmation__btn--primary"
+                                    (click)="confirmAction(msg, confirmation)">Confirmer</button>
+                                } @else if (confirmation.status === 'resolving') {
+                                <span class="bob-confirmation__state">
+                                    <i class="fa-solid fa-spinner fa-spin"></i> Validation
+                                </span>
+                                } @else if (confirmation.status === 'confirmed') {
+                                <span class="bob-confirmation__state">Action confirmée</span>
+                                } @else if (confirmation.status === 'cancelled') {
+                                <span class="bob-confirmation__state">Action annulée</span>
+                                } @else {
+                                <span class="bob-confirmation__state">À confirmer</span>
+                                }
+                            </div>
+                        </section>
+                        }
+                    </div>
+                    }
+
                     @if (msg.role === 'bob' && !msg.isLoading && msg.text) {
                     <div class="bob-exp__msg-actions">
                         <button class="bob-exp__action-btn"><i class="fa-solid fa-copy"></i> Copy</button>

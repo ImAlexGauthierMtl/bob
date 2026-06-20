@@ -1,6 +1,7 @@
 import { createAction, props } from '@ngrx/store';
 import {
     BobChatArtifactView,
+    BobChatConfirmationStatus,
     BobChatMessageView,
     BobChatSendRequest,
     BobChatSendSuccessPayload,
@@ -69,4 +70,21 @@ export const addBobChatToolStep = createAction(
 export const attachBobChatArtifact = createAction(
     '[Bob Chat] Attach artifact',
     props<{ messageId: string; artifact: BobChatArtifactView }>(),
+);
+
+export const confirmBobChatAction = createAction(
+    '[Bob Chat] Confirm action',
+    props<{ messageId: string; runId: string; confirmationId: string }>(),
+);
+export const cancelBobChatAction = createAction(
+    '[Bob Chat] Cancel action',
+    props<{ messageId: string; runId: string; confirmationId: string }>(),
+);
+export const resolveBobChatActionSuccess = createAction(
+    '[Bob Chat] Resolve action success',
+    props<{ messageId: string; confirmationId: string; status: BobChatConfirmationStatus }>(),
+);
+export const resolveBobChatActionFailure = createAction(
+    '[Bob Chat] Resolve action failure',
+    props<{ messageId: string; confirmationId: string; error: string }>(),
 );

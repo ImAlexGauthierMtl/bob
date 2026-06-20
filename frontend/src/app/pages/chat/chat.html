@@ -49,6 +49,47 @@
                             }
                         </div>
                     }
+                    @if (msg.role === 'bob' && msg.confirmations?.length) {
+                        <div class="chat-confirmations">
+                            @for (confirmation of msg.confirmations; track confirmation.confirmationId) {
+                                <section
+                                    class="chat-confirmation"
+                                    [class.chat-confirmation--confirmed]="confirmation.status === 'confirmed'"
+                                    [class.chat-confirmation--cancelled]="confirmation.status === 'cancelled'"
+                                    [class.chat-confirmation--failed]="confirmation.status === 'failed'"
+                                >
+                                    <div class="chat-confirmation__body">
+                                        <p class="chat-confirmation__eyebrow">Action Bob en attente</p>
+                                        <p class="chat-confirmation__label">{{ confirmation.label }}</p>
+                                        @if (confirmation.family || confirmation.capability || confirmation.risk) {
+                                            <p class="chat-confirmation__meta">
+                                                @if (confirmation.family) { <span>{{ confirmation.family }}</span> }
+                                                @if (confirmation.capability) { <span>{{ confirmation.capability }}</span> }
+                                                @if (confirmation.risk) { <span>{{ confirmation.risk }}</span> }
+                                            </p>
+                                        }
+                                        @if (confirmation.error) {
+                                            <p class="chat-confirmation__error">{{ confirmation.error }}</p>
+                                        }
+                                    </div>
+                                    <div class="chat-confirmation__actions">
+                                        @if (confirmation.status === 'pending' || confirmation.status === 'failed') {
+                                            <button type="button" class="chat-confirmation__btn" (click)="cancelAction(msg, confirmation)">Annuler</button>
+                                            <button type="button" class="chat-confirmation__btn chat-confirmation__btn--primary" (click)="confirmAction(msg, confirmation)">Confirmer</button>
+                                        } @else if (confirmation.status === 'resolving') {
+                                            <span class="chat-confirmation__state"><i class="fa-solid fa-spinner fa-spin"></i> Validation</span>
+                                        } @else if (confirmation.status === 'confirmed') {
+                                            <span class="chat-confirmation__state">Action confirmée</span>
+                                        } @else if (confirmation.status === 'cancelled') {
+                                            <span class="chat-confirmation__state">Action annulée</span>
+                                        } @else {
+                                            <span class="chat-confirmation__state">À confirmer</span>
+                                        }
+                                    </div>
+                                </section>
+                            }
+                        </div>
+                    }
                 </div>
             </div>
         }

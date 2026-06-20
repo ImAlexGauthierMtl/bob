@@ -47,6 +47,19 @@ export interface BobChatArtifactView {
     sections?: BobChatArtifactSectionView[];
 }
 
+export type BobChatConfirmationStatus = 'pending' | 'resolving' | 'confirmed' | 'cancelled' | 'failed';
+
+export interface BobChatActionConfirmationView {
+    confirmationId: string;
+    runId: string;
+    label: string;
+    status: BobChatConfirmationStatus;
+    family?: string;
+    capability?: string;
+    risk?: string;
+    error?: string;
+}
+
 export interface BobChatMessageView {
     id: string;
     role: 'user' | 'bob';
@@ -55,6 +68,7 @@ export interface BobChatMessageView {
     isLoading?: boolean;
     toolSteps?: BobChatToolStep[];
     artifact?: BobChatArtifactView;
+    confirmations?: BobChatActionConfirmationView[];
 }
 
 export interface BobChatSessionSummary {
