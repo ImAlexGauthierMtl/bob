@@ -1,3 +1,4 @@
+import json
 from copy import deepcopy
 from datetime import datetime, timezone
 
@@ -239,15 +240,23 @@ def test_runtime_settings_expose_backend_catalog_and_mcp_families(client):
     default_agent = next(agent for agent in payload["agents"] if agent["id"] == "agent-bob-orchestrator")
     assert "skill-mcp-capability-routing" in default_agent["skills"]
     assert payload["mcp"]["tool_gating_required"] is True
-    assert "assistant-memory" in {family["family"] for family in payload["mcp"]["families"]}
-    assert "slack.draft-send" in {capability["qualified_id"] for capability in payload["mcp"]["capabilities"]}
+    mcp_families = {family["family"] for family in payload["mcp"]["families"]}
+    mcp_capabilities = {capability["qualified_id"] for capability in payload["mcp"]["capabilities"]}
+    assert "assistant-memory" in mcp_families
+    assert "bob-control-center" in mcp_families
+    assert "slack.draft-send" in mcp_capabilities
     assert "factory.requests-queues" in {capability["qualified_id"] for capability in payload["mcp"]["capabilities"]}
+    assert "bob-control-center.agents-catalog" in mcp_capabilities
+    assert "bob-control-center.profiles-taxonomy" in mcp_capabilities
     assert "factory" in {tool["family"] for tool in payload["tools"]}
     assert "bob_mcp_gateway" in {tool["name"] for tool in payload["tools"]}
     assert "slack.draft-send" in {tool["name"] for tool in payload["tools"]}
     factory_family = next(family for family in payload["mcp"]["families"] if family["family"] == "factory")
     assert factory_family["capability_count"] >= 9
     assert any(item["file"] == "requests-queues.md" for item in factory_family["capability_items"])
+    bcc_family = next(family for family in payload["mcp"]["families"] if family["family"] == "bob-control-center")
+    assert bcc_family["capability_count"] >= 7
+    assert any(item["file"] == "agents-catalog.md" for item in bcc_family["capability_items"])
     legacy_agent_name = "".join(("libre", "chat"))
     legacy_graph_name = "".join(("lang", "graph"))
     assert legacy_agent_name not in str(payload).lower()
@@ -259,13 +268,18 @@ def test_runtime_settings_expose_backend_catalog_and_mcp_families(client):
         "agents",
         "skills",
         "tools_mcp",
+        "bob_control_center",
         "memory_rag_vectors",
         "rbac_entitlements",
     }
     assert {
+        module["id"]: module["status"]
+        for module in inventory["settings_modules"]
+    }["bob_control_center"] == "mcp_catalog_ported_legacy_backend_active"
+    assert {
         surface["id"]: surface["status"]
         for surface in inventory["surfaces"]
-    }["bob_control_center"] == "legacy_settings_surface_active"
+    }["bob_control_center"] == "mcp_catalog_ported_legacy_backend_active"
     assert {
         surface["id"]: surface["status"]
         for surface in inventory["surfaces"]
@@ -414,6 +428,65 @@ def test_selected_agent_tools_gate_runtime_tool_calls(client):
     assert payload["metadata"]["tool_calls"][0]["tool"] == "bob_mcp_gateway"
     assert payload["actions"][0]["metadata"]["family"] == "factory"
     assert "bob_runtime_status" not in {call["tool"] for call in payload["metadata"]["tool_calls"]}
+
+
+def test_selected_agent_can_read_bob_control_center_catalog_through_mcp_gateway(client):
+    headers = signed_headers(user_id="user-runtime-bcc-catalog")
+    client.post(
+        "/internal/agent-runtime/v1/settings/tools",
+        json={
+            "id": "tool-bcc-agents-catalog",
+            "name": "bob-control-center.agents-catalog",
+            "family": "bob-control-center",
+            "risk": "read",
+            "execution": "internal_gateway",
+        },
+        headers={**headers, "Idempotency-Key": "tool-bcc-agents-catalog"},
+    )
+    client.post(
+        "/internal/agent-runtime/v1/settings/agents",
+        json={
+            "id": "agent-bcc-catalog",
+            "name": "Bob Control Center Catalog",
+            "description": "Agent de lecture des catalogues Bob Control Center.",
+            "provider_id": "fireworks-kimi",
+            "status": "active",
+            "skills": [],
+            "tools": ["tool-bcc-agents-catalog"],
+        },
+        headers={**headers, "Idempotency-Key": "agent-bcc-catalog"},
+    )
+
+    created = client.post(
+        "/internal/agent-runtime/v1/runs",
+        json={
+            **run_body(),
+            "prompt": "Liste le catalogue agents du Bob Control Center.",
+            "metadata": {
+                "source": "bob-chat-b4f-api",
+                "agent_id": "agent-bcc-catalog",
+            },
+        },
+        headers={**headers, "Idempotency-Key": "selected-agent-bcc-catalog-run"},
+    )
+
+    assert created.status_code == 201
+    payload = created.json()
+    assert payload["metadata"]["runtime_catalog"]["agent"]["id"] == "agent-bcc-catalog"
+    assert payload["metadata"]["tool_calls"][0]["tool"] == "bob_mcp_gateway"
+    assert payload["actions"][0]["metadata"] == {
+        "family": "bob-control-center",
+        "risk": "read",
+        "operation": "execute_capability",
+        "capability": "agents-catalog",
+    }
+    content = json.loads(payload["actions"][0]["content"])
+    assert content["family"] == "bob-control-center"
+    assert content["capability"] == "agents-catalog"
+    assert content["selected_agent"]["id"] == "agent-bcc-catalog"
+    assert content["selected_tools"][0]["name"] == "bob-control-center.agents-catalog"
+    assert content["legacy_backend_active"] is True
+    assert "/internal/agent-runtime/v1/settings/agents" in content["runtime_settings_routes"]
 
 
 def test_http_catalog_source_and_redaction_reach_runtime_prompt():

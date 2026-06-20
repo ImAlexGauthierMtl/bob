@@ -170,6 +170,7 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
                 "available_tool_families": [
                     "runtime",
                     "memory",
+                    "bob-control-center",
                     "support",
                     "workspace",
                     "integrations",
@@ -317,6 +318,15 @@ def _execute_mcp_gateway(
             risk=effective_risk,
         )
 
+    if operation == "execute_capability" and family["family"] == "bob-control-center":
+        return _execute_bob_control_center_capability(
+            call=call,
+            context=context,
+            metadata=metadata,
+            capability=capability,
+            risk=effective_risk,
+        )
+
     content = {
         "status": "ready_for_read",
         "family": family["family"],
@@ -369,7 +379,7 @@ def _catalog_tool_aliases(tool: dict[str, Any]) -> set[str]:
 
     family = _normalize_tool_identifier(str(tool.get("family") or ""))
     execution = _normalize_tool_identifier(str(tool.get("execution") or ""))
-    if family in {"mcp", "factory"} or execution.startswith("mcp") or execution == "internal_gateway":
+    if family in {"mcp", "factory", "bob-control-center"} or execution.startswith("mcp") or execution == "internal_gateway":
         aliases.add("bob_mcp_gateway")
     if family == "memory":
         aliases.add("bob_memory_context_summary")
@@ -639,6 +649,80 @@ def _execute_support_memory_capability(
     )
 
 
+def _execute_bob_control_center_capability(
+    *,
+    call: RuntimeToolCall,
+    context: InternalContext,
+    metadata: dict[str, Any],
+    capability: dict[str, Any] | None,
+    risk: str,
+) -> RuntimeToolResult:
+    capability_id = str((capability or {}).get("id") or call.arguments.get("capability") or "agents-catalog")
+    capability_id = capability_id.removeprefix("bob-control-center.").strip()
+    runtime_catalog = metadata.get("runtime_catalog") if isinstance(metadata, dict) else None
+    runtime_catalog = runtime_catalog if isinstance(runtime_catalog, dict) else {}
+
+    if risk != "read":
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="requires_confirmation",
+            content=_json_dumps(
+                {
+                    "status": "confirmation_required",
+                    "family": "bob-control-center",
+                    "capability": capability_id,
+                    "risk": risk,
+                    "reason": "bob_control_center_write_requires_settings_mutation_or_confirmed_mcp_adapter",
+                    "policy": _mcp_policy(context=context),
+                }
+            ),
+            metadata={"family": "bob-control-center", "risk": risk, "operation": "execute_capability"},
+        )
+
+    if capability_id in {"agents-catalog", "skills-catalog", "tools-catalog"}:
+        content = _bob_control_center_runtime_catalog(
+            runtime_catalog=runtime_catalog,
+            capability_id=capability_id,
+        )
+    elif capability_id in {"profiles-taxonomy", "roles-permissions"}:
+        content = _bob_control_center_legacy_contract(capability_id=capability_id)
+    else:
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="rejected",
+            content=_json_dumps(
+                {
+                    "error": "bob_control_center_capability_not_loaded",
+                    "capability": capability_id,
+                    "loaded_capabilities": [
+                        "agents-catalog",
+                        "skills-catalog",
+                        "tools-catalog",
+                        "profiles-taxonomy",
+                        "roles-permissions",
+                    ],
+                }
+            ),
+            metadata={"family": "bob-control-center", "risk": "blocked", "operation": "execute_capability"},
+        )
+
+    content["policy"] = _mcp_policy(context=context)
+    return RuntimeToolResult(
+        call_id=call.id,
+        name=call.name,
+        status="completed",
+        content=_json_dumps(content),
+        metadata={
+            "family": "bob-control-center",
+            "risk": "read",
+            "operation": "execute_capability",
+            "capability": capability_id,
+        },
+    )
+
+
 def _mcp_policy(*, context: InternalContext) -> dict[str, Any]:
     return {
         "tool_gating_required": True,
@@ -849,6 +933,70 @@ def _organization_memory_items(*, memory_context: dict[str, Any], max_items: int
     organization = memory_context.get("organization") if isinstance(memory_context.get("organization"), list) else []
     scoped_context = {"private": [], "organization": organization}
     return _memory_items(memory_context=scoped_context, max_items=max_items)
+
+
+def _bob_control_center_runtime_catalog(
+    *,
+    runtime_catalog: dict[str, Any],
+    capability_id: str,
+) -> dict[str, Any]:
+    selected_agent = runtime_catalog.get("agent") if isinstance(runtime_catalog.get("agent"), dict) else {}
+    selected_skills = runtime_catalog.get("skills") if isinstance(runtime_catalog.get("skills"), list) else []
+    selected_tools = runtime_catalog.get("tools") if isinstance(runtime_catalog.get("tools"), list) else []
+    return {
+        "status": "completed",
+        "family": "bob-control-center",
+        "capability": capability_id,
+        "source": "agent-runtime-backend-api",
+        "runtime_settings_routes": [
+            "/internal/agent-runtime/v1/settings/agents",
+            "/internal/agent-runtime/v1/settings/skills",
+            "/internal/agent-runtime/v1/settings/tools",
+        ],
+        "selected_agent": {
+            "id": selected_agent.get("id"),
+            "name": selected_agent.get("name"),
+            "status": selected_agent.get("status"),
+            "provider_id": selected_agent.get("provider_id"),
+        },
+        "selected_skill_count": len(selected_skills),
+        "selected_tool_count": len(selected_tools),
+        "selected_skills": [
+            {"id": item.get("id"), "name": item.get("name"), "source": item.get("source")}
+            for item in selected_skills
+            if isinstance(item, dict)
+        ],
+        "selected_tools": [
+            {
+                "id": item.get("id"),
+                "name": item.get("name"),
+                "family": item.get("family"),
+                "execution": item.get("execution"),
+            }
+            for item in selected_tools
+            if isinstance(item, dict)
+        ],
+        "legacy_backend_active": True,
+        "legacy_backend_boundary": "agent-control-b4f-api owns remaining BCC CRUD until migrated behind Bob settings/MCP adapters",
+    }
+
+
+def _bob_control_center_legacy_contract(*, capability_id: str) -> dict[str, Any]:
+    return {
+        "status": "ready_for_migration",
+        "family": "bob-control-center",
+        "capability": capability_id,
+        "source": "agent-runtime-backend-api",
+        "legacy_backend_active": True,
+        "target_owner": "bob-settings runtime + MCP governed catalog",
+        "read_contract": [
+            "tenant_scoped_profile_taxonomy",
+            "role_and_permission_catalog",
+            "agent_skill_tool_assignments",
+        ],
+        "write_contract": "settings mutation or confirmed MCP adapter required",
+        "next_gateway_step": "bind BCC repositories behind runtime settings adapters and retire public agent-control surface after parity tests",
+    }
 
 
 def _bounded_int(value: Any, *, default: int, minimum: int, maximum: int) -> int:

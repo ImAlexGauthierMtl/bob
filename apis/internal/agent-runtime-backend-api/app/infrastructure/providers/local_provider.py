@@ -47,6 +47,28 @@ class LocalRuntimeProvider(RuntimeProviderPort):
                         ],
                         raw_metadata={"trace_id": trace_id, "phase": "tool_selection"},
                     )
+                if _needs_bob_control_center_execution(prompt):
+                    return RuntimeModelResult(
+                        content="",
+                        provider="local",
+                        model=self.model,
+                        mode="local_runtime",
+                        tool_calls=[
+                            RuntimeToolCall(
+                                id=f"local_tool_bcc_{_infer_bob_control_center_capability(prompt).split('.')[-1].replace('-', '_')}",
+                                name="bob_mcp_gateway",
+                                arguments={
+                                    "operation": "execute_capability",
+                                    "family": "bob-control-center",
+                                    "capability": _infer_bob_control_center_capability(prompt),
+                                    "query": prompt,
+                                    "limit": 10,
+                                    "risk": "read",
+                                },
+                            )
+                        ],
+                        raw_metadata={"trace_id": trace_id, "phase": "tool_selection"},
+                    )
                 if _needs_factory_read_execution(prompt):
                     return RuntimeModelResult(
                         content="",
@@ -156,6 +178,8 @@ def _last_user_prompt(messages: list[dict[str, Any]]) -> str:
 
 def _needs_mcp_gateway(prompt: str) -> bool:
     normalized = prompt.lower()
+    if _needs_bob_control_center_execution(prompt):
+        return True
     return any(
         token in normalized
         for token in (
@@ -187,6 +211,7 @@ def _infer_mcp_family(prompt: str) -> str:
     for family in (
         "assistant-memory",
         "support-memory",
+        "bob-control-center",
         "croo-connect",
         "mail-calendar",
         "workspace-files",
@@ -202,7 +227,37 @@ def _infer_mcp_family(prompt: str) -> str:
     ):
         if family in normalized or family.replace("-", " ") in normalized:
             return family
+    if "bcc" in normalized or "control center" in normalized:
+        return "bob-control-center"
+    if any(token in normalized for token in ("agent", "agents", "skill", "skills", "tool", "tools")) and any(
+        token in normalized
+        for token in ("catalog", "catalogue", "settings", "param", "liste", "list", "crée", "cree", "create")
+    ):
+        return "bob-control-center"
     return "factory"
+
+
+def _needs_bob_control_center_execution(prompt: str) -> bool:
+    normalized = prompt.lower()
+    if any(token in normalized for token in ("bob control center", "control center", "bcc")):
+        return True
+    return any(token in normalized for token in ("agent", "agents", "skill", "skills", "tool", "tools")) and any(
+        token in normalized
+        for token in ("catalog", "catalogue", "settings", "param", "paramètre", "parametre", "liste", "list")
+    )
+
+
+def _infer_bob_control_center_capability(prompt: str) -> str:
+    normalized = prompt.lower()
+    if any(token in normalized for token in ("skill", "skills", "competence", "compétence")):
+        return "bob-control-center.skills-catalog"
+    if any(token in normalized for token in ("tool", "tools", "outil", "outils")):
+        return "bob-control-center.tools-catalog"
+    if any(token in normalized for token in ("profile", "profiles", "profil", "profils", "taxonomy", "taxonomie")):
+        return "bob-control-center.profiles-taxonomy"
+    if any(token in normalized for token in ("role", "roles", "permission", "permissions", "rbac")):
+        return "bob-control-center.roles-permissions"
+    return "bob-control-center.agents-catalog"
 
 
 def _infer_memory_capability(prompt: str) -> tuple[str, str] | None:

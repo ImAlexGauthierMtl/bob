@@ -163,6 +163,15 @@ MCP_CAPABILITY_REGISTRY: dict[str, list[dict[str, Any]]] = {
         {"id": "propose-training", "title": "Proposer formation", "file": "propose-training.md", "risk": "draft", "tools": ["propose_training_entry"]},
         {"id": "review-pending", "title": "Revue pending", "file": "review-pending.md", "risk": "write-requested", "tools": ["list_pending_training", "review_pending_training_batch", "approve_training_entry", "reject_training_entry"]},
     ],
+    "bob-control-center": [
+        {"id": "agents-catalog", "title": "Catalogue agents", "file": "agents-catalog.md", "risk": "read", "tools": ["list_runtime_agents", "get_runtime_agent"]},
+        {"id": "skills-catalog", "title": "Catalogue skills", "file": "skills-catalog.md", "risk": "read", "tools": ["list_runtime_skills", "get_runtime_skill"]},
+        {"id": "tools-catalog", "title": "Catalogue tools", "file": "tools-catalog.md", "risk": "read", "tools": ["list_runtime_tools", "get_runtime_tool"]},
+        {"id": "profiles-taxonomy", "title": "Profils et taxonomie BCC", "file": "profiles-taxonomy.md", "risk": "read", "tools": ["list_bcc_profiles", "get_bcc_profile"]},
+        {"id": "roles-permissions", "title": "Roles et permissions", "file": "roles-permissions.md", "risk": "read", "tools": ["list_bcc_roles", "list_bcc_permissions"]},
+        {"id": "interview-session", "title": "Entrevue profilee", "file": "interview-session.md", "risk": "draft", "tools": ["start_bcc_interview", "draft_bcc_profile_update"]},
+        {"id": "library-write", "title": "Ecriture bibliotheque BCC", "file": "library-write.md", "risk": "write-requested", "tools": ["create_bcc_skill", "update_bcc_task", "link_bcc_resource"]},
+    ],
     "croo-connect": [
         {"id": "list-supported-apps", "title": "Lister apps supportees", "file": "list-supported-apps.md", "risk": "read", "tools": ["list_supported_apps"]},
         {"id": "connect-account", "title": "Connecter un compte", "file": "connect-account.md", "risk": "write-requested", "tools": ["connect_account"]},
@@ -262,6 +271,12 @@ MCP_TOOL_FAMILIES: list[dict[str, Any]] = [
         "skill": "tools/support-memory/SKILL.md",
         "capabilities": "tools/support-memory/capabilities/index.md",
         "servers": ["support-memory"],
+    },
+    {
+        "family": "bob-control-center",
+        "skill": "tools/bob-control-center/SKILL.md",
+        "capabilities": "tools/bob-control-center/capabilities/index.md",
+        "servers": ["bob-runtime-settings", "bob-control-center"],
     },
     {
         "family": "croo-connect",
@@ -390,6 +405,18 @@ DEFAULT_CONVERSION_INVENTORY: dict[str, Any] = {
             "controls": ["bob_mcp_gateway", "mcp.capabilities", "mcp.families"],
         },
         {
+            "id": "bob_control_center",
+            "label": "Bob Control Center",
+            "status": "mcp_catalog_ported_legacy_backend_active",
+            "owner": "agent-runtime-backend-api",
+            "controls": [
+                "bob-control-center.agents-catalog",
+                "bob-control-center.skills-catalog",
+                "bob-control-center.tools-catalog",
+                "bob-control-center.profiles-taxonomy",
+            ],
+        },
+        {
             "id": "memory_rag_vectors",
             "label": "Memory RAG Vectors",
             "status": "ported_active",
@@ -429,12 +456,11 @@ DEFAULT_CONVERSION_INVENTORY: dict[str, Any] = {
         {
             "id": "bob_control_center",
             "label": "Bob Control Center",
-            "status": "legacy_settings_surface_active",
-            "current": "agent-control-b4f-api -> agent-backend-api",
+            "status": "mcp_catalog_ported_legacy_backend_active",
+            "current": "bob-control-center MCP catalog in runtime; legacy CRUD still agent-control-b4f-api -> agent-backend-api",
             "target": "bob-settings runtime + MCP governed catalog",
             "remaining_work": [
                 "migrate BCC organization, role, profile and library CRUD into Bob settings modules",
-                "bind BCC profile interview tools through runtime MCP gating",
                 "retire agent-control public gateway after parity tests",
             ],
         },
