@@ -135,6 +135,7 @@ Exposed through the gateway as `/api/bob-settings/v1` and implemented by
 - `GET /api/bob-settings/v1/voice`
 - `PUT /api/bob-settings/v1/voice`
 - `GET /api/bob-settings/v1/runtime`
+- `GET /api/bob-settings/v1/memory`
 - `POST /api/bob-settings/v1/runtime/agents`
 - `POST /api/bob-settings/v1/runtime/skills`
 - `POST /api/bob-settings/v1/runtime/tools`
@@ -161,6 +162,13 @@ Rules:
 - Runtime catalog reads and mutations are delegated to
   `agent-runtime-backend-api` with a signed internal session context. The B4F
   does not own or persist provider, agent, skill or tool runtime catalog data.
+- Memory settings are delegated to `agent-memory-backend-api` with a signed
+  internal session context. The B4F returns memory counts, isolation status,
+  redacted Milvus/embedding configuration and vector health only; it does not
+  expose URIs, tokens, provider secrets or raw memory content.
+- Memory settings may return a `vector_index.degraded[]` list when vector
+  configuration or health is unavailable. This must not block conversation,
+  voice or runtime catalog settings from loading.
 - Runtime catalog settings expose safe provider, agent, skill, tool, memory,
   RAG and vector controls. They never expose provider keys, raw tool secrets or
   internal signed session contexts.

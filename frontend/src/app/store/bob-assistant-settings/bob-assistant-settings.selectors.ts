@@ -28,6 +28,11 @@ export const selectBobAssistantRuntimeSettings = createSelector(
     (state) => state.runtime,
 );
 
+export const selectBobAssistantMemorySettings = createSelector(
+    selectBobAssistantSettingsState,
+    (state) => state.memorySettings,
+);
+
 export const selectBobAssistantSettingsLoading = createSelector(
     selectBobAssistantSettingsState,
     (state) => state.loading,

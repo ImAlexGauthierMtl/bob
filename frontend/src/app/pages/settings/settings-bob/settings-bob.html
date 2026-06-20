@@ -196,7 +196,70 @@
             </section>
 
             <section class="bob-runtime-block">
-                <h5>Memory</h5>
+                <div class="bob-runtime-block__head">
+                    <h5>Memory</h5>
+                    @if (memorySettings?.status?.database_status) {
+                    <span [class]="'bob-status-chip bob-status-chip--' + statusTone(memorySettings?.status?.database_status)">
+                        {{ memorySettings?.status?.database_status }}
+                    </span>
+                    }
+                </div>
+                @if (memorySettings?.status; as memoryStatus) {
+                <div class="bob-memory-metrics">
+                    <div>
+                        <strong>{{ memoryStatus.memory_entries }}</strong>
+                        <span>Private</span>
+                    </div>
+                    <div>
+                        <strong>{{ memoryStatus.organization_entries }}</strong>
+                        <span>Organization</span>
+                    </div>
+                    <div>
+                        <strong>{{ memoryStatus.journal_entries }}</strong>
+                        <span>Journal</span>
+                    </div>
+                </div>
+                <div class="bob-runtime-row">
+                    <div>
+                        <strong>Isolation</strong>
+                        <span>{{ memoryStatus.tenant_id }}</span>
+                    </div>
+                    <em [class.bob-status-ok]="memoryStatus.isolation_enforced">
+                        {{ memoryStatus.isolation_enforced ? 'enforced' : 'review' }}
+                    </em>
+                </div>
+                }
+                @if (memorySettings?.vector_index?.health; as vectorHealth) {
+                <div class="bob-runtime-row">
+                    <div>
+                        <strong>Vector health</strong>
+                        <span>{{ vectorHealth.provider }} · {{ vectorHealth.checked ? 'checked' : 'not checked' }}</span>
+                    </div>
+                    <em [class.bob-status-ok]="vectorHealth.ready">{{ vectorHealth.status }}</em>
+                </div>
+                }
+                @if (memorySettings?.vector_index?.config; as vectorConfig) {
+                <div class="bob-runtime-row bob-runtime-row--stack">
+                    <strong>Embeddings</strong>
+                    <span>{{ vectorConfig.embedding_provider }} · {{ vectorConfig.embedding_dimension }} dimensions</span>
+                    <span>Milvus {{ vectorConfig.enabled ? 'enabled' : 'disabled' }} · {{ vectorConfig.configured ? 'configured' : 'not configured' }}</span>
+                </div>
+                }
+                @if (memorySettings?.rag; as ragSettings) {
+                <div class="bob-runtime-row bob-runtime-row--stack">
+                    <strong>RAG</strong>
+                    <span>{{ ragSettings.milvus_role }} · {{ ragSettings.content_revalidation }}</span>
+                    <span>{{ ragSettings.available_context_routes.join(' · ') }}</span>
+                </div>
+                }
+                @if (memorySettings?.vector_index?.degraded?.length) {
+                @for (degraded of memorySettings?.vector_index?.degraded; track degraded.target) {
+                <div class="bob-runtime-row bob-runtime-row--stack bob-runtime-row--warning">
+                    <strong>{{ degraded.target }}</strong>
+                    <span>{{ degraded.status_code }} · {{ memoryDegradedLabel(degraded.detail) }}</span>
+                </div>
+                }
+                }
                 @for (entry of runtimeMemory | keyvalue; track entry.key) {
                 <div class="bob-runtime-row bob-runtime-row--stack">
                     <strong>{{ entry.key }}</strong>

@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import {
     BobConversationPersonality,
     BobLanguageOption,
+    BobMemorySettingsResponse,
     BobRuntimeAgent,
     BobRuntimeMcpCapability,
     BobRuntimeMcpFamily,
@@ -29,6 +30,7 @@ import {
     selectBobAssistantSettingsNotice,
     selectBobAssistantSettingsOptions,
     selectBobAssistantSettingsPersonality,
+    selectBobAssistantMemorySettings,
     selectBobAssistantRuntimeSettings,
     selectBobAssistantRuntimeSaving,
     selectBobAssistantSettingsSaving,
@@ -75,6 +77,7 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
     runtimeMcpFamilies: BobRuntimeMcpFamily[] = [];
     runtimeMcpCapabilities: BobRuntimeMcpCapability[] = [];
     runtimeMemory: Record<string, string> = {};
+    memorySettings: BobMemorySettingsResponse | null = null;
     runtimeLoading = false;
     runtimeMessage = '';
     newAgentName = '';
@@ -126,6 +129,11 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
                     this.applyRuntimeSettings(runtime);
                     this.runtimeLoading = false;
                 }
+            }),
+        );
+        this.subscriptions.add(
+            this.store.select(selectBobAssistantMemorySettings).subscribe((memorySettings) => {
+                this.memorySettings = memorySettings;
             }),
         );
         this.subscriptions.add(
@@ -260,6 +268,20 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
         this.selectedAgentToolIds = checked
             ? Array.from(new Set([...this.selectedAgentToolIds, toolId]))
             : this.selectedAgentToolIds.filter((id) => id !== toolId);
+    }
+
+    memoryDegradedLabel(detail: { code?: string; message?: string } | string | null): string {
+        if (!detail) return 'unavailable';
+        if (typeof detail === 'string') return detail;
+        return detail.code || detail.message || 'unavailable';
+    }
+
+    statusTone(value: string | undefined | null): string {
+        if (!value) return 'pending';
+        const normalized = value.toLowerCase();
+        if (['ready', 'ok', 'configured', 'runtime_backend_managed'].includes(normalized)) return 'ok';
+        if (['disabled', 'not_configured', 'missing'].includes(normalized)) return 'warn';
+        return normalized.includes('error') || normalized.includes('failed') ? 'error' : 'warn';
     }
 
     private refreshVoicesForLanguage(): void {

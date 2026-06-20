@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
 
 import pytest
+import httpx
 from fastapi.testclient import TestClient
 from jose import jwt
 
 import main
-from app.infrastructure.clients.platform_clients import UsageClient, WorkflowClient
+from app.infrastructure.clients.platform_clients import AgentMemoryClient, UsageClient, WorkflowClient
 from app.middleware.auth import get_current_user, settings
 from app.presentation.routes import (
     bob_settings_preferences_routes,
@@ -120,8 +121,8 @@ class FakeServiceClient:
     def __init__(self):
         self.calls = []
 
-    async def get(self, path, params=None, forward_headers=None):
-        self.calls.append(("get", path, params, forward_headers))
+    async def get(self, path, params=None, forward_headers=None, headers=None):
+        self.calls.append(("get", path, params, forward_headers, headers))
         if path.endswith("/missing"):
             return FakeResponse(status_code=404)
         return FakeResponse({"path": path, "params": params})
@@ -277,6 +278,64 @@ class FakeAgentRuntimeClient:
         return response
 
 
+class FakeAgentMemoryClient:
+    def __init__(self, *, fail_vector_config=False):
+        self.calls = []
+        self.fail_vector_config = fail_vector_config
+
+    async def get_status(self, *, headers=None):
+        self.calls.append(("get_status", dict(headers or {})))
+        return {
+            "tenant_id": "tenant-croo-local",
+            "user_id": "local-session-admin",
+            "database_status": "ready",
+            "memory_entries": 7,
+            "organization_entries": 3,
+            "journal_entries": 2,
+            "last_event": "2026-06-20T10:00:00Z",
+            "isolation_enforced": True,
+        }
+
+    async def get_vector_config(self, *, headers=None):
+        self.calls.append(("get_vector_config", dict(headers or {})))
+        if self.fail_vector_config:
+            request = httpx.Request("GET", "http://agent-memory/vector-index/config")
+            response = httpx.Response(
+                503,
+                json={"detail": {"code": "milvus_uri_required"}},
+                request=request,
+            )
+            raise httpx.HTTPStatusError("vector config unavailable", request=request, response=response)
+        return {
+            "provider": "milvus",
+            "enabled": True,
+            "configured": True,
+            "uri_configured": True,
+            "token_configured": True,
+            "database": "default",
+            "secure": True,
+            "timeout_seconds": 5,
+            "default_dimension": 1024,
+            "embedding_provider": "fireworks",
+            "embedding_model_configured": True,
+            "embedding_dimension": 1024,
+            "embedding_configured": True,
+        }
+
+    async def get_vector_health(self, *, headers=None):
+        self.calls.append(("get_vector_health", dict(headers or {})))
+        return {
+            "provider": "milvus",
+            "status": "ready",
+            "ready": True,
+            "checked": True,
+            "enabled": True,
+            "configured": True,
+            "embedding_configured": True,
+            "failure_code": None,
+        }
+
+
 @pytest.fixture()
 def client(monkeypatch):
     main.app.dependency_overrides[workflow_routes.get_current_user] = lambda: {"user_id": "user-1"}
@@ -286,6 +345,7 @@ def client(monkeypatch):
     monkeypatch.setattr(workflow_routes, "workflow_client", FakeWorkflowClient())
     monkeypatch.setattr(usage_routes, "usage_client", FakeUsageClient())
     monkeypatch.setattr(bob_settings_preferences_routes, "agent_runtime_client", FakeAgentRuntimeClient())
+    monkeypatch.setattr(bob_settings_preferences_routes, "agent_memory_client", FakeAgentMemoryClient())
     monkeypatch.setattr(
         overview_routes,
         "overview_service",
@@ -481,6 +541,61 @@ def test_bob_runtime_settings_catalog_and_mutations(client):
     assert "X-Session-Context" in fake_runtime.calls[0][1]
     assert fake_runtime.calls[1][0] == "create_catalog_item"
     assert fake_runtime.calls[1][3]["Idempotency-Key"] == "agent-1"
+
+
+def test_bob_memory_settings_delegate_to_agent_memory_backend(client):
+    fake_memory = bob_settings_preferences_routes.agent_memory_client
+    headers = {
+        "Authorization": "Bearer local-admin-token",
+        "X-CDE-Capabilities": "bob_settings.manage",
+    }
+
+    response = client.get("/api/bob-settings/v1/memory", headers=headers)
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["status"]["database_status"] == "ready"
+    assert payload["status"]["memory_entries"] == 7
+    assert payload["vector_index"]["config"]["provider"] == "milvus"
+    assert payload["vector_index"]["config"]["uri_configured"] is True
+    assert payload["vector_index"]["config"]["token_configured"] is True
+    assert "uri" not in payload["vector_index"]["config"]
+    assert "token" not in payload["vector_index"]["config"]
+    assert payload["vector_index"]["health"]["ready"] is True
+    assert payload["rag"]["postgres_source_of_truth"] is True
+    assert payload["source"] == "agent-memory-backend-api"
+    assert [call[0] for call in fake_memory.calls] == [
+        "get_status",
+        "get_vector_config",
+        "get_vector_health",
+    ]
+    signed_context = fake_memory.calls[1][1]["X-Session-Context"]
+    context = bob_settings_preferences_routes._internal_session_signer().validate(signed_context)
+    assert context.tenant_id == "tenant-croo-local"
+    assert "agent_memory.vector.manage" in context.permissions
+    assert "agent_memory.rag.search" in context.permissions
+    assert "X-Trace-Id" in fake_memory.calls[1][1]
+
+
+def test_bob_memory_settings_degrades_vector_status_without_blocking(client, monkeypatch):
+    fake_memory = FakeAgentMemoryClient(fail_vector_config=True)
+    monkeypatch.setattr(bob_settings_preferences_routes, "agent_memory_client", fake_memory)
+
+    response = client.get(
+        "/api/bob-settings/v1/memory",
+        headers={
+            "Authorization": "Bearer local-admin-token",
+            "X-CDE-Capabilities": "bob_settings.manage",
+        },
+    )
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["status"]["database_status"] == "ready"
+    assert payload["vector_index"]["config"] is None
+    assert payload["vector_index"]["health"]["status"] == "ready"
+    assert payload["vector_index"]["degraded"][0]["status_code"] == 503
+    assert payload["vector_index"]["degraded"][0]["detail"] == {"code": "milvus_uri_required"}
 
 
 def test_bob_settings_security_mutations_require_idempotency_key(client):
@@ -730,17 +845,21 @@ def test_auth_dependency_rejects_invalid_jwt():
 async def test_backend_client_methods_cover_paths(monkeypatch):
     fake_workflow_service = FakeServiceClient()
     fake_usage_service = FakeServiceClient()
+    fake_memory_service = FakeServiceClient()
 
     def fake_factory(name):
         if name == "workflow~backend-api":
             return fake_workflow_service
         if name == "usage~backend-api":
             return fake_usage_service
+        if name == "agent-memory~backend-api":
+            return fake_memory_service
         raise AssertionError(name)
 
     monkeypatch.setattr("app.infrastructure.clients.platform_clients.create_service_client", fake_factory)
     workflow_client = WorkflowClient()
     usage_client = UsageClient()
+    memory_client = AgentMemoryClient()
 
     assert (await workflow_client.list(1, 5, "company", "crm", True))["params"]["is_template"] == "true"
     assert (await workflow_client.create({"name": "Flow"}))["json"]["name"] == "Flow"
@@ -770,6 +889,11 @@ async def test_backend_client_methods_cover_paths(monkeypatch):
     assert (await usage_client.admin_intent_detail("corr-1"))["path"].endswith("/corr-1")
     assert (await usage_client.list_rate_cards(False))["params"] == {"active_only": "false"}
     assert (await usage_client.create_rate_card({"name": "Default"}))["json"]["name"] == "Default"
+
+    assert (await memory_client.get_status(headers={"X-Test": "1"}))["path"] == "/internal/agent-memory/v1/status"
+    assert (await memory_client.get_vector_config(headers={"X-Test": "1"}))["path"].endswith("/vector-index/config")
+    assert (await memory_client.get_vector_health(headers={"X-Test": "1"}))["path"].endswith("/vector-index/health")
+    assert fake_memory_service.calls[0][4] == {"X-Test": "1"}
 
 
 def test_python_package_contract_loads_runtime_components():

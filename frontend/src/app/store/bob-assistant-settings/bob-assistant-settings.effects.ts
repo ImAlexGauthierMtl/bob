@@ -30,14 +30,31 @@ export class BobAssistantSettingsEffects {
                     conversation: this.service.getConversation(),
                     voice: this.service.getVoice(),
                     runtime: this.service.getRuntime(),
+                    memorySettings: this.service.getMemory().pipe(
+                        catchError((error) => of({
+                            status: null,
+                            vector_index: {
+                                config: null,
+                                health: null,
+                                degraded: [{
+                                    target: 'memory_settings',
+                                    status_code: 0,
+                                    detail: { code: errorMessage(error) },
+                                }],
+                            },
+                            rag: null,
+                            source: 'frontend-degraded',
+                        })),
+                    ),
                 }).pipe(
-                    map(({ conversation, voice, runtime }) => loadBobAssistantSettingsSuccess({
+                    map(({ conversation, voice, runtime, memorySettings }) => loadBobAssistantSettingsSuccess({
                         personality: conversation.personality,
                         voice: voice.voice,
                         availableTones: conversation.available_tones,
                         availableLanguages: conversation.available_languages,
                         availableVoices: voice.available_voices,
                         runtime,
+                        memorySettings,
                     })),
                     catchError((error) => of(loadBobAssistantSettingsFailure({ error: errorMessage(error) }))),
                 ),

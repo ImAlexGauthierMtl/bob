@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 
-from app.infrastructure.clients.platform_clients import agent_runtime_client
+from app.infrastructure.clients.platform_clients import agent_memory_client, agent_runtime_client
 from shared.infrastructure import InternalSessionContext, InternalSessionContextSigner
 
 
@@ -82,6 +82,12 @@ _VOICE_DEFAULTS: dict[str, Any] = {
 _CONVERSATION_SETTINGS_BY_ACTOR: dict[str, dict[str, Any]] = {}
 _VOICE_SETTINGS_BY_ACTOR: dict[str, dict[str, Any]] = {}
 _IDEMPOTENCY_REPLAYS: dict[tuple[str, str, str], dict[str, Any]] = {}
+_MEMORY_SETTINGS_PERMISSIONS = {
+    "agent_memory.private.use",
+    "agent_memory.organization.search",
+    "agent_memory.rag.search",
+    "agent_memory.vector.manage",
+}
 
 
 async def _require_settings_mutation_permission(
@@ -269,6 +275,50 @@ async def get_runtime_settings(
     )
 
 
+@router.get("/memory")
+async def get_memory_settings(
+    request: Request,
+    authorization: str | None = Header(None, alias="Authorization"),
+    x_cde_capabilities: str | None = Header(None, alias="X-CDE-Capabilities"),
+) -> dict[str, Any]:
+    capabilities = _memory_settings_capabilities(
+        _capabilities_from_header_or_env(x_cde_capabilities)
+    )
+    headers = _runtime_backend_headers(
+        request=request,
+        authorization=authorization,
+        capabilities=capabilities,
+        idempotency_key=None,
+    )
+    status_payload = await _memory_backend_call("get_status", headers=headers)
+    degraded: list[dict[str, Any]] = []
+    vector_config = await _optional_memory_backend_call(
+        "get_vector_config",
+        headers=headers,
+        degraded=degraded,
+    )
+    vector_health = await _optional_memory_backend_call(
+        "get_vector_health",
+        headers=headers,
+        degraded=degraded,
+    )
+    return {
+        "status": status_payload,
+        "vector_index": {
+            "config": vector_config,
+            "health": vector_health,
+            "degraded": degraded,
+        },
+        "rag": {
+            "postgres_source_of_truth": True,
+            "milvus_role": "reconstructible_index",
+            "content_revalidation": "postgres_before_context",
+            "available_context_routes": ["rag/context", "rag/milvus-context"],
+        },
+        "source": "agent-memory-backend-api",
+    }
+
+
 @router.post("/runtime/agents", status_code=status.HTTP_201_CREATED)
 async def create_runtime_agent(
     payload: dict[str, Any],
@@ -327,6 +377,13 @@ def _clean_dict(payload: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in payload.items() if value is not None}
 
 
+def _memory_settings_capabilities(capabilities: set[str]) -> set[str]:
+    expanded = set(capabilities)
+    if "admin" in expanded or "bob_settings.manage" in expanded:
+        expanded.update(_MEMORY_SETTINGS_PERMISSIONS)
+    return expanded
+
+
 async def _runtime_backend_call(
     method: str,
     *,
@@ -364,6 +421,47 @@ async def _runtime_backend_call(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail={"code": "runtime_backend_call_invalid"},
     )
+
+
+async def _memory_backend_call(method: str, *, headers: dict[str, str]) -> dict[str, Any]:
+    try:
+        if method == "get_status":
+            return await agent_memory_client.get_status(headers=headers)
+        if method == "get_vector_config":
+            return await agent_memory_client.get_vector_config(headers=headers)
+        if method == "get_vector_health":
+            return await agent_memory_client.get_vector_health(headers=headers)
+    except httpx.HTTPStatusError as exc:
+        detail = _safe_backend_detail(exc.response, fallback_code="agent_memory_backend_error")
+        raise HTTPException(status_code=exc.response.status_code, detail=detail) from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "agent_memory_backend_unavailable", "message": str(exc)},
+        ) from exc
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail={"code": "memory_backend_call_invalid"},
+    )
+
+
+async def _optional_memory_backend_call(
+    method: str,
+    *,
+    headers: dict[str, str],
+    degraded: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    try:
+        return await _memory_backend_call(method, headers=headers)
+    except HTTPException as exc:
+        degraded.append(
+            {
+                "target": method,
+                "status_code": exc.status_code,
+                "detail": exc.detail,
+            }
+        )
+        return None
 
 
 def _runtime_backend_headers(
@@ -409,11 +507,15 @@ def _internal_session_signer() -> InternalSessionContextSigner:
     )
 
 
-def _safe_backend_detail(response: httpx.Response) -> Any:
+def _safe_backend_detail(
+    response: httpx.Response,
+    *,
+    fallback_code: str = "agent_runtime_backend_error",
+) -> Any:
     if not response.content:
-        return {"code": "agent_runtime_backend_error"}
+        return {"code": fallback_code}
     try:
         payload = response.json()
     except ValueError:
-        return {"code": "agent_runtime_backend_error", "message": response.text}
+        return {"code": fallback_code, "message": response.text}
     return payload.get("detail", payload)

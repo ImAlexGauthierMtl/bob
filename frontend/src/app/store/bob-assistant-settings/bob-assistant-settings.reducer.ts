@@ -2,6 +2,7 @@ import { createReducer, on } from '@ngrx/store';
 import {
     BobConversationPersonality,
     BobLanguageOption,
+    BobMemorySettingsResponse,
     BobRuntimeSettingsResponse,
     BobVoiceOption,
     BobVoiceSettings,
@@ -27,6 +28,7 @@ export interface BobAssistantSettingsState {
     availableLanguages: BobLanguageOption[];
     availableVoices: BobVoiceOption[];
     runtime: BobRuntimeSettingsResponse | null;
+    memorySettings: BobMemorySettingsResponse | null;
     loading: boolean;
     saving: boolean;
     runtimeSaving: boolean;
@@ -41,6 +43,7 @@ export const initialBobAssistantSettingsState: BobAssistantSettingsState = {
     availableLanguages: [],
     availableVoices: [],
     runtime: null,
+    memorySettings: null,
     loading: false,
     saving: false,
     runtimeSaving: false,

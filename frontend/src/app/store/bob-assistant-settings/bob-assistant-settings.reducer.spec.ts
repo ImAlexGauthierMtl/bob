@@ -43,6 +43,54 @@ const runtime = {
     memory: {},
 };
 
+const memorySettings = {
+    status: {
+        tenant_id: 'tenant-croo-local',
+        user_id: 'user-local',
+        database_status: 'ready',
+        memory_entries: 2,
+        organization_entries: 1,
+        journal_entries: 1,
+        last_event: null,
+        isolation_enforced: true,
+    },
+    vector_index: {
+        config: {
+            provider: 'milvus',
+            enabled: true,
+            configured: true,
+            uri_configured: true,
+            token_configured: true,
+            database: 'default',
+            secure: true,
+            timeout_seconds: 5,
+            default_dimension: 1024,
+            embedding_provider: 'fireworks',
+            embedding_model_configured: true,
+            embedding_dimension: 1024,
+            embedding_configured: true,
+        },
+        health: {
+            provider: 'milvus',
+            status: 'ready',
+            ready: true,
+            checked: true,
+            enabled: true,
+            configured: true,
+            embedding_configured: true,
+            failure_code: null,
+        },
+        degraded: [],
+    },
+    rag: {
+        postgres_source_of_truth: true,
+        milvus_role: 'reconstructible_index',
+        content_revalidation: 'postgres_before_context',
+        available_context_routes: ['rag/context'],
+    },
+    source: 'agent-memory-backend-api',
+};
+
 describe('bobAssistantSettingsReducer', () => {
     it('loads conversation and voice settings', () => {
         const state = bobAssistantSettingsReducer(initialBobAssistantSettingsState, loadBobAssistantSettingsSuccess({
@@ -52,12 +100,14 @@ describe('bobAssistantSettingsReducer', () => {
             availableLanguages: [{ code: 'auto', name: 'Auto-detect' }],
             availableVoices: [{ id: 'autumn', name: 'Autumn', gender: 'female', accent: 'North American', style: 'Warm' }],
             runtime,
+            memorySettings,
         }));
 
         expect(state.personality?.tone).toBe('professional');
         expect(state.voice?.voice).toBe('autumn');
         expect(state.availableVoices.length).toBe(1);
         expect(state.runtime?.providers[0].status).toBe('runtime_backend_managed');
+        expect(state.memorySettings?.status?.database_status).toBe('ready');
     });
 
     it('tracks save lifecycle', () => {

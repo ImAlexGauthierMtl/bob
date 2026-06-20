@@ -210,6 +210,27 @@ class AgentRuntimeClient:
         return resp.json()
 
 
+class AgentMemoryClient:
+    def __init__(self):
+        self._client = create_service_client("agent-memory~backend-api")
+
+    async def get_status(self, *, headers=None):
+        resp = await self._client.get("/internal/agent-memory/v1/status", headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_vector_config(self, *, headers=None):
+        resp = await self._client.get("/internal/agent-memory/v1/vector-index/config", headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_vector_health(self, *, headers=None):
+        resp = await self._client.get("/internal/agent-memory/v1/vector-index/health", headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+
 workflow_client = WorkflowClient()
 usage_client = UsageClient()
 agent_runtime_client = AgentRuntimeClient()
+agent_memory_client = AgentMemoryClient()

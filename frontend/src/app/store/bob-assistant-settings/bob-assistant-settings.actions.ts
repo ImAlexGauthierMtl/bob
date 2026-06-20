@@ -2,6 +2,7 @@ import { createAction, props } from '@ngrx/store';
 import {
     BobConversationPersonality,
     BobLanguageOption,
+    BobMemorySettingsResponse,
     BobRuntimeAgent,
     BobRuntimeSettingsResponse,
     BobRuntimeSkill,
@@ -20,6 +21,7 @@ export const loadBobAssistantSettingsSuccess = createAction(
         availableLanguages: BobLanguageOption[];
         availableVoices: BobVoiceOption[];
         runtime: BobRuntimeSettingsResponse;
+        memorySettings: BobMemorySettingsResponse;
     }>(),
 );
 export const loadBobAssistantSettingsFailure = createAction(

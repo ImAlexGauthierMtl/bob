@@ -124,6 +124,68 @@ export interface BobRuntimeSettingsResponse {
     source?: string;
 }
 
+export interface BobMemoryStatus {
+    tenant_id: string;
+    user_id: string;
+    database_status: string;
+    memory_entries: number;
+    organization_entries: number;
+    journal_entries: number;
+    last_event?: string | null;
+    isolation_enforced: boolean;
+}
+
+export interface BobVectorIndexConfig {
+    provider: string;
+    enabled: boolean;
+    configured: boolean;
+    uri_configured: boolean;
+    token_configured: boolean;
+    database: string;
+    secure: boolean;
+    timeout_seconds: number;
+    default_dimension: number;
+    embedding_provider: string;
+    embedding_model_configured: boolean;
+    embedding_dimension: number;
+    embedding_configured: boolean;
+}
+
+export interface BobVectorIndexHealth {
+    provider: string;
+    status: string;
+    ready: boolean;
+    checked: boolean;
+    enabled: boolean;
+    configured: boolean;
+    embedding_configured: boolean;
+    failure_code?: string | null;
+}
+
+export interface BobMemoryDegradedStatus {
+    target: string;
+    status_code: number;
+    detail: { code?: string; message?: string } | string | null;
+}
+
+export interface BobMemoryRagSettings {
+    postgres_source_of_truth: boolean;
+    milvus_role: string;
+    content_revalidation: string;
+    available_context_routes: string[];
+}
+
+export interface BobMemorySettingsResponse {
+    status: BobMemoryStatus | null;
+    vector_index: {
+        config: BobVectorIndexConfig | null;
+        health: BobVectorIndexHealth | null;
+        degraded: BobMemoryDegradedStatus[];
+    };
+    rag: BobMemoryRagSettings | null;
+    source?: string;
+}
+
 export interface BobRuntimeCreateResponse<T> {
     item: T;
     runtime: BobRuntimeSettingsResponse;
@@ -160,6 +222,10 @@ export class BobAssistantSettingsService {
 
     getRuntime(): Observable<BobRuntimeSettingsResponse> {
         return this.http.get<BobRuntimeSettingsResponse>(`${this.baseUrl}/runtime`);
+    }
+
+    getMemory(): Observable<BobMemorySettingsResponse> {
+        return this.http.get<BobMemorySettingsResponse>(`${this.baseUrl}/memory`);
     }
 
     createRuntimeAgent(payload: Partial<BobRuntimeAgent> & { name: string }): Observable<BobRuntimeCreateResponse<BobRuntimeAgent>> {
