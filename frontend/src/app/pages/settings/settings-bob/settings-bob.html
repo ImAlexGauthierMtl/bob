@@ -269,6 +269,67 @@
             </section>
         </div>
 
+        @if (runtimeConversionInventory) {
+        <div class="bob-runtime-grid bob-runtime-grid--conversion">
+            <section class="bob-runtime-block">
+                <div class="bob-runtime-block__head">
+                    <h5>Conversion Coverage</h5>
+                    <span [class]="'bob-status-chip bob-status-chip--' + statusTone(runtimeConversionInventory.status)">
+                        {{ runtimeConversionInventory.status }}
+                    </span>
+                </div>
+                <div class="bob-runtime-row bob-runtime-row--stack">
+                    <strong>{{ runtimeConversionInventory.target }}</strong>
+                    <span>{{ runtimeConversionInventory.active_model }}</span>
+                </div>
+                <div class="bob-conversion-grid">
+                    @for (module of conversionModules; track module.id) {
+                    <div class="bob-conversion-card">
+                        <div class="bob-conversion-card__head">
+                            <strong>{{ module.label }}</strong>
+                            <span [class]="'bob-status-chip bob-status-chip--' + statusTone(module.status)">
+                                {{ module.status }}
+                            </span>
+                        </div>
+                        <small>{{ module.owner }}</small>
+                        @if (module.controls?.length) {
+                        <div class="bob-conversion-card__tags">
+                            @for (control of module.controls; track control) {
+                            <em>{{ control }}</em>
+                            }
+                        </div>
+                        }
+                    </div>
+                    }
+                </div>
+            </section>
+
+            <section class="bob-runtime-block">
+                <div class="bob-runtime-block__head">
+                    <h5>Migration Surfaces</h5>
+                    <span>{{ conversionSurfaces.length }}</span>
+                </div>
+                @for (surface of conversionSurfaces; track surface.id) {
+                <div class="bob-runtime-row bob-runtime-row--stack">
+                    <strong>{{ surface.label }}</strong>
+                    <span>{{ surface.current }}</span>
+                    <span>{{ surface.target }}</span>
+                    <em [class]="'bob-status-chip bob-status-chip--' + statusTone(surface.status)">
+                        {{ surface.status }}
+                    </em>
+                    @if (surface.remaining_work?.length) {
+                    <div class="bob-conversion-card__tags">
+                        @for (item of surface.remaining_work; track item) {
+                        <em>{{ item }}</em>
+                        }
+                    </div>
+                    }
+                </div>
+                }
+            </section>
+        </div>
+        }
+
         <div class="bob-runtime-grid bob-runtime-grid--mcp">
             <section class="bob-runtime-block">
                 <div class="bob-runtime-block__head">

@@ -249,7 +249,27 @@ def test_runtime_settings_expose_backend_catalog_and_mcp_families(client):
     assert factory_family["capability_count"] >= 9
     assert any(item["file"] == "requests-queues.md" for item in factory_family["capability_items"])
     legacy_agent_name = "".join(("libre", "chat"))
+    legacy_graph_name = "".join(("lang", "graph"))
     assert legacy_agent_name not in str(payload).lower()
+    assert legacy_graph_name not in str(payload).lower()
+    inventory = payload["conversion_inventory"]
+    assert inventory["target"] == "bob-cde-runtime"
+    assert inventory["active_model"] == "accounts/fireworks/models/kimi-k2p7-code"
+    assert {module["id"] for module in inventory["settings_modules"]} >= {
+        "agents",
+        "skills",
+        "tools_mcp",
+        "memory_rag_vectors",
+        "rbac_entitlements",
+    }
+    assert {
+        surface["id"]: surface["status"]
+        for surface in inventory["surfaces"]
+    }["bob_control_center"] == "legacy_settings_surface_active"
+    assert {
+        surface["id"]: surface["status"]
+        for surface in inventory["surfaces"]
+    }["legacy_graph_runtime"] == "removed_from_cde_runtime"
 
 
 def test_runtime_settings_catalog_mutations_are_scoped_and_idempotent(client):

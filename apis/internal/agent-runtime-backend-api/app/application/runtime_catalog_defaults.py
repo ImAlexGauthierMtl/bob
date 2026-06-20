@@ -356,6 +356,99 @@ DEFAULT_MEMORY: dict[str, str] = {
     "vector_index": "ACL revalidees apres recherche vectorielle",
 }
 
+DEFAULT_CONVERSION_INVENTORY: dict[str, Any] = {
+    "target": "bob-cde-runtime",
+    "status": "in_progress",
+    "active_model": "accounts/fireworks/models/kimi-k2p7-code",
+    "settings_modules": [
+        {
+            "id": "providers",
+            "label": "Providers",
+            "status": "ported_active",
+            "owner": "agent-runtime-backend-api",
+            "controls": ["fireworks-kimi", "local-runtime"],
+        },
+        {
+            "id": "agents",
+            "label": "Agents",
+            "status": "ported_active",
+            "owner": "agent-runtime-backend-api",
+            "controls": ["/internal/agent-runtime/v1/settings/agents"],
+        },
+        {
+            "id": "skills",
+            "label": "Skills",
+            "status": "ported_active",
+            "owner": "agent-runtime-backend-api",
+            "controls": ["/internal/agent-runtime/v1/settings/skills", "croo-agentic/agent-skills"],
+        },
+        {
+            "id": "tools_mcp",
+            "label": "Tools MCP",
+            "status": "ported_active",
+            "owner": "agent-runtime-backend-api",
+            "controls": ["bob_mcp_gateway", "mcp.capabilities", "mcp.families"],
+        },
+        {
+            "id": "memory_rag_vectors",
+            "label": "Memory RAG Vectors",
+            "status": "ported_active",
+            "owner": "agent-memory-backend-api",
+            "controls": ["private_user", "organization", "rag", "vector_index"],
+        },
+        {
+            "id": "rbac_entitlements",
+            "label": "RBAC Entitlements",
+            "status": "platform_contract_active",
+            "owner": "platform-b4f-api",
+            "controls": ["bob_chat.use", "local_super_admin", "bob-cloud-contract"],
+        },
+    ],
+    "surfaces": [
+        {
+            "id": "conversation",
+            "label": "Conversation Bob",
+            "status": "ported_active",
+            "current": "bob-chat-b4f-api -> agent-runtime-backend-api",
+            "target": "bob-chat-b4f-api -> agent-runtime-backend-api",
+            "evidence": ["POST /api/bob-chat/v1/messages", "POST /internal/agent-runtime/v1/runs"],
+        },
+        {
+            "id": "runtime_settings",
+            "label": "Runtime Settings",
+            "status": "ported_active",
+            "current": "platform-b4f-api -> agent-runtime-backend-api",
+            "target": "platform-b4f-api -> agent-runtime-backend-api",
+            "evidence": [
+                "GET /api/bob-settings/v1/runtime",
+                "POST /api/bob-settings/v1/runtime/agents",
+                "POST /api/bob-settings/v1/runtime/skills",
+                "POST /api/bob-settings/v1/runtime/tools",
+            ],
+        },
+        {
+            "id": "bob_control_center",
+            "label": "Bob Control Center",
+            "status": "legacy_settings_surface_active",
+            "current": "agent-control-b4f-api -> agent-backend-api",
+            "target": "bob-settings runtime + MCP governed catalog",
+            "remaining_work": [
+                "migrate BCC organization, role, profile and library CRUD into Bob settings modules",
+                "bind BCC profile interview tools through runtime MCP gating",
+                "retire agent-control public gateway after parity tests",
+            ],
+        },
+        {
+            "id": "legacy_graph_runtime",
+            "label": "Legacy Graph Runtime",
+            "status": "removed_from_cde_runtime",
+            "current": "not present in CDE runtime search",
+            "target": "no legacy graph runtime dependency",
+            "evidence": ["runtime imports and settings use Bob runtime providers only"],
+        },
+    ],
+}
+
 
 def default_runtime_settings(*, active_provider: str = "auto") -> dict[str, Any]:
     return {
@@ -373,6 +466,7 @@ def default_runtime_settings(*, active_provider: str = "auto") -> dict[str, Any]
             "families": default_mcp_families(),
             "capabilities": default_mcp_capabilities(),
         },
+        "conversion_inventory": deepcopy(DEFAULT_CONVERSION_INVENTORY),
         "source": "agent-runtime-backend-api",
     }
 

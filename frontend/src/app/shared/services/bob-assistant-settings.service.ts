@@ -113,6 +113,32 @@ export interface BobRuntimeMcpSettings {
     capabilities: BobRuntimeMcpCapability[];
 }
 
+export interface BobRuntimeConversionModule {
+    id: string;
+    label: string;
+    status: string;
+    owner: string;
+    controls?: string[];
+}
+
+export interface BobRuntimeConversionSurface {
+    id: string;
+    label: string;
+    status: string;
+    current: string;
+    target: string;
+    evidence?: string[];
+    remaining_work?: string[];
+}
+
+export interface BobRuntimeConversionInventory {
+    target: string;
+    status: string;
+    active_model: string;
+    settings_modules: BobRuntimeConversionModule[];
+    surfaces: BobRuntimeConversionSurface[];
+}
+
 export interface BobRuntimeSettingsResponse {
     providers: BobRuntimeProvider[];
     active_provider: string;
@@ -121,6 +147,7 @@ export interface BobRuntimeSettingsResponse {
     tools: BobRuntimeTool[];
     memory: Record<string, string>;
     mcp?: BobRuntimeMcpSettings;
+    conversion_inventory?: BobRuntimeConversionInventory;
     source?: string;
 }
 

@@ -224,6 +224,10 @@
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
 }
 
+.bob-runtime-grid--conversion {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+}
+
 .bob-runtime-block {
     border: 1px solid #DEDED9;
     background: #fff;
@@ -370,6 +374,64 @@
     overflow-wrap: anywhere;
 }
 
+.bob-conversion-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.bob-conversion-card {
+    min-width: 0;
+    border: 1px solid #EFEFEB;
+    border-radius: 6px;
+    padding: 0.65rem;
+}
+
+.bob-conversion-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.bob-conversion-card strong,
+.bob-conversion-card small,
+.bob-conversion-card__tags em {
+    overflow-wrap: anywhere;
+}
+
+.bob-conversion-card strong {
+    font-size: 0.78rem;
+    color: #20201E;
+}
+
+.bob-conversion-card small {
+    display: block;
+    margin-top: 0.35rem;
+    color: #6F6F68;
+    font-size: 0.68rem;
+}
+
+.bob-conversion-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+}
+
+.bob-conversion-card__tags em {
+    max-width: 100%;
+    border: 1px solid #DEDED9;
+    border-radius: 6px;
+    color: #20201E;
+    background: #F7F7F6;
+    font-size: 0.64rem;
+    font-style: normal;
+    line-height: 1.2;
+    padding: 0.18rem 0.4rem;
+}
+
 .bob-inline-form {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 2.5rem;
@@ -475,7 +537,8 @@
 @media (max-width: 980px) {
     .bob-runtime-grid,
     .bob-runtime-grid--three,
-    .bob-runtime-grid--mcp {
+    .bob-runtime-grid--mcp,
+    .bob-runtime-grid--conversion {
         grid-template-columns: 1fr;
     }
 }
@@ -500,6 +563,10 @@
     }
 
     .bob-mcp-family-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .bob-conversion-grid {
         grid-template-columns: 1fr;
     }
 

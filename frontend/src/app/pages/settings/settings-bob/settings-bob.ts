@@ -8,6 +8,9 @@ import {
     BobConversationPersonality,
     BobLanguageOption,
     BobMemorySettingsResponse,
+    BobRuntimeConversionInventory,
+    BobRuntimeConversionModule,
+    BobRuntimeConversionSurface,
     BobRuntimeAgent,
     BobRuntimeMcpCapability,
     BobRuntimeMcpFamily,
@@ -77,6 +80,7 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
     runtimeMcpFamilies: BobRuntimeMcpFamily[] = [];
     runtimeMcpCapabilities: BobRuntimeMcpCapability[] = [];
     runtimeMemory: Record<string, string> = {};
+    runtimeConversionInventory: BobRuntimeConversionInventory | null = null;
     memorySettings: BobMemorySettingsResponse | null = null;
     runtimeLoading = false;
     runtimeMessage = '';
@@ -103,6 +107,14 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
             ...family,
             capability_items: this.runtimeMcpCapabilities.filter((capability) => capability.family === family.family),
         }));
+    }
+
+    get conversionModules(): BobRuntimeConversionModule[] {
+        return this.runtimeConversionInventory?.settings_modules || [];
+    }
+
+    get conversionSurfaces(): BobRuntimeConversionSurface[] {
+        return this.runtimeConversionInventory?.surfaces || [];
     }
 
     ngOnInit(): void {
@@ -279,8 +291,8 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
     statusTone(value: string | undefined | null): string {
         if (!value) return 'pending';
         const normalized = value.toLowerCase();
-        if (['ready', 'ok', 'configured', 'runtime_backend_managed'].includes(normalized)) return 'ok';
-        if (['disabled', 'not_configured', 'missing'].includes(normalized)) return 'warn';
+        if (['ready', 'ok', 'configured', 'runtime_backend_managed', 'ported_active', 'platform_contract_active', 'removed_from_cde_runtime'].includes(normalized)) return 'ok';
+        if (['disabled', 'not_configured', 'missing', 'legacy_settings_surface_active', 'in_progress'].includes(normalized)) return 'warn';
         return normalized.includes('error') || normalized.includes('failed') ? 'error' : 'warn';
     }
 
@@ -337,6 +349,7 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
         this.runtimeMcpFamilies = settings.mcp?.families || [];
         this.runtimeMcpCapabilities = settings.mcp?.capabilities || [];
         this.runtimeMemory = settings.memory || {};
+        this.runtimeConversionInventory = settings.conversion_inventory || null;
     }
 
     private flashMessage(message: string): void {
