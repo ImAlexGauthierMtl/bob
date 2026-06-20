@@ -5,7 +5,11 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from app.application.runtime_catalog_defaults import MCP_TOOL_FAMILIES
+from app.application.runtime_catalog_defaults import (
+    MCP_TOOL_FAMILIES,
+    default_mcp_capabilities,
+    mcp_capabilities_for_family,
+)
 from app.application.ports import RuntimeToolRegistryPort
 from app.domain import InternalContext, RuntimeToolCall, RuntimeToolResult
 from app.infrastructure.tools.factory_supabase_adapter import (
@@ -14,6 +18,16 @@ from app.infrastructure.tools.factory_supabase_adapter import (
 )
 
 _MCP_FAMILIES_BY_NAME = {str(family["family"]): family for family in MCP_TOOL_FAMILIES}
+_MCP_CAPABILITY_IDS = {str(capability["qualified_id"]) for capability in default_mcp_capabilities()}
+_MCP_CAPABILITY_IDS.update(str(capability["id"]) for capability in default_mcp_capabilities())
+_FACTORY_EXECUTABLE_CAPABILITIES = {
+    "requests-queues.list_requests",
+    "requests-queues.list_queue_by_project",
+    "requests-queues.get_request",
+    "dev-validation.list_queue",
+    "review.write",
+}
+_MCP_CAPABILITY_IDS.update(_FACTORY_EXECUTABLE_CAPABILITIES)
 
 
 class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
@@ -69,13 +83,7 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
                     },
                     "capability": {
                         "type": "string",
-                        "enum": [
-                            "requests-queues.list_requests",
-                            "requests-queues.list_queue_by_project",
-                            "requests-queues.get_request",
-                            "dev-validation.list_queue",
-                            "review.write",
-                        ],
+                        "enum": sorted(_MCP_CAPABILITY_IDS),
                         "description": "Capacite cible quand une execution est demandee.",
                     },
                     "project_id": {
@@ -194,6 +202,8 @@ def _execute_mcp_gateway(
                     "servers": family["servers"],
                     "skill": family["skill"],
                     "capabilities": family["capabilities"],
+                    "capability_count": len(mcp_capabilities_for_family(str(family["family"]))),
+                    "capability_items": mcp_capabilities_for_family(str(family["family"])),
                 }
                 for family in MCP_TOOL_FAMILIES
             ],
@@ -251,6 +261,8 @@ def _execute_mcp_gateway(
         "servers": family["servers"],
         "skill": family["skill"],
         "capabilities": family["capabilities"],
+        "capability_count": len(mcp_capabilities_for_family(str(family["family"]))),
+        "capability_items": mcp_capabilities_for_family(str(family["family"])),
         "loaded_for_run": True,
         "external_connector_bound": False,
         "next_gateway_step": "bind_mcp_server_adapter_for_external_execution",
@@ -272,7 +284,9 @@ def _execute_factory_capability(
     factory_adapter: FactorySupabaseAdapter,
     risk: str,
 ) -> RuntimeToolResult:
-    capability = str(call.arguments.get("capability") or "requests-queues.list_queue_by_project").strip()
+    capability = _normalize_factory_capability(
+        str(call.arguments.get("capability") or "requests-queues.list_queue_by_project").strip()
+    )
     if risk != "read":
         return RuntimeToolResult(
             call_id=call.id,
@@ -368,6 +382,15 @@ def _mcp_policy(*, context: InternalContext) -> dict[str, Any]:
         "writes_require_confirmation": True,
         "secrets_redacted": True,
     }
+
+
+def _normalize_factory_capability(capability: str) -> str:
+    normalized = capability.removeprefix("factory.").strip()
+    if normalized == "requests-queues":
+        return "requests-queues.list_queue_by_project"
+    if normalized == "dev-validation":
+        return "dev-validation.list_queue"
+    return normalized
 
 
 def _json_dumps(value: dict[str, Any]) -> str:

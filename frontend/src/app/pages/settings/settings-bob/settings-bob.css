@@ -220,6 +220,10 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.bob-runtime-grid--mcp {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+
 .bob-runtime-block {
     border: 1px solid #DEDED9;
     background: #fff;
@@ -313,9 +317,59 @@
     grid-template-columns: minmax(0, 1fr) minmax(6rem, 0.55fr) 2.5rem;
 }
 
+.bob-mcp-family-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.bob-mcp-family {
+    min-width: 0;
+    border: 1px solid #EFEFEB;
+    border-radius: 6px;
+    padding: 0.55rem 0.65rem;
+}
+
+.bob-mcp-family strong,
+.bob-mcp-family span {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.bob-mcp-family strong {
+    font-size: 0.78rem;
+    color: #20201E;
+}
+
+.bob-mcp-family span {
+    margin-top: 0.15rem;
+    font-size: 0.68rem;
+    color: #6F6F68;
+}
+
+.bob-mcp-family__capabilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+}
+
+.bob-mcp-family__capabilities small {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    border: 1px solid #DEDED9;
+    border-radius: 999px;
+    color: #20201E;
+    background: #F7F7F6;
+    font-size: 0.64rem;
+    line-height: 1.2;
+    padding: 0.15rem 0.4rem;
+}
+
 @media (max-width: 980px) {
     .bob-runtime-grid,
-    .bob-runtime-grid--three {
+    .bob-runtime-grid--three,
+    .bob-runtime-grid--mcp {
         grid-template-columns: 1fr;
     }
 }
@@ -333,6 +387,10 @@
 
     .bob-icon-btn {
         width: 100%;
+    }
+
+    .bob-mcp-family-grid {
+        grid-template-columns: 1fr;
     }
 }
 

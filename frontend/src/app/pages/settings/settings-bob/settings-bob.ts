@@ -8,6 +8,8 @@ import {
     BobConversationPersonality,
     BobLanguageOption,
     BobRuntimeAgent,
+    BobRuntimeMcpCapability,
+    BobRuntimeMcpFamily,
     BobRuntimeProvider,
     BobRuntimeSettingsResponse,
     BobRuntimeSkill,
@@ -70,6 +72,8 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
     runtimeAgents: BobRuntimeAgent[] = [];
     runtimeSkills: BobRuntimeSkill[] = [];
     runtimeTools: BobRuntimeTool[] = [];
+    runtimeMcpFamilies: BobRuntimeMcpFamily[] = [];
+    runtimeMcpCapabilities: BobRuntimeMcpCapability[] = [];
     runtimeMemory: Record<string, string> = {};
     runtimeLoading = false;
     runtimeMessage = '';
@@ -87,6 +91,13 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
 
     get isRuntimeSaving(): boolean {
         return this.runtimeSavingSignal();
+    }
+
+    get runtimeMcpFamiliesWithCapabilities(): BobRuntimeMcpFamily[] {
+        return this.runtimeMcpFamilies.map((family) => ({
+            ...family,
+            capability_items: this.runtimeMcpCapabilities.filter((capability) => capability.family === family.family),
+        }));
     }
 
     ngOnInit(): void {
@@ -275,6 +286,8 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
         this.runtimeAgents = settings.agents;
         this.runtimeSkills = settings.skills;
         this.runtimeTools = settings.tools;
+        this.runtimeMcpFamilies = settings.mcp?.families || [];
+        this.runtimeMcpCapabilities = settings.mcp?.capabilities || [];
         this.runtimeMemory = settings.memory || {};
     }
 

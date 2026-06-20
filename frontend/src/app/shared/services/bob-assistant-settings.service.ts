@@ -81,6 +81,38 @@ export interface BobRuntimeTool {
     description: string;
 }
 
+export interface BobRuntimeMcpCapability {
+    id: string;
+    qualified_id: string;
+    family: string;
+    title?: string;
+    file?: string;
+    risk?: string;
+    skill?: string;
+    capability_path?: string;
+    tools?: string[];
+}
+
+export interface BobRuntimeMcpFamily {
+    family: string;
+    label?: string;
+    description?: string;
+    risk?: string;
+    skill?: string;
+    capabilities?: string;
+    capability_count?: number;
+    capability_items?: BobRuntimeMcpCapability[];
+}
+
+export interface BobRuntimeMcpSettings {
+    local_only?: boolean;
+    tool_gating_required?: boolean;
+    max_normal_families?: number;
+    max_exceptional_families?: number;
+    families: BobRuntimeMcpFamily[];
+    capabilities: BobRuntimeMcpCapability[];
+}
+
 export interface BobRuntimeSettingsResponse {
     providers: BobRuntimeProvider[];
     active_provider: string;
@@ -88,6 +120,7 @@ export interface BobRuntimeSettingsResponse {
     skills: BobRuntimeSkill[];
     tools: BobRuntimeTool[];
     memory: Record<string, string>;
+    mcp?: BobRuntimeMcpSettings;
     source?: string;
 }
 

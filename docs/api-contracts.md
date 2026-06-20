@@ -209,12 +209,15 @@ Rules:
 - `POST /internal/agent-runtime/v1/settings/agents`
 - `POST /internal/agent-runtime/v1/settings/skills`
 - `POST /internal/agent-runtime/v1/settings/tools`
-- Runtime settings include the imported Croo agentic MCP family catalog as
-  safe metadata: family, skill path, capability index and server names. Read
-  execution is gated through the internal `bob_mcp_gateway` runtime tool, which
-  can list or describe loaded families and persists the result as an audited run
-  action. External connector execution and writes remain blocked until the
-  matching MCP adapter is bound and an explicit confirmation is resolved.
+- Runtime settings include the imported Croo agentic MCP catalog as safe
+  metadata: family, skill path, capability index, server names and per-capability
+  entries with `qualified_id`, risk level, capability file and expected MCP
+  tools. These capability entries are also surfaced as runtime tools in settings.
+  Read execution is gated through the internal `bob_mcp_gateway` runtime tool,
+  which can list or describe loaded families and persists the result as an
+  audited run action. External connector execution and writes remain blocked
+  until the matching MCP adapter is bound and an explicit confirmation is
+  resolved.
 - The first bound MCP adapter is Factory Supabase read access. It is enabled
   only inside `agent-runtime-backend-api` through `FACTORY_SUPABASE_DB_URL`
   (fallback `SUPABASE_DB_URL`) and supports read capabilities such as

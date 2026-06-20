@@ -206,6 +206,41 @@
             </section>
         </div>
 
+        <div class="bob-runtime-grid bob-runtime-grid--mcp">
+            <section class="bob-runtime-block">
+                <div class="bob-runtime-block__head">
+                    <h5>MCP Families</h5>
+                    <span>{{ runtimeMcpFamilies.length }}</span>
+                </div>
+                <div class="bob-mcp-family-grid">
+                    @for (family of runtimeMcpFamiliesWithCapabilities; track family.family) {
+                    <div class="bob-mcp-family">
+                        <strong>{{ family.family }}</strong>
+                        <span>{{ family.capability_items?.length || family.capability_count || 0 }} capabilities</span>
+                        <div class="bob-mcp-family__capabilities">
+                            @for (capability of family.capability_items; track capability.qualified_id) {
+                            <small>{{ capability.qualified_id }}</small>
+                            }
+                        </div>
+                    </div>
+                    }
+                </div>
+            </section>
+
+            <section class="bob-runtime-block">
+                <div class="bob-runtime-block__head">
+                    <h5>MCP Capabilities</h5>
+                    <span>{{ runtimeMcpCapabilities.length }}</span>
+                </div>
+                @for (capability of runtimeMcpCapabilities; track capability.qualified_id) {
+                <div class="bob-runtime-row bob-runtime-row--stack">
+                    <strong>{{ capability.qualified_id }}</strong>
+                    <span>{{ capability.risk || 'read' }} · {{ capability.file || capability.capability_path }}</span>
+                </div>
+                }
+            </section>
+        </div>
+
         <div class="bob-runtime-grid bob-runtime-grid--three">
             <section class="bob-runtime-block">
                 <div class="bob-runtime-block__head">

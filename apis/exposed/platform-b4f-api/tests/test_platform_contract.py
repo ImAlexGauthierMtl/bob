@@ -217,9 +217,40 @@ class FakeAgentRuntimeClient:
             "active_provider": "auto",
             "agents": [{"id": "agent-bob-orchestrator", "name": "Bob Orchestrator"}],
             "skills": [],
-            "tools": [{"id": "tool-mcp-factory", "name": "factory", "family": "factory"}],
+            "tools": [
+                {"id": "tool-mcp-factory", "name": "factory", "family": "factory"},
+                {
+                    "id": "tool-mcp-factory-requests-queues",
+                    "name": "factory.requests-queues",
+                    "family": "factory",
+                    "execution": "mcp_gateway_capability",
+                },
+            ],
             "memory": {"rag": "Postgres source de verite, Milvus reconstructible"},
-            "mcp": {"tool_gating_required": True, "families": [{"family": "factory"}]},
+            "mcp": {
+                "tool_gating_required": True,
+                "families": [
+                    {
+                        "family": "factory",
+                        "capability_count": 1,
+                        "capability_items": [
+                            {
+                                "id": "requests-queues",
+                                "qualified_id": "factory.requests-queues",
+                                "file": "requests-queues.md",
+                            }
+                        ],
+                    }
+                ],
+                "capabilities": [
+                    {
+                        "id": "requests-queues",
+                        "qualified_id": "factory.requests-queues",
+                        "family": "factory",
+                        "file": "requests-queues.md",
+                    }
+                ],
+            },
             "source": "agent-runtime-backend-api",
         }
         self.replays = {}
@@ -435,6 +466,8 @@ def test_bob_runtime_settings_catalog_and_mutations(client):
     assert catalog.json()["providers"][0]["status"] == "runtime_backend_managed"
     assert catalog.json()["providers"][0]["model"] == "accounts/fireworks/models/kimi-k2p7-code"
     assert catalog.json()["agents"][0]["name"] == "Bob Orchestrator"
+    assert catalog.json()["mcp"]["capabilities"][0]["qualified_id"] == "factory.requests-queues"
+    assert "factory.requests-queues" in {runtime_tool["name"] for runtime_tool in catalog.json()["tools"]}
     assert agent.status_code == 201
     assert agent.json()["item"]["name"] == "Bob QA"
     assert skill.status_code == 201

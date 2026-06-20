@@ -181,8 +181,14 @@ def test_runtime_settings_expose_backend_catalog_and_mcp_families(client):
     assert payload["providers"][0]["model"] == "accounts/fireworks/models/kimi-k2p7-code"
     assert payload["mcp"]["tool_gating_required"] is True
     assert "assistant-memory" in {family["family"] for family in payload["mcp"]["families"]}
+    assert "slack.draft-send" in {capability["qualified_id"] for capability in payload["mcp"]["capabilities"]}
+    assert "factory.requests-queues" in {capability["qualified_id"] for capability in payload["mcp"]["capabilities"]}
     assert "factory" in {tool["family"] for tool in payload["tools"]}
     assert "bob_mcp_gateway" in {tool["name"] for tool in payload["tools"]}
+    assert "slack.draft-send" in {tool["name"] for tool in payload["tools"]}
+    factory_family = next(family for family in payload["mcp"]["families"] if family["family"] == "factory")
+    assert factory_family["capability_count"] >= 9
+    assert any(item["file"] == "requests-queues.md" for item in factory_family["capability_items"])
 
 
 def test_runtime_settings_catalog_mutations_are_scoped_and_idempotent(client):
@@ -343,6 +349,15 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
         context=context,
         metadata=metadata,
     )
+    mcp_list = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-mcp-list",
+            name="bob_mcp_gateway",
+            arguments={"operation": "list_families", "risk": "read"},
+        ),
+        context=context,
+        metadata=metadata,
+    )
 
     assert tools[0]["function"]["name"] == "bob_runtime_status"
     assert {tool["function"]["name"] for tool in tools} == {
@@ -356,6 +371,9 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
     assert "mem-1" in memory_summary.content
     assert mcp_gateway.status == "completed"
     assert "factory-supabase" in mcp_gateway.content
+    assert "requests-queues.md" in mcp_gateway.content
+    assert mcp_list.status == "completed"
+    assert "slack.draft-send" in mcp_list.content
     assert mcp_write.status == "requires_confirmation"
     assert "write_or_destructive_mcp_action_requires_explicit_confirmation" in mcp_write.content
     assert rejected.status == "rejected"
@@ -416,6 +434,21 @@ async def test_mcp_gateway_executes_factory_read_adapter_and_degrades_cleanly():
         context=context,
         metadata={},
     )
+    portable_queue = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-factory-portable-read",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "factory",
+                "capability": "factory.requests-queues",
+                "status": "NEW",
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={},
+    )
     request = await registry.execute(
         call=RuntimeToolCall(
             id="call-factory-get",
@@ -451,6 +484,8 @@ async def test_mcp_gateway_executes_factory_read_adapter_and_degrades_cleanly():
     assert queue.metadata["capability"] == "requests-queues.list_queue_by_project"
     assert "project-1" in queue.content
     assert "external_connector_bound" in queue.content
+    assert portable_queue.status == "completed"
+    assert portable_queue.metadata["capability"] == "requests-queues.list_queue_by_project"
     assert request.status == "completed"
     assert "Installer Bob MCP" in request.content
     assert degraded.status == "degraded"
