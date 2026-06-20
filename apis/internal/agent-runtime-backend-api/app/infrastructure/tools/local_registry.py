@@ -8,11 +8,18 @@ from typing import Any
 from app.application.runtime_catalog_defaults import MCP_TOOL_FAMILIES
 from app.application.ports import RuntimeToolRegistryPort
 from app.domain import InternalContext, RuntimeToolCall, RuntimeToolResult
+from app.infrastructure.tools.factory_supabase_adapter import (
+    FactorySupabaseAdapter,
+    FactorySupabaseAdapterError,
+)
 
 _MCP_FAMILIES_BY_NAME = {str(family["family"]): family for family in MCP_TOOL_FAMILIES}
 
 
 class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
+    def __init__(self, *, factory_adapter: FactorySupabaseAdapter | None = None) -> None:
+        self.factory_adapter = factory_adapter or FactorySupabaseAdapter.from_env()
+
     def list_tools(
         self,
         *,
@@ -62,7 +69,41 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
                     },
                     "capability": {
                         "type": "string",
-                        "description": "Capacite cible quand une execution future est demandee.",
+                        "enum": [
+                            "requests-queues.list_requests",
+                            "requests-queues.list_queue_by_project",
+                            "requests-queues.get_request",
+                            "dev-validation.list_queue",
+                            "review.write",
+                        ],
+                        "description": "Capacite cible quand une execution est demandee.",
+                    },
+                    "project_id": {
+                        "type": "string",
+                        "description": "Projet Factory cible quand applicable.",
+                    },
+                    "request_id": {
+                        "type": "string",
+                        "description": "Demande Factory cible quand applicable.",
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Statut Factory cible, par exemple NEW ou DEV_VALIDATION.",
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "Recherche texte appliquee aux demandes Factory.",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100,
+                        "description": "Nombre maximal d'elements a retourner.",
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Offset de pagination.",
                     },
                     "risk": {
                         "type": "string",
@@ -121,10 +162,10 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
                 status="completed",
                 content=json.dumps(content, ensure_ascii=False),
                 metadata={"family": "memory", "risk": "read"},
-            )
+        )
 
         if call.name == "bob_mcp_gateway":
-            return _execute_mcp_gateway(call=call, context=context)
+            return _execute_mcp_gateway(call=call, context=context, factory_adapter=self.factory_adapter)
 
         return RuntimeToolResult(
             call_id=call.id,
@@ -135,7 +176,12 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
         )
 
 
-def _execute_mcp_gateway(*, call: RuntimeToolCall, context: InternalContext) -> RuntimeToolResult:
+def _execute_mcp_gateway(
+    *,
+    call: RuntimeToolCall,
+    context: InternalContext,
+    factory_adapter: FactorySupabaseAdapter,
+) -> RuntimeToolResult:
     operation = str(call.arguments.get("operation") or "describe_family")
     family_name = str(call.arguments.get("family") or "").strip()
     risk = str(call.arguments.get("risk") or "read").strip().lower()
@@ -191,6 +237,14 @@ def _execute_mcp_gateway(*, call: RuntimeToolCall, context: InternalContext) -> 
             metadata={"family": family["family"], "risk": risk, "operation": operation},
         )
 
+    if operation == "execute_capability" and family["family"] == "factory":
+        return _execute_factory_capability(
+            call=call,
+            context=context,
+            factory_adapter=factory_adapter,
+            risk=risk,
+        )
+
     content = {
         "status": "ready_for_read",
         "family": family["family"],
@@ -211,6 +265,98 @@ def _execute_mcp_gateway(*, call: RuntimeToolCall, context: InternalContext) -> 
     )
 
 
+def _execute_factory_capability(
+    *,
+    call: RuntimeToolCall,
+    context: InternalContext,
+    factory_adapter: FactorySupabaseAdapter,
+    risk: str,
+) -> RuntimeToolResult:
+    capability = str(call.arguments.get("capability") or "requests-queues.list_queue_by_project").strip()
+    if risk != "read":
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="requires_confirmation",
+            content=_json_dumps(
+                {
+                    "status": "confirmation_required",
+                    "family": "factory",
+                    "capability": capability,
+                    "risk": risk,
+                    "reason": "factory_write_requires_confirmed_mcp_adapter_call_and_readback",
+                    "policy": _mcp_policy(context=context),
+                }
+            ),
+            metadata={"family": "factory", "risk": risk, "operation": "execute_capability"},
+        )
+
+    try:
+        if capability == "requests-queues.list_requests":
+            content = factory_adapter.list_requests(
+                project_id=str(call.arguments.get("project_id") or ""),
+                query=str(call.arguments.get("query") or ""),
+                status=str(call.arguments.get("status") or ""),
+                limit=_bounded_int(call.arguments.get("limit"), default=25, minimum=1, maximum=100),
+                offset=_bounded_int(call.arguments.get("offset"), default=0, minimum=0, maximum=10_000),
+            )
+        elif capability == "requests-queues.get_request":
+            content = factory_adapter.get_request(request_id=str(call.arguments.get("request_id") or ""))
+        elif capability == "dev-validation.list_queue":
+            content = factory_adapter.list_requests(
+                project_id=str(call.arguments.get("project_id") or ""),
+                status=str(call.arguments.get("status") or "DEV_VALIDATION"),
+                limit=_bounded_int(call.arguments.get("limit"), default=25, minimum=1, maximum=100),
+                offset=_bounded_int(call.arguments.get("offset"), default=0, minimum=0, maximum=10_000),
+            )
+            content["capability"] = capability
+        elif capability == "requests-queues.list_queue_by_project":
+            content = factory_adapter.list_queue_by_project(
+                status=str(call.arguments.get("status") or "NEW"),
+                limit=_bounded_int(call.arguments.get("limit"), default=25, minimum=1, maximum=100),
+                offset=_bounded_int(call.arguments.get("offset"), default=0, minimum=0, maximum=10_000),
+            )
+        else:
+            return RuntimeToolResult(
+                call_id=call.id,
+                name=call.name,
+                status="rejected",
+                content=_json_dumps({"error": "factory_capability_not_loaded", "capability": capability}),
+                metadata={"family": "factory", "risk": "blocked", "operation": "execute_capability"},
+            )
+    except FactorySupabaseAdapterError as exc:
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="degraded",
+            content=_json_dumps(
+                {
+                    "error": exc.code,
+                    "family": "factory",
+                    "capability": capability,
+                    "external_connector_bound": False,
+                    "policy": _mcp_policy(context=context),
+                }
+            ),
+            metadata={"family": "factory", "risk": "read", "operation": "execute_capability"},
+        )
+
+    content["policy"] = _mcp_policy(context=context)
+    content["external_connector_bound"] = True
+    return RuntimeToolResult(
+        call_id=call.id,
+        name=call.name,
+        status="completed",
+        content=_json_dumps(content),
+        metadata={
+            "family": "factory",
+            "risk": "read",
+            "operation": "execute_capability",
+            "capability": capability,
+        },
+    )
+
+
 def _mcp_policy(*, context: InternalContext) -> dict[str, Any]:
     return {
         "tool_gating_required": True,
@@ -222,6 +368,10 @@ def _mcp_policy(*, context: InternalContext) -> dict[str, Any]:
         "writes_require_confirmation": True,
         "secrets_redacted": True,
     }
+
+
+def _json_dumps(value: dict[str, Any]) -> str:
+    return json.dumps(value, ensure_ascii=False, default=str)
 
 
 def _function_tool(*, name: str, description: str, properties: dict[str, Any]) -> dict[str, Any]:

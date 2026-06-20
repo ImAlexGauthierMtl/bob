@@ -13,6 +13,10 @@ from app.infrastructure.persistence.in_memory_agent_runtime_repository import (
 from app.infrastructure.providers import factory as provider_factory
 from app.infrastructure.providers.fireworks_provider import FireworksRuntimeProvider, _to_tool_call
 from app.infrastructure.providers.local_provider import LocalRuntimeProvider
+from app.infrastructure.tools.factory_supabase_adapter import (
+    FactorySupabaseAdapter,
+    FactorySupabaseAdapterError,
+)
 from app.infrastructure.tools.local_registry import LocalRuntimeToolRegistry
 from app.presentation.routes import agent_runtime_routes
 from shared.infrastructure import InternalSessionContext, InternalSessionContextSigner
@@ -357,6 +361,102 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
     assert rejected.status == "rejected"
 
 
+@pytest.mark.asyncio
+async def test_mcp_gateway_executes_factory_read_adapter_and_degrades_cleanly():
+    class FakeFactoryAdapter:
+        def list_queue_by_project(self, **kwargs):
+            return {
+                "source": "Factory Supabase",
+                "operation": "list_queue_by_project",
+                "status": kwargs["status"],
+                "total_projects": 1,
+                "projects": [{"project_id": "project-1", "project_name": "CDE", "request_count": 2}],
+            }
+
+        def list_requests(self, **kwargs):
+            return {
+                "source": "Factory Supabase",
+                "operation": "list_requests",
+                "status": kwargs["status"],
+                "total_matching": 1,
+                "requests": [{"request_id": "request-1", "title": "Installer Bob MCP"}],
+            }
+
+        def get_request(self, **kwargs):
+            return {
+                "source": "Factory Supabase",
+                "operation": "get_request",
+                "request": {"request_id": kwargs["request_id"], "title": "Installer Bob MCP"},
+            }
+
+    class MissingFactoryAdapter(FakeFactoryAdapter):
+        def list_queue_by_project(self, **kwargs):
+            raise FactorySupabaseAdapterError("factory_supabase_db_url_missing")
+
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="user-alex-local",
+        trace_id="f" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+    registry = LocalRuntimeToolRegistry(factory_adapter=FakeFactoryAdapter())
+    queue = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-factory-read",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "factory",
+                "capability": "requests-queues.list_queue_by_project",
+                "status": "NEW",
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={},
+    )
+    request = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-factory-get",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "factory",
+                "capability": "requests-queues.get_request",
+                "request_id": "request-1",
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={},
+    )
+    degraded = await LocalRuntimeToolRegistry(factory_adapter=MissingFactoryAdapter()).execute(
+        call=RuntimeToolCall(
+            id="call-factory-missing",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "factory",
+                "capability": "requests-queues.list_queue_by_project",
+                "status": "NEW",
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={},
+    )
+
+    assert queue.status == "completed"
+    assert queue.metadata["capability"] == "requests-queues.list_queue_by_project"
+    assert "project-1" in queue.content
+    assert "external_connector_bound" in queue.content
+    assert request.status == "completed"
+    assert "Installer Bob MCP" in request.content
+    assert degraded.status == "degraded"
+    assert "factory_supabase_db_url_missing" in degraded.content
+
+
 def test_provider_factory_selects_local_fireworks_and_rejects_missing_key(monkeypatch):
     monkeypatch.setenv("AGENT_RUNTIME_PROVIDER", "local")
     assert isinstance(provider_factory.create_runtime_provider(), LocalRuntimeProvider)
@@ -369,6 +469,123 @@ def test_provider_factory_selects_local_fireworks_and_rejects_missing_key(monkey
     monkeypatch.setenv("FIREWORKS_API_KEY", "test-key")
     provider = provider_factory.create_runtime_provider()
     assert isinstance(provider, FireworksRuntimeProvider)
+
+
+def test_factory_supabase_adapter_builds_read_queries_and_errors(monkeypatch):
+    class FakeCursor:
+        def __init__(self):
+            self.last_query = ""
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def execute(self, query, params):
+            self.last_query = query
+            self.params = params
+
+        def fetchone(self):
+            if "COUNT(DISTINCT" in self.last_query:
+                return {"total_projects": 1, "total_requests": 2}
+            if "COUNT(*)" in self.last_query:
+                return {"total_matching": 1}
+            if "WHERE r.id" in self.last_query:
+                return {"request_id": self.params["request_id"], "title": "Installer Bob MCP"}
+            return {}
+
+        def fetchall(self):
+            if "project_rank = 1" in self.last_query:
+                return [
+                    {
+                        "project_id": "project-1",
+                        "project_name": "CDE",
+                        "request_count": 2,
+                        "oldest_request_id": "request-1",
+                    }
+                ]
+            return [{"request_id": "request-1", "title": "Installer Bob MCP", "status": "NEW"}]
+
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def cursor(self):
+            return FakeCursor()
+
+    calls = []
+
+    def fake_connect(*args, **kwargs):
+        calls.append((args, kwargs))
+        return FakeConnection()
+
+    monkeypatch.setattr("app.infrastructure.tools.factory_supabase_adapter.psycopg.connect", fake_connect)
+    adapter = FactorySupabaseAdapter(db_url="postgresql://factory.example/db", connect_timeout=3)
+
+    queue = adapter.list_queue_by_project(status="new", limit=500, offset=-10)
+    requests = adapter.list_requests(project_id="", query="bob", status="new", limit=250, offset=0)
+    request = adapter.get_request(request_id="request-1")
+
+    assert queue["status"] == "NEW"
+    assert queue["limit"] == 100
+    assert queue["offset"] == 0
+    assert queue["projects"][0]["project_id"] == "project-1"
+    assert requests["total_matching"] == 1
+    assert requests["requests"][0]["title"] == "Installer Bob MCP"
+    assert request["request"]["request_id"] == "request-1"
+    assert calls[0][0] == ("postgresql://factory.example/db",)
+    assert calls[0][1]["connect_timeout"] == 3
+
+    with pytest.raises(FactorySupabaseAdapterError) as missing_url:
+        FactorySupabaseAdapter(db_url="").list_queue_by_project()
+    assert missing_url.value.code == "factory_supabase_db_url_missing"
+
+    with pytest.raises(FactorySupabaseAdapterError) as missing_id:
+        adapter.get_request(request_id="")
+    assert missing_id.value.code == "request_id_required"
+
+
+def test_factory_supabase_adapter_from_env_and_connection_failure(monkeypatch):
+    monkeypatch.setenv("SUPABASE_DB_URL", "postgresql://fallback.example/db")
+    monkeypatch.setenv("FACTORY_SUPABASE_CONNECT_TIMEOUT_SECONDS", "bad")
+    adapter = FactorySupabaseAdapter.from_env()
+    assert adapter.db_url == "postgresql://fallback.example/db"
+    assert adapter.connect_timeout == 10
+
+    def broken_connect(*args, **kwargs):
+        raise RuntimeError("network unavailable")
+
+    monkeypatch.setattr("app.infrastructure.tools.factory_supabase_adapter.psycopg.connect", broken_connect)
+    with pytest.raises(FactorySupabaseAdapterError) as error:
+        adapter.list_requests()
+    assert error.value.code == "factory_supabase_connection_failed"
+
+
+@pytest.mark.asyncio
+async def test_local_provider_honors_explicit_factory_queue_capability():
+    provider = LocalRuntimeProvider()
+    result = await provider.complete(
+        messages=[
+            {
+                "role": "user",
+                "content": (
+                    "Exécute bob_mcp_gateway avec la capability Factory "
+                    "requests-queues.list_queue_by_project en lecture, statut NEW."
+                ),
+            }
+        ],
+        tools=[{"type": "function", "function": {"name": "bob_mcp_gateway"}}],
+        trace_id="a" * 32,
+    )
+
+    assert result.tool_calls
+    assert result.tool_calls[0].arguments["operation"] == "execute_capability"
+    assert result.tool_calls[0].arguments["capability"] == "requests-queues.list_queue_by_project"
+    assert result.tool_calls[0].arguments["status"] == "NEW"
 
 
 @pytest.mark.asyncio

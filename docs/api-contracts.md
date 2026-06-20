@@ -215,6 +215,13 @@ Rules:
   can list or describe loaded families and persists the result as an audited run
   action. External connector execution and writes remain blocked until the
   matching MCP adapter is bound and an explicit confirmation is resolved.
+- The first bound MCP adapter is Factory Supabase read access. It is enabled
+  only inside `agent-runtime-backend-api` through `FACTORY_SUPABASE_DB_URL`
+  (fallback `SUPABASE_DB_URL`) and supports read capabilities such as
+  `requests-queues.list_queue_by_project`, `requests-queues.list_requests`,
+  `requests-queues.get_request`, and `dev-validation.list_queue`. These calls
+  return `degraded` when the local secret is absent rather than leaking or
+  fabricating data.
 - Runtime provider selection is controlled by environment. `auto` uses
   Fireworks when `FIREWORKS_API_KEY` is present, otherwise the deterministic
   local runtime is used for dev/CI.
