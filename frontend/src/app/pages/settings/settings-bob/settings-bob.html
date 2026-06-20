@@ -339,11 +339,18 @@
                 <div class="bob-mcp-family-grid">
                     @for (family of runtimeMcpFamiliesWithCapabilities; track family.family) {
                     <div class="bob-mcp-family">
-                        <strong>{{ family.family }}</strong>
-                        <span>{{ family.capability_items?.length || family.capability_count || 0 }} capabilities</span>
+                        <div class="bob-mcp-family__head">
+                            <strong>{{ family.family }}</strong>
+                            <em [class]="'bob-status-chip bob-status-chip--' + statusTone(family.runtime_status)">
+                                {{ runtimeStatusLabel(family.runtime_status) }}
+                            </em>
+                        </div>
+                        <span>{{ family.active_capability_count || 0 }} active · {{ family.capability_items?.length || family.capability_count || 0 }} capabilities</span>
                         <div class="bob-mcp-family__capabilities">
                             @for (capability of family.capability_items; track capability.qualified_id) {
-                            <small>{{ capability.qualified_id }}</small>
+                            <small [class]="'bob-mcp-capability bob-mcp-capability--' + statusTone(capability.runtime_status)">
+                                {{ capability.qualified_id }}
+                            </small>
                             }
                         </div>
                     </div>
@@ -358,8 +365,21 @@
                 </div>
                 @for (capability of runtimeMcpCapabilities; track capability.qualified_id) {
                 <div class="bob-runtime-row bob-runtime-row--stack">
-                    <strong>{{ capability.qualified_id }}</strong>
-                    <span>{{ capability.risk || 'read' }} · {{ capability.file || capability.capability_path }}</span>
+                    <div class="bob-runtime-row__head">
+                        <strong>{{ capability.qualified_id }}</strong>
+                        <em [class]="'bob-status-chip bob-status-chip--' + statusTone(capability.runtime_status)">
+                            {{ runtimeStatusLabel(capability.runtime_status) }}
+                        </em>
+                    </div>
+                    <span>{{ capability.risk || 'read' }} · {{ capability.connector_status || 'not_bound' }}</span>
+                    <span>{{ capability.file || capability.capability_path }}</span>
+                    @if (capability.remaining_work?.length) {
+                    <div class="bob-conversion-card__tags">
+                        @for (item of capability.remaining_work; track item) {
+                        <em>{{ item }}</em>
+                        }
+                    </div>
+                    }
                 </div>
                 }
             </section>

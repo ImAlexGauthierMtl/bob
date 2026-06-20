@@ -88,6 +88,10 @@ export interface BobRuntimeMcpCapability {
     title?: string;
     file?: string;
     risk?: string;
+    runtime_status?: string;
+    connector_status?: string;
+    settings_status?: string;
+    remaining_work?: string[];
     skill?: string;
     capability_path?: string;
     tools?: string[];
@@ -101,6 +105,8 @@ export interface BobRuntimeMcpFamily {
     skill?: string;
     capabilities?: string;
     capability_count?: number;
+    active_capability_count?: number;
+    runtime_status?: string;
     capability_items?: BobRuntimeMcpCapability[];
 }
 

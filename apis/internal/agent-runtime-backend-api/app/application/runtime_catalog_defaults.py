@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from copy import deepcopy
 from typing import Any
 
@@ -371,6 +372,40 @@ DEFAULT_MEMORY: dict[str, str] = {
     "vector_index": "ACL revalidees apres recherche vectorielle",
 }
 
+_LOCAL_RUNTIME_CAPABILITIES = {
+    "assistant-memory.status",
+    "assistant-memory.search",
+    "assistant-memory.readback",
+    "support-memory.status",
+    "support-memory.search",
+    "support-memory.playbook",
+    "bob-control-center.agents-catalog",
+    "bob-control-center.skills-catalog",
+    "bob-control-center.tools-catalog",
+    "bob-control-center.profiles-taxonomy",
+    "bob-control-center.roles-permissions",
+}
+
+_LOCAL_WORKSPACE_CAPABILITIES = {
+    "workspace-files.local-files",
+    "gitlab-code.local-code",
+}
+
+_GITLAB_READ_CAPABILITIES = {
+    "gitlab-code.projects",
+    "gitlab-code.branches",
+    "gitlab-code.tree",
+    "gitlab-code.files",
+    "gitlab-code.search-code",
+}
+
+_FACTORY_READ_CAPABILITIES = {
+    "factory.projects-structure-repos",
+    "factory.requests-queues",
+    "factory.images",
+    "factory.dev-validation",
+}
+
 DEFAULT_CONVERSION_INVENTORY: dict[str, Any] = {
     "target": "bob-cde-runtime",
     "status": "in_progress",
@@ -517,6 +552,12 @@ def default_mcp_families() -> list[dict[str, Any]]:
         capability_items = mcp_capabilities_for_family(str(family["family"]))
         family["capability_count"] = len(capability_items)
         family["capability_items"] = capability_items
+        family["runtime_status"] = _family_runtime_status(capability_items)
+        family["active_capability_count"] = sum(
+            1
+            for capability in capability_items
+            if _capability_counts_as_active(str(capability.get("runtime_status") or ""))
+        )
     return families
 
 
@@ -576,10 +617,83 @@ def default_mcp_capability_tools() -> list[dict[str, Any]]:
 def _qualified_capability(*, family: str, capability: dict[str, Any]) -> dict[str, Any]:
     skill = f"tools/{family}/SKILL.md"
     capability_path = f"tools/{family}/capabilities/{capability['file']}"
+    qualified_id = f"{family}.{capability['id']}"
+    runtime_status = _capability_runtime_status(qualified_id=qualified_id, risk=str(capability.get("risk") or "read"))
     return {
         **deepcopy(capability),
         "family": family,
-        "qualified_id": f"{family}.{capability['id']}",
+        "qualified_id": qualified_id,
         "skill": skill,
         "capability_path": capability_path,
+        **runtime_status,
     }
+
+
+def _capability_runtime_status(*, qualified_id: str, risk: str) -> dict[str, Any]:
+    normalized_risk = risk.strip().lower()
+    if qualified_id in _LOCAL_RUNTIME_CAPABILITIES:
+        return {
+            "runtime_status": "local_runtime_active",
+            "connector_status": "runtime_managed",
+            "settings_status": "visible_in_settings",
+        }
+    if qualified_id in _LOCAL_WORKSPACE_CAPABILITIES:
+        enabled = _env_enabled("BOB_LOCAL_WORKSPACE_ENABLED")
+        return {
+            "runtime_status": "local_adapter_active" if enabled else "local_adapter_disabled",
+            "connector_status": "configured" if enabled else "disabled",
+            "settings_status": "visible_in_settings",
+            "remaining_work": [] if enabled else ["enable BOB_LOCAL_WORKSPACE_ENABLED"],
+        }
+    if qualified_id in _GITLAB_READ_CAPABILITIES:
+        configured = bool(
+            os.environ.get("CROO_GITLAB_TOKEN")
+            or os.environ.get("GITLAB_TOKEN")
+            or os.environ.get("GLAB_TOKEN")
+        )
+        return {
+            "runtime_status": "remote_adapter_configured" if configured else "remote_adapter_missing_secret",
+            "connector_status": "configured" if configured else "missing_secret",
+            "settings_status": "visible_in_settings",
+            "remaining_work": [] if configured else ["configure CROO_GITLAB_TOKEN"],
+        }
+    if qualified_id in _FACTORY_READ_CAPABILITIES:
+        configured = bool(os.environ.get("FACTORY_SUPABASE_DB_URL") or os.environ.get("SUPABASE_DB_URL"))
+        return {
+            "runtime_status": "remote_adapter_configured" if configured else "remote_adapter_missing_secret",
+            "connector_status": "configured" if configured else "missing_secret",
+            "settings_status": "visible_in_settings",
+            "remaining_work": [] if configured else ["configure FACTORY_SUPABASE_DB_URL or SUPABASE_DB_URL"],
+        }
+    if normalized_risk not in {"read", "readonly"}:
+        return {
+            "runtime_status": "confirmation_gated_contract",
+            "connector_status": "requires_human_confirmation",
+            "settings_status": "visible_in_settings",
+            "remaining_work": ["bind external MCP adapter before execution"],
+        }
+    return {
+        "runtime_status": "contract_pending_adapter",
+        "connector_status": "not_bound",
+        "settings_status": "visible_in_settings",
+        "remaining_work": ["bind external MCP adapter"],
+    }
+
+
+def _family_runtime_status(capabilities: list[dict[str, Any]]) -> str:
+    statuses = {str(capability.get("runtime_status") or "") for capability in capabilities}
+    if statuses and all(_capability_counts_as_active(status) for status in statuses):
+        return "local_active"
+    if any(_capability_counts_as_active(status) for status in statuses):
+        return "partially_active"
+    if any(status == "remote_adapter_missing_secret" for status in statuses):
+        return "needs_configuration"
+    return "contract_pending"
+
+
+def _capability_counts_as_active(status: str) -> bool:
+    return status.endswith("_active") or status == "remote_adapter_configured"
+
+
+def _env_enabled(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}

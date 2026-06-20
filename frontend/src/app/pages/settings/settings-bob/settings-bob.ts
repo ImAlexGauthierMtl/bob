@@ -288,11 +288,42 @@ export class SettingsBobComponent implements OnInit, OnDestroy {
         return detail.code || detail.message || 'unavailable';
     }
 
+    runtimeStatusLabel(value: string | undefined | null): string {
+        if (!value) return 'pending';
+        return value.replace(/_/g, ' ');
+    }
+
     statusTone(value: string | undefined | null): string {
         if (!value) return 'pending';
         const normalized = value.toLowerCase();
-        if (['ready', 'ok', 'configured', 'runtime_backend_managed', 'ported_active', 'platform_contract_active', 'removed_from_cde_runtime'].includes(normalized)) return 'ok';
-        if (['disabled', 'not_configured', 'missing', 'legacy_settings_surface_active', 'in_progress'].includes(normalized)) return 'warn';
+        if ([
+            'ready',
+            'ok',
+            'configured',
+            'runtime_backend_managed',
+            'ported_active',
+            'platform_contract_active',
+            'removed_from_cde_runtime',
+            'local_active',
+            'local_runtime_active',
+            'local_adapter_active',
+            'remote_adapter_configured',
+        ].includes(normalized)) return 'ok';
+        if ([
+            'disabled',
+            'not_configured',
+            'missing',
+            'missing_secret',
+            'needs_configuration',
+            'contract_pending',
+            'contract_pending_adapter',
+            'partially_active',
+            'confirmation_gated_contract',
+            'local_adapter_disabled',
+            'remote_adapter_missing_secret',
+            'legacy_settings_surface_active',
+            'in_progress',
+        ].includes(normalized)) return 'warn';
         return normalized.includes('error') || normalized.includes('failed') ? 'error' : 'warn';
     }
 

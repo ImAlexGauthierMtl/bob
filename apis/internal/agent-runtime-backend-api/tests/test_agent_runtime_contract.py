@@ -256,7 +256,11 @@ def test_run_scope_is_tenant_and_user_bound(client):
     assert foreign_tenant.status_code == 404
 
 
-def test_runtime_settings_expose_backend_catalog_and_mcp_families(client):
+def test_runtime_settings_expose_backend_catalog_and_mcp_families(client, monkeypatch):
+    monkeypatch.setenv("BOB_LOCAL_WORKSPACE_ENABLED", "true")
+    monkeypatch.setenv("CROO_GITLAB_TOKEN", "glpat-test")
+    monkeypatch.setenv("FACTORY_SUPABASE_DB_URL", "postgresql://factory:test@localhost:5432/factory")
+
     response = client.get(
         "/internal/agent-runtime/v1/settings",
         headers=signed_headers(),
@@ -290,6 +294,26 @@ def test_runtime_settings_expose_backend_catalog_and_mcp_families(client):
     bcc_family = next(family for family in payload["mcp"]["families"] if family["family"] == "bob-control-center")
     assert bcc_family["capability_count"] >= 7
     assert any(item["file"] == "agents-catalog.md" for item in bcc_family["capability_items"])
+    workspace_local = next(
+        capability for capability in payload["mcp"]["capabilities"] if capability["qualified_id"] == "workspace-files.local-files"
+    )
+    gitlab_files = next(
+        capability for capability in payload["mcp"]["capabilities"] if capability["qualified_id"] == "gitlab-code.files"
+    )
+    factory_requests = next(
+        capability for capability in payload["mcp"]["capabilities"] if capability["qualified_id"] == "factory.requests-queues"
+    )
+    slack_draft = next(
+        capability for capability in payload["mcp"]["capabilities"] if capability["qualified_id"] == "slack.draft-send"
+    )
+    assert workspace_local["runtime_status"] == "local_adapter_active"
+    assert workspace_local["connector_status"] == "configured"
+    assert gitlab_files["runtime_status"] == "remote_adapter_configured"
+    assert factory_requests["runtime_status"] == "remote_adapter_configured"
+    assert slack_draft["runtime_status"] == "confirmation_gated_contract"
+    workspace_family = next(family for family in payload["mcp"]["families"] if family["family"] == "workspace-files")
+    assert workspace_family["runtime_status"] == "partially_active"
+    assert workspace_family["active_capability_count"] >= 1
     legacy_agent_name = "".join(("libre", "chat"))
     legacy_graph_name = "".join(("lang", "graph"))
     assert legacy_agent_name not in str(payload).lower()
@@ -317,6 +341,25 @@ def test_runtime_settings_expose_backend_catalog_and_mcp_families(client):
         surface["id"]: surface["status"]
         for surface in inventory["surfaces"]
     }["legacy_graph_runtime"] == "removed_from_cde_runtime"
+
+
+def test_runtime_settings_accept_supabase_db_url_for_factory_status(client, monkeypatch):
+    monkeypatch.delenv("FACTORY_SUPABASE_DB_URL", raising=False)
+    monkeypatch.setenv("SUPABASE_DB_URL", "postgresql://factory:test@localhost:5432/factory")
+
+    response = client.get(
+        "/internal/agent-runtime/v1/settings",
+        headers=signed_headers(),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    factory_requests = next(
+        capability for capability in payload["mcp"]["capabilities"] if capability["qualified_id"] == "factory.requests-queues"
+    )
+    assert factory_requests["runtime_status"] == "remote_adapter_configured"
+    assert factory_requests["connector_status"] == "configured"
+    assert factory_requests["remaining_work"] == []
 
 
 def test_runtime_settings_catalog_mutations_are_scoped_and_idempotent(client):
