@@ -296,6 +296,53 @@ def test_run_resolves_selected_agent_skills_and_tools_from_runtime_settings(clie
     assert [item["id"] for item in runtime_catalog["tools"]] == ["tool-cde-factory-read"]
 
 
+def test_selected_agent_tools_gate_runtime_tool_calls(client):
+    headers = signed_headers(user_id="user-runtime-tool-gating")
+    client.post(
+        "/internal/agent-runtime/v1/settings/tools",
+        json={
+            "id": "tool-cde-factory-read",
+            "name": "factory.requests-queues",
+            "family": "factory",
+            "risk": "read",
+        },
+        headers={**headers, "Idempotency-Key": "tool-gated-factory"},
+    )
+    client.post(
+        "/internal/agent-runtime/v1/settings/agents",
+        json={
+            "id": "agent-cde-factory-only",
+            "name": "Bob Factory Only",
+            "description": "Agent limite a la gateway Factory.",
+            "provider_id": "fireworks-kimi",
+            "status": "active",
+            "skills": [],
+            "tools": ["tool-cde-factory-read"],
+        },
+        headers={**headers, "Idempotency-Key": "agent-gated-factory"},
+    )
+
+    created = client.post(
+        "/internal/agent-runtime/v1/runs",
+        json={
+            **run_body(),
+            "prompt": "Liste la queue Factory NEW par projet.",
+            "metadata": {
+                "source": "bob-chat-b4f-api",
+                "agent_id": "agent-cde-factory-only",
+            },
+        },
+        headers={**headers, "Idempotency-Key": "selected-agent-gated-tool-run"},
+    )
+
+    assert created.status_code == 201
+    payload = created.json()
+    assert payload["metadata"]["runtime_catalog"]["agent"]["id"] == "agent-cde-factory-only"
+    assert payload["metadata"]["tool_calls"][0]["tool"] == "bob_mcp_gateway"
+    assert payload["actions"][0]["metadata"]["family"] == "factory"
+    assert "bob_runtime_status" not in {call["tool"] for call in payload["metadata"]["tool_calls"]}
+
+
 def test_completed_run_is_not_cancelable(client):
     created = client.post(
         "/internal/agent-runtime/v1/runs",
@@ -445,6 +492,50 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
     assert mcp_write.status == "requires_confirmation"
     assert "write_or_destructive_mcp_action_requires_explicit_confirmation" in mcp_write.content
     assert rejected.status == "rejected"
+
+
+@pytest.mark.asyncio
+async def test_local_registry_filters_tools_by_selected_agent_catalog():
+    registry = LocalRuntimeToolRegistry()
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="user-alex-local",
+        trace_id="e" * 32,
+        permissions=("bob_chat.use",),
+        roles=("admin",),
+    )
+
+    memory_only = registry.list_tools(
+        prompt="Resume la memoire",
+        context=context,
+        metadata={
+            "runtime_catalog": {
+                "tools": [{"id": "tool-memory-summary", "name": "bob_memory_context_summary", "family": "memory"}],
+            },
+        },
+    )
+    factory_only = registry.list_tools(
+        prompt="Liste Factory",
+        context=context,
+        metadata={
+            "runtime_catalog": {
+                "tools": [{"id": "tool-cde-factory-read", "name": "factory.requests-queues", "family": "factory"}],
+            },
+        },
+    )
+    unmapped = registry.list_tools(
+        prompt="Teste un outil non branche",
+        context=context,
+        metadata={
+            "runtime_catalog": {
+                "tools": [{"id": "tool-custom-unmapped", "name": "custom_unmapped", "family": "custom"}],
+            },
+        },
+    )
+
+    assert {tool["function"]["name"] for tool in memory_only} == {"bob_memory_context_summary"}
+    assert {tool["function"]["name"] for tool in factory_only} == {"bob_mcp_gateway"}
+    assert unmapped == []
 
 
 @pytest.mark.asyncio

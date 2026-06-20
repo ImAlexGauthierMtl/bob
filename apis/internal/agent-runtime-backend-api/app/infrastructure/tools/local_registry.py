@@ -28,6 +28,17 @@ _FACTORY_EXECUTABLE_CAPABILITIES = {
     "review.write",
 }
 _MCP_CAPABILITY_IDS.update(_FACTORY_EXECUTABLE_CAPABILITIES)
+_CATALOG_TOOL_ALIASES = {
+    "tool-runtime-status": "bob_runtime_status",
+    "bob_runtime_status": "bob_runtime_status",
+    "runtime-status": "bob_runtime_status",
+    "tool-memory-summary": "bob_memory_context_summary",
+    "bob_memory_context_summary": "bob_memory_context_summary",
+    "memory-summary": "bob_memory_context_summary",
+    "tool-mcp-gateway": "bob_mcp_gateway",
+    "bob_mcp_gateway": "bob_mcp_gateway",
+    "mcp-gateway": "bob_mcp_gateway",
+}
 
 
 class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
@@ -41,8 +52,8 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
         context: InternalContext,
         metadata: dict[str, Any],
     ) -> list[dict[str, Any]]:
-        return [
-            _function_tool(
+        available_tools = {
+            "bob_runtime_status": _function_tool(
                 name="bob_runtime_status",
                 description="Retourne l'etat controle du runtime Bob, du provider actif et des familles d'outils disponibles.",
                 properties={
@@ -52,7 +63,7 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
                     }
                 },
             ),
-            _function_tool(
+            "bob_memory_context_summary": _function_tool(
                 name="bob_memory_context_summary",
                 description="Resume le contexte memoire deja fourni par Bob Chat avant l'appel runtime.",
                 properties={
@@ -64,7 +75,7 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
                     }
                 },
             ),
-            _function_tool(
+            "bob_mcp_gateway": _function_tool(
                 name="bob_mcp_gateway",
                 description=(
                     "Lit les familles MCP importees de croo-agentic, applique le gating de famille "
@@ -120,6 +131,14 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
                     },
                 },
             ),
+        }
+        allowed_tool_names = _allowed_runtime_tool_names(metadata)
+        if allowed_tool_names is None:
+            allowed_tool_names = set(available_tools)
+        return [
+            tool
+            for name, tool in available_tools.items()
+            if name in allowed_tool_names
         ]
 
     async def execute(
@@ -275,6 +294,60 @@ def _execute_mcp_gateway(
         content=json.dumps(content, ensure_ascii=False),
         metadata={"family": family["family"], "risk": "read", "operation": operation},
     )
+
+
+def _allowed_runtime_tool_names(metadata: dict[str, Any]) -> set[str] | None:
+    runtime_catalog = metadata.get("runtime_catalog") if isinstance(metadata, dict) else None
+    selected_tools = runtime_catalog.get("tools") if isinstance(runtime_catalog, dict) else None
+    if not isinstance(selected_tools, list):
+        return None
+
+    allowed: set[str] = set()
+    for tool in selected_tools:
+        if not isinstance(tool, dict):
+            continue
+        allowed.update(_catalog_tool_aliases(tool))
+    return allowed
+
+
+def _catalog_tool_aliases(tool: dict[str, Any]) -> set[str]:
+    aliases: set[str] = set()
+    for key in ("id", "name", "capability_id", "qualified_id"):
+        value = tool.get(key)
+        if not value:
+            continue
+        raw_value = str(value).strip().lower()
+        normalized = _normalize_tool_identifier(raw_value)
+        mapped = _CATALOG_TOOL_ALIASES.get(normalized)
+        if mapped:
+            aliases.add(mapped)
+        if _looks_like_mcp_capability(raw_value) or _looks_like_mcp_capability(normalized):
+            aliases.add("bob_mcp_gateway")
+
+    family = _normalize_tool_identifier(str(tool.get("family") or ""))
+    execution = _normalize_tool_identifier(str(tool.get("execution") or ""))
+    if family in {"mcp", "factory"} or execution.startswith("mcp") or execution == "internal_gateway":
+        aliases.add("bob_mcp_gateway")
+    if family == "memory":
+        aliases.add("bob_memory_context_summary")
+    if family == "runtime":
+        aliases.add("bob_runtime_status")
+    return aliases
+
+
+def _normalize_tool_identifier(value: str) -> str:
+    return value.strip().lower().replace("_", "-")
+
+
+def _looks_like_mcp_capability(value: str) -> bool:
+    if value in _MCP_CAPABILITY_IDS:
+        return True
+    if value.replace("-", "_") in _MCP_CAPABILITY_IDS:
+        return True
+    if "." in value:
+        family = value.split(".", 1)[0]
+        return family in _MCP_FAMILIES_BY_NAME
+    return False
 
 
 def _execute_factory_capability(

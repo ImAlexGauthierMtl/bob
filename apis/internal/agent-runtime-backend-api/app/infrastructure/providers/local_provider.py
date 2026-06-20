@@ -21,7 +21,8 @@ class LocalRuntimeProvider(RuntimeProviderPort):
     ) -> RuntimeModelResult:
         if tools and not _has_tool_result(messages):
             prompt = _last_user_prompt(messages)
-            if _needs_mcp_gateway(prompt):
+            available_tools = _available_tool_names(tools)
+            if _needs_mcp_gateway(prompt) and "bob_mcp_gateway" in available_tools:
                 if _needs_factory_read_execution(prompt):
                     return RuntimeModelResult(
                         content="",
@@ -62,20 +63,36 @@ class LocalRuntimeProvider(RuntimeProviderPort):
                     ],
                     raw_metadata={"trace_id": trace_id, "phase": "tool_selection"},
                 )
-            return RuntimeModelResult(
-                content="",
-                provider="local",
-                model=self.model,
-                mode="local_runtime",
-                tool_calls=[
-                    RuntimeToolCall(
-                        id="local_tool_runtime_status",
-                        name="bob_runtime_status",
-                        arguments={"include_tools": True},
-                    )
-                ],
-                raw_metadata={"trace_id": trace_id, "phase": "tool_selection"},
-            )
+            if "bob_runtime_status" in available_tools:
+                return RuntimeModelResult(
+                    content="",
+                    provider="local",
+                    model=self.model,
+                    mode="local_runtime",
+                    tool_calls=[
+                        RuntimeToolCall(
+                            id="local_tool_runtime_status",
+                            name="bob_runtime_status",
+                            arguments={"include_tools": True},
+                        )
+                    ],
+                    raw_metadata={"trace_id": trace_id, "phase": "tool_selection"},
+                )
+            if "bob_memory_context_summary" in available_tools:
+                return RuntimeModelResult(
+                    content="",
+                    provider="local",
+                    model=self.model,
+                    mode="local_runtime",
+                    tool_calls=[
+                        RuntimeToolCall(
+                            id="local_tool_memory_summary",
+                            name="bob_memory_context_summary",
+                            arguments={"max_items": 4},
+                        )
+                    ],
+                    raw_metadata={"trace_id": trace_id, "phase": "tool_selection"},
+                )
 
         prompt = _last_user_prompt(messages)
         tool_readback = _tool_readback(messages)
@@ -94,6 +111,16 @@ class LocalRuntimeProvider(RuntimeProviderPort):
 
 def _has_tool_result(messages: list[dict[str, Any]]) -> bool:
     return any(message.get("role") == "tool" for message in messages)
+
+
+def _available_tool_names(tools: list[dict[str, Any]]) -> set[str]:
+    names: set[str] = set()
+    for tool in tools:
+        function = tool.get("function") if isinstance(tool, dict) else None
+        name = function.get("name") if isinstance(function, dict) else None
+        if name:
+            names.add(str(name))
+    return names
 
 
 def _last_user_prompt(messages: list[dict[str, Any]]) -> str:
