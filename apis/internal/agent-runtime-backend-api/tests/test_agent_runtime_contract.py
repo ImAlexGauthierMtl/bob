@@ -24,6 +24,7 @@ from app.infrastructure.tools.factory_supabase_adapter import (
     FactorySupabaseAdapter,
     FactorySupabaseAdapterError,
 )
+from app.infrastructure.tools.gitlab_read_adapter import GitLabReadAdapter, GitLabReadAdapterError
 from app.infrastructure.tools.local_registry import LocalRuntimeToolRegistry
 from app.presentation.routes import agent_runtime_routes
 from shared.infrastructure import InternalSessionContext, InternalSessionContextSigner
@@ -1674,6 +1675,159 @@ async def test_mcp_gateway_executes_factory_read_adapter_and_degrades_cleanly():
     assert "factory_supabase_db_url_missing" in degraded.content
 
 
+@pytest.mark.asyncio
+async def test_mcp_gateway_executes_gitlab_read_adapter_and_degrades_cleanly():
+    class FakeGitLabAdapter:
+        def list_projects(self, **kwargs):
+            return {
+                "source": "GitLab",
+                "operation": "list_projects",
+                "query": kwargs["query"],
+                "projects": [{"project_id": 42, "path_with_namespace": "the-croo-group/app-cde-dev-01"}],
+            }
+
+        def list_branches(self, **kwargs):
+            return {
+                "source": "GitLab",
+                "operation": "list_branches",
+                "project_id": kwargs["project_id"],
+                "branches": [{"name": "main", "default": True}],
+            }
+
+        def list_tree(self, **kwargs):
+            return {
+                "source": "GitLab",
+                "operation": "list_tree",
+                "project_id": kwargs["project_id"],
+                "path": kwargs["path"],
+                "items": [{"type": "blob", "path": "README.md"}],
+            }
+
+        def get_file(self, **kwargs):
+            return {
+                "source": "GitLab",
+                "operation": "get_file",
+                "project_id": kwargs["project_id"],
+                "path": kwargs["path"],
+                "content": "# CDE",
+                "content_truncated": False,
+            }
+
+        def search_code(self, **kwargs):
+            return {
+                "source": "GitLab",
+                "operation": "search_code",
+                "project_id": kwargs["project_id"],
+                "query": kwargs["query"],
+                "results": [{"path": "apis/main.py", "filename": "main.py"}],
+            }
+
+    class MissingGitLabAdapter(FakeGitLabAdapter):
+        def list_projects(self, **kwargs):
+            raise GitLabReadAdapterError("gitlab_token_missing")
+
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="user-alex-local",
+        trace_id="b" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+    registry = LocalRuntimeToolRegistry(gitlab_adapter=FakeGitLabAdapter())
+    projects = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-gitlab-projects",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "gitlab-code",
+                "capability": "gitlab-code.projects",
+                "query": "app-cde",
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={},
+    )
+    file_result = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-gitlab-file",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "gitlab-code",
+                "capability": "gitlab-code.files",
+                "project_id": "the-croo-group/app-cde-dev-01",
+                "path": "README.md",
+                "ref": "main",
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={},
+    )
+    search = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-gitlab-search",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "gitlab-code",
+                "capability": "search-code",
+                "project_id": "the-croo-group/app-cde-dev-01",
+                "query": "AgentRuntimeUseCases",
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={},
+    )
+    degraded = await LocalRuntimeToolRegistry(gitlab_adapter=MissingGitLabAdapter()).execute(
+        call=RuntimeToolCall(
+            id="call-gitlab-missing",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "gitlab-code",
+                "capability": "gitlab-code.projects",
+                "query": "app-cde",
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={},
+    )
+    write = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-gitlab-write",
+            name="bob_mcp_gateway",
+                arguments={
+                    "operation": "execute_capability",
+                    "family": "gitlab-code",
+                    "capability": "gitlab-code.write-file",
+                    "project_id": "the-croo-group/app-cde-dev-01",
+                    "path": "README.md",
+                    "risk": "write",
+                },
+        ),
+        context=context,
+        metadata={},
+    )
+
+    assert projects.status == "completed"
+    assert projects.metadata["external_connector_bound"] is True
+    assert projects.metadata["capability"] == "projects"
+    assert "the-croo-group/app-cde-dev-01" in projects.content
+    assert "gitlab_read_adapter" in projects.content
+    assert file_result.status == "completed"
+    assert "# CDE" in file_result.content
+    assert search.status == "completed"
+    assert "AgentRuntimeUseCases" in search.content
+    assert degraded.status == "degraded"
+    assert "gitlab_token_missing" in degraded.content
+    assert write.status == "requires_confirmation"
+
+
 def test_provider_factory_selects_local_fireworks_and_rejects_missing_key(monkeypatch):
     monkeypatch.setenv("AGENT_RUNTIME_PROVIDER", "local")
     assert isinstance(provider_factory.create_runtime_provider(), LocalRuntimeProvider)
@@ -1780,6 +1934,96 @@ def test_factory_supabase_adapter_from_env_and_connection_failure(monkeypatch):
     with pytest.raises(FactorySupabaseAdapterError) as error:
         adapter.list_requests()
     assert error.value.code == "factory_supabase_connection_failed"
+
+
+def test_gitlab_read_adapter_builds_bounded_read_requests(monkeypatch):
+    class FakeResponse:
+        def __init__(self, *, json_value=None, text_value="", status_code=200):
+            self._json_value = json_value
+            self.text = text_value
+            self.status_code = status_code
+
+        def json(self):
+            return self._json_value
+
+        def raise_for_status(self):
+            return None
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            calls.append(("init", args, kwargs))
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def request(self, method, url, params):
+            calls.append((method, url, params))
+            if url.endswith("/projects"):
+                return FakeResponse(
+                    json_value=[
+                        {
+                            "id": 42,
+                            "path_with_namespace": "the-croo-group/app-cde-dev-01",
+                            "name": "CDE",
+                            "default_branch": "main",
+                            "web_url": "https://gitlab.tools.thesmartcrew.com/the-croo-group/app-cde-dev-01",
+                        }
+                    ]
+                )
+            if url.endswith("/repository/branches"):
+                return FakeResponse(json_value=[{"name": "main", "default": True, "commit": {"id": "abc", "title": "Init"}}])
+            if url.endswith("/repository/tree"):
+                return FakeResponse(json_value=[{"id": "1", "name": "README.md", "type": "blob", "path": "README.md"}])
+            if "/repository/files/" in url:
+                return FakeResponse(text_value="A" * 20)
+            if url.endswith("/search"):
+                return FakeResponse(json_value=[{"filename": "main.py", "path": "apis/main.py", "ref": "main"}])
+            return FakeResponse(json_value=[])
+
+    calls = []
+    monkeypatch.setattr("app.infrastructure.tools.gitlab_read_adapter.httpx.Client", FakeClient)
+    adapter = GitLabReadAdapter(
+        api_url="https://gitlab.tools.thesmartcrew.com/api/v4",
+        token="test-token",
+        timeout_seconds=3,
+        max_file_bytes=10,
+    )
+
+    projects = adapter.list_projects(query="cde", limit=500)
+    branches = adapter.list_branches(project_id="the-croo-group/app-cde-dev-01", limit=2)
+    tree = adapter.list_tree(project_id="42", path="/apis", ref="main", limit=3)
+    file_result = adapter.get_file(project_id="42", path="README.md", ref="main")
+    search = adapter.search_code(project_id="42", query="AgentRuntimeUseCases", ref="main", limit=4)
+
+    assert projects["projects"][0]["project_id"] == 42
+    assert projects["limit"] == 100
+    assert branches["branches"][0]["name"] == "main"
+    assert tree["items"][0]["path"] == "README.md"
+    assert file_result["content"] == "A" * 10
+    assert file_result["content_truncated"] is True
+    assert search["results"][0]["path"] == "apis/main.py"
+    assert calls[0][2]["headers"] == {"PRIVATE-TOKEN": "test-token"}
+    assert calls[1][2]["per_page"] == 100
+    assert "/repository/files/README.md/raw" in calls[7][1]
+
+    with pytest.raises(GitLabReadAdapterError) as missing_token:
+        GitLabReadAdapter(token=None).list_projects()
+    assert missing_token.value.code == "gitlab_token_missing"
+
+    with pytest.raises(GitLabReadAdapterError) as missing_project:
+        adapter.list_branches(project_id="")
+    assert missing_project.value.code == "gitlab_project_id_required"
+
+    with pytest.raises(GitLabReadAdapterError) as missing_file:
+        adapter.get_file(project_id="42", path="")
+    assert missing_file.value.code == "gitlab_file_path_required"
+
+    with pytest.raises(GitLabReadAdapterError) as missing_search:
+        adapter.search_code(project_id="42", query="")
+    assert missing_search.value.code == "gitlab_search_query_required"
 
 
 @pytest.mark.asyncio

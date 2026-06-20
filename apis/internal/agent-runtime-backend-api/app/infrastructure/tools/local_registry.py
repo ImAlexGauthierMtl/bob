@@ -16,6 +16,7 @@ from app.infrastructure.tools.factory_supabase_adapter import (
     FactorySupabaseAdapter,
     FactorySupabaseAdapterError,
 )
+from app.infrastructure.tools.gitlab_read_adapter import GitLabReadAdapter, GitLabReadAdapterError
 
 _MCP_FAMILIES_BY_NAME = {str(family["family"]): family for family in MCP_TOOL_FAMILIES}
 _MCP_CAPABILITY_IDS = {str(capability["qualified_id"]) for capability in default_mcp_capabilities()}
@@ -28,6 +29,19 @@ _FACTORY_EXECUTABLE_CAPABILITIES = {
     "review.write",
 }
 _MCP_CAPABILITY_IDS.update(_FACTORY_EXECUTABLE_CAPABILITIES)
+_GITLAB_EXECUTABLE_CAPABILITIES = {
+    "gitlab-code.projects",
+    "gitlab-code.branches",
+    "gitlab-code.tree",
+    "gitlab-code.files",
+    "gitlab-code.search-code",
+    "projects",
+    "branches",
+    "tree",
+    "files",
+    "search-code",
+}
+_MCP_CAPABILITY_IDS.update(_GITLAB_EXECUTABLE_CAPABILITIES)
 _CATALOG_TOOL_ALIASES = {
     "tool-runtime-status": "bob_runtime_status",
     "bob_runtime_status": "bob_runtime_status",
@@ -42,8 +56,14 @@ _CATALOG_TOOL_ALIASES = {
 
 
 class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
-    def __init__(self, *, factory_adapter: FactorySupabaseAdapter | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        factory_adapter: FactorySupabaseAdapter | None = None,
+        gitlab_adapter: GitLabReadAdapter | None = None,
+    ) -> None:
         self.factory_adapter = factory_adapter or FactorySupabaseAdapter.from_env()
+        self.gitlab_adapter = gitlab_adapter or GitLabReadAdapter.from_env()
 
     def list_tools(
         self,
@@ -104,6 +124,14 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
                     "request_id": {
                         "type": "string",
                         "description": "Demande Factory cible quand applicable.",
+                    },
+                    "path": {
+                        "type": "string",
+                        "description": "Chemin de fichier ou dossier cible pour les capacites code.",
+                    },
+                    "ref": {
+                        "type": "string",
+                        "description": "Branche, tag ou SHA cible pour les capacites code.",
                     },
                     "status": {
                         "type": "string",
@@ -211,6 +239,7 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
                 context=context,
                 metadata=metadata,
                 factory_adapter=self.factory_adapter,
+                gitlab_adapter=self.gitlab_adapter,
             )
 
         return RuntimeToolResult(
@@ -228,6 +257,7 @@ def _execute_mcp_gateway(
     context: InternalContext,
     metadata: dict[str, Any],
     factory_adapter: FactorySupabaseAdapter,
+    gitlab_adapter: GitLabReadAdapter,
 ) -> RuntimeToolResult:
     operation = str(call.arguments.get("operation") or "describe_family")
     family_name = str(call.arguments.get("family") or "").strip()
@@ -298,6 +328,16 @@ def _execute_mcp_gateway(
             call=call,
             context=context,
             factory_adapter=factory_adapter,
+            risk=effective_risk,
+            confirmed=confirmed,
+        )
+
+    if operation == "execute_capability" and family["family"] == "gitlab-code":
+        return _execute_gitlab_code_capability(
+            call=call,
+            context=context,
+            gitlab_adapter=gitlab_adapter,
+            capability=capability,
             risk=effective_risk,
             confirmed=confirmed,
         )
@@ -547,6 +587,127 @@ def _execute_factory_capability(
             "risk": "read",
             "operation": "execute_capability",
             "capability": capability,
+        },
+    )
+
+
+def _execute_gitlab_code_capability(
+    *,
+    call: RuntimeToolCall,
+    context: InternalContext,
+    gitlab_adapter: GitLabReadAdapter,
+    capability: dict[str, Any] | None,
+    risk: str,
+    confirmed: bool = False,
+) -> RuntimeToolResult:
+    capability_id = _normalize_gitlab_capability(
+        str((capability or {}).get("id") or call.arguments.get("capability") or "projects").strip()
+    )
+    if risk != "read" and confirmed:
+        return _confirmed_connector_pending_result(
+            call=call,
+            context=context,
+            family_name="gitlab-code",
+            capability_id=capability_id,
+            risk=risk,
+            next_gateway_step="bind_gitlab_write_adapter_after_human_approval",
+        )
+
+    if risk != "read":
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="requires_confirmation",
+            content=_json_dumps(
+                {
+                    "status": "confirmation_required",
+                    "family": "gitlab-code",
+                    "capability": capability_id,
+                    "risk": risk,
+                    "reason": "gitlab_write_or_mutation_requires_explicit_confirmation_and_separate_write_adapter",
+                    "policy": _mcp_policy(context=context),
+                }
+            ),
+            metadata={"family": "gitlab-code", "risk": risk, "operation": "execute_capability"},
+        )
+
+    try:
+        if capability_id == "projects":
+            content = gitlab_adapter.list_projects(
+                query=str(call.arguments.get("query") or ""),
+                limit=_bounded_int(call.arguments.get("limit"), default=20, minimum=1, maximum=100),
+            )
+        elif capability_id == "branches":
+            content = gitlab_adapter.list_branches(
+                project_id=str(call.arguments.get("project_id") or ""),
+                limit=_bounded_int(call.arguments.get("limit"), default=20, minimum=1, maximum=100),
+            )
+        elif capability_id == "tree":
+            content = gitlab_adapter.list_tree(
+                project_id=str(call.arguments.get("project_id") or ""),
+                path=str(call.arguments.get("path") or ""),
+                ref=str(call.arguments.get("ref") or ""),
+                limit=_bounded_int(call.arguments.get("limit"), default=50, minimum=1, maximum=100),
+            )
+        elif capability_id == "files":
+            content = gitlab_adapter.get_file(
+                project_id=str(call.arguments.get("project_id") or ""),
+                path=str(call.arguments.get("path") or ""),
+                ref=str(call.arguments.get("ref") or ""),
+            )
+        elif capability_id == "search-code":
+            content = gitlab_adapter.search_code(
+                project_id=str(call.arguments.get("project_id") or ""),
+                query=str(call.arguments.get("query") or ""),
+                ref=str(call.arguments.get("ref") or ""),
+                limit=_bounded_int(call.arguments.get("limit"), default=20, minimum=1, maximum=100),
+            )
+        else:
+            return RuntimeToolResult(
+                call_id=call.id,
+                name=call.name,
+                status="rejected",
+                content=_json_dumps(
+                    {
+                        "error": "gitlab_capability_not_loaded",
+                        "capability": capability_id,
+                        "loaded_capabilities": ["projects", "branches", "tree", "files", "search-code"],
+                    }
+                ),
+                metadata={"family": "gitlab-code", "risk": "blocked", "operation": "execute_capability"},
+            )
+    except GitLabReadAdapterError as exc:
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="degraded",
+            content=_json_dumps(
+                {
+                    "error": exc.code,
+                    "family": "gitlab-code",
+                    "capability": capability_id,
+                    "external_connector_bound": False,
+                    "execution_mode": "gitlab_read_adapter",
+                    "policy": _mcp_policy(context=context),
+                }
+            ),
+            metadata={"family": "gitlab-code", "risk": "read", "operation": "execute_capability"},
+        )
+
+    content["policy"] = _mcp_policy(context=context)
+    content["external_connector_bound"] = True
+    content["execution_mode"] = "gitlab_read_adapter"
+    return RuntimeToolResult(
+        call_id=call.id,
+        name=call.name,
+        status="completed",
+        content=_json_dumps(content),
+        metadata={
+            "family": "gitlab-code",
+            "risk": "read",
+            "operation": "execute_capability",
+            "capability": capability_id,
+            "external_connector_bound": True,
         },
     )
 
@@ -954,6 +1115,13 @@ def _normalize_factory_capability(capability: str) -> str:
         return "requests-queues.list_queue_by_project"
     if normalized == "dev-validation":
         return "dev-validation.list_queue"
+    return normalized
+
+
+def _normalize_gitlab_capability(capability: str) -> str:
+    normalized = capability.removeprefix("gitlab-code.").strip()
+    if normalized == "gitlab-code":
+        return "projects"
     return normalized
 
 
