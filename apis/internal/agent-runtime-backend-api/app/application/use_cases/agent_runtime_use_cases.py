@@ -23,6 +23,11 @@ from app.domain import (
 )
 
 
+MAX_TOOL_ITERATIONS = 5
+MAX_TOOL_CALLS_PER_ITERATION = 3
+MAX_TOTAL_TOOL_CALLS = 12
+
+
 class AgentRuntimeRepositoryPort(Protocol):
     def create_run(self, *, run: AgentRun) -> AgentRun:
         ...
@@ -142,8 +147,23 @@ class AgentRuntimeUseCases:
             trace_id=context.trace_id,
         )
         narration_steps[1]["status"] = "complete"
+        provider_iterations = 1
+        tool_loop_limit_reached = False
 
-        if final_result.tool_calls:
+        while final_result.tool_calls:
+            if provider_iterations >= MAX_TOOL_ITERATIONS or len(tool_results) >= MAX_TOTAL_TOOL_CALLS:
+                tool_loop_limit_reached = True
+                narration_steps.append(
+                    {
+                        "label": "tool_loop_limit_reached",
+                        "status": "degraded",
+                        "visible": True,
+                    }
+                )
+                break
+
+            remaining_tool_budget = MAX_TOTAL_TOOL_CALLS - len(tool_results)
+            tool_calls = final_result.tool_calls[: min(MAX_TOOL_CALLS_PER_ITERATION, remaining_tool_budget)]
             messages.append(
                 {
                     "role": "assistant",
@@ -157,11 +177,11 @@ class AgentRuntimeUseCases:
                                 "arguments": json.dumps(tool_call.arguments, ensure_ascii=False),
                             },
                         }
-                        for tool_call in final_result.tool_calls
+                        for tool_call in tool_calls
                     ],
                 }
             )
-            for tool_call in final_result.tool_calls[:3]:
+            for tool_call in tool_calls:
                 tool_result = await self.tool_registry.execute(
                     call=tool_call,
                     context=context,
@@ -196,8 +216,13 @@ class AgentRuntimeUseCases:
                 tools=tools,
                 trace_id=context.trace_id,
             )
+            provider_iterations += 1
 
-        assistant_content = final_result.content.strip() or _fallback_assistant_content(prompt, channel)
+        assistant_content = final_result.content.strip()
+        if not assistant_content and tool_loop_limit_reached:
+            assistant_content = _tool_loop_limit_content(prompt=prompt, executed_tools=len(tool_results))
+        if not assistant_content:
+            assistant_content = _fallback_assistant_content(prompt, channel)
         completed_at = _utc_now()
         run = AgentRun(
             id=f"run_{uuid4().hex}",
@@ -221,6 +246,13 @@ class AgentRuntimeUseCases:
                     {"id": item["id"], "tool": item["tool"], "status": item["status"]}
                     for item in tool_results
                 ],
+                "tool_loop": {
+                    "provider_iterations": provider_iterations,
+                    "executed_tool_calls": len(tool_results),
+                    "max_provider_iterations": MAX_TOOL_ITERATIONS,
+                    "max_total_tool_calls": MAX_TOTAL_TOOL_CALLS,
+                    "limit_reached": tool_loop_limit_reached,
+                },
                 "runtime": final_result.raw_metadata,
             },
             narration_steps=[
@@ -488,6 +520,15 @@ def _fallback_assistant_content(prompt: str, channel: str) -> str:
     return (
         "Bob a traite la demande dans le runtime agentique CDE. "
         f"Canal: {channel}. "
+        f"Demande: {normalized_prompt}"
+    )
+
+
+def _tool_loop_limit_content(*, prompt: str, executed_tools: int) -> str:
+    normalized_prompt = " ".join(prompt.split())[:180]
+    return (
+        "Bob a interrompu la boucle d'outils pour garder l'execution sous controle. "
+        f"Outils executes: {executed_tools}. "
         f"Demande: {normalized_prompt}"
     )
 

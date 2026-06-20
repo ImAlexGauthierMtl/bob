@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
@@ -85,6 +86,21 @@ class CapturingRuntimeProvider:
             mode="capture_runtime",
             raw_metadata={"trace_id": trace_id},
         )
+
+
+class SequencedRuntimeProvider:
+    def __init__(self, results: list[RuntimeModelResult]) -> None:
+        self.results = results
+        self.messages = []
+        self.tools = []
+        self.calls = 0
+
+    async def complete(self, *, messages, tools, trace_id):
+        self.calls += 1
+        self.messages.append(deepcopy(messages))
+        self.tools.append(deepcopy(tools))
+        index = min(self.calls - 1, len(self.results) - 1)
+        return self.results[index]
 
 
 def test_monitoring_endpoints_do_not_require_internal_context(client):
@@ -511,6 +527,207 @@ async def test_selected_skill_and_tool_details_are_injected_in_runtime_prompt():
     assert "execution=internal_gateway" in system_prompt
 
 
+@pytest.mark.asyncio
+async def test_runtime_executes_multiple_tool_call_turns_before_final_answer():
+    repo = InMemoryAgentRuntimeRepository()
+    provider = SequencedRuntimeProvider(
+        [
+            RuntimeModelResult(
+                content="",
+                provider="sequence",
+                model="sequence-model",
+                mode="sequence_runtime",
+                tool_calls=[
+                    RuntimeToolCall(
+                        id="call-runtime-status",
+                        name="bob_runtime_status",
+                        arguments={"include_tools": False},
+                    )
+                ],
+            ),
+            RuntimeModelResult(
+                content="",
+                provider="sequence",
+                model="sequence-model",
+                mode="sequence_runtime",
+                tool_calls=[
+                    RuntimeToolCall(
+                        id="call-memory",
+                        name="bob_memory_context_summary",
+                        arguments={"max_items": 1},
+                    )
+                ],
+            ),
+            RuntimeModelResult(
+                content="Synthese finale apres deux outils.",
+                provider="sequence",
+                model="sequence-model",
+                mode="sequence_runtime",
+                raw_metadata={"phase": "final"},
+            ),
+        ]
+    )
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="user-multi-tool",
+        trace_id="b" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+
+    run = await use_cases.create_run(
+        context=context,
+        session_id="session-multi-tool",
+        input_message_id="msg-multi-tool",
+        prompt="Resume le runtime puis la memoire.",
+        channel="workspace",
+        metadata={
+            "source": "bob-chat-b4f-api",
+            "memory_context": {
+                "private": [{"id": "mem-1", "title": "Preference", "memory_type": "note"}],
+                "organization": [],
+            },
+        },
+        idempotency_key="run-multi-tool",
+    )
+
+    assert provider.calls == 3
+    assert run.assistant_content == "Synthese finale apres deux outils."
+    assert [action["tool"] for action in run.actions] == [
+        "bob_runtime_status",
+        "bob_memory_context_summary",
+    ]
+    assert run.metadata["tool_loop"] == {
+        "provider_iterations": 3,
+        "executed_tool_calls": 2,
+        "max_provider_iterations": 5,
+        "max_total_tool_calls": 12,
+        "limit_reached": False,
+    }
+    assert any(message.get("role") == "tool" for message in provider.messages[1])
+    assert any(message.get("role") == "tool" for message in provider.messages[2])
+
+
+@pytest.mark.asyncio
+async def test_runtime_tool_loop_stops_at_provider_iteration_limit():
+    repo = InMemoryAgentRuntimeRepository()
+    provider = SequencedRuntimeProvider(
+        [
+            RuntimeModelResult(
+                content="",
+                provider="sequence",
+                model="sequence-model",
+                mode="sequence_runtime",
+                tool_calls=[
+                    RuntimeToolCall(
+                        id=f"call-runtime-status-{index}",
+                        name="bob_runtime_status",
+                        arguments={"include_tools": False},
+                    )
+                ],
+            )
+            for index in range(8)
+        ]
+    )
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="user-loop-limit",
+        trace_id="f" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+
+    run = await use_cases.create_run(
+        context=context,
+        session_id="session-loop-limit",
+        input_message_id="msg-loop-limit",
+        prompt="Continue toujours a verifier le runtime.",
+        channel="workspace",
+        metadata={"source": "bob-chat-b4f-api"},
+        idempotency_key="run-loop-limit",
+    )
+
+    assert provider.calls == 5
+    assert len(run.actions) == 4
+    assert run.metadata["tool_loop"]["provider_iterations"] == 5
+    assert run.metadata["tool_loop"]["executed_tool_calls"] == 4
+    assert run.metadata["tool_loop"]["limit_reached"] is True
+    assert "interrompu la boucle d'outils" in run.assistant_content
+    assert run.narration_steps[-2] == {
+        "label": "tool_loop_limit_reached",
+        "status": "degraded",
+        "visible": True,
+    }
+
+
+@pytest.mark.asyncio
+async def test_runtime_tool_loop_caps_calls_per_turn_and_total_calls():
+    repo = InMemoryAgentRuntimeRepository()
+    repeated_results = []
+    for turn in range(8):
+        repeated_results.append(
+            RuntimeModelResult(
+                content="",
+                provider="sequence",
+                model="sequence-model",
+                mode="sequence_runtime",
+                tool_calls=[
+                    RuntimeToolCall(
+                        id=f"call-runtime-status-{turn}-{index}",
+                        name="bob_runtime_status",
+                        arguments={"include_tools": False},
+                    )
+                    for index in range(4)
+                ],
+            )
+        )
+    provider = SequencedRuntimeProvider(repeated_results)
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="user-loop-total-limit",
+        trace_id="9" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+
+    run = await use_cases.create_run(
+        context=context,
+        session_id="session-loop-total-limit",
+        input_message_id="msg-loop-total-limit",
+        prompt="Appelle trop d'outils pour verifier les plafonds.",
+        channel="workspace",
+        metadata={"source": "bob-chat-b4f-api"},
+        idempotency_key="run-loop-total-limit",
+    )
+
+    tool_messages_by_provider_turn = [
+        [message for message in messages if message.get("role") == "tool"]
+        for messages in provider.messages[1:]
+    ]
+
+    assert provider.calls == 5
+    assert len(run.actions) == 12
+    assert all(len(messages) == expected for messages, expected in zip(tool_messages_by_provider_turn, (3, 6, 9, 12)))
+    assert run.metadata["tool_loop"]["executed_tool_calls"] == 12
+    assert run.metadata["tool_loop"]["max_total_tool_calls"] == 12
+    assert run.metadata["tool_loop"]["limit_reached"] is True
+
+
 def test_completed_run_is_not_cancelable(client):
     created = client.post(
         "/internal/agent-runtime/v1/runs",
@@ -700,10 +917,25 @@ async def test_local_registry_filters_tools_by_selected_agent_catalog():
             },
         },
     )
+    rejected_ungated = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-runtime-status-ungated",
+            name="bob_runtime_status",
+            arguments={"include_tools": True},
+        ),
+        context=context,
+        metadata={
+            "runtime_catalog": {
+                "tools": [{"id": "tool-cde-factory-read", "name": "factory.requests-queues", "family": "factory"}],
+            },
+        },
+    )
 
     assert {tool["function"]["name"] for tool in memory_only} == {"bob_memory_context_summary"}
     assert {tool["function"]["name"] for tool in factory_only} == {"bob_mcp_gateway"}
     assert unmapped == []
+    assert rejected_ungated.status == "rejected"
+    assert "tool_not_allowed_for_selected_agent" in rejected_ungated.content
 
 
 @pytest.mark.asyncio

@@ -148,6 +148,19 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
         context: InternalContext,
         metadata: dict[str, Any],
     ) -> RuntimeToolResult:
+        allowed_tool_names = _allowed_runtime_tool_names(metadata)
+        if allowed_tool_names is not None and call.name not in allowed_tool_names:
+            return RuntimeToolResult(
+                call_id=call.id,
+                name=call.name,
+                status="rejected",
+                content=json.dumps(
+                    {"error": "tool_not_allowed_for_selected_agent", "tool": call.name},
+                    ensure_ascii=False,
+                ),
+                metadata={"risk": "blocked"},
+            )
+
         if call.name == "bob_runtime_status":
             content = {
                 "runtime": "bob-agent-runtime",
