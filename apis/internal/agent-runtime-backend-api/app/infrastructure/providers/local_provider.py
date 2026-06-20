@@ -23,6 +23,30 @@ class LocalRuntimeProvider(RuntimeProviderPort):
             prompt = _last_user_prompt(messages)
             available_tools = _available_tool_names(tools)
             if _needs_mcp_gateway(prompt) and "bob_mcp_gateway" in available_tools:
+                memory_capability = _infer_memory_capability(prompt)
+                if memory_capability:
+                    family, capability = memory_capability
+                    return RuntimeModelResult(
+                        content="",
+                        provider="local",
+                        model=self.model,
+                        mode="local_runtime",
+                        tool_calls=[
+                            RuntimeToolCall(
+                                id=f"local_tool_{family.replace('-', '_')}_{capability.split('.')[-1].replace('-', '_')}",
+                                name="bob_mcp_gateway",
+                                arguments={
+                                    "operation": "execute_capability",
+                                    "family": family,
+                                    "capability": capability,
+                                    "query": prompt,
+                                    "limit": 5,
+                                    "risk": "read",
+                                },
+                            )
+                        ],
+                        raw_metadata={"trace_id": trace_id, "phase": "tool_selection"},
+                    )
                 if _needs_factory_read_execution(prompt):
                     return RuntimeModelResult(
                         content="",
@@ -145,6 +169,15 @@ def _needs_mcp_gateway(prompt: str) -> bool:
             "skyswitch",
             "capabilit",
             "famille",
+            "mémoire",
+            "memoire",
+            "memory",
+            "playbook",
+            "procédure",
+            "procedure",
+            "préférence",
+            "preference",
+            "journal",
         )
     )
 
@@ -170,6 +203,63 @@ def _infer_mcp_family(prompt: str) -> str:
         if family in normalized or family.replace("-", " ") in normalized:
             return family
     return "factory"
+
+
+def _infer_memory_capability(prompt: str) -> tuple[str, str] | None:
+    normalized = prompt.lower()
+    if _mentions_support_memory(normalized):
+        if any(token in normalized for token in ("playbook", "procédure", "procedure", "runbook")):
+            return ("support-memory", "support-memory.playbook")
+        if any(token in normalized for token in ("cherche", "recherche", "search", "trouve", "find")):
+            return ("support-memory", "support-memory.search")
+        return ("support-memory", "support-memory.status")
+    if _mentions_assistant_memory(normalized):
+        if any(token in normalized for token in ("statut", "status", "état", "etat", "health")):
+            return ("assistant-memory", "assistant-memory.status")
+        if any(token in normalized for token in ("rappel", "readback", "liste", "list", "lis", "affiche")):
+            return ("assistant-memory", "assistant-memory.readback")
+        return ("assistant-memory", "assistant-memory.search")
+    return None
+
+
+def _mentions_support_memory(normalized: str) -> bool:
+    return any(
+        token in normalized
+        for token in (
+            "support-memory",
+            "support memory",
+            "mémoire support",
+            "memoire support",
+            "mémoire d'organisation",
+            "memoire d'organisation",
+            "organisation",
+            "organization",
+            "playbook",
+            "procédure support",
+            "procedure support",
+            "runbook",
+        )
+    )
+
+
+def _mentions_assistant_memory(normalized: str) -> bool:
+    return any(
+        token in normalized
+        for token in (
+            "assistant-memory",
+            "assistant memory",
+            "mémoire privée",
+            "memoire privée",
+            "mémoire privee",
+            "memoire privee",
+            "ma mémoire",
+            "ma memoire",
+            "memory",
+            "préférence",
+            "preference",
+            "journal",
+        )
+    )
 
 
 def _needs_factory_read_execution(prompt: str) -> bool:

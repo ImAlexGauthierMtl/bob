@@ -1429,6 +1429,92 @@ async def test_local_provider_honors_explicit_factory_queue_capability():
 
 
 @pytest.mark.asyncio
+async def test_local_provider_routes_private_memory_to_mcp_gateway():
+    provider = LocalRuntimeProvider()
+    result = await provider.complete(
+        messages=[
+            {
+                "role": "user",
+                "content": "Cherche dans ma mémoire privée la préférence de langue pour Bob.",
+            }
+        ],
+        tools=[{"type": "function", "function": {"name": "bob_mcp_gateway"}}],
+        trace_id="a" * 32,
+    )
+
+    assert result.tool_calls
+    call = result.tool_calls[0]
+    assert call.name == "bob_mcp_gateway"
+    assert call.arguments["operation"] == "execute_capability"
+    assert call.arguments["family"] == "assistant-memory"
+    assert call.arguments["capability"] == "assistant-memory.search"
+    assert call.arguments["risk"] == "read"
+
+
+@pytest.mark.asyncio
+async def test_local_provider_does_not_route_memory_without_mcp_gateway_tool():
+    provider = LocalRuntimeProvider()
+    result = await provider.complete(
+        messages=[
+            {
+                "role": "user",
+                "content": "Cherche dans ma mémoire privée la préférence de langue pour Bob.",
+            }
+        ],
+        tools=[{"type": "function", "function": {"name": "bob_runtime_status"}}],
+        trace_id="a" * 32,
+    )
+
+    assert result.tool_calls
+    assert result.tool_calls[0].name == "bob_runtime_status"
+
+
+@pytest.mark.asyncio
+async def test_local_provider_routes_support_playbook_to_mcp_gateway():
+    provider = LocalRuntimeProvider()
+    result = await provider.complete(
+        messages=[
+            {
+                "role": "user",
+                "content": "Va lire le playbook support dans la mémoire d'organisation pour Factory.",
+            }
+        ],
+        tools=[{"type": "function", "function": {"name": "bob_mcp_gateway"}}],
+        trace_id="a" * 32,
+    )
+
+    assert result.tool_calls
+    call = result.tool_calls[0]
+    assert call.name == "bob_mcp_gateway"
+    assert call.arguments["operation"] == "execute_capability"
+    assert call.arguments["family"] == "support-memory"
+    assert call.arguments["capability"] == "support-memory.playbook"
+    assert call.arguments["risk"] == "read"
+
+
+@pytest.mark.asyncio
+async def test_local_provider_routes_organization_memory_search_to_support_memory():
+    provider = LocalRuntimeProvider()
+    result = await provider.complete(
+        messages=[
+            {
+                "role": "user",
+                "content": "Cherche dans la mémoire organisation la règle Factory.",
+            }
+        ],
+        tools=[{"type": "function", "function": {"name": "bob_mcp_gateway"}}],
+        trace_id="a" * 32,
+    )
+
+    assert result.tool_calls
+    call = result.tool_calls[0]
+    assert call.name == "bob_mcp_gateway"
+    assert call.arguments["family"] == "support-memory"
+    assert call.arguments["capability"] == "support-memory.search"
+    assert call.arguments["risk"] == "read"
+
+
+@pytest.mark.asyncio
 async def test_fireworks_provider_maps_chat_completion_tool_calls(monkeypatch):
     class FakeAsyncClient:
         def __init__(self, timeout):

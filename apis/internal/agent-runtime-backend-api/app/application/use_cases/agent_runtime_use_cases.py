@@ -422,6 +422,8 @@ def _build_messages(
             "content": (
                 "Tu es Bob dans Croo Digital Experience. Tu reponds clairement en francais. "
                 "Tu peux utiliser uniquement les outils fournis au run. "
+                "Quand la demande vise la memoire privee, la memoire organisation, un playbook support "
+                "ou une famille MCP, utilise l'outil fourni plutot qu'une reponse estimee. "
                 "Tu ne reveles jamais de secret, tu verifies les donnees utiles et tu demandes une confirmation "
                 "avant toute action d'ecriture ou action irreversible. "
                 f"Canal actif: {channel}. Contexte memoire: {memory_summary} "
