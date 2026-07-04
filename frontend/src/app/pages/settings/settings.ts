@@ -3,6 +3,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { BobActionService } from '../../shared/services/bob-action.service';
+import { AuthService } from '../../shared/services/auth.service';
 
 @Component({
     selector: 'croo-settings',
@@ -18,7 +19,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     constructor(
         private router: Router,
-        private bobAction: BobActionService
+        private bobAction: BobActionService,
+        private authService: AuthService
     ) { }
 
     ngOnInit(): void {
@@ -33,10 +35,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
                 const tabMap: { [key: string]: string } = {
                     'profile': 'profile',
-                    'security': 'security',
-                    'account': 'security',
-                    'notification': 'notifications',
-                    'notifications': 'notifications',
+                    'my tools': 'my-tools',
+                    'tool access': 'my-tools',
                     'bob': 'bob',
                     'assistant': 'bob',
                     'automation': 'automation',
@@ -51,6 +51,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
                     'license': 'platform-access',
                     'licence': 'platform-access',
                     'rbac': 'platform-access',
+                    'governance': 'tool-governance',
+                    'tool governance': 'tool-governance',
+                    'authorized tools': 'tool-governance',
+                    'knowledge': 'knowledge',
+                    'rag': 'knowledge',
+                    'milvus': 'knowledge',
+                    'zoho desk': 'knowledge',
                     'integration': 'integrations',
                     'integrations': 'integrations'
                 };
@@ -73,6 +80,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
     ngOnDestroy(): void {
         this.routerSub?.unsubscribe();
         this.bobActionSub?.unsubscribe();
+    }
+
+    logout(): void {
+        this.authService.logout();
     }
 
     private checkRoute(url: string): void {

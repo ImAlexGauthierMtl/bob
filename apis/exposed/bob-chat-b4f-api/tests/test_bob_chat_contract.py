@@ -598,6 +598,68 @@ async def test_bob_cloud_identity_provider_issues_internal_context():
 
 
 @pytest.mark.asyncio
+async def test_bob_cloud_identity_provider_prefers_local_bearer_session(monkeypatch):
+    class BobCloudClient:
+        def __init__(self):
+            self.calls = []
+
+        async def get_session(self, forward_headers=None):
+            self.calls.append("get_session")
+            return {
+                "authenticated": True,
+                "session_id": "sess-bob-cloud-stub",
+                "user": {"id": "user-alex-local"},
+                "tenant": {"id": "tenant-croo-local"},
+                "permissions": ["bob_chat.use"],
+                "platform_roles": ["admin"],
+            }
+
+        async def check_capability(self, capability, forward_headers=None):
+            self.calls.append(("check_capability", capability))
+            return {"capability": capability, "status": "enabled"}
+
+    class LocalAuthClient:
+        def __init__(self):
+            self.calls = []
+
+        async def get(self, path, forward_headers=None):
+            self.calls.append((path, dict(forward_headers or {})))
+            return httpx.Response(
+                200,
+                json={
+                    "authenticated": True,
+                    "session_id": "local-717b9f8f-fb71-4223-9f89-3999ba73479b",
+                    "user": {"id": "717b9f8f-fb71-4223-9f89-3999ba73479b"},
+                    "tenant": {"id": "tenant-croo-local"},
+                    "permissions": [],
+                    "platform_roles": ["admin"],
+                    "source": "local-dev",
+                },
+            )
+
+    monkeypatch.setenv("CDE_LOCAL_AUTH_ENABLED", "true")
+    bob_cloud_client = BobCloudClient()
+    local_auth_client = LocalAuthClient()
+    signer = InternalSessionContextSigner("test-internal-secret", kid="test-kid")
+    provider = BobCloudIdentityProvider(
+        bob_cloud_client=bob_cloud_client,
+        signer=signer,
+        local_auth_client=local_auth_client,
+    )
+
+    context = await provider.resolve(
+        forward_headers={"authorization": "Bearer local-token"},
+        trace_id="d" * 32,
+    )
+
+    signed = signer.validate(context.internal_session_context)
+    assert context.user_id == "717b9f8f-fb71-4223-9f89-3999ba73479b"
+    assert signed.user_id == "717b9f8f-fb71-4223-9f89-3999ba73479b"
+    assert local_auth_client.calls[0][0] == "/api/auth/v1/session"
+    assert bob_cloud_client.calls == []
+
+
+@pytest.mark.asyncio
 async def test_bob_cloud_identity_provider_maps_auth_and_capability_errors():
     class AnonymousBobCloudClient:
         async def get_session(self, forward_headers=None):

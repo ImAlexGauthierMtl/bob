@@ -5,7 +5,20 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import datetime, timezone
 
-from app.domain import MemoryEntry, MemoryJournalEntry, MemoryScope, VectorIndexJob, VectorIndexRecord
+from app.domain import (
+    KnowledgeChunk,
+    KnowledgeCollection,
+    KnowledgeDatabase,
+    KnowledgeIngestionRun,
+    KnowledgeItem,
+    KnowledgeProcedure,
+    KnowledgeSource,
+    MemoryEntry,
+    MemoryJournalEntry,
+    MemoryScope,
+    VectorIndexJob,
+    VectorIndexRecord,
+)
 
 
 class InMemoryAgentMemoryRepository:
@@ -14,6 +27,13 @@ class InMemoryAgentMemoryRepository:
         self.journal: dict[str, MemoryJournalEntry] = {}
         self.vector_jobs: dict[str, VectorIndexJob] = {}
         self.vector_records: dict[str, VectorIndexRecord] = {}
+        self.knowledge_databases: dict[str, KnowledgeDatabase] = {}
+        self.knowledge_collections: dict[str, KnowledgeCollection] = {}
+        self.knowledge_sources: dict[str, KnowledgeSource] = {}
+        self.knowledge_ingestion_runs: dict[str, KnowledgeIngestionRun] = {}
+        self.knowledge_items: dict[str, KnowledgeItem] = {}
+        self.knowledge_chunks: dict[str, KnowledgeChunk] = {}
+        self.knowledge_procedures: dict[str, KnowledgeProcedure] = {}
 
     def count_entries(self, *, tenant_id: str, user_id: str) -> int:
         return len(
@@ -256,3 +276,130 @@ class InMemoryAgentMemoryRepository:
                 self.vector_records[record_id] = replace(record, index_status=status)
                 updated += 1
         return updated
+
+    def list_knowledge_databases(self, *, tenant_id: str) -> list[KnowledgeDatabase]:
+        return [item for item in self.knowledge_databases.values() if item.tenant_id == tenant_id]
+
+    def list_knowledge_collections(self, *, tenant_id: str) -> list[KnowledgeCollection]:
+        return [item for item in self.knowledge_collections.values() if item.tenant_id == tenant_id]
+
+    def list_knowledge_sources(self, *, tenant_id: str) -> list[KnowledgeSource]:
+        return [item for item in self.knowledge_sources.values() if item.tenant_id == tenant_id]
+
+    def get_knowledge_database(self, *, tenant_id: str, database_id: str) -> KnowledgeDatabase | None:
+        database = self.knowledge_databases.get(database_id)
+        if not database or database.tenant_id != tenant_id:
+            return None
+        return database
+
+    def get_knowledge_collection(self, *, tenant_id: str, collection_id: str) -> KnowledgeCollection | None:
+        collection = self.knowledge_collections.get(collection_id)
+        if not collection or collection.tenant_id != tenant_id:
+            return None
+        return collection
+
+    def get_knowledge_source(self, *, tenant_id: str, source_id: str) -> KnowledgeSource | None:
+        source = self.knowledge_sources.get(source_id)
+        if not source or source.tenant_id != tenant_id:
+            return None
+        return source
+
+    def get_knowledge_database_by_idempotency_key(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        idempotency_key: str,
+    ) -> KnowledgeDatabase | None:
+        return next(
+            (
+                item
+                for item in self.knowledge_databases.values()
+                if item.tenant_id == tenant_id
+                and item.created_by == user_id
+                and item.idempotency_key == idempotency_key
+            ),
+            None,
+        )
+
+    def get_knowledge_collection_by_idempotency_key(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        idempotency_key: str,
+    ) -> KnowledgeCollection | None:
+        return next(
+            (
+                item
+                for item in self.knowledge_collections.values()
+                if item.tenant_id == tenant_id
+                and item.created_by == user_id
+                and item.idempotency_key == idempotency_key
+            ),
+            None,
+        )
+
+    def get_knowledge_source_by_idempotency_key(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        idempotency_key: str,
+    ) -> KnowledgeSource | None:
+        return next(
+            (
+                item
+                for item in self.knowledge_sources.values()
+                if item.tenant_id == tenant_id
+                and item.created_by == user_id
+                and item.idempotency_key == idempotency_key
+            ),
+            None,
+        )
+
+    def create_knowledge_database(self, *, database: KnowledgeDatabase) -> KnowledgeDatabase:
+        self.knowledge_databases[database.id] = database
+        return database
+
+    def create_knowledge_collection(self, *, collection: KnowledgeCollection) -> KnowledgeCollection:
+        self.knowledge_collections[collection.id] = collection
+        return collection
+
+    def create_knowledge_source(self, *, source: KnowledgeSource) -> KnowledgeSource:
+        self.knowledge_sources[source.id] = source
+        return source
+
+    def create_knowledge_ingestion_run(self, *, run: KnowledgeIngestionRun) -> KnowledgeIngestionRun:
+        self.knowledge_ingestion_runs[run.id] = run
+        return run
+
+    def update_knowledge_ingestion_run(self, *, run: KnowledgeIngestionRun) -> KnowledgeIngestionRun:
+        self.knowledge_ingestion_runs[run.id] = run
+        return run
+
+    def upsert_knowledge_item(self, *, item: KnowledgeItem) -> KnowledgeItem:
+        existing = next(
+            (
+                value
+                for value in self.knowledge_items.values()
+                if value.tenant_id == item.tenant_id
+                and value.source_id == item.source_id
+                and value.external_id == item.external_id
+            ),
+            None,
+        )
+        if existing:
+            self.knowledge_items[existing.id] = replace(item, id=existing.id)
+            return self.knowledge_items[existing.id]
+        self.knowledge_items[item.id] = item
+        return item
+
+    def create_knowledge_chunks(self, *, chunks: list[KnowledgeChunk]) -> list[KnowledgeChunk]:
+        for chunk in chunks:
+            self.knowledge_chunks[chunk.id] = chunk
+        return chunks
+
+    def create_knowledge_procedure(self, *, procedure: KnowledgeProcedure) -> KnowledgeProcedure:
+        self.knowledge_procedures[procedure.id] = procedure
+        return procedure

@@ -17,17 +17,10 @@
         <div class="profile-hero">
             <div class="profile-photo">
                 <div class="profile-photo__img team-card__avatar">{{ getInitials() }}</div>
-                <button class="profile-photo__btn">
-                    <i class="fa-solid fa-camera"></i>
-                </button>
             </div>
             <div>
                 <h4 class="profile-hero__name">{{ firstName }} {{ lastName }}</h4>
                 <p class="profile-hero__role">{{ jobTitle || 'No title' }} • {{ location || 'No location' }}</p>
-                <div class="profile-hero__actions">
-                    <button class="btn btn-outline--accent">Change Photo</button>
-                    <button class="btn btn-outline">Remove Photo</button>
-                </div>
             </div>
         </div>
     </div>

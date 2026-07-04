@@ -111,6 +111,132 @@ class VectorRevalidationMatch:
     rejection_code: str | None = None
 
 
+@dataclass(frozen=True)
+class KnowledgeDatabase:
+    id: str
+    tenant_id: str
+    name: str
+    display_name: str
+    description: str
+    status: str
+    milvus_database: str
+    embedding_provider: str
+    embedding_model: str
+    embedding_dimension: int
+    created_by: str
+    created_at: datetime
+    idempotency_key: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class KnowledgeCollection:
+    id: str
+    tenant_id: str
+    database_id: str
+    name: str
+    display_name: str
+    theme: str
+    description: str
+    status: str
+    milvus_collection: str
+    scope_type: str
+    source_kind: str
+    created_by: str
+    created_at: datetime
+    idempotency_key: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class KnowledgeSource:
+    id: str
+    tenant_id: str
+    collection_id: str
+    name: str
+    provider: str
+    source_type: str
+    status: str
+    pipedream_app: str
+    pipedream_source_id: Optional[str]
+    sync_mode: str
+    ingestion_strategy: str
+    created_by: str
+    created_at: datetime
+    idempotency_key: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class KnowledgeIngestionRun:
+    id: str
+    tenant_id: str
+    source_id: str
+    trigger_type: str
+    external_event_id: Optional[str]
+    status: str
+    raw_items_count: int
+    normalized_items_count: int
+    candidate_procedures_count: int
+    error_message: Optional[str]
+    started_at: datetime
+    completed_at: Optional[datetime]
+    metadata_json: dict
+
+
+@dataclass(frozen=True)
+class KnowledgeItem:
+    id: str
+    tenant_id: str
+    source_id: str
+    run_id: Optional[str]
+    external_id: str
+    item_type: str
+    title: str
+    body: str
+    metadata_json: dict
+    content_hash: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class KnowledgeChunk:
+    id: str
+    tenant_id: str
+    collection_id: str
+    item_id: str
+    chunk_index: int
+    content: str
+    content_hash: str
+    metadata_json: dict
+    vector_id: str
+    embedding_model: str
+    embedding_dimension: int
+    milvus_collection: str
+    status: str
+    created_at: datetime
+    indexed_at: Optional[datetime]
+
+
+@dataclass(frozen=True)
+class KnowledgeProcedure:
+    id: str
+    tenant_id: str
+    collection_id: str
+    source_item_id: Optional[str]
+    title: str
+    intent_key: str
+    trigger_summary: str
+    procedure_markdown: str
+    tool_plan_json: list[dict]
+    confidence: int
+    status: str
+    generated_by_model: str
+    approved_by: Optional[str]
+    approved_at: Optional[datetime]
+    created_at: datetime
+    updated_at: datetime
+
+
 class MemoryError(Exception):
     def __init__(self, code: str) -> None:
         super().__init__(code)

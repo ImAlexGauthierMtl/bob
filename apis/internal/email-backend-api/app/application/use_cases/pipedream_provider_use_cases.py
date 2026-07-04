@@ -11,7 +11,26 @@ class PipedreamClientPort(Protocol):
     async def list_accounts(self, external_user_id: str, app: Optional[str] = None) -> list[dict[str, Any]]:
         ...
 
-    async def list_apps(self, query: Optional[str] = None, limit: int = 100) -> list[dict[str, Any]]:
+    async def list_apps(
+        self,
+        query: Optional[str] = None,
+        limit: int = 100,
+        *,
+        after: Optional[str] = None,
+        has_actions: Optional[bool] = None,
+        has_triggers: Optional[bool] = None,
+    ) -> dict[str, Any]:
+        ...
+
+    async def list_actions(
+        self,
+        app: str,
+        query: Optional[str] = None,
+        limit: int = 20,
+        *,
+        after: Optional[str] = None,
+        registry: str = "public",
+    ) -> dict[str, Any]:
         ...
 
     async def delete_account(self, account_id: str) -> bool:
@@ -98,6 +117,44 @@ class PipedreamProviderUseCases:
             "updated_at": raw.get("updated_at"),
         }
 
+    @staticmethod
+    def normalize_page_info(raw: dict[str, Any]) -> dict[str, Any]:
+        page_info = raw.get("page_info") if isinstance(raw, dict) else None
+        if not isinstance(page_info, dict):
+            return {}
+        return {
+            "count": page_info.get("count"),
+            "total_count": page_info.get("total_count"),
+            "start_cursor": page_info.get("start_cursor"),
+            "end_cursor": page_info.get("end_cursor"),
+        }
+
+    def normalize_integration(self, app: dict[str, Any]) -> dict[str, Any]:
+        app_slug = app.get("name_slug") or app.get("key") or ""
+        return {
+            "id": app.get("id") or app_slug,
+            "key": self.integration_key_from_app_slug(app_slug),
+            "name": app.get("name") or app_slug,
+            "description": app.get("description"),
+            "iconUrl": app.get("img_src"),
+            "status": "active",
+        }
+
+    @staticmethod
+    def normalize_tool(raw: dict[str, Any]) -> dict[str, Any]:
+        props = raw.get("configurable_props")
+        annotations = raw.get("annotations")
+        title = annotations.get("title") if isinstance(annotations, dict) else None
+        return {
+            "key": raw.get("key") or raw.get("id") or "",
+            "name": raw.get("name") or title or raw.get("key") or "",
+            "description": raw.get("description"),
+            "component_type": raw.get("component_type"),
+            "version": raw.get("version"),
+            "annotations": annotations if isinstance(annotations, dict) else {},
+            "configurable_props_count": len(props) if isinstance(props, list) else 0,
+        }
+
     async def create_token(
         self,
         user: dict[str, Any],
@@ -146,22 +203,63 @@ class PipedreamProviderUseCases:
         finally:
             await client.close()
 
-    async def list_integrations(self, query: Optional[str] = None) -> list[dict[str, Any]]:
+    async def list_integrations(
+        self,
+        query: Optional[str] = None,
+        *,
+        limit: int = 100,
+        after: Optional[str] = None,
+        has_actions: Optional[bool] = None,
+        has_triggers: Optional[bool] = None,
+    ) -> dict[str, Any]:
         client = self.client_factory()
         try:
-            apps = await client.list_apps(query=query)
-            return [
-                {
-                    "id": app.get("id") or app.get("name_slug"),
-                    "key": self.integration_key_from_app_slug(app.get("name_slug")),
-                    "name": app.get("name") or app.get("name_slug"),
-                    "description": app.get("description"),
-                    "iconUrl": app.get("img_src"),
-                    "status": "active",
-                }
-                for app in apps
-                if app.get("name_slug")
-            ]
+            payload = await client.list_apps(
+                query=query,
+                limit=limit,
+                after=after,
+                has_actions=has_actions,
+                has_triggers=has_triggers,
+            )
+            apps = payload.get("data", []) if isinstance(payload, dict) else []
+            return {
+                "items": [
+                    self.normalize_integration(app)
+                    for app in apps
+                    if app.get("name_slug") or app.get("key")
+                ],
+                "page_info": self.normalize_page_info(payload),
+            }
+        finally:
+            await client.close()
+
+    async def list_tools(
+        self,
+        integration_key: str,
+        query: Optional[str] = None,
+        *,
+        limit: int = 20,
+        after: Optional[str] = None,
+        registry: str = "public",
+    ) -> dict[str, Any]:
+        client = self.client_factory()
+        try:
+            payload = await client.list_actions(
+                self.app_slug(integration_key),
+                query=query,
+                limit=limit,
+                after=after,
+                registry=registry,
+            )
+            actions = payload.get("data", []) if isinstance(payload, dict) else []
+            return {
+                "items": [
+                    self.normalize_tool(action)
+                    for action in actions
+                    if action.get("key") or action.get("id")
+                ],
+                "page_info": self.normalize_page_info(payload),
+            }
         finally:
             await client.close()
 

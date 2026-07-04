@@ -239,6 +239,29 @@ def _needs_mcp_gateway(prompt: str) -> bool:
             "web research",
             "recherche web",
             "skyswitch",
+            "netsapiens",
+            "telco",
+            "did",
+            "dids",
+            "e911",
+            "cnam",
+            "sms",
+            "mms",
+            "10dlc",
+            "lnp",
+            "port order",
+            "phone number",
+            "toll free",
+            "pbx",
+            "subscriber",
+            "answering rule",
+            "answering rules",
+            "time frame",
+            "timeframe",
+            "conference bridge",
+            "sip trunk",
+            "voicemail",
+            "call recording",
             "capabilit",
             "famille",
             "mémoire",
@@ -290,6 +313,35 @@ def _infer_mcp_family(prompt: str) -> str:
         return "workspace-files"
     if "supabase" in normalized or "pipedream" in normalized:
         return "pipedream-supabase"
+    if any(
+        token in normalized
+        for token in (
+            "netsapiens",
+            "telco",
+            "did",
+            "dids",
+            "e911",
+            "cnam",
+            "sms",
+            "mms",
+            "10dlc",
+            "lnp",
+            "port order",
+            "phone number",
+            "toll free",
+            "pbx",
+            "subscriber",
+            "answering rule",
+            "answering rules",
+            "time frame",
+            "timeframe",
+            "conference bridge",
+            "sip trunk",
+            "voicemail",
+            "call recording",
+        )
+    ):
+        return "skyswitch"
     if "chrome" in normalized or "browser" in normalized or "navigateur" in normalized:
         return "browser"
     if "recherche web" in normalized or "web research" in normalized or "web search" in normalized:

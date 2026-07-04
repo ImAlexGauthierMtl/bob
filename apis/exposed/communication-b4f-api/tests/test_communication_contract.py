@@ -165,6 +165,9 @@ class FakeMembraneCrudClient:
             return {"id": "membrane-connection-1", "user_id": user_id, "integration_key": integration_key}
         return None
 
+    async def delete_connection(self, connection_id, forward_headers=None):
+        return connection_id != "missing"
+
 
 class FakeResponse:
     def __init__(self, payload=None, status_code=200, text=""):
@@ -249,6 +252,7 @@ def install_fakes(monkeypatch):
     monkeypatch.setattr(auth_module, "_fetch_user_profile", fake_profile)
     monkeypatch.setattr(provider_proxy, "_client", provider_client)
     monkeypatch.setattr(integration_settings_routes, "integration_settings_client", FakeIntegrationSettingsClient())
+    monkeypatch.setattr(pipedream_routes, "membrane_crud_client", FakeMembraneCrudClient())
     monkeypatch.setattr(smart_label_routes, "smart_label_client", FakeSmartLabelClient())
     monkeypatch.setattr(
         integration_overview_routes,
@@ -341,7 +345,12 @@ def test_provider_routes_are_proxied_to_email_backend(monkeypatch):
         )
         assert response.status_code in {200, 401, 503}
 
+        response = client.get("/pipedream/integrations/github/tools", params={"limit": 5}, headers=headers)
+        assert response.json()["path"] == "/api/v1/provider/pipedream/integrations/github/tools?limit=5"
+
         assert client.delete("/pipedream/connections/missing", headers=headers).status_code in {204, 404, 503}
+        assert client.delete("/pipedream/local-connections/membrane-connection-1", headers=headers).status_code == 204
+        assert client.delete("/pipedream/local-connections/missing", headers=headers).status_code == 404
 
     assert provider_client.calls[0][1] == "/api/v1/provider/ms365/auth-url?prompt=select_account"
     assert dict(provider_client.calls[0][4])["authorization"].startswith("Bearer ")
@@ -408,6 +417,7 @@ async def test_email_backend_clients_cover_crud_paths(monkeypatch):
     assert (await membrane.upsert_email({"id": "membrane-email-1"}))["id"] == "membrane-email-1"
     assert (await membrane.upsert_event({"id": "membrane-event-1"}))["id"] == "membrane-event-1"
     assert (await membrane.get_connection_by_user("user-1", integration_key="microsoft-outlook"))["id"] == "membrane-1"
+    assert await membrane.delete_connection("membrane-connection-1") is True
     assert (await membrane.list_emails("user-1", folder="inbox", search="q"))["total"] == 1
     assert (await membrane.get_email("email-1", "user-1"))["id"] == "email-1"
     assert await membrane.get_email("missing", "user-1") is None

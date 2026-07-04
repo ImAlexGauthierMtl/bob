@@ -87,6 +87,25 @@ class AgentRuntimeRepositoryPort(Protocol):
     ) -> list[RuntimeCatalogItem]:
         ...
 
+    def list_user_catalog_items(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        collection: str,
+    ) -> list[RuntimeCatalogItem]:
+        ...
+
+    def get_catalog_item(
+        self,
+        *,
+        item_id: str,
+        tenant_id: str,
+        collection: str,
+        user_id: str | None = None,
+    ) -> Optional[RuntimeCatalogItem]:
+        ...
+
     def get_catalog_item_by_idempotency_key(
         self,
         *,
@@ -98,6 +117,9 @@ class AgentRuntimeRepositoryPort(Protocol):
         ...
 
     def create_catalog_item(self, *, item: RuntimeCatalogItem) -> RuntimeCatalogItem:
+        ...
+
+    def upsert_catalog_item(self, *, item: RuntimeCatalogItem) -> RuntimeCatalogItem:
         ...
 
 
@@ -135,13 +157,21 @@ class AgentRuntimeUseCases:
         now = _utc_now()
         run_id = f"run_{uuid4().hex}"
         runtime_catalog = await self.resolve_runtime_catalog(context=context, metadata=metadata)
+        tool_governance = await self.get_user_tool_access(context=context)
+        runtime_catalog = _apply_tool_governance_to_runtime_catalog(
+            runtime_catalog=runtime_catalog,
+            tool_governance=tool_governance,
+        )
         run_metadata = {
             **metadata,
+            "source_prompt": prompt,
             "runtime_catalog": runtime_catalog,
+            "tool_governance": tool_governance,
         }
         tools = self.tool_registry.list_tools(prompt=prompt, context=context, metadata=run_metadata)
         messages = _build_messages(prompt=prompt, channel=channel, metadata=run_metadata, tools=tools)
         tool_results: list[dict[str, Any]] = []
+        show_tool_trace = _show_tool_trace(run_metadata)
         narration_steps = [
             {
                 "label": "demande_recue",
@@ -218,7 +248,7 @@ class AgentRuntimeUseCases:
                         {
                             "label": "intent_router",
                             "status": "complete",
-                            "visible": True,
+                            "visible": show_tool_trace,
                         }
                     )
                     routing_events.append(
@@ -241,7 +271,7 @@ class AgentRuntimeUseCases:
                     {
                         "label": "tool_loop_limit_reached",
                         "status": "degraded",
-                        "visible": True,
+                        "visible": show_tool_trace,
                     }
                 )
                 break
@@ -309,7 +339,7 @@ class AgentRuntimeUseCases:
                     {
                         "label": f"outil_{tool_result.name}",
                         "status": tool_result.status,
-                        "visible": True,
+                        "visible": show_tool_trace,
                     }
                 )
             final_result = await _complete_provider_safely(
@@ -562,6 +592,383 @@ class AgentRuntimeUseCases:
             "runtime": await self.get_runtime_settings(context=context),
         }
 
+    async def get_tool_governance(self, *, context: InternalContext) -> dict[str, Any]:
+        settings = await self.get_runtime_settings(context=context)
+        defaults = {policy["id"]: policy for policy in _default_tool_policies(settings)}
+        custom_items = self.repo.list_catalog_items(
+            tenant_id=context.tenant_id,
+            user_id=context.user_id,
+            collection="tool_policies",
+        )
+
+        policies = dict(defaults)
+        for item in custom_items:
+            policy = _normalise_tool_policy(item.payload)
+            policies[policy["id"]] = {
+                **policies.get(policy["id"], {}),
+                **policy,
+                "source": "admin_policy",
+            }
+
+        sorted_policies = sorted(
+            policies.values(),
+            key=lambda item: (
+                str(item.get("provider") or ""),
+                str(item.get("family") or ""),
+                str(item.get("display_name") or item.get("id") or ""),
+            ),
+        )
+        return {
+            "source": "agent-runtime-backend-api",
+            "scope": "tenant",
+            "tenant_id": context.tenant_id,
+            "items": sorted_policies,
+            "total": len(sorted_policies),
+            "enabled_total": sum(1 for item in sorted_policies if item.get("enabled") is True),
+            "collections": {
+                "policies": "tool_policies",
+                "user_preferences": "user_tool_preferences",
+            },
+        }
+
+    async def update_tool_governance_policy(
+        self,
+        *,
+        context: InternalContext,
+        policy_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        policy = _tool_policy_payload(policy_id=policy_id, payload=payload)
+        item = RuntimeCatalogItem(
+            id=_catalog_storage_id("tool-policy", policy_id),
+            tenant_id=context.tenant_id,
+            user_id=context.user_id,
+            collection="tool_policies",
+            name=policy["display_name"],
+            payload=policy,
+            payload_hash=_request_payload_hash(collection="tool_policies", payload=policy),
+            idempotency_key=None,
+            created_at=_utc_now(),
+        )
+        created = self.repo.upsert_catalog_item(item=item)
+        return _normalise_tool_policy(created.payload)
+
+    async def get_user_tool_access(self, *, context: InternalContext) -> dict[str, Any]:
+        governance = await self.get_tool_governance(context=context)
+        preferences = await self.get_user_tool_preferences(context=context)
+        allowed = [item for item in governance["items"] if item.get("enabled") is True]
+        return {
+            "source": "agent-runtime-backend-api",
+            "scope": "user",
+            "tenant_id": context.tenant_id,
+            "user_id": context.user_id,
+            "preferences": preferences,
+            "policies": governance["items"],
+            "allowed_tools": allowed,
+            "allowed_total": len(allowed),
+        }
+
+    async def get_user_tool_preferences(self, *, context: InternalContext) -> dict[str, Any]:
+        item = self.repo.get_catalog_item(
+            item_id=_catalog_storage_id("user-tool-preferences", context.user_id),
+            tenant_id=context.tenant_id,
+            user_id=context.user_id,
+            collection="user_tool_preferences",
+        )
+        if not item:
+            return _default_user_tool_preferences()
+        return _normalise_user_tool_preferences(item.payload)
+
+    async def update_user_tool_preferences(
+        self,
+        *,
+        context: InternalContext,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        preferences = _user_tool_preferences_payload(payload)
+        item = RuntimeCatalogItem(
+            id=_catalog_storage_id("user-tool-preferences", context.user_id),
+            tenant_id=context.tenant_id,
+            user_id=context.user_id,
+            collection="user_tool_preferences",
+            name="User Tool Preferences",
+            payload=preferences,
+            payload_hash=_request_payload_hash(collection="user_tool_preferences", payload=preferences),
+            idempotency_key=None,
+            created_at=_utc_now(),
+        )
+        created = self.repo.upsert_catalog_item(item=item)
+        return _normalise_user_tool_preferences(created.payload)
+
+
+def _default_tool_policies(settings: dict[str, Any]) -> list[dict[str, Any]]:
+    policies: list[dict[str, Any]] = []
+    for tool in settings.get("tools", []):
+        if not isinstance(tool, dict):
+            continue
+        tool_id = _runtime_tool_policy_id(tool)
+        if not tool_id:
+            continue
+        policies.append(
+            _normalise_tool_policy(
+                {
+                    "id": tool_id,
+                    "display_name": str(tool.get("description") or tool.get("name") or tool_id),
+                    "provider": _provider_for_runtime_tool(tool),
+                    "integration_key": tool.get("family"),
+                    "tool_key": tool.get("name") or tool.get("id"),
+                    "family": tool.get("family"),
+                    "capability": tool.get("capability_id") or tool.get("name"),
+                    "risk": tool.get("risk") or "read",
+                    "enabled": _runtime_tool_enabled_by_default(tool),
+                    "team_scope": [],
+                    "sync_enabled": False,
+                    "sync_mode": "none",
+                    "data_mapping": {},
+                    "notes": tool.get("source") or tool.get("execution"),
+                    "source": "runtime_default",
+                }
+            )
+        )
+
+    for capability in settings.get("mcp", {}).get("capabilities", []):
+        if not isinstance(capability, dict):
+            continue
+        policy_id = str(capability.get("qualified_id") or "").strip()
+        if not policy_id:
+            continue
+        policies.append(
+            _normalise_tool_policy(
+                {
+                    "id": policy_id,
+                    "display_name": capability.get("title") or policy_id,
+                    "provider": "mcp",
+                    "integration_key": capability.get("family"),
+                    "tool_key": ",".join(str(item) for item in capability.get("tools", []) if item),
+                    "family": capability.get("family"),
+                    "capability": capability.get("id"),
+                    "risk": capability.get("risk") or "read",
+                    "enabled": _capability_enabled_by_default(capability),
+                    "team_scope": [],
+                    "sync_enabled": False,
+                    "sync_mode": "none",
+                    "data_mapping": _capability_data_mapping(capability),
+                    "notes": capability.get("file"),
+                    "source": "mcp_catalog",
+                }
+            )
+        )
+    return _dedupe_policies(policies)
+
+
+def _runtime_tool_policy_id(tool: dict[str, Any]) -> str:
+    family = _clean_string(tool.get("family"))
+    capability = _clean_string(tool.get("capability_id"))
+    if family and capability and capability != family:
+        return capability if "." in capability else f"{family}.{capability}"
+    return str(tool.get("id") or tool.get("name") or "").strip()
+
+
+def _runtime_tool_enabled_by_default(tool: dict[str, Any]) -> bool:
+    risk = _clean_string(tool.get("risk")) or "read"
+    if risk == "destructive-confirmed":
+        return False
+    status = _clean_string(tool.get("status"))
+    if not status:
+        return True
+    return status.lower() not in {"disabled", "inactive", "archived", "deleted"}
+
+
+def _capability_data_mapping(capability: dict[str, Any]) -> dict[str, Any]:
+    mapping = {
+        "capability_path": capability.get("capability_path"),
+        "runtime_status": capability.get("runtime_status"),
+        "connector_status": capability.get("connector_status"),
+    }
+    for key in (
+        "api_surface",
+        "api_base_hint",
+        "portal_url",
+        "endpoint",
+        "http_method",
+        "api_object",
+        "api_action",
+        "doc_section",
+        "doc_operation",
+        "doc_url",
+        "api_scope",
+        "read_only_test",
+        "guardrail",
+    ):
+        value = capability.get(key)
+        if value not in (None, ""):
+            mapping[key] = value
+    return mapping
+
+
+def _provider_for_runtime_tool(tool: dict[str, Any]) -> str:
+    execution = str(tool.get("execution") or "")
+    if "mcp" in execution:
+        return "mcp"
+    if str(tool.get("family") or "") in {"mail-calendar", "slack", "teams"}:
+        return "pipedream"
+    return "internal"
+
+
+def _capability_enabled_by_default(capability: dict[str, Any]) -> bool:
+    status = str(capability.get("runtime_status") or "")
+    risk = str(capability.get("risk") or "read")
+    if risk == "destructive-confirmed":
+        return False
+    return status in {
+        "local_runtime_active",
+        "local_adapter_active",
+        "remote_adapter_configured",
+        "confirmation_gated_contract",
+    }
+
+
+def _dedupe_policies(policies: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_id: dict[str, dict[str, Any]] = {}
+    for policy in policies:
+        policy_id = str(policy["id"])
+        existing = by_id.get(policy_id)
+        if existing:
+            by_id[policy_id] = {
+                **existing,
+                **policy,
+                "enabled": bool(existing.get("enabled")) or bool(policy.get("enabled")),
+            }
+            continue
+        by_id[policy_id] = policy
+    return list(by_id.values())
+
+
+def _tool_policy_payload(*, policy_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    merged = {"id": policy_id, **payload}
+    return _normalise_tool_policy(merged)
+
+
+def _normalise_tool_policy(payload: dict[str, Any]) -> dict[str, Any]:
+    policy_id = _required_clean_string(payload.get("id"), "tool_policy_id")
+    display_name = _clean_string(payload.get("display_name")) or _clean_string(payload.get("name")) or policy_id
+    sync_mode = _clean_string(payload.get("sync_mode")) or "none"
+    if sync_mode not in {"none", "read_only", "import", "two_way"}:
+        raise AgentRuntimeError("tool_policy_sync_mode_invalid")
+    return {
+        "id": policy_id,
+        "display_name": display_name[:180],
+        "provider": _clean_string(payload.get("provider")) or "mcp",
+        "integration_key": _clean_string(payload.get("integration_key")),
+        "tool_key": _clean_string(payload.get("tool_key")),
+        "family": _clean_string(payload.get("family")),
+        "capability": _clean_string(payload.get("capability")),
+        "risk": _clean_string(payload.get("risk")) or "read",
+        "enabled": bool(payload.get("enabled", True)),
+        "team_scope": _clean_string_list(payload.get("team_scope")),
+        "sync_enabled": bool(payload.get("sync_enabled", False)),
+        "sync_mode": sync_mode,
+        "data_mapping": payload.get("data_mapping") if isinstance(payload.get("data_mapping"), dict) else {},
+        "notes": _clean_string(payload.get("notes")),
+        "source": _clean_string(payload.get("source")) or "admin_policy",
+    }
+
+
+def _default_user_tool_preferences() -> dict[str, Any]:
+    return {
+        "preferred_email_provider": "auto",
+        "preferred_calendar_provider": "auto",
+        "require_write_confirmation": True,
+        "show_tool_trace": True,
+        "allow_personal_connectors": True,
+    }
+
+
+def _user_tool_preferences_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    defaults = _default_user_tool_preferences()
+    preferences = {
+        **defaults,
+        **{
+            key: value
+            for key, value in payload.items()
+            if key in defaults
+        },
+    }
+    return _normalise_user_tool_preferences(preferences)
+
+
+def _normalise_user_tool_preferences(payload: dict[str, Any]) -> dict[str, Any]:
+    email_provider = _preference_choice(
+        payload.get("preferred_email_provider"),
+        allowed={"auto", "gmail", "microsoft_outlook", "ask"},
+        default="auto",
+    )
+    calendar_provider = _preference_choice(
+        payload.get("preferred_calendar_provider"),
+        allowed={"auto", "google_calendar", "microsoft_outlook", "ask"},
+        default="auto",
+    )
+    return {
+        "preferred_email_provider": email_provider,
+        "preferred_calendar_provider": calendar_provider,
+        "require_write_confirmation": bool(payload.get("require_write_confirmation", True)),
+        "show_tool_trace": bool(payload.get("show_tool_trace", True)),
+        "allow_personal_connectors": bool(payload.get("allow_personal_connectors", True)),
+    }
+
+
+def _metadata_tool_preferences(metadata: dict[str, Any]) -> dict[str, Any]:
+    governance = metadata.get("tool_governance") if isinstance(metadata, dict) else None
+    preferences = governance.get("preferences") if isinstance(governance, dict) else None
+    if not isinstance(preferences, dict):
+        return _default_user_tool_preferences()
+    return _normalise_user_tool_preferences(preferences)
+
+
+def _show_tool_trace(metadata: dict[str, Any]) -> bool:
+    return bool(_metadata_tool_preferences(metadata).get("show_tool_trace", True))
+
+
+def _tool_preference_summary(metadata: dict[str, Any]) -> str:
+    preferences = _metadata_tool_preferences(metadata)
+    return (
+        f"email={preferences['preferred_email_provider']}, "
+        f"calendrier={preferences['preferred_calendar_provider']}, "
+        f"confirmation_ecriture={preferences['require_write_confirmation']}, "
+        f"trace_outils={preferences['show_tool_trace']}, "
+        f"connecteurs_personnels={preferences['allow_personal_connectors']}."
+    )
+
+
+def _preference_choice(value: Any, *, allowed: set[str], default: str) -> str:
+    candidate = str(value or "").strip()
+    return candidate if candidate in allowed else default
+
+
+def _catalog_storage_id(prefix: str, value: str) -> str:
+    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:32]
+    return f"{prefix}-{digest}"[:64]
+
+
+def _required_clean_string(value: Any, code: str) -> str:
+    cleaned = _clean_string(value)
+    if not cleaned:
+        raise AgentRuntimeError(code)
+    return cleaned
+
+
+def _clean_string(value: Any) -> str | None:
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    return cleaned or None
+
+
+def _clean_string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
 
 def _build_messages(
     *,
@@ -577,6 +984,7 @@ def _build_messages(
     agent_summary = _agent_runtime_summary(
         metadata.get("runtime_catalog") if isinstance(metadata, dict) else None
     )
+    preference_summary = _tool_preference_summary(metadata)
     return [
         {
             "role": "system",
@@ -589,10 +997,11 @@ def _build_messages(
                 "un tool_call bob_mcp_gateway au premier tour avec operation=execute_capability, "
                 "family, capability et risk alignes au catalogue. "
                 "N'appelle bob_runtime_status que pour une demande de statut, diagnostic ou etat runtime. "
-                "Tu ne reveles jamais de secret, tu verifies les donnees utiles et tu demandes une confirmation "
-                "avant toute action d'ecriture ou action irreversible. "
+                "Tu ne reveles jamais de secret, tu verifies les donnees utiles et tu respectes la politique "
+                "de confirmation du runtime avant toute ecriture; les actions irreversibles restent toujours gatees. "
                 f"Canal actif: {channel}. Contexte memoire: {memory_summary} "
                 f"Catalogue agent: {agent_summary} "
+                f"Preferences outils: {preference_summary} "
                 f"Selection MCP: {mcp_tool_selection} "
                 f"Runtime: {runtime_summary}"
             ),
@@ -818,6 +1227,82 @@ def _catalog_detail_lines(entries: list[Any], *, fields: tuple[str, ...]) -> str
         ]
         lines.append(f"{name} ({'; '.join(details)})" if details else name)
     return " | ".join(lines[:8])
+
+
+def _apply_tool_governance_to_runtime_catalog(
+    *,
+    runtime_catalog: dict[str, Any],
+    tool_governance: dict[str, Any],
+) -> dict[str, Any]:
+    selected_tools = runtime_catalog.get("tools") if isinstance(runtime_catalog, dict) else None
+    policies = tool_governance.get("policies") if isinstance(tool_governance, dict) else None
+    allowed_tools = tool_governance.get("allowed_tools") if isinstance(tool_governance, dict) else None
+    if not isinstance(selected_tools, list) or not isinstance(policies, list) or not isinstance(allowed_tools, list):
+        return runtime_catalog
+
+    filtered_tools = [
+        tool
+        for tool in selected_tools
+        if isinstance(tool, dict) and _runtime_tool_allowed_by_governance(tool, policies, allowed_tools)
+    ]
+    return {
+        **runtime_catalog,
+        "tools": filtered_tools,
+        "governance": {
+            "source": tool_governance.get("source"),
+            "allowed_total": tool_governance.get("allowed_total"),
+            "filtered_tool_count": len(selected_tools) - len(filtered_tools),
+        },
+    }
+
+
+def _runtime_tool_allowed_by_governance(
+    tool: dict[str, Any],
+    policies: list[Any],
+    allowed_tools: list[Any],
+) -> bool:
+    tool_keys = {
+        _compact_governance_key(tool.get("id")),
+        _compact_governance_key(tool.get("name")),
+        _compact_governance_key(tool.get("tool_key")),
+        _compact_governance_key(tool.get("capability_id")),
+    }
+    tool_keys.discard("")
+    if not tool_keys:
+        return True
+
+    matching_policy_exists = False
+    for policy in policies:
+        if not isinstance(policy, dict):
+            continue
+        policy_keys = _runtime_policy_governance_keys(policy)
+        if tool_keys & policy_keys:
+            matching_policy_exists = True
+            break
+    if not matching_policy_exists:
+        return True
+
+    for policy in allowed_tools:
+        if not isinstance(policy, dict):
+            continue
+        policy_keys = _runtime_policy_governance_keys(policy)
+        if tool_keys & policy_keys:
+            return True
+    return False
+
+
+def _runtime_policy_governance_keys(policy: dict[str, Any]) -> set[str]:
+    policy_keys = {
+        _compact_governance_key(policy.get("id")),
+        _compact_governance_key(policy.get("tool_key")),
+        _compact_governance_key(policy.get("capability")),
+    }
+    policy_keys.discard("")
+    return policy_keys
+
+
+def _compact_governance_key(value: Any) -> str:
+    return str(value or "").strip().lower().replace("_", "-")
 
 
 def _compact_text(value: str, limit: int) -> str:

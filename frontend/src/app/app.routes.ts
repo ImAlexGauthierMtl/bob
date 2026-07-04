@@ -157,10 +157,10 @@ export const routes: Routes = [
                             ),
                     },
                     {
-                        path: 'security',
+                        path: 'my-tools',
                         loadComponent: () =>
-                            import('./pages/settings/settings-security/settings-security').then(
-                                (m) => m.SettingsSecurityComponent
+                            import('./pages/settings/settings-my-tools/settings-my-tools').then(
+                                (m) => m.SettingsMyToolsComponent
                             ),
                     },
                     {
@@ -168,13 +168,6 @@ export const routes: Routes = [
                         loadComponent: () =>
                             import('./pages/settings/settings-bob/settings-bob').then(
                                 (m) => m.SettingsBobComponent
-                            ),
-                    },
-                    {
-                        path: 'notifications',
-                        loadComponent: () =>
-                            import('./pages/settings/settings-notifications/settings-notifications').then(
-                                (m) => m.SettingsNotificationsComponent
                             ),
                     },
                     {
@@ -210,6 +203,20 @@ export const routes: Routes = [
                         loadComponent: () =>
                             import('./pages/settings/settings-platform-access/settings-platform-access').then(
                                 (m) => m.SettingsPlatformAccessComponent
+                            ),
+                    },
+                    {
+                        path: 'tool-governance',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-tool-governance/settings-tool-governance').then(
+                                (m) => m.SettingsToolGovernanceComponent
+                            ),
+                    },
+                    {
+                        path: 'knowledge',
+                        loadComponent: () =>
+                            import('./pages/settings/settings-knowledge/settings-knowledge').then(
+                                (m) => m.SettingsKnowledgeComponent
                             ),
                     },
                     {

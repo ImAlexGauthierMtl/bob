@@ -185,6 +185,43 @@ class AgentRuntimeRepository:
         )
         return [_catalog_item_from_model(model) for model in models]
 
+    def list_user_catalog_items(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        collection: str,
+    ) -> list[RuntimeCatalogItem]:
+        models = (
+            self.db.query(RuntimeCatalogItemModel)
+            .filter(
+                RuntimeCatalogItemModel.tenant_id == tenant_id,
+                RuntimeCatalogItemModel.user_id == user_id,
+                RuntimeCatalogItemModel.collection == collection,
+            )
+            .order_by(RuntimeCatalogItemModel.created_at.asc(), RuntimeCatalogItemModel.id.asc())
+            .all()
+        )
+        return [_catalog_item_from_model(model) for model in models]
+
+    def get_catalog_item(
+        self,
+        *,
+        item_id: str,
+        tenant_id: str,
+        collection: str,
+        user_id: str | None = None,
+    ) -> RuntimeCatalogItem | None:
+        query = self.db.query(RuntimeCatalogItemModel).filter(
+            RuntimeCatalogItemModel.id == item_id,
+            RuntimeCatalogItemModel.tenant_id == tenant_id,
+            RuntimeCatalogItemModel.collection == collection,
+        )
+        if user_id is not None:
+            query = query.filter(RuntimeCatalogItemModel.user_id == user_id)
+        model = query.one_or_none()
+        return _catalog_item_from_model(model) if model else None
+
     def get_catalog_item_by_idempotency_key(
         self,
         *,
@@ -218,6 +255,27 @@ class AgentRuntimeRepository:
             created_at=item.created_at,
         )
         self.db.add(model)
+        self.db.commit()
+        self.db.refresh(model)
+        return _catalog_item_from_model(model)
+
+    def upsert_catalog_item(self, *, item: RuntimeCatalogItem) -> RuntimeCatalogItem:
+        model = (
+            self.db.query(RuntimeCatalogItemModel)
+            .filter(
+                RuntimeCatalogItemModel.id == item.id,
+                RuntimeCatalogItemModel.tenant_id == item.tenant_id,
+                RuntimeCatalogItemModel.collection == item.collection,
+            )
+            .one_or_none()
+        )
+        if model is None:
+            return self.create_catalog_item(item=item)
+        model.user_id = item.user_id
+        model.name = item.name
+        model.payload = item.payload
+        model.payload_hash = item.payload_hash
+        model.idempotency_key = item.idempotency_key
         self.db.commit()
         self.db.refresh(model)
         return _catalog_item_from_model(model)

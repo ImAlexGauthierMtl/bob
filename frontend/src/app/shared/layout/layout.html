@@ -75,43 +75,46 @@
                 </a>
             </div>
 
-            <div class="sidebar__section">
-                <p class="sidebar__section-title">Agents</p>
-                <div class="sidebar__nav-secondary">
-                    <a routerLink="/team" class="sidebar__link sidebar__link--sm">
-                        <i class="fa-solid fa-users"></i>
-                        <span>Team</span>
-                    </a>
-                    <a routerLink="/settings" class="sidebar__link sidebar__link--sm">
-                        <i class="fa-solid fa-gear"></i>
-                        <span>Settings</span>
-                    </a>
-                </div>
-
-                @if (isSuperAdmin) {
-                <div class="sidebar__section sidebar__section--admin" id="sidebar-admin-section">
-                    <p class="sidebar__section-title">Administration</p>
-                    <div class="sidebar__nav-secondary">
-                        <a routerLink="/tenants" routerLinkActive="sidebar__link--active"
-                            class="sidebar__link sidebar__link--sm" id="sidebar-tenants-link">
-                            <i class="fa-solid fa-building-columns"></i> Tenants
-                        </a>
-                        <a routerLink="/usage-logs" routerLinkActive="sidebar__link--active"
-                            class="sidebar__link sidebar__link--sm" id="sidebar-logs-link">
-                            <i class="fa-solid fa-chart-line"></i> Logs
-                        </a>
-                    </div>
-                </div>
-                }
-            </div>
         </nav>
 
         <div class="sidebar__user">
-            <div class="sidebar__avatar-placeholder">{{ userName ? userName[0] : 'U' }}</div>
-            <div class="sidebar__user-info">
-                <p class="sidebar__user-name">{{ userName || 'User' }}</p>
-                <p class="sidebar__user-role">{{ userRole || 'Member' }}</p>
+            @if (showUserMenu) {
+            <div class="sidebar__user-menu">
+                <a routerLink="/team" routerLinkActive="sidebar__user-menu-item--active"
+                    class="sidebar__user-menu-item" (click)="closeUserMenu()">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Team</span>
+                </a>
+                <a routerLink="/settings" routerLinkActive="sidebar__user-menu-item--active"
+                    class="sidebar__user-menu-item" (click)="closeUserMenu()">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Settings</span>
+                </a>
+                @if (isSuperAdmin) {
+                <div class="sidebar__user-menu-divider"></div>
+                <a routerLink="/tenants" routerLinkActive="sidebar__user-menu-item--active"
+                    class="sidebar__user-menu-item" id="sidebar-tenants-link" (click)="closeUserMenu()">
+                    <i class="fa-solid fa-building-columns"></i>
+                    <span>Tenants</span>
+                </a>
+                <a routerLink="/usage-logs" routerLinkActive="sidebar__user-menu-item--active"
+                    class="sidebar__user-menu-item" id="sidebar-logs-link" (click)="closeUserMenu()">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Logs</span>
+                </a>
+                }
             </div>
+            }
+            <button type="button" class="sidebar__user-trigger" (click)="toggleUserMenu()"
+                [attr.aria-expanded]="showUserMenu" aria-haspopup="menu">
+                <div class="sidebar__avatar-placeholder">{{ userName ? userName[0] : 'U' }}</div>
+                <div class="sidebar__user-info">
+                    <p class="sidebar__user-name">{{ userName || 'User' }}</p>
+                    <p class="sidebar__user-role">{{ userRole || 'Member' }}</p>
+                </div>
+                <i class="fa-solid fa-chevron-up sidebar__user-chevron"
+                    [class.sidebar__user-chevron--open]="showUserMenu"></i>
+            </button>
         </div>
     </aside>
 
@@ -121,11 +124,9 @@
             <router-outlet />
 
             <footer class="app-footer">
-                <p class="app-footer__copyright">© 2026 Croo Digital Experience. All rights reserved.</p>
+                <p class="app-footer__copyright">© 2026 The Croo Group. All rights reserved.</p>
                 <div class="app-footer__links">
                     <a routerLink="/knowledge-base">Knowledge Base</a>
-                    <a href="#">API Docs</a>
-                    <a href="#">Privacy</a>
                 </div>
             </footer>
         </div>

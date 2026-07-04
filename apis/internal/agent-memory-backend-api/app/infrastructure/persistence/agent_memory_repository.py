@@ -8,8 +8,28 @@ from typing import Optional
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app.domain import MemoryEntry, MemoryJournalEntry, MemoryScope, VectorIndexJob, VectorIndexRecord
+from app.domain import (
+    KnowledgeChunk,
+    KnowledgeCollection,
+    KnowledgeDatabase,
+    KnowledgeIngestionRun,
+    KnowledgeItem,
+    KnowledgeProcedure,
+    KnowledgeSource,
+    MemoryEntry,
+    MemoryJournalEntry,
+    MemoryScope,
+    VectorIndexJob,
+    VectorIndexRecord,
+)
 from app.infrastructure.persistence.models.agent_memory import (
+    KnowledgeChunkModel,
+    KnowledgeCollectionModel,
+    KnowledgeDatabaseModel,
+    KnowledgeIngestionRunModel,
+    KnowledgeItemModel,
+    KnowledgeProcedureModel,
+    KnowledgeSourceModel,
     MemoryEntryModel,
     MemoryJournalModel,
     VectorIndexJobModel,
@@ -380,6 +400,193 @@ class AgentMemoryRepository:
         self.db.commit()
         return int(updated)
 
+    def list_knowledge_databases(self, *, tenant_id: str) -> list[KnowledgeDatabase]:
+        models = (
+            self.db.query(KnowledgeDatabaseModel)
+            .filter(KnowledgeDatabaseModel.tenant_id == tenant_id)
+            .order_by(KnowledgeDatabaseModel.created_at.desc())
+            .all()
+        )
+        return [_knowledge_database_from_model(model) for model in models]
+
+    def list_knowledge_collections(self, *, tenant_id: str) -> list[KnowledgeCollection]:
+        models = (
+            self.db.query(KnowledgeCollectionModel)
+            .filter(KnowledgeCollectionModel.tenant_id == tenant_id)
+            .order_by(KnowledgeCollectionModel.created_at.desc())
+            .all()
+        )
+        return [_knowledge_collection_from_model(model) for model in models]
+
+    def list_knowledge_sources(self, *, tenant_id: str) -> list[KnowledgeSource]:
+        models = (
+            self.db.query(KnowledgeSourceModel)
+            .filter(KnowledgeSourceModel.tenant_id == tenant_id)
+            .order_by(KnowledgeSourceModel.created_at.desc())
+            .all()
+        )
+        return [_knowledge_source_from_model(model) for model in models]
+
+    def get_knowledge_database(self, *, tenant_id: str, database_id: str) -> KnowledgeDatabase | None:
+        model = (
+            self.db.query(KnowledgeDatabaseModel)
+            .filter(
+                KnowledgeDatabaseModel.tenant_id == tenant_id,
+                KnowledgeDatabaseModel.id == database_id,
+            )
+            .one_or_none()
+        )
+        return _knowledge_database_from_model(model) if model else None
+
+    def get_knowledge_collection(self, *, tenant_id: str, collection_id: str) -> KnowledgeCollection | None:
+        model = (
+            self.db.query(KnowledgeCollectionModel)
+            .filter(
+                KnowledgeCollectionModel.tenant_id == tenant_id,
+                KnowledgeCollectionModel.id == collection_id,
+            )
+            .one_or_none()
+        )
+        return _knowledge_collection_from_model(model) if model else None
+
+    def get_knowledge_source(self, *, tenant_id: str, source_id: str) -> KnowledgeSource | None:
+        model = (
+            self.db.query(KnowledgeSourceModel)
+            .filter(
+                KnowledgeSourceModel.tenant_id == tenant_id,
+                KnowledgeSourceModel.id == source_id,
+            )
+            .one_or_none()
+        )
+        return _knowledge_source_from_model(model) if model else None
+
+    def get_knowledge_database_by_idempotency_key(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        idempotency_key: str,
+    ) -> KnowledgeDatabase | None:
+        model = (
+            self.db.query(KnowledgeDatabaseModel)
+            .filter(
+                KnowledgeDatabaseModel.tenant_id == tenant_id,
+                KnowledgeDatabaseModel.created_by == user_id,
+                KnowledgeDatabaseModel.idempotency_key == idempotency_key,
+            )
+            .one_or_none()
+        )
+        return _knowledge_database_from_model(model) if model else None
+
+    def get_knowledge_collection_by_idempotency_key(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        idempotency_key: str,
+    ) -> KnowledgeCollection | None:
+        model = (
+            self.db.query(KnowledgeCollectionModel)
+            .filter(
+                KnowledgeCollectionModel.tenant_id == tenant_id,
+                KnowledgeCollectionModel.created_by == user_id,
+                KnowledgeCollectionModel.idempotency_key == idempotency_key,
+            )
+            .one_or_none()
+        )
+        return _knowledge_collection_from_model(model) if model else None
+
+    def get_knowledge_source_by_idempotency_key(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        idempotency_key: str,
+    ) -> KnowledgeSource | None:
+        model = (
+            self.db.query(KnowledgeSourceModel)
+            .filter(
+                KnowledgeSourceModel.tenant_id == tenant_id,
+                KnowledgeSourceModel.created_by == user_id,
+                KnowledgeSourceModel.idempotency_key == idempotency_key,
+            )
+            .one_or_none()
+        )
+        return _knowledge_source_from_model(model) if model else None
+
+    def create_knowledge_database(self, *, database: KnowledgeDatabase) -> KnowledgeDatabase:
+        model = KnowledgeDatabaseModel(**database.__dict__)
+        self.db.add(model)
+        self.db.commit()
+        self.db.refresh(model)
+        return _knowledge_database_from_model(model)
+
+    def create_knowledge_collection(self, *, collection: KnowledgeCollection) -> KnowledgeCollection:
+        model = KnowledgeCollectionModel(**collection.__dict__)
+        self.db.add(model)
+        self.db.commit()
+        self.db.refresh(model)
+        return _knowledge_collection_from_model(model)
+
+    def create_knowledge_source(self, *, source: KnowledgeSource) -> KnowledgeSource:
+        model = KnowledgeSourceModel(**source.__dict__)
+        self.db.add(model)
+        self.db.commit()
+        self.db.refresh(model)
+        return _knowledge_source_from_model(model)
+
+    def create_knowledge_ingestion_run(self, *, run: KnowledgeIngestionRun) -> KnowledgeIngestionRun:
+        model = KnowledgeIngestionRunModel(**run.__dict__)
+        self.db.add(model)
+        self.db.commit()
+        self.db.refresh(model)
+        return _knowledge_ingestion_run_from_model(model)
+
+    def update_knowledge_ingestion_run(self, *, run: KnowledgeIngestionRun) -> KnowledgeIngestionRun:
+        model = self.db.get(KnowledgeIngestionRunModel, run.id)
+        if model is None:
+            raise ValueError("knowledge_ingestion_run_not_found")
+        for key, value in run.__dict__.items():
+            setattr(model, key, value)
+        self.db.commit()
+        self.db.refresh(model)
+        return _knowledge_ingestion_run_from_model(model)
+
+    def upsert_knowledge_item(self, *, item: KnowledgeItem) -> KnowledgeItem:
+        model = (
+            self.db.query(KnowledgeItemModel)
+            .filter(
+                KnowledgeItemModel.tenant_id == item.tenant_id,
+                KnowledgeItemModel.source_id == item.source_id,
+                KnowledgeItemModel.external_id == item.external_id,
+            )
+            .one_or_none()
+        )
+        if model is None:
+            model = KnowledgeItemModel(**item.__dict__)
+            self.db.add(model)
+        else:
+            for key, value in item.__dict__.items():
+                setattr(model, key, value)
+        self.db.commit()
+        self.db.refresh(model)
+        return _knowledge_item_from_model(model)
+
+    def create_knowledge_chunks(self, *, chunks: list[KnowledgeChunk]) -> list[KnowledgeChunk]:
+        models = [KnowledgeChunkModel(**chunk.__dict__) for chunk in chunks]
+        self.db.add_all(models)
+        self.db.commit()
+        for model in models:
+            self.db.refresh(model)
+        return [_knowledge_chunk_from_model(model) for model in models]
+
+    def create_knowledge_procedure(self, *, procedure: KnowledgeProcedure) -> KnowledgeProcedure:
+        model = KnowledgeProcedureModel(**procedure.__dict__)
+        self.db.add(model)
+        self.db.commit()
+        self.db.refresh(model)
+        return _knowledge_procedure_from_model(model)
+
 
 def _entry_from_model(model: MemoryEntryModel) -> MemoryEntry:
     return MemoryEntry(
@@ -461,4 +668,137 @@ def _vector_record_from_model(model: VectorIndexRecordModel) -> VectorIndexRecor
         trace_id=model.trace_id,
         created_at=model.created_at,
         job_id=model.job_id,
+    )
+
+
+def _knowledge_database_from_model(model: KnowledgeDatabaseModel) -> KnowledgeDatabase:
+    return KnowledgeDatabase(
+        id=model.id,
+        tenant_id=model.tenant_id,
+        name=model.name,
+        display_name=model.display_name,
+        description=model.description,
+        status=model.status,
+        milvus_database=model.milvus_database,
+        embedding_provider=model.embedding_provider,
+        embedding_model=model.embedding_model,
+        embedding_dimension=model.embedding_dimension,
+        created_by=model.created_by,
+        created_at=model.created_at,
+        idempotency_key=model.idempotency_key,
+    )
+
+
+def _knowledge_collection_from_model(model: KnowledgeCollectionModel) -> KnowledgeCollection:
+    return KnowledgeCollection(
+        id=model.id,
+        tenant_id=model.tenant_id,
+        database_id=model.database_id,
+        name=model.name,
+        display_name=model.display_name,
+        theme=model.theme,
+        description=model.description,
+        status=model.status,
+        milvus_collection=model.milvus_collection,
+        scope_type=model.scope_type,
+        source_kind=model.source_kind,
+        created_by=model.created_by,
+        created_at=model.created_at,
+        idempotency_key=model.idempotency_key,
+    )
+
+
+def _knowledge_source_from_model(model: KnowledgeSourceModel) -> KnowledgeSource:
+    return KnowledgeSource(
+        id=model.id,
+        tenant_id=model.tenant_id,
+        collection_id=model.collection_id,
+        name=model.name,
+        provider=model.provider,
+        source_type=model.source_type,
+        status=model.status,
+        pipedream_app=model.pipedream_app,
+        pipedream_source_id=model.pipedream_source_id,
+        sync_mode=model.sync_mode,
+        ingestion_strategy=model.ingestion_strategy,
+        created_by=model.created_by,
+        created_at=model.created_at,
+        idempotency_key=model.idempotency_key,
+    )
+
+
+def _knowledge_ingestion_run_from_model(model: KnowledgeIngestionRunModel) -> KnowledgeIngestionRun:
+    return KnowledgeIngestionRun(
+        id=model.id,
+        tenant_id=model.tenant_id,
+        source_id=model.source_id,
+        trigger_type=model.trigger_type,
+        external_event_id=model.external_event_id,
+        status=model.status,
+        raw_items_count=model.raw_items_count,
+        normalized_items_count=model.normalized_items_count,
+        candidate_procedures_count=model.candidate_procedures_count,
+        error_message=model.error_message,
+        started_at=model.started_at,
+        completed_at=model.completed_at,
+        metadata_json=model.metadata_json or {},
+    )
+
+
+def _knowledge_item_from_model(model: KnowledgeItemModel) -> KnowledgeItem:
+    return KnowledgeItem(
+        id=model.id,
+        tenant_id=model.tenant_id,
+        source_id=model.source_id,
+        run_id=model.run_id,
+        external_id=model.external_id,
+        item_type=model.item_type,
+        title=model.title,
+        body=model.body,
+        metadata_json=model.metadata_json or {},
+        content_hash=model.content_hash,
+        status=model.status,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+    )
+
+
+def _knowledge_chunk_from_model(model: KnowledgeChunkModel) -> KnowledgeChunk:
+    return KnowledgeChunk(
+        id=model.id,
+        tenant_id=model.tenant_id,
+        collection_id=model.collection_id,
+        item_id=model.item_id,
+        chunk_index=model.chunk_index,
+        content=model.content,
+        content_hash=model.content_hash,
+        metadata_json=model.metadata_json or {},
+        vector_id=model.vector_id,
+        embedding_model=model.embedding_model,
+        embedding_dimension=model.embedding_dimension,
+        milvus_collection=model.milvus_collection,
+        status=model.status,
+        created_at=model.created_at,
+        indexed_at=model.indexed_at,
+    )
+
+
+def _knowledge_procedure_from_model(model: KnowledgeProcedureModel) -> KnowledgeProcedure:
+    return KnowledgeProcedure(
+        id=model.id,
+        tenant_id=model.tenant_id,
+        collection_id=model.collection_id,
+        source_item_id=model.source_item_id,
+        title=model.title,
+        intent_key=model.intent_key,
+        trigger_summary=model.trigger_summary,
+        procedure_markdown=model.procedure_markdown,
+        tool_plan_json=model.tool_plan_json or [],
+        confidence=model.confidence,
+        status=model.status,
+        generated_by_model=model.generated_by_model,
+        approved_by=model.approved_by,
+        approved_at=model.approved_at,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
     )

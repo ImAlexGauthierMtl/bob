@@ -6,7 +6,7 @@ REQUIRED_SURFACE = "agent-control"
 PUBLIC_BASE_PATH = "/api/agent-control/v1"
 
 OPERATIONAL_ENDPOINTS = ("/health", "/readiness", "/liveness", "/startup", "/metrics")
-PUBLIC_NAMESPACES = ("agent-control", "bcc", "training", "client-map")
+PUBLIC_NAMESPACES = ("agent-control", "bcc", "training", "client-map", "tool-governance")
 
 
 def load_app():
@@ -18,22 +18,35 @@ def load_app():
 
 def load_runtime_routes():
     """Load the route modules exposed by Agent Control."""
-    from app.presentation.routes import agent_control_routes, bcc_routes, client_map_routes, training_routes
+    from app.presentation.routes import (
+        agent_control_routes,
+        bcc_routes,
+        client_map_routes,
+        tool_governance_routes,
+        training_routes,
+    )
 
     return (
         agent_control_routes,
         bcc_routes,
         client_map_routes,
+        tool_governance_routes,
         training_routes,
     )
 
 
 def load_runtime_client_classes():
     """Load backend client classes used by Agent Control."""
-    from app.infrastructure.clients.agent_client import BccClient, ClientMapClient, TrainingClient
+    from app.infrastructure.clients.agent_client import (
+        BccClient,
+        ClientMapClient,
+        ToolGovernanceClient,
+        TrainingClient,
+    )
 
     return (
         BccClient,
         ClientMapClient,
+        ToolGovernanceClient,
         TrainingClient,
     )

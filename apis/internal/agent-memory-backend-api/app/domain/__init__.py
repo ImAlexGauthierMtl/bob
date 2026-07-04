@@ -2,6 +2,13 @@
 
 from app.domain.entities import (
     InternalContext,
+    KnowledgeChunk,
+    KnowledgeCollection,
+    KnowledgeDatabase,
+    KnowledgeIngestionRun,
+    KnowledgeItem,
+    KnowledgeProcedure,
+    KnowledgeSource,
     MemoryEntry,
     MemoryError,
     MemoryForbiddenError,
@@ -15,6 +22,13 @@ from app.domain.entities import (
 
 __all__ = [
     "InternalContext",
+    "KnowledgeChunk",
+    "KnowledgeCollection",
+    "KnowledgeDatabase",
+    "KnowledgeIngestionRun",
+    "KnowledgeItem",
+    "KnowledgeProcedure",
+    "KnowledgeSource",
     "MemoryEntry",
     "MemoryError",
     "MemoryForbiddenError",

@@ -40,11 +40,14 @@ export class LoginComponent {
 
     onSubmit(event: Event): void {
         event.preventDefault();
+        const credentials = this.getSubmittedCredentials(event);
+        this.email = credentials.email;
+        this.password = credentials.password;
         this.errorMessage = '';
         this.isLoading = true;
 
         this.authService
-            .login({ email: this.email, password: this.password })
+            .login(credentials)
             .subscribe({
                 next: () => {
                     this.router.navigate(['/dashboard']);
@@ -62,15 +65,20 @@ export class LoginComponent {
             });
     }
 
-    signInWithGoogle(): void {
-        // TODO: Implement Google SSO
+    private getSubmittedCredentials(event: Event): { email: string; password: string } {
+        const form = event.currentTarget instanceof HTMLFormElement ? event.currentTarget : null;
+        if (!form) {
+            return { email: this.email.trim(), password: this.password };
+        }
+
+        const formData = new FormData(form);
+        const submittedEmail = formData.get('email');
+        const submittedPassword = formData.get('password');
+
+        return {
+            email: typeof submittedEmail === 'string' ? submittedEmail.trim() : this.email.trim(),
+            password: typeof submittedPassword === 'string' ? submittedPassword : this.password,
+        };
     }
 
-    signInWithMicrosoft(): void {
-        // TODO: Implement Microsoft SSO
-    }
-
-    signInWithBiometric(): void {
-        // TODO: Implement biometric auth
-    }
 }

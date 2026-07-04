@@ -243,6 +243,10 @@ class MembraneCrudClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def delete_connection(self, connection_id: str, forward_headers=None) -> bool:
+        resp = await self._client.delete(f"/api/v1/membrane/connections/{connection_id}", forward_headers=forward_headers)
+        return resp.status_code == 204
+
     async def list_emails(self, user_id: str, skip: int = 0, limit: int = 50, folder: Optional[str] = None, search: Optional[str] = None, forward_headers=None) -> dict:
         params: Dict[str, str] = {"user_id": user_id, "skip": str(skip), "limit": str(limit)}
         if folder:

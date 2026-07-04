@@ -229,6 +229,31 @@ class AgentMemoryClient:
         resp.raise_for_status()
         return resp.json()
 
+    async def get_knowledge(self, *, headers=None):
+        resp = await self._client.get("/internal/agent-memory/v1/knowledge", headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def create_knowledge_database(self, *, data, headers=None):
+        resp = await self._client.post("/internal/agent-memory/v1/knowledge/databases", json=data, headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def create_knowledge_collection(self, *, data, headers=None):
+        resp = await self._client.post("/internal/agent-memory/v1/knowledge/collections", json=data, headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def create_knowledge_source(self, *, data, headers=None):
+        resp = await self._client.post("/internal/agent-memory/v1/knowledge/sources", json=data, headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def ingest_zoho_desk_knowledge(self, *, data, headers=None):
+        resp = await self._client.post("/internal/agent-memory/v1/knowledge/ingest/zoho-desk", json=data, headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
 
 workflow_client = WorkflowClient()
 usage_client = UsageClient()

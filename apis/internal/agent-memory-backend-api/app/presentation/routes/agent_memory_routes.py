@@ -12,6 +12,13 @@ from app.presentation.deps import get_agent_memory_use_cases, get_internal_conte
 from app.presentation.schemas.agent_memory_schemas import (
     JournalRecordRequest,
     JournalResponse,
+    KnowledgeCollectionRequest,
+    KnowledgeCollectionResponse,
+    KnowledgeDatabaseRequest,
+    KnowledgeDatabaseResponse,
+    KnowledgeOverviewResponse,
+    KnowledgeSourceRequest,
+    KnowledgeSourceResponse,
     MemoryEntryResponse,
     MemoryRecordRequest,
     MemorySearchRequest,
@@ -34,6 +41,8 @@ from app.presentation.schemas.agent_memory_schemas import (
     VectorStoreConfigResponse,
     VectorUpsertPlanRequest,
     VectorUpsertPlanResponse,
+    ZohoDeskIngestionRequest,
+    ZohoDeskIngestionResponse,
 )
 from app.infrastructure.vector import (
     EmbeddingConfig,
@@ -148,6 +157,8 @@ async def record_organization_entry(
         )
     except MemoryForbiddenError as exc:
         raise HTTPException(status_code=403, detail={"code": exc.code}) from exc
+    except MemoryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail={"code": exc.code}) from exc
     except MemoryError as exc:
         raise HTTPException(status_code=400, detail={"code": exc.code}) from exc
     return MemoryEntryResponse.from_domain(entry)
@@ -224,6 +235,8 @@ async def create_vector_rebuild_job(
         )
     except MemoryForbiddenError as exc:
         raise HTTPException(status_code=403, detail={"code": exc.code}) from exc
+    except MemoryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail={"code": exc.code}) from exc
     except MemoryError as exc:
         raise HTTPException(status_code=400, detail={"code": exc.code}) from exc
     return VectorIndexJobResponse.from_domain(job)
@@ -286,6 +299,145 @@ async def get_vector_health(
         embedding_configured=embedding_config.configured,
         failure_code=health.failure_code,
     )
+
+
+@router.get("/knowledge", response_model=KnowledgeOverviewResponse)
+async def get_knowledge_overview(
+    context: InternalContext = Depends(get_internal_context),
+    use_cases: AgentMemoryUseCases = Depends(get_agent_memory_use_cases),
+) -> KnowledgeOverviewResponse:
+    try:
+        payload = await use_cases.list_knowledge(context=context)
+    except MemoryForbiddenError as exc:
+        raise HTTPException(status_code=403, detail={"code": exc.code}) from exc
+    return KnowledgeOverviewResponse(
+        databases=[
+            KnowledgeDatabaseResponse.from_domain(database)
+            for database in payload["databases"]
+        ],
+        collections=[
+            KnowledgeCollectionResponse.from_domain(collection)
+            for collection in payload["collections"]
+        ],
+        sources=[KnowledgeSourceResponse.from_domain(source) for source in payload["sources"]],
+        ingestion_flow=list(payload["ingestion_flow"]),
+    )
+
+
+@router.post("/knowledge/databases", response_model=KnowledgeDatabaseResponse, status_code=status.HTTP_201_CREATED)
+async def create_knowledge_database(
+    body: KnowledgeDatabaseRequest,
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    context: InternalContext = Depends(get_internal_context),
+    use_cases: AgentMemoryUseCases = Depends(get_agent_memory_use_cases),
+) -> KnowledgeDatabaseResponse:
+    try:
+        database = await use_cases.create_knowledge_database(
+            context=context,
+            name=body.name,
+            display_name=body.display_name,
+            description=body.description,
+            milvus_database=body.milvus_database,
+            embedding_provider=body.embedding_provider,
+            embedding_model=body.embedding_model,
+            embedding_dimension=body.embedding_dimension,
+            idempotency_key=idempotency_key,
+        )
+    except MemoryForbiddenError as exc:
+        raise HTTPException(status_code=403, detail={"code": exc.code}) from exc
+    except MemoryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail={"code": exc.code}) from exc
+    except MemoryError as exc:
+        raise HTTPException(status_code=400, detail={"code": exc.code}) from exc
+    return KnowledgeDatabaseResponse.from_domain(database)
+
+
+@router.post("/knowledge/collections", response_model=KnowledgeCollectionResponse, status_code=status.HTTP_201_CREATED)
+async def create_knowledge_collection(
+    body: KnowledgeCollectionRequest,
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    context: InternalContext = Depends(get_internal_context),
+    use_cases: AgentMemoryUseCases = Depends(get_agent_memory_use_cases),
+) -> KnowledgeCollectionResponse:
+    try:
+        collection = await use_cases.create_knowledge_collection(
+            context=context,
+            database_id=body.database_id,
+            name=body.name,
+            display_name=body.display_name,
+            theme=body.theme,
+            description=body.description,
+            milvus_collection=body.milvus_collection,
+            scope_type=body.scope_type,
+            source_kind=body.source_kind,
+            idempotency_key=idempotency_key,
+        )
+    except MemoryForbiddenError as exc:
+        raise HTTPException(status_code=403, detail={"code": exc.code}) from exc
+    except MemoryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail={"code": exc.code}) from exc
+    except MemoryError as exc:
+        raise HTTPException(status_code=400, detail={"code": exc.code}) from exc
+    return KnowledgeCollectionResponse.from_domain(collection)
+
+
+@router.post("/knowledge/sources", response_model=KnowledgeSourceResponse, status_code=status.HTTP_201_CREATED)
+async def create_knowledge_source(
+    body: KnowledgeSourceRequest,
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    context: InternalContext = Depends(get_internal_context),
+    use_cases: AgentMemoryUseCases = Depends(get_agent_memory_use_cases),
+) -> KnowledgeSourceResponse:
+    try:
+        source = await use_cases.create_knowledge_source(
+            context=context,
+            collection_id=body.collection_id,
+            name=body.name,
+            provider=body.provider,
+            source_type=body.source_type,
+            pipedream_app=body.pipedream_app,
+            pipedream_source_id=body.pipedream_source_id,
+            sync_mode=body.sync_mode,
+            ingestion_strategy=body.ingestion_strategy,
+            idempotency_key=idempotency_key,
+        )
+    except MemoryForbiddenError as exc:
+        raise HTTPException(status_code=403, detail={"code": exc.code}) from exc
+    except MemoryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail={"code": exc.code}) from exc
+    except MemoryError as exc:
+        raise HTTPException(status_code=400, detail={"code": exc.code}) from exc
+    return KnowledgeSourceResponse.from_domain(source)
+
+
+@router.post(
+    "/knowledge/ingest/zoho-desk",
+    response_model=ZohoDeskIngestionResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def ingest_zoho_desk_ticket(
+    body: ZohoDeskIngestionRequest,
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    context: InternalContext = Depends(get_internal_context),
+    use_cases: AgentMemoryUseCases = Depends(get_agent_memory_use_cases),
+) -> ZohoDeskIngestionResponse:
+    _ = idempotency_key
+    try:
+        result = await use_cases.ingest_zoho_ticket(
+            context=context,
+            source_id=body.source_id,
+            ticket=body.ticket,
+            trigger_type=body.trigger_type,
+            external_event_id=body.external_event_id,
+            dry_run=body.dry_run,
+        )
+    except MemoryForbiddenError as exc:
+        raise HTTPException(status_code=403, detail={"code": exc.code}) from exc
+    except MemoryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail={"code": exc.code}) from exc
+    except MemoryError as exc:
+        raise HTTPException(status_code=400, detail={"code": exc.code}) from exc
+    return ZohoDeskIngestionResponse(**result)
 
 
 @router.post(

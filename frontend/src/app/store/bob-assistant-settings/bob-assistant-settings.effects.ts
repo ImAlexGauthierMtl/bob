@@ -10,9 +10,6 @@ import {
     loadBobAssistantSettings,
     loadBobAssistantSettingsFailure,
     loadBobAssistantSettingsSuccess,
-    saveBobAssistantSettings,
-    saveBobAssistantSettingsFailure,
-    saveBobAssistantSettingsSuccess,
     updateBobRuntimeSettingsFailure,
     updateBobRuntimeSettingsSuccess,
 } from './bob-assistant-settings.actions';
@@ -27,8 +24,6 @@ export class BobAssistantSettingsEffects {
             ofType(loadBobAssistantSettings),
             switchMap(() =>
                 forkJoin({
-                    conversation: this.service.getConversation(),
-                    voice: this.service.getVoice(),
                     runtime: this.service.getRuntime(),
                     memorySettings: this.service.getMemory().pipe(
                         catchError((error) => of({
@@ -47,37 +42,11 @@ export class BobAssistantSettingsEffects {
                         })),
                     ),
                 }).pipe(
-                    map(({ conversation, voice, runtime, memorySettings }) => loadBobAssistantSettingsSuccess({
-                        personality: conversation.personality,
-                        voice: voice.voice,
-                        availableTones: conversation.available_tones,
-                        availableLanguages: conversation.available_languages,
-                        availableVoices: voice.available_voices,
+                    map(({ runtime, memorySettings }) => loadBobAssistantSettingsSuccess({
                         runtime,
                         memorySettings,
                     })),
                     catchError((error) => of(loadBobAssistantSettingsFailure({ error: errorMessage(error) }))),
-                ),
-            ),
-        ),
-    );
-
-    save$ = createEffect(() =>
-        this.actions$.pipe(
-            ofType(saveBobAssistantSettings),
-            mergeMap(({ personality, voice }) =>
-                forkJoin({
-                    conversation: this.service.updateConversation(personality),
-                    voiceSettings: this.service.updateVoice(voice),
-                }).pipe(
-                    map(({ conversation, voiceSettings }) => saveBobAssistantSettingsSuccess({
-                        personality: conversation.personality,
-                        voice: voiceSettings.voice,
-                        availableTones: conversation.available_tones,
-                        availableLanguages: conversation.available_languages,
-                        availableVoices: voiceSettings.available_voices,
-                    })),
-                    catchError((error) => of(saveBobAssistantSettingsFailure({ error: errorMessage(error) }))),
                 ),
             ),
         ),

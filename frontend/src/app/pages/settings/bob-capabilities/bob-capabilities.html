@@ -8,7 +8,7 @@
         </a>
         <div class="auto-back__title">
             <h2 class="auto-back__heading">Bob Capabilities</h2>
-            <p class="auto-back__subtitle">Manage what Bob can do — enable or disable capabilities</p>
+            <p class="auto-back__subtitle">Review the capabilities currently available to Bob</p>
         </div>
     </div>
 
@@ -95,10 +95,10 @@
                     <span class="cap-row__source">· Source: {{ cap.source }}</span>
                 </p>
             </div>
-            <label class="toggle">
-                <input type="checkbox" [checked]="cap.granted" (change)="toggleCapability(cap)" />
-                <div class="toggle__track"></div>
-            </label>
+            <span class="status-badge" [class.status-badge--green]="cap.granted"
+                [class.status-badge--gray]="!cap.granted">
+                {{ cap.granted ? 'Active' : 'Inactive' }}
+            </span>
         </div>
         }
 

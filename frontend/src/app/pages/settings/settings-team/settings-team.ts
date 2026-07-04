@@ -118,19 +118,6 @@ export class SettingsTeamComponent implements OnInit {
 
     // ── Admin Actions ───────────────────────────
 
-    resetUserPassword(user: User): void {
-        this.activeMenuUserId = null;
-        const tempPassword = this.generateTempPassword();
-        this.userService.update(user.id, {}).subscribe({
-            next: () => {
-                alert(`Password reset link would be sent to ${user.email}.\nTemp password: ${tempPassword}`);
-            },
-            error: () => {
-                alert('Failed to reset password.');
-            },
-        });
-    }
-
     deactivateUser(user: User): void {
         this.activeMenuUserId = null;
         if (!confirm(`Are you sure you want to deactivate ${user.first_name} ${user.last_name}?`)) return;
@@ -203,10 +190,6 @@ export class SettingsTeamComponent implements OnInit {
                 this.statusType = 'error';
             },
         });
-    }
-
-    private generateTempPassword(): string {
-        return 'Temp' + Math.random().toString(36).slice(2, 10) + '!1';
     }
 
     // ── Helpers ──────────────────────────────

@@ -31,6 +31,7 @@ from app.presentation.schemas.provider_pipedream_schemas import (
     PipedreamIntegrationListResponse,
     PipedreamTokenRequest,
     PipedreamTokenResponse,
+    PipedreamToolListResponse,
     PipedreamWebhookPayload,
 )
 
@@ -135,16 +136,61 @@ async def delete_connection(
 @router.get("/integrations", response_model=PipedreamIntegrationListResponse)
 async def list_integrations(
     q: Optional[str] = None,
+    limit: int = Query(100, ge=1, le=200),
+    after: Optional[str] = None,
+    has_actions: Optional[bool] = None,
+    has_triggers: Optional[bool] = None,
     current_user: dict = Depends(get_current_user),
     use_cases: PipedreamProviderUseCases = Depends(get_pipedream_provider_use_cases),
 ):
     try:
-        return PipedreamIntegrationListResponse(items=await use_cases.list_integrations(q))
+        return PipedreamIntegrationListResponse.model_validate(
+            await use_cases.list_integrations(
+                q,
+                limit=limit,
+                after=after,
+                has_actions=has_actions,
+                has_triggers=has_triggers,
+            )
+        )
     except httpx.HTTPStatusError as exc:
         logger.error("pipedream_list_apps_error", status=exc.response.status_code, detail=exc.response.text[:300])
         raise HTTPException(status_code=502, detail="Failed to fetch Pipedream apps")
     except RuntimeError as exc:
         logger.error("pipedream_list_apps_failed", error=str(exc))
+        raise HTTPException(status_code=503, detail="Pipedream integration not configured")
+
+
+@router.get("/integrations/{integration_key}/tools", response_model=PipedreamToolListResponse)
+async def list_integration_tools(
+    integration_key: str,
+    q: Optional[str] = None,
+    limit: int = Query(20, ge=1, le=100),
+    after: Optional[str] = None,
+    registry: str = Query("public", pattern="^(public|private|all)$"),
+    current_user: dict = Depends(get_current_user),
+    use_cases: PipedreamProviderUseCases = Depends(get_pipedream_provider_use_cases),
+):
+    try:
+        return PipedreamToolListResponse.model_validate(
+            await use_cases.list_tools(
+                integration_key,
+                q,
+                limit=limit,
+                after=after,
+                registry=registry,
+            )
+        )
+    except httpx.HTTPStatusError as exc:
+        logger.error(
+            "pipedream_list_tools_error",
+            integration_key=integration_key,
+            status=exc.response.status_code,
+            detail=exc.response.text[:300],
+        )
+        raise HTTPException(status_code=502, detail="Failed to fetch Pipedream tools")
+    except RuntimeError as exc:
+        logger.error("pipedream_list_tools_failed", integration_key=integration_key, error=str(exc))
         raise HTTPException(status_code=503, detail="Pipedream integration not configured")
 
 

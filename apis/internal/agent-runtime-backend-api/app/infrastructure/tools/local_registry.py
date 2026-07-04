@@ -19,6 +19,10 @@ from app.infrastructure.tools.factory_supabase_adapter import (
 )
 from app.infrastructure.tools.gitlab_read_adapter import GitLabReadAdapter, GitLabReadAdapterError
 from app.infrastructure.tools.local_workspace_adapter import LocalWorkspaceAdapter, LocalWorkspaceAdapterError
+from app.infrastructure.tools.pipedream_action_adapter import (
+    PipedreamActionAdapter,
+    PipedreamActionAdapterError,
+)
 
 _MCP_FAMILIES_BY_NAME = {str(family["family"]): family for family in MCP_TOOL_FAMILIES}
 _MCP_CAPABILITY_IDS = {str(capability["qualified_id"]) for capability in default_mcp_capabilities()}
@@ -46,6 +50,19 @@ _GITLAB_EXECUTABLE_CAPABILITIES = {
     "local-code",
 }
 _MCP_CAPABILITY_IDS.update(_GITLAB_EXECUTABLE_CAPABILITIES)
+_PERSONAL_CONNECTOR_FAMILIES = {
+    "mail-calendar",
+    "slack",
+    "teams",
+    "croo-connect",
+    "pipedream-supabase",
+}
+_PERSONAL_CONNECTOR_WORKSPACE_CAPABILITIES = {
+    "drive-onedrive-read",
+    "sharing-permissions",
+    "sheets-read",
+    "sheets-write",
+}
 _CATALOG_TOOL_ALIASES = {
     "tool-runtime-status": "bob_runtime_status",
     "bob_runtime_status": "bob_runtime_status",
@@ -66,10 +83,12 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
         factory_adapter: FactorySupabaseAdapter | None = None,
         gitlab_adapter: GitLabReadAdapter | None = None,
         local_workspace_adapter: LocalWorkspaceAdapter | None = None,
+        pipedream_adapter: PipedreamActionAdapter | None = None,
     ) -> None:
         self.factory_adapter = factory_adapter or FactorySupabaseAdapter.from_env()
         self.gitlab_adapter = gitlab_adapter or GitLabReadAdapter.from_env()
         self.local_workspace_adapter = local_workspace_adapter or LocalWorkspaceAdapter.from_env()
+        self.pipedream_adapter = pipedream_adapter or PipedreamActionAdapter.from_env()
 
     def list_tools(
         self,
@@ -210,6 +229,7 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
             )
 
         if call.name == "bob_runtime_status":
+            preferences = _tool_preferences(metadata)
             content = {
                 "runtime": "bob-agent-runtime",
                 "tenant_id": context.tenant_id,
@@ -225,8 +245,9 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
                 ],
                 "policy": {
                     "secrets_redacted": True,
-                    "write_requires_confirmation": True,
+                    "write_requires_confirmation": bool(preferences.get("require_write_confirmation", True)),
                     "destructive_tools_blocked_by_default": True,
+                    "personal_connectors_allowed": bool(preferences.get("allow_personal_connectors", True)),
                 },
             }
             if not call.arguments.get("include_tools", False):
@@ -254,13 +275,14 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
         )
 
         if call.name == "bob_mcp_gateway":
-            return _execute_mcp_gateway(
+            return await _execute_mcp_gateway(
                 call=call,
                 context=context,
                 metadata=metadata,
                 factory_adapter=self.factory_adapter,
                 gitlab_adapter=self.gitlab_adapter,
                 local_workspace_adapter=self.local_workspace_adapter,
+                pipedream_adapter=self.pipedream_adapter,
             )
 
         return RuntimeToolResult(
@@ -272,7 +294,7 @@ class LocalRuntimeToolRegistry(RuntimeToolRegistryPort):
         )
 
 
-def _execute_mcp_gateway(
+async def _execute_mcp_gateway(
     *,
     call: RuntimeToolCall,
     context: InternalContext,
@@ -280,24 +302,33 @@ def _execute_mcp_gateway(
     factory_adapter: FactorySupabaseAdapter,
     gitlab_adapter: GitLabReadAdapter,
     local_workspace_adapter: LocalWorkspaceAdapter,
+    pipedream_adapter: PipedreamActionAdapter,
 ) -> RuntimeToolResult:
     operation = str(call.arguments.get("operation") or "describe_family")
     family_name = str(call.arguments.get("family") or "").strip()
     risk = str(call.arguments.get("risk") or "read").strip().lower()
 
     if operation == "list_families":
-        content = {
-            "families": [
+        governed_families = []
+        for family in MCP_TOOL_FAMILIES:
+            capability_items = _governed_capability_items_for_family(
+                metadata=metadata,
+                family=str(family["family"]),
+            )
+            if _tool_governance_enabled(metadata) and not capability_items:
+                continue
+            governed_families.append(
                 {
                     "family": family["family"],
                     "servers": family["servers"],
                     "skill": family["skill"],
                     "capabilities": family["capabilities"],
-                    "capability_count": len(mcp_capabilities_for_family(str(family["family"]))),
-                    "capability_items": mcp_capabilities_for_family(str(family["family"])),
+                    "capability_count": len(capability_items),
+                    "capability_items": capability_items,
                 }
-                for family in MCP_TOOL_FAMILIES
-            ],
+            )
+        content = {
+            "families": governed_families,
             "policy": _mcp_policy(context=context),
         }
         return RuntimeToolResult(
@@ -325,17 +356,84 @@ def _execute_mcp_gateway(
         family=str(family["family"]),
         capability=str(call.arguments.get("capability") or "").strip(),
     )
+    if operation == "execute_capability" and not _mcp_capability_allowed_by_governance(
+        metadata=metadata,
+        family=str(family["family"]),
+        capability=capability,
+        requested_capability=str(call.arguments.get("capability") or ""),
+    ):
+        content = {
+            "error": "mcp_capability_not_allowed_by_governance",
+            "family": family["family"],
+            "capability": call.arguments.get("capability"),
+            "policy": _mcp_policy(context=context),
+        }
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="rejected",
+            content=json.dumps(content, ensure_ascii=False),
+            metadata={"family": family["family"], "risk": "blocked", "operation": operation},
+        )
     effective_risk = _effective_capability_risk(call_risk=risk, capability=capability)
     confirmed = bool(call.arguments.get("confirmed") is True or call.arguments.get("confirmation_id"))
+    confirmation_required = _confirmation_required_for_risk(metadata=metadata, risk=effective_risk)
+    confirmed_for_execution = confirmed or (
+        _risk_requires_confirmation(effective_risk) and not confirmation_required
+    )
+    provider_preference = _provider_preference_for_capability(
+        metadata=metadata,
+        family_name=str(family["family"]),
+        capability=capability,
+        requested_capability=str(call.arguments.get("capability") or ""),
+    )
 
-    if operation == "execute_capability" and _risk_requires_confirmation(effective_risk) and not confirmed:
+    if operation == "execute_capability" and _personal_connector_disabled_for_capability(
+        metadata=metadata,
+        family_name=str(family["family"]),
+        capability=capability,
+        requested_capability=str(call.arguments.get("capability") or ""),
+    ):
+        content = {
+            "error": "personal_connectors_disabled_by_user_preference",
+            "family": family["family"],
+            "capability": call.arguments.get("capability"),
+            "preference": "allow_personal_connectors",
+            "policy": _mcp_policy(context=context, metadata=metadata),
+        }
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="rejected",
+            content=json.dumps(content, ensure_ascii=False),
+            metadata={"family": family["family"], "risk": "blocked", "operation": operation},
+        )
+
+    if operation == "execute_capability" and provider_preference.get("requires_selection"):
+        content = {
+            "error": "tool_provider_preference_requires_selection",
+            "family": family["family"],
+            "capability": call.arguments.get("capability"),
+            "preference": provider_preference.get("preference"),
+            "allowed_values": provider_preference.get("allowed_values") or [],
+            "policy": _mcp_policy(context=context, metadata=metadata),
+        }
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="requires_clarification",
+            content=json.dumps(content, ensure_ascii=False),
+            metadata={"family": family["family"], "risk": "blocked", "operation": operation},
+        )
+
+    if operation == "execute_capability" and confirmation_required and not confirmed:
         content = {
             "status": "confirmation_required",
             "family": family["family"],
             "capability": call.arguments.get("capability"),
             "risk": effective_risk,
             "reason": "write_or_destructive_mcp_action_requires_explicit_confirmation_and_connector_binding",
-            "policy": _mcp_policy(context=context),
+            "policy": _mcp_policy(context=context, metadata=metadata),
         }
         return RuntimeToolResult(
             call_id=call.id,
@@ -351,7 +449,7 @@ def _execute_mcp_gateway(
             context=context,
             factory_adapter=factory_adapter,
             risk=effective_risk,
-            confirmed=confirmed,
+            confirmed=confirmed_for_execution,
         )
 
     if operation == "execute_capability" and family["family"] == "gitlab-code":
@@ -362,7 +460,7 @@ def _execute_mcp_gateway(
             local_workspace_adapter=local_workspace_adapter,
             capability=capability,
             risk=effective_risk,
-            confirmed=confirmed,
+            confirmed=confirmed_for_execution,
         )
 
     if operation == "execute_capability" and family["family"] == "workspace-files":
@@ -372,7 +470,7 @@ def _execute_mcp_gateway(
             local_workspace_adapter=local_workspace_adapter,
             capability=capability,
             risk=effective_risk,
-            confirmed=confirmed,
+            confirmed=confirmed_for_execution,
         )
 
     if operation == "execute_capability" and family["family"] == "assistant-memory":
@@ -382,7 +480,7 @@ def _execute_mcp_gateway(
             metadata=metadata,
             capability=capability,
             risk=effective_risk,
-            confirmed=confirmed,
+            confirmed=confirmed_for_execution,
         )
 
     if operation == "execute_capability" and family["family"] == "support-memory":
@@ -392,7 +490,7 @@ def _execute_mcp_gateway(
             metadata=metadata,
             capability=capability,
             risk=effective_risk,
-            confirmed=confirmed,
+            confirmed=confirmed_for_execution,
         )
 
     if operation == "execute_capability" and family["family"] == "bob-control-center":
@@ -402,17 +500,30 @@ def _execute_mcp_gateway(
             metadata=metadata,
             capability=capability,
             risk=effective_risk,
-            confirmed=confirmed,
+            confirmed=confirmed_for_execution,
+        )
+
+    if operation == "execute_capability" and family["family"] in {"slack", "mail-calendar"} and effective_risk == "read":
+        return await _execute_pipedream_read_capability(
+            call=call,
+            context=context,
+            metadata=metadata,
+            family=family,
+            capability=capability,
+            pipedream_adapter=pipedream_adapter,
+            provider_preference=str(provider_preference.get("provider") or ""),
         )
 
     if operation == "execute_capability":
-        if _risk_requires_confirmation(effective_risk) and confirmed:
+        if _risk_requires_confirmation(effective_risk) and confirmed_for_execution:
             return _execute_confirmed_mcp_contract(
                 call=call,
                 context=context,
                 family=family,
                 capability=capability,
                 risk=effective_risk,
+                metadata=metadata,
+                provider_preference=str(provider_preference.get("provider") or ""),
             )
         return _execute_external_mcp_read_contract(
             call=call,
@@ -420,6 +531,8 @@ def _execute_mcp_gateway(
             family=family,
             capability=capability,
             risk=effective_risk,
+            metadata=metadata,
+            provider_preference=str(provider_preference.get("provider") or ""),
         )
 
     content = {
@@ -428,12 +541,12 @@ def _execute_mcp_gateway(
         "servers": family["servers"],
         "skill": family["skill"],
         "capabilities": family["capabilities"],
-        "capability_count": len(mcp_capabilities_for_family(str(family["family"]))),
-        "capability_items": mcp_capabilities_for_family(str(family["family"])),
+        "capability_count": len(_governed_capability_items_for_family(metadata=metadata, family=str(family["family"]))),
+        "capability_items": _governed_capability_items_for_family(metadata=metadata, family=str(family["family"])),
         "loaded_for_run": True,
         "external_connector_bound": False,
         "next_gateway_step": "bind_mcp_server_adapter_for_external_execution",
-        "policy": _mcp_policy(context=context),
+        "policy": _mcp_policy(context=context, metadata=metadata),
     }
     return RuntimeToolResult(
         call_id=call.id,
@@ -456,6 +569,175 @@ def _allowed_runtime_tool_names(metadata: dict[str, Any]) -> set[str] | None:
             continue
         allowed.update(_catalog_tool_aliases(tool))
     return allowed
+
+
+def _tool_governance_enabled(metadata: dict[str, Any]) -> bool:
+    governance = metadata.get("tool_governance") if isinstance(metadata, dict) else None
+    return isinstance(governance, dict) and isinstance(governance.get("allowed_tools"), list)
+
+
+def _tool_preferences(metadata: dict[str, Any]) -> dict[str, Any]:
+    governance = metadata.get("tool_governance") if isinstance(metadata, dict) else None
+    preferences = governance.get("preferences") if isinstance(governance, dict) else None
+    if not isinstance(preferences, dict):
+        preferences = {}
+    return {
+        "preferred_email_provider": str(preferences.get("preferred_email_provider") or "auto"),
+        "preferred_calendar_provider": str(preferences.get("preferred_calendar_provider") or "auto"),
+        "require_write_confirmation": bool(preferences.get("require_write_confirmation", True)),
+        "show_tool_trace": bool(preferences.get("show_tool_trace", True)),
+        "allow_personal_connectors": bool(preferences.get("allow_personal_connectors", True)),
+    }
+
+
+def _confirmation_required_for_risk(*, metadata: dict[str, Any], risk: str) -> bool:
+    if not _risk_requires_confirmation(risk):
+        return False
+    normalized = str(risk or "").strip().lower()
+    if normalized.startswith("destructive"):
+        return True
+    return bool(_tool_preferences(metadata).get("require_write_confirmation", True))
+
+
+def _personal_connector_disabled_for_capability(
+    *,
+    metadata: dict[str, Any],
+    family_name: str,
+    capability: dict[str, Any] | None,
+    requested_capability: str,
+) -> bool:
+    if bool(_tool_preferences(metadata).get("allow_personal_connectors", True)):
+        return False
+    return _capability_requires_personal_connector(
+        family_name=family_name,
+        capability=capability,
+        requested_capability=requested_capability,
+    )
+
+
+def _capability_requires_personal_connector(
+    *,
+    family_name: str,
+    capability: dict[str, Any] | None,
+    requested_capability: str,
+) -> bool:
+    normalized_family = _normalize_governance_key(family_name)
+    normalized_capability = _capability_id(capability=capability, requested_capability=requested_capability)
+    if normalized_family in _PERSONAL_CONNECTOR_FAMILIES:
+        return True
+    if normalized_family == "workspace-files":
+        return normalized_capability in _PERSONAL_CONNECTOR_WORKSPACE_CAPABILITIES
+    return any(str(tool).strip().lower().startswith("pipedream") for tool in (capability or {}).get("tools", []))
+
+
+def _provider_preference_for_capability(
+    *,
+    metadata: dict[str, Any],
+    family_name: str,
+    capability: dict[str, Any] | None,
+    requested_capability: str,
+) -> dict[str, Any]:
+    if _normalize_governance_key(family_name) != "mail-calendar":
+        return {"provider": ""}
+
+    capability_id = _capability_id(capability=capability, requested_capability=requested_capability)
+    preferences = _tool_preferences(metadata)
+    if capability_id.startswith("mail-"):
+        preference_key = "preferred_email_provider"
+        allowed_values = ["gmail", "microsoft_outlook"]
+    elif capability_id.startswith("calendar-"):
+        preference_key = "preferred_calendar_provider"
+        allowed_values = ["google_calendar", "microsoft_outlook"]
+    else:
+        return {"provider": ""}
+
+    provider = str(preferences.get(preference_key) or "auto").strip()
+    if provider == "ask":
+        return {
+            "provider": "",
+            "requires_selection": True,
+            "preference": preference_key,
+            "allowed_values": allowed_values,
+        }
+    if provider in allowed_values:
+        return {
+            "provider": provider,
+            "preference": preference_key,
+            "allowed_values": allowed_values,
+        }
+    return {"provider": "", "preference": preference_key, "allowed_values": allowed_values}
+
+
+def _capability_id(*, capability: dict[str, Any] | None, requested_capability: str) -> str:
+    raw = str((capability or {}).get("id") or requested_capability or "")
+    if "." in raw:
+        raw = raw.split(".", 1)[1]
+    return _normalize_governance_key(raw)
+
+
+def _governed_capability_items_for_family(*, metadata: dict[str, Any], family: str) -> list[dict[str, Any]]:
+    capabilities = mcp_capabilities_for_family(family)
+    if not _tool_governance_enabled(metadata):
+        return capabilities
+    return [
+        capability
+        for capability in capabilities
+        if _mcp_capability_allowed_by_governance(
+            metadata=metadata,
+            family=family,
+            capability=capability,
+            requested_capability=str(capability.get("qualified_id") or capability.get("id") or ""),
+        )
+    ]
+
+
+def _mcp_capability_allowed_by_governance(
+    *,
+    metadata: dict[str, Any],
+    family: str,
+    capability: dict[str, Any] | None,
+    requested_capability: str,
+) -> bool:
+    governance = metadata.get("tool_governance") if isinstance(metadata, dict) else None
+    allowed_tools = governance.get("allowed_tools") if isinstance(governance, dict) else None
+    if not isinstance(allowed_tools, list):
+        return True
+
+    requested = _normalize_governance_key(requested_capability)
+    capability_id = _normalize_governance_key((capability or {}).get("id"))
+    qualified_id = _normalize_governance_key((capability or {}).get("qualified_id"))
+    family_key = _normalize_governance_key(family)
+    accepted_ids = {
+        requested,
+        capability_id,
+        qualified_id,
+        f"{family_key}.{capability_id}" if capability_id else "",
+        f"{family_key}.{requested}" if requested and "." not in requested else requested,
+    }
+    accepted_ids.discard("")
+
+    for policy in allowed_tools:
+        if not isinstance(policy, dict):
+            continue
+        policy_family = _normalize_governance_key(policy.get("family"))
+        policy_keys = {
+            _normalize_governance_key(policy.get("id")),
+            _normalize_governance_key(policy.get("capability")),
+            _normalize_governance_key(policy.get("tool_key")),
+        }
+        policy_keys.discard("")
+        if accepted_ids & policy_keys:
+            return True
+        if policy_family == family_key and (
+            _normalize_governance_key(policy.get("capability")) in {capability_id, requested}
+            or _normalize_governance_key(policy.get("id")) in accepted_ids
+        ):
+            return True
+    return False
+
+
+def _normalize_governance_key(value: Any) -> str:
+    return str(value or "").strip().lower().replace("_", "-")
 
 
 def _prioritize_tools_for_prompt(*, prompt: str, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1133,6 +1415,97 @@ def _execute_bob_control_center_capability(
     )
 
 
+async def _execute_pipedream_read_capability(
+    *,
+    call: RuntimeToolCall,
+    context: InternalContext,
+    metadata: dict[str, Any],
+    family: dict[str, Any],
+    capability: dict[str, Any] | None,
+    pipedream_adapter: PipedreamActionAdapter,
+    provider_preference: str = "",
+) -> RuntimeToolResult:
+    family_name = str(family["family"])
+    selected_capability = capability or _first_read_capability(family_name)
+    capability_id = str((selected_capability or {}).get("id") or call.arguments.get("capability") or "")
+    try:
+        content = await pipedream_adapter.execute_read(
+            family=family_name,
+            capability=capability_id,
+            query=_execution_query(call=call, metadata=metadata),
+            limit=_bounded_int(call.arguments.get("limit"), default=10, minimum=1, maximum=100),
+            context=context,
+            provider_preference=provider_preference or None,
+        )
+    except PipedreamActionAdapterError as exc:
+        if exc.code.endswith("_not_supported"):
+            return _execute_external_mcp_read_contract(
+                call=call,
+                context=context,
+                family=family,
+                capability=capability,
+                risk="read",
+                metadata=metadata,
+                provider_preference=provider_preference,
+            )
+        return RuntimeToolResult(
+            call_id=call.id,
+            name=call.name,
+            status="degraded",
+            content=_json_dumps(
+                {
+                    "status": "adapter_error",
+                    "family": family_name,
+                    "capability": capability_id,
+                    "error": exc.code,
+                    "detail": exc.detail,
+                    "external_connector_bound": False,
+                    "execution_mode": "pipedream_connect_action",
+                    "provider_preference": provider_preference or "auto",
+                    "policy": _mcp_policy(context=context, metadata=metadata),
+                }
+            ),
+            metadata={
+                "family": family_name,
+                "risk": "read",
+                "operation": "execute_capability",
+                "capability": capability_id,
+                "external_connector_bound": False,
+            },
+        )
+
+    content["policy"] = _mcp_policy(context=context, metadata=metadata)
+    content["provider_preference"] = provider_preference or "auto"
+    bound = bool(content.get("external_connector_bound"))
+    status = "completed" if content.get("status") in {"completed", "channel_required", "channel_not_found"} else "degraded"
+    return RuntimeToolResult(
+        call_id=call.id,
+        name=call.name,
+        status=status,
+        content=_json_dumps(content),
+        metadata={
+            "family": family_name,
+            "risk": "read",
+            "operation": "execute_capability",
+            "capability": capability_id,
+            "external_connector_bound": bound,
+            "execution_mode": "pipedream_connect_action",
+        },
+    )
+
+
+def _execution_query(*, call: RuntimeToolCall, metadata: dict[str, Any]) -> str:
+    query = str(call.arguments.get("query") or "").strip()
+    source_prompt = str(metadata.get("source_prompt") or metadata.get("prompt") or "").strip()
+    if not source_prompt:
+        return query
+    if query == source_prompt:
+        return source_prompt
+    if not query:
+        return source_prompt
+    return f"{query}\n\nDemande utilisateur: {source_prompt}"
+
+
 def _execute_external_mcp_read_contract(
     *,
     call: RuntimeToolCall,
@@ -1140,6 +1513,8 @@ def _execute_external_mcp_read_contract(
     family: dict[str, Any],
     capability: dict[str, Any] | None,
     risk: str,
+    metadata: dict[str, Any] | None = None,
+    provider_preference: str = "",
 ) -> RuntimeToolResult:
     family_name = str(family["family"])
     selected_capability = capability or _first_read_capability(family_name)
@@ -1177,9 +1552,10 @@ def _execute_external_mcp_read_contract(
         "request": {
             "query": call.arguments.get("query") or "",
             "limit": _bounded_int(call.arguments.get("limit"), default=10, minimum=1, maximum=100),
+            "provider_preference": provider_preference or "auto",
         },
         "next_gateway_step": f"bind_{family_name.replace('-', '_')}_mcp_server_adapter",
-        "policy": _mcp_policy(context=context),
+        "policy": _mcp_policy(context=context, metadata=metadata),
     }
     return RuntimeToolResult(
         call_id=call.id,
@@ -1203,6 +1579,8 @@ def _execute_confirmed_mcp_contract(
     family: dict[str, Any],
     capability: dict[str, Any] | None,
     risk: str,
+    metadata: dict[str, Any] | None = None,
+    provider_preference: str = "",
 ) -> RuntimeToolResult:
     family_name = str(family["family"])
     selected_capability = capability or _first_non_read_capability(family_name)
@@ -1223,7 +1601,9 @@ def _execute_confirmed_mcp_contract(
             "request": {
                 "query": call.arguments.get("query") or "",
                 "limit": _bounded_int(call.arguments.get("limit"), default=10, minimum=1, maximum=100),
+                "provider_preference": provider_preference or "auto",
             },
+            "policy": _mcp_policy(context=context, metadata=metadata),
         },
     )
 
@@ -1280,7 +1660,8 @@ def _first_non_read_capability(family: str) -> dict[str, Any] | None:
     return None
 
 
-def _mcp_policy(*, context: InternalContext) -> dict[str, Any]:
+def _mcp_policy(*, context: InternalContext, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+    preferences = _tool_preferences(metadata or {})
     return {
         "tool_gating_required": True,
         "max_normal_families": 3,
@@ -1288,7 +1669,8 @@ def _mcp_policy(*, context: InternalContext) -> dict[str, Any]:
         "tenant_id": context.tenant_id,
         "user_id": context.user_id,
         "permissions": list(context.permissions),
-        "writes_require_confirmation": True,
+        "writes_require_confirmation": bool(preferences.get("require_write_confirmation", True)),
+        "personal_connectors_allowed": bool(preferences.get("allow_personal_connectors", True)),
         "secrets_redacted": True,
     }
 

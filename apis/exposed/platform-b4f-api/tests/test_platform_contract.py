@@ -335,6 +335,81 @@ class FakeAgentMemoryClient:
             "failure_code": None,
         }
 
+    async def get_knowledge(self, *, headers=None):
+        self.calls.append(("get_knowledge", dict(headers or {})))
+        return {
+            "databases": [],
+            "collections": [],
+            "sources": [],
+            "ingestion_flow": ["pipedream_source_event", "store_postgres_source_of_truth", "upsert_milvus_index"],
+            "postgres_source_of_truth": True,
+            "milvus_role": "reconstructible_vector_index",
+        }
+
+    async def create_knowledge_database(self, *, data, headers=None):
+        self.calls.append(("create_knowledge_database", dict(data), dict(headers or {})))
+        return {
+            "id": "kdb_local",
+            "name": data["name"],
+            "display_name": data["display_name"],
+            "description": data.get("description", ""),
+            "status": "active",
+            "milvus_database": data.get("milvus_database", "bob_knowledge"),
+            "embedding_provider": data.get("embedding_provider", "fireworks"),
+            "embedding_model": data.get("embedding_model", "fireworks/qwen3-embedding-8b"),
+            "embedding_dimension": data.get("embedding_dimension", 4096),
+            "created_by": "local-session-admin",
+            "created_at": "2026-06-20T10:00:00Z",
+        }
+
+    async def create_knowledge_collection(self, *, data, headers=None):
+        self.calls.append(("create_knowledge_collection", dict(data), dict(headers or {})))
+        return {
+            "id": "kcol_local",
+            "database_id": data["database_id"],
+            "name": data["name"],
+            "display_name": data["display_name"],
+            "theme": data.get("theme", "support_technique"),
+            "description": data.get("description", ""),
+            "status": "candidate",
+            "milvus_collection": data["milvus_collection"],
+            "scope_type": data.get("scope_type", "organization"),
+            "source_kind": data.get("source_kind", "zoho_desk"),
+            "created_by": "local-session-admin",
+            "created_at": "2026-06-20T10:00:00Z",
+        }
+
+    async def create_knowledge_source(self, *, data, headers=None):
+        self.calls.append(("create_knowledge_source", dict(data), dict(headers or {})))
+        return {
+            "id": "ksrc_local",
+            "collection_id": data["collection_id"],
+            "name": data["name"],
+            "provider": data.get("provider", "pipedream"),
+            "source_type": data.get("source_type", "zoho_desk"),
+            "status": "connection_required",
+            "pipedream_app": data.get("pipedream_app", "zoho_desk"),
+            "pipedream_source_id": data.get("pipedream_source_id"),
+            "sync_mode": data.get("sync_mode", "incremental"),
+            "ingestion_strategy": data.get("ingestion_strategy", "tickets_to_candidate_procedures"),
+            "created_by": "local-session-admin",
+            "created_at": "2026-06-20T10:00:00Z",
+        }
+
+    async def ingest_zoho_desk_knowledge(self, *, data, headers=None):
+        self.calls.append(("ingest_zoho_desk_knowledge", dict(data), dict(headers or {})))
+        return {
+            "run_id": "kir_local",
+            "status": "completed",
+            "item_id": "kitem_local",
+            "procedure_id": "kproc_local",
+            "chunks": 2,
+            "milvus_upserted": 2 if not data.get("dry_run") else 0,
+            "dry_run": bool(data.get("dry_run")),
+            "fireworks_api_key_set": True,
+            "fallback_mode": "deterministic_when_fireworks_unavailable",
+        }
+
 
 @pytest.fixture()
 def client(monkeypatch):
@@ -596,6 +671,75 @@ def test_bob_memory_settings_degrades_vector_status_without_blocking(client, mon
     assert payload["vector_index"]["health"]["status"] == "ready"
     assert payload["vector_index"]["degraded"][0]["status_code"] == 503
     assert payload["vector_index"]["degraded"][0]["detail"] == {"code": "milvus_uri_required"}
+
+
+def test_bob_knowledge_settings_delegate_to_agent_memory_backend(client):
+    fake_memory = bob_settings_preferences_routes.agent_memory_client
+    headers = {
+        "Authorization": "Bearer local-admin-token",
+        "X-CDE-Capabilities": "bob_settings.manage",
+    }
+
+    overview = client.get("/api/bob-settings/v1/knowledge", headers=headers)
+    database = client.post(
+        "/api/bob-settings/v1/knowledge/databases",
+        json={"name": "bob_support", "display_name": "Bob Support"},
+        headers={**headers, "Idempotency-Key": "knowledge-db"},
+    )
+    collection = client.post(
+        "/api/bob-settings/v1/knowledge/collections",
+        json={
+            "database_id": "kdb_local",
+            "name": "zoho_support",
+            "display_name": "Zoho Support",
+            "milvus_collection": "support_procedure_chunks_v1",
+        },
+        headers={**headers, "Idempotency-Key": "knowledge-col"},
+    )
+    source = client.post(
+        "/api/bob-settings/v1/knowledge/sources",
+        json={"collection_id": "kcol_local", "name": "Zoho Desk"},
+        headers={**headers, "Idempotency-Key": "knowledge-src"},
+    )
+
+    assert overview.status_code == 200
+    assert overview.json()["postgres_source_of_truth"] is True
+    assert database.status_code == 201
+    assert collection.status_code == 201
+    assert source.status_code == 201
+    assert [call[0] for call in fake_memory.calls[-4:]] == [
+        "get_knowledge",
+        "create_knowledge_database",
+        "create_knowledge_collection",
+        "create_knowledge_source",
+    ]
+    assert fake_memory.calls[-1][2]["Idempotency-Key"] == "knowledge-src"
+
+
+def test_bob_knowledge_zoho_ingestion_delegates_to_agent_memory_backend(client):
+    fake_memory = bob_settings_preferences_routes.agent_memory_client
+    headers = {
+        "Authorization": "Bearer local-admin-token",
+        "X-CDE-Capabilities": "bob_settings.manage",
+        "Idempotency-Key": "knowledge-ingest",
+    }
+
+    response = client.post(
+        "/api/bob-settings/v1/knowledge/ingest/zoho-desk",
+        json={
+            "source_id": "ksrc_zoho",
+            "dry_run": True,
+            "ticket": {"id": "71638", "subject": "Client demande X"},
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 202
+    assert response.json()["status"] == "completed"
+    assert response.json()["dry_run"] is True
+    assert fake_memory.calls[-1][0] == "ingest_zoho_desk_knowledge"
+    assert fake_memory.calls[-1][1]["source_id"] == "ksrc_zoho"
+    assert fake_memory.calls[-1][2]["Idempotency-Key"] == "knowledge-ingest"
 
 
 def test_bob_settings_security_mutations_require_idempotency_key(client):

@@ -1,5 +1,6 @@
 import '@angular/compiler';
-import { createEnvironmentInjector, runInInjectionContext } from '@angular/core';
+import { createEnvironmentInjector, EnvironmentInjector, runInInjectionContext } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { Actions } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { Subject, of } from 'rxjs';
@@ -53,7 +54,7 @@ describe('BobChatEffects', () => {
                 { provide: BobService, useValue: bobService },
                 { provide: BobActionService, useValue: { dispatch: vi.fn() } },
                 { provide: Store, useValue: store },
-        ]);
+        ], TestBed.inject(EnvironmentInjector));
 
         const effects = runInInjectionContext(injector, () => new BobChatEffects());
         const result = new Promise((resolve) => {

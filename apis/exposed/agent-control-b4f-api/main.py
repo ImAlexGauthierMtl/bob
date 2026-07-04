@@ -19,6 +19,7 @@ from app.presentation.routes.agent_control_routes import router as agent_control
 from app.presentation.routes.bcc_routes import router as bcc_router
 from app.presentation.routes.client_map_routes import router as client_map_router
 from app.presentation.routes.training_routes import router as training_router
+from app.presentation.routes.tool_governance_routes import router as tool_governance_router
 
 
 settings = get_settings("agent-control")
@@ -58,6 +59,7 @@ def create_app() -> FastAPI:
     application.include_router(bcc_router, tags=["bcc"], dependencies=permission_guard)
     application.include_router(client_map_router, tags=["client-map"], dependencies=permission_guard)
     application.include_router(training_router, tags=["training"], dependencies=permission_guard)
+    application.include_router(tool_governance_router, tags=["tool-governance"], dependencies=permission_guard)
     return application
 
 

@@ -27,6 +27,7 @@ from app.infrastructure.tools.factory_supabase_adapter import (
 from app.infrastructure.tools.gitlab_read_adapter import GitLabReadAdapter, GitLabReadAdapterError
 from app.infrastructure.tools.local_workspace_adapter import LocalWorkspaceAdapter, LocalWorkspaceAdapterError
 from app.infrastructure.tools.local_registry import LocalRuntimeToolRegistry
+from app.infrastructure.tools.pipedream_action_adapter import PipedreamActionAdapter
 from app.presentation.routes import agent_runtime_routes
 from shared.infrastructure import InternalSessionContext, InternalSessionContextSigner
 
@@ -139,6 +140,138 @@ class FailingAtomicConfirmationRepository(InMemoryAgentRuntimeRepository):
     def create_run_with_confirmations(self, *, run, confirmations):
         assert confirmations
         raise RuntimeError("atomic_confirmation_write_failed")
+
+
+class FakePipedreamAdapter:
+    async def execute_read(self, *, family, capability, query, limit, context, provider_preference=None):
+        assert family == "slack"
+        assert capability == "messages-read-search"
+        return {
+            "status": "channel_required",
+            "family": "slack",
+            "capability": capability,
+            "action_key": "slack_v2-list-channels",
+            "connected_account": {
+                "id": "apn-slack",
+                "app": "slack_v2",
+                "name": "alex@bigbob.ai",
+                "healthy": True,
+            },
+            "external_connector_bound": True,
+            "execution_mode": "pipedream_connect_action",
+            "summary": "Successfully found 2 channels",
+            "items": [
+                {"id": "C1", "name": "general", "num_members": 5},
+                {"id": "C2", "name": "debug-bob", "num_members": 3},
+            ],
+        }
+
+
+class RecordingPipedreamAdapter:
+    def __init__(self):
+        self.calls = []
+
+    async def execute_read(self, *, family, capability, query, limit, context, provider_preference=None):
+        self.calls.append(
+            {
+                "family": family,
+                "capability": capability,
+                "query": query,
+                "limit": limit,
+                "user_id": context.user_id,
+                "provider_preference": provider_preference,
+            }
+        )
+        return {
+            "status": "completed",
+            "family": family,
+            "capability": capability,
+            "action_key": "microsoft_outlook-find-email",
+            "connected_account": {
+                "id": "apn-outlook",
+                "app": "microsoft_outlook",
+                "name": "alexandre.gauthier@croo.io",
+                "healthy": True,
+            },
+            "external_connector_bound": True,
+            "execution_mode": "pipedream_connect_action",
+            "summary": "1 item(s) returned",
+            "items": [{"id": "msg-1"}],
+        }
+
+
+class FakePipedreamResponseStore:
+    def __init__(self):
+        self.values = {}
+        self.deleted = []
+
+    async def get(self, key):
+        return self.values.get(key)
+
+    async def delete(self, key):
+        self.deleted.append(key)
+        self.values.pop(key, None)
+
+
+class FakePipedreamEventBus:
+    def __init__(self):
+        self.published = []
+        self.redis = FakePipedreamResponseStore()
+
+    async def publish(self, event):
+        self.published.append(event)
+        operation = event.payload["operation"]
+        response_key = event.payload["response_key"]
+        if operation == "list_connections":
+            data = {
+                "items": [
+                    {
+                        "id": "apn-slack",
+                        "app": "slack_v2",
+                        "name": "alex@bigbob.ai",
+                        "healthy": True,
+                    },
+                    {
+                        "id": "apn-gmail",
+                        "app": "gmail",
+                        "name": "alex@bigbob.ai",
+                        "healthy": True,
+                    },
+                    {
+                        "id": "apn-outlook",
+                        "app": "microsoft_outlook",
+                        "name": "alexandre.gauthier@croo.io",
+                        "healthy": True,
+                    }
+                ]
+            }
+        else:
+            action_key = event.payload["data"]["action_key"]
+            if action_key == "microsoft_outlook-find-email":
+                data = {
+                    "success": True,
+                    "output": {"ret": {"messages": [{"id": "outlook-1", "subject": "Outlook mail"}]}},
+                }
+            elif action_key == "gmail-find-email":
+                data = {
+                    "success": True,
+                    "output": {"ret": {"messages": [{"id": "gmail-1", "subject": "Gmail mail"}]}},
+                }
+            else:
+                data = {
+                    "success": True,
+                    "output": {
+                        "ret": {
+                            "channels": [
+                                {"id": "C1", "name": "general", "is_member": True, "num_members": 5}
+                            ]
+                        }
+                    },
+                }
+        self.redis.values[response_key] = json.dumps({"ok": True, "data": data})
+
+    async def _get_redis(self):
+        return self.redis
 
 
 class RecordingRuntimeSession:
@@ -401,6 +534,484 @@ def test_runtime_settings_catalog_mutations_are_scoped_and_idempotent(client):
     assert conflict.json()["detail"] == {"code": "idempotency_conflict"}
     assert "factory_status" in {tool["name"] for tool in scoped.json()["tools"]}
     assert missing_name.status_code == 422
+
+
+def test_tool_governance_policies_and_user_preferences_are_scoped(client):
+    governance = client.get(
+        "/internal/agent-runtime/v1/settings/tool-governance",
+        headers=signed_headers(user_id="tool-admin"),
+    )
+
+    assert governance.status_code == 200
+    payload = governance.json()
+    assert payload["scope"] == "tenant"
+    assert payload["total"] >= 50
+    assert "mail-calendar.mail-read-search" in {item["id"] for item in payload["items"]}
+
+    updated = client.put(
+        "/internal/agent-runtime/v1/settings/tool-governance/mail-calendar.mail-read-search",
+        json={
+            "display_name": "Read company mail",
+            "provider": "pipedream",
+            "integration_key": "microsoft-outlook",
+            "family": "mail-calendar",
+            "capability": "mail-read-search",
+            "risk": "read",
+            "enabled": False,
+            "team_scope": ["support", "sales"],
+            "sync_enabled": True,
+            "sync_mode": "read_only",
+            "notes": "Map message metadata into CDE activity timeline.",
+        },
+        headers=signed_headers(user_id="tool-admin"),
+    )
+    assert updated.status_code == 200
+    assert updated.json()["enabled"] is False
+    assert updated.json()["team_scope"] == ["support", "sales"]
+
+    reread = client.get(
+        "/internal/agent-runtime/v1/settings/tool-governance",
+        headers=signed_headers(user_id="another-admin-same-tenant"),
+    ).json()
+    mail_policy = next(item for item in reread["items"] if item["id"] == "mail-calendar.mail-read-search")
+    assert mail_policy["display_name"] == "Read company mail"
+    assert mail_policy["source"] == "admin_policy"
+
+    my_access = client.get(
+        "/internal/agent-runtime/v1/settings/tool-governance/me",
+        headers=signed_headers(user_id="tool-user"),
+    ).json()
+    assert my_access["preferences"]["preferred_email_provider"] == "auto"
+    assert "mail-calendar.mail-read-search" not in {item["id"] for item in my_access["allowed_tools"]}
+
+    saved_preferences = client.put(
+        "/internal/agent-runtime/v1/settings/tool-preferences/me",
+        json={
+            "preferred_email_provider": "microsoft_outlook",
+            "preferred_calendar_provider": "microsoft_outlook",
+            "require_write_confirmation": False,
+            "show_tool_trace": False,
+        },
+        headers=signed_headers(user_id="tool-user"),
+    )
+    assert saved_preferences.status_code == 200
+    assert saved_preferences.json()["preferred_email_provider"] == "microsoft_outlook"
+    assert saved_preferences.json()["require_write_confirmation"] is False
+
+    other_user_access = client.get(
+        "/internal/agent-runtime/v1/settings/tool-governance/me",
+        headers=signed_headers(user_id="other-tool-user"),
+    ).json()
+    assert other_user_access["preferences"]["preferred_email_provider"] == "auto"
+
+
+@pytest.mark.asyncio
+async def test_run_applies_tool_governance_before_mcp_gateway_execution():
+    repo = InMemoryAgentRuntimeRepository()
+    provider = ToolChoiceSequencedRuntimeProvider(
+        [
+            RuntimeModelResult(
+                content="",
+                provider="test-provider",
+                model="test-model",
+                mode="tool_choice",
+                tool_calls=[
+                    RuntimeToolCall(
+                        id="call-governed-mail",
+                        name="bob_mcp_gateway",
+                        arguments={
+                            "operation": "execute_capability",
+                            "family": "mail-calendar",
+                            "capability": "mail-calendar.mail-read-search",
+                            "risk": "read",
+                        },
+                    )
+                ],
+            ),
+            RuntimeModelResult(
+                content="Governed",
+                provider="test-provider",
+                model="test-model",
+                mode="tool_choice",
+            ),
+        ]
+    )
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+    admin_context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="tool-governance-admin",
+        trace_id="a" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+    run_context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="tool-governance-user",
+        trace_id="b" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+
+    disabled = await use_cases.update_tool_governance_policy(
+        context=admin_context,
+        policy_id="mail-calendar.mail-read-search",
+        payload={
+            "display_name": "Read company mail",
+            "provider": "pipedream",
+            "integration_key": "microsoft-outlook",
+            "family": "mail-calendar",
+            "capability": "mail-read-search",
+            "risk": "read",
+            "enabled": False,
+            "team_scope": ["sales"],
+            "sync_enabled": False,
+            "sync_mode": "none",
+        },
+    )
+    run = await use_cases.create_run(
+        context=run_context,
+        session_id="session-governed-outlook",
+        input_message_id="msg-governed-outlook",
+        prompt="Teste le connecteur Outlook en lecture seulement.",
+        channel="workspace",
+        metadata={"source": "bob-chat-b4f-api"},
+        idempotency_key="governed-outlook-run",
+    )
+
+    assert disabled["enabled"] is False
+    allowed_policy_ids = {
+        item["id"]
+        for item in run.metadata["tool_governance"]["allowed_tools"]
+    }
+    assert "mail-calendar.mail-read-search" not in allowed_policy_ids
+    assert run.actions[0]["status"] == "rejected"
+    assert "mcp_capability_not_allowed_by_governance" in run.actions[0]["content"]
+
+
+@pytest.mark.asyncio
+async def test_user_tool_preferences_are_applied_to_runtime_tool_execution():
+    repo = InMemoryAgentRuntimeRepository()
+    adapter = RecordingPipedreamAdapter()
+    provider = ToolChoiceSequencedRuntimeProvider(
+        [
+            RuntimeModelResult(
+                content="",
+                provider="test-provider",
+                model="test-model",
+                mode="tool_choice",
+                tool_calls=[
+                    RuntimeToolCall(
+                        id="call-preferred-mail",
+                        name="bob_mcp_gateway",
+                        arguments={
+                            "operation": "execute_capability",
+                            "family": "mail-calendar",
+                            "capability": "mail-calendar.mail-read-search",
+                            "query": "mes derniers emails",
+                            "limit": 1,
+                            "risk": "read",
+                        },
+                    )
+                ],
+            ),
+            RuntimeModelResult(
+                content="Outlook choisi",
+                provider="test-provider",
+                model="test-model",
+                mode="tool_choice",
+            ),
+        ]
+    )
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(pipedream_adapter=adapter),
+    )
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="tool-preference-user",
+        trace_id="b" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+
+    await use_cases.update_user_tool_preferences(
+        context=context,
+        payload={"preferred_email_provider": "microsoft_outlook"},
+    )
+    run = await use_cases.create_run(
+        context=context,
+        session_id="session-preferred-mail",
+        input_message_id="msg-preferred-mail",
+        prompt="Je veux voir mes courriels.",
+        channel="workspace",
+        metadata={"source": "bob-chat-b4f-api"},
+        idempotency_key="preferred-mail-run",
+    )
+
+    assert run.actions[0]["status"] == "completed"
+    assert adapter.calls[0]["provider_preference"] == "microsoft_outlook"
+    assert json.loads(run.actions[0]["content"])["provider_preference"] == "microsoft_outlook"
+    assert "Preferences outils: email=microsoft_outlook" in provider.messages[0][0]["content"]
+
+
+@pytest.mark.asyncio
+async def test_user_tool_preferences_can_require_provider_selection_and_hide_tool_trace():
+    repo = InMemoryAgentRuntimeRepository()
+    provider = ToolChoiceSequencedRuntimeProvider(
+        [
+            RuntimeModelResult(
+                content="",
+                provider="test-provider",
+                model="test-model",
+                mode="tool_choice",
+                tool_calls=[
+                    RuntimeToolCall(
+                        id="call-mail-ask-provider",
+                        name="bob_mcp_gateway",
+                        arguments={
+                            "operation": "execute_capability",
+                            "family": "mail-calendar",
+                            "capability": "mail-calendar.mail-read-search",
+                            "risk": "read",
+                        },
+                    )
+                ],
+            ),
+            RuntimeModelResult(
+                content="Choix requis",
+                provider="test-provider",
+                model="test-model",
+                mode="tool_choice",
+            ),
+        ]
+    )
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(pipedream_adapter=RecordingPipedreamAdapter()),
+    )
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="tool-preference-ask-user",
+        trace_id="b" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+
+    await use_cases.update_user_tool_preferences(
+        context=context,
+        payload={"preferred_email_provider": "ask", "show_tool_trace": False},
+    )
+    run = await use_cases.create_run(
+        context=context,
+        session_id="session-mail-ask-provider",
+        input_message_id="msg-mail-ask-provider",
+        prompt="Je veux voir mes courriels.",
+        channel="workspace",
+        metadata={"source": "bob-chat-b4f-api"},
+        idempotency_key="mail-ask-provider-run",
+    )
+
+    assert run.actions[0]["status"] == "requires_clarification"
+    assert "tool_provider_preference_requires_selection" in run.actions[0]["content"]
+    tool_step = next(step for step in run.narration_steps if step["label"] == "outil_bob_mcp_gateway")
+    assert tool_step["visible"] is False
+
+
+@pytest.mark.asyncio
+async def test_user_tool_preferences_can_disable_personal_connectors():
+    repo = InMemoryAgentRuntimeRepository()
+    adapter = RecordingPipedreamAdapter()
+    provider = ToolChoiceSequencedRuntimeProvider(
+        [
+            RuntimeModelResult(
+                content="",
+                provider="test-provider",
+                model="test-model",
+                mode="tool_choice",
+                tool_calls=[
+                    RuntimeToolCall(
+                        id="call-personal-disabled",
+                        name="bob_mcp_gateway",
+                        arguments={
+                            "operation": "execute_capability",
+                            "family": "mail-calendar",
+                            "capability": "mail-calendar.mail-read-search",
+                            "risk": "read",
+                        },
+                    )
+                ],
+            ),
+            RuntimeModelResult(
+                content="Connecteur bloque",
+                provider="test-provider",
+                model="test-model",
+                mode="tool_choice",
+            ),
+        ]
+    )
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(pipedream_adapter=adapter),
+    )
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="tool-personal-disabled-user",
+        trace_id="b" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+
+    await use_cases.update_user_tool_preferences(
+        context=context,
+        payload={"allow_personal_connectors": False},
+    )
+    run = await use_cases.create_run(
+        context=context,
+        session_id="session-personal-disabled",
+        input_message_id="msg-personal-disabled",
+        prompt="Je veux voir mes courriels.",
+        channel="workspace",
+        metadata={"source": "bob-chat-b4f-api"},
+        idempotency_key="personal-disabled-run",
+    )
+
+    assert run.actions[0]["status"] == "rejected"
+    assert "personal_connectors_disabled_by_user_preference" in run.actions[0]["content"]
+    assert adapter.calls == []
+
+
+@pytest.mark.asyncio
+async def test_user_tool_preferences_skip_non_destructive_write_confirmation_but_not_destructive_actions():
+    repo = InMemoryAgentRuntimeRepository()
+    provider = ToolChoiceSequencedRuntimeProvider(
+        [
+            RuntimeModelResult(
+                content="",
+                provider="test-provider",
+                model="test-model",
+                mode="tool_choice",
+                tool_calls=[
+                    RuntimeToolCall(
+                        id="call-slack-draft-no-confirm",
+                        name="bob_mcp_gateway",
+                        arguments={
+                            "operation": "execute_capability",
+                            "family": "slack",
+                            "capability": "slack.draft-send",
+                            "query": "Prépare un message Slack.",
+                            "risk": "draft",
+                        },
+                    )
+                ],
+            ),
+            RuntimeModelResult(
+                content="Draft pret",
+                provider="test-provider",
+                model="test-model",
+                mode="tool_choice",
+            ),
+        ]
+    )
+    use_cases = AgentRuntimeUseCases(
+        repo=repo,
+        runtime_provider=provider,
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="tool-write-preference-user",
+        trace_id="b" * 32,
+        permissions=("bob_chat.use", "agent.run.create"),
+        roles=("admin",),
+    )
+
+    await use_cases.update_user_tool_preferences(
+        context=context,
+        payload={"require_write_confirmation": False},
+    )
+    run = await use_cases.create_run(
+        context=context,
+        session_id="session-slack-draft-no-confirm",
+        input_message_id="msg-slack-draft-no-confirm",
+        prompt="Prépare un message Slack pour l'équipe.",
+        channel="workspace",
+        metadata={"source": "bob-chat-b4f-api"},
+        idempotency_key="slack-draft-no-confirm-run",
+    )
+
+    assert run.actions[0]["status"] == "confirmed_pending_connector"
+    assert run.metadata["pending_confirmations"] == []
+
+    destructive_provider = ToolChoiceSequencedRuntimeProvider(
+        [
+            RuntimeModelResult(
+                content="",
+                provider="test-provider",
+                model="test-model",
+                mode="tool_choice",
+                tool_calls=[
+                    RuntimeToolCall(
+                        id="call-slack-destructive-confirm",
+                        name="bob_mcp_gateway",
+                        arguments={
+                            "operation": "execute_capability",
+                            "family": "slack",
+                            "capability": "slack.message-management",
+                            "query": "Supprime un message Slack.",
+                            "risk": "destructive-confirmed",
+                        },
+                    )
+                ],
+            ),
+            RuntimeModelResult(
+                content="Confirmation requise",
+                provider="test-provider",
+                model="test-model",
+                mode="tool_choice",
+            ),
+        ]
+    )
+    destructive_use_cases = AgentRuntimeUseCases(
+        repo=InMemoryAgentRuntimeRepository(),
+        runtime_provider=destructive_provider,
+        tool_registry=LocalRuntimeToolRegistry(),
+    )
+    await destructive_use_cases.update_user_tool_preferences(
+        context=context,
+        payload={"require_write_confirmation": False},
+    )
+    await destructive_use_cases.update_tool_governance_policy(
+        context=context,
+        policy_id="slack.message-management",
+        payload={
+            "display_name": "Slack message management",
+            "provider": "pipedream",
+            "integration_key": "slack",
+            "family": "slack",
+            "capability": "message-management",
+            "risk": "destructive-confirmed",
+            "enabled": True,
+        },
+    )
+    destructive_run = await destructive_use_cases.create_run(
+        context=context,
+        session_id="session-slack-destructive-confirm",
+        input_message_id="msg-slack-destructive-confirm",
+        prompt="Supprime un message Slack.",
+        channel="workspace",
+        metadata={"source": "bob-chat-b4f-api"},
+        idempotency_key="slack-destructive-confirm-run",
+    )
+
+    assert destructive_run.actions[0]["status"] == "requires_confirmation"
+    assert destructive_run.metadata["pending_confirmations"]
 
 
 def test_run_resolves_selected_agent_skills_and_tools_from_runtime_settings(client):
@@ -1396,7 +2007,7 @@ def test_run_creates_pending_confirmation_for_gated_mcp_action(client, runtime_r
 
 @pytest.mark.asyncio
 async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools():
-    registry = LocalRuntimeToolRegistry()
+    registry = LocalRuntimeToolRegistry(pipedream_adapter=FakePipedreamAdapter())
     context = InternalContext(
         tenant_id="tenant-croo-local",
         user_id="user-alex-local",
@@ -1682,14 +2293,15 @@ async def test_local_registry_executes_runtime_memory_and_rejects_unknown_tools(
         "risk": "read",
         "operation": "execute_capability",
         "capability": "messages-read-search",
-        "external_connector_bound": False,
+        "external_connector_bound": True,
+        "execution_mode": "pipedream_connect_action",
     }
     slack_content = json.loads(slack_read_contract.content)
-    assert slack_content["status"] == "connector_binding_required"
-    assert slack_content["qualified_id"] == "slack.messages-read-search"
-    assert slack_content["servers"] == ["pipedream-slack"]
-    assert slack_content["mcp_tools"] == ["pipedream-slack"]
-    assert slack_content["request"] == {"query": "conversion Bob", "limit": 3}
+    assert slack_content["status"] == "channel_required"
+    assert slack_content["connected_account"]["app"] == "slack_v2"
+    assert slack_content["external_connector_bound"] is True
+    assert slack_content["execution_mode"] == "pipedream_connect_action"
+    assert slack_content["items"][0]["name"] == "general"
     assert slack_content["policy"]["writes_require_confirmation"] is True
     assert slack_draft_contract.status == "requires_confirmation"
     assert slack_draft_contract.metadata == {
@@ -1763,6 +2375,146 @@ async def test_local_registry_filters_tools_by_selected_agent_catalog():
     assert unmapped == []
     assert rejected_ungated.status == "rejected"
     assert "tool_not_allowed_for_selected_agent" in rejected_ungated.content
+
+
+@pytest.mark.asyncio
+async def test_pipedream_action_adapter_uses_event_bus_response_path():
+    bus = FakePipedreamEventBus()
+    adapter = PipedreamActionAdapter(bus=bus, timeout_seconds=0.5, poll_interval_seconds=0.01)
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="717b9f8f-fb71-4223-9f89-3999ba73479b",
+        trace_id="e" * 32,
+        permissions=("bob_chat.use",),
+        roles=("admin",),
+    )
+
+    result = await adapter.execute_read(
+        family="slack",
+        capability="channels-users",
+        query="liste les canaux slack",
+        limit=1,
+        context=context,
+    )
+
+    assert result["status"] == "completed"
+    assert result["items"][0]["name"] == "general"
+    assert [event.payload["operation"] for event in bus.published] == ["list_connections", "run_action"]
+    assert bus.published[0].event_type == "agent-runtime.pipedream.read.requested"
+    assert bus.published[0].payload["context"]["tenant_id"] == "tenant-croo-local"
+    assert bus.published[1].payload["data"]["input"]["slack"] == {"authProvisionId": "apn-slack"}
+
+
+@pytest.mark.asyncio
+async def test_pipedream_mail_read_defaults_to_outlook_when_multiple_accounts_connected():
+    bus = FakePipedreamEventBus()
+    adapter = PipedreamActionAdapter(bus=bus, timeout_seconds=0.5, poll_interval_seconds=0.01)
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="717b9f8f-fb71-4223-9f89-3999ba73479b",
+        trace_id="e" * 32,
+        permissions=("bob_chat.use",),
+        roles=("admin",),
+    )
+
+    result = await adapter.execute_read(
+        family="mail-calendar",
+        capability="mail-read-search",
+        query="je veux voir mes emails",
+        limit=1,
+        context=context,
+    )
+
+    assert result["status"] == "completed"
+    assert result["action_key"] == "microsoft_outlook-find-email"
+    assert result["connected_account"]["app"] == "microsoft_outlook"
+    assert result["items"][0]["id"] == "outlook-1"
+
+
+@pytest.mark.asyncio
+async def test_pipedream_mail_read_uses_user_prompt_over_model_provider_guess():
+    bus = FakePipedreamEventBus()
+    adapter = PipedreamActionAdapter(bus=bus, timeout_seconds=0.5, poll_interval_seconds=0.01)
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="717b9f8f-fb71-4223-9f89-3999ba73479b",
+        trace_id="e" * 32,
+        permissions=("bob_chat.use",),
+        roles=("admin",),
+    )
+
+    result = await adapter.execute_read(
+        family="mail-calendar",
+        capability="mail-read-search",
+        query="liste les emails Gmail\n\nDemande utilisateur: je veux voir mes emails",
+        limit=1,
+        context=context,
+    )
+
+    assert result["status"] == "completed"
+    assert result["action_key"] == "microsoft_outlook-find-email"
+    assert result["connected_account"]["app"] == "microsoft_outlook"
+
+
+@pytest.mark.asyncio
+async def test_pipedream_mail_read_honors_explicit_gmail_request():
+    bus = FakePipedreamEventBus()
+    adapter = PipedreamActionAdapter(bus=bus, timeout_seconds=0.5, poll_interval_seconds=0.01)
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="717b9f8f-fb71-4223-9f89-3999ba73479b",
+        trace_id="e" * 32,
+        permissions=("bob_chat.use",),
+        roles=("admin",),
+    )
+
+    result = await adapter.execute_read(
+        family="mail-calendar",
+        capability="mail-read-search",
+        query="je veux voir mes emails Gmail",
+        limit=1,
+        context=context,
+    )
+
+    assert result["status"] == "completed"
+    assert result["action_key"] == "gmail-find-email"
+    assert result["connected_account"]["app"] == "gmail"
+    assert result["items"][0]["id"] == "gmail-1"
+
+
+@pytest.mark.asyncio
+async def test_local_registry_preserves_source_prompt_for_pipedream_selection():
+    adapter = RecordingPipedreamAdapter()
+    registry = LocalRuntimeToolRegistry(pipedream_adapter=adapter)
+    context = InternalContext(
+        tenant_id="tenant-croo-local",
+        user_id="717b9f8f-fb71-4223-9f89-3999ba73479b",
+        trace_id="e" * 32,
+        permissions=("bob_chat.use",),
+        roles=("admin",),
+    )
+
+    result = await registry.execute(
+        call=RuntimeToolCall(
+            id="call-mail-source-prompt",
+            name="bob_mcp_gateway",
+            arguments={
+                "operation": "execute_capability",
+                "family": "mail-calendar",
+                "capability": "mail-calendar.mail-read-search",
+                "query": "statut de l outil",
+                "limit": 1,
+                "risk": "read",
+            },
+        ),
+        context=context,
+        metadata={"source_prompt": "Cherche 1 email Outlook recent connecte et retourne seulement le statut."},
+    )
+
+    assert result.status == "completed"
+    assert adapter.calls[0]["family"] == "mail-calendar"
+    assert "statut de l outil" in adapter.calls[0]["query"]
+    assert "Outlook" in adapter.calls[0]["query"]
 
 
 @pytest.mark.asyncio
@@ -2607,7 +3359,7 @@ async def test_local_provider_routes_external_draft_intent_to_confirmation_gated
         (
             "Réserve un DID SkySwitch.",
             "skyswitch",
-            "skyswitch.telco-dids",
+            "skyswitch.telco-catalog-reservations-and-purchase-reserve-phone-number",
             "write-requested",
         ),
     ],

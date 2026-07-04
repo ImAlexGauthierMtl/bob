@@ -20,9 +20,11 @@ async def lifespan(app: FastAPI):
         email_contact, smart_label, integration_setting,
         membrane_connection, membrane_synced_email, membrane_synced_event,
     )  # noqa: F401
+    from app.events.pipedream_runtime_actions import register_pipedream_runtime_action_subscriber
     from app.infrastructure.database import init as db_init
     db_init("email-backend")
 
+    register_pipedream_runtime_action_subscriber()
     if hasattr(event_bus, 'start_listening'):
         await event_bus.start_listening()
     logger.info("email_backend_api_started", port=settings.api_port)

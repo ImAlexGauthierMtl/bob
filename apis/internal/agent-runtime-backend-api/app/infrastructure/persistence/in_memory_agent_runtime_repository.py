@@ -88,6 +88,36 @@ class InMemoryAgentRuntimeRepository:
             and item.collection == collection
         ]
 
+    def list_user_catalog_items(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        collection: str,
+    ) -> list[RuntimeCatalogItem]:
+        return [
+            item
+            for item in self.catalog_items.values()
+            if item.tenant_id == tenant_id
+            and item.user_id == user_id
+            and item.collection == collection
+        ]
+
+    def get_catalog_item(
+        self,
+        *,
+        item_id: str,
+        tenant_id: str,
+        collection: str,
+        user_id: str | None = None,
+    ) -> RuntimeCatalogItem | None:
+        item = self.catalog_items.get(item_id)
+        if not item or item.tenant_id != tenant_id or item.collection != collection:
+            return None
+        if user_id is not None and item.user_id != user_id:
+            return None
+        return item
+
     def get_catalog_item_by_idempotency_key(
         self,
         *,
@@ -107,5 +137,9 @@ class InMemoryAgentRuntimeRepository:
         return None
 
     def create_catalog_item(self, *, item: RuntimeCatalogItem) -> RuntimeCatalogItem:
+        self.catalog_items[item.id] = item
+        return item
+
+    def upsert_catalog_item(self, *, item: RuntimeCatalogItem) -> RuntimeCatalogItem:
         self.catalog_items[item.id] = item
         return item

@@ -1,0 +1,125 @@
+<div class="knowledge-page">
+    <header class="knowledge-header">
+        <div>
+            <p class="settings-eyebrow">Knowledge</p>
+            <h1>Agent knowledge</h1>
+        </div>
+        <button type="button" class="icon-button" (click)="reload()" [disabled]="loading || saving" title="Refresh">
+            <i class="fa-solid fa-rotate"></i>
+        </button>
+    </header>
+
+    @if (error) {
+    <div class="status status--error">{{ error }}</div>
+    }
+
+    <section class="knowledge-status">
+        <div>
+            <span>Postgres</span>
+            <strong>{{ memory?.rag?.postgres_source_of_truth ? 'Source of truth' : 'Unavailable' }}</strong>
+        </div>
+        <div>
+            <span>Milvus</span>
+            <strong>{{ memory?.vector_index?.health?.status || 'Unknown' }}</strong>
+        </div>
+        <div>
+            <span>Embeddings</span>
+            <strong>{{ memory?.vector_index?.config?.embedding_provider || 'Not configured' }}</strong>
+        </div>
+        <div>
+            <span>Dimension</span>
+            <strong>{{ memory?.vector_index?.config?.embedding_dimension || databaseForm.embedding_dimension }}</strong>
+        </div>
+    </section>
+
+    <section class="knowledge-grid">
+        <article class="knowledge-panel">
+            <div class="panel-title">
+                <h2>Databases</h2>
+                <span>{{ knowledge?.databases?.length || 0 }}</span>
+            </div>
+            <form class="knowledge-form" (ngSubmit)="createDatabase()">
+                <input name="dbDisplay" [(ngModel)]="databaseForm.display_name" placeholder="Display name">
+                <input name="dbName" [(ngModel)]="databaseForm.name" placeholder="Key">
+                <input name="dbMilvus" [(ngModel)]="databaseForm.milvus_database" placeholder="Milvus database">
+                <input name="dbModel" [(ngModel)]="databaseForm.embedding_model" placeholder="Embedding model">
+                <button type="submit" [disabled]="saving">
+                    <i class="fa-solid fa-database"></i>
+                    <span>Create</span>
+                </button>
+            </form>
+            <div class="entity-list">
+                @for (database of knowledge?.databases || []; track database.id) {
+                <div class="entity-row">
+                    <strong>{{ database.display_name }}</strong>
+                    <span>{{ database.milvus_database }} · {{ database.embedding_provider }}</span>
+                </div>
+                }
+            </div>
+        </article>
+
+        <article class="knowledge-panel">
+            <div class="panel-title">
+                <h2>Collections</h2>
+                <span>{{ knowledge?.collections?.length || 0 }}</span>
+            </div>
+            <form class="knowledge-form" (ngSubmit)="createCollection()">
+                <select name="collectionDatabase" [(ngModel)]="collectionForm.database_id">
+                    @for (database of knowledge?.databases || []; track database.id) {
+                    <option [value]="database.id">{{ database.display_name }}</option>
+                    }
+                </select>
+                <input name="collectionDisplay" [(ngModel)]="collectionForm.display_name" placeholder="Display name">
+                <input name="collectionTheme" [(ngModel)]="collectionForm.theme" placeholder="Theme">
+                <input name="collectionMilvus" [(ngModel)]="collectionForm.milvus_collection" placeholder="Milvus collection">
+                <button type="submit" [disabled]="saving || !collectionForm.database_id">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <span>Create</span>
+                </button>
+            </form>
+            <div class="entity-list">
+                @for (collection of knowledge?.collections || []; track collection.id) {
+                <div class="entity-row">
+                    <strong>{{ collection.display_name }}</strong>
+                    <span>{{ collection.milvus_collection }} · {{ collection.theme }} · {{ collection.status }}</span>
+                </div>
+                }
+            </div>
+        </article>
+
+        <article class="knowledge-panel">
+            <div class="panel-title">
+                <h2>Sources</h2>
+                <span>{{ knowledge?.sources?.length || 0 }}</span>
+            </div>
+            <form class="knowledge-form" (ngSubmit)="createSource()">
+                <select name="sourceCollection" [(ngModel)]="sourceForm.collection_id">
+                    @for (collection of knowledge?.collections || []; track collection.id) {
+                    <option [value]="collection.id">{{ collection.display_name }}</option>
+                    }
+                </select>
+                <input name="sourceName" [(ngModel)]="sourceForm.name" placeholder="Source name">
+                <input name="sourceApp" [(ngModel)]="sourceForm.pipedream_app" placeholder="Pipedream app">
+                <input name="sourceId" [(ngModel)]="sourceForm.pipedream_source_id" placeholder="Pipedream source id">
+                <button type="submit" [disabled]="saving || !sourceForm.collection_id">
+                    <i class="fa-solid fa-plug-circle-bolt"></i>
+                    <span>Connect</span>
+                </button>
+            </form>
+            <div class="entity-list">
+                @for (source of knowledge?.sources || []; track source.id) {
+                <div class="entity-row">
+                    <strong>{{ source.name }}</strong>
+                    <span>{{ source.provider }} · {{ source.status }}</span>
+                </div>
+                }
+            </div>
+        </article>
+    </section>
+
+    <section class="flow-strip">
+        @for (step of knowledge?.ingestion_flow || []; track step) {
+        <span>{{ step }}</span>
+        }
+    </section>
+</div>

@@ -22,6 +22,11 @@ contract.
 - Pipedream credentials are read only by backend services.
 - Pipedream Connect tokens are created server-side and returned to the
   frontend as short-lived tokens or Connect Link URLs.
+- `agent-runtime-backend-api` requests read-only Bob tool calls through the
+  Redis event bus. `email-backend-api` remains the owner of Pipedream provider
+  execution, injects the connected account `authProvisionId` server-side, and
+  returns the correlated result through Redis. Write/destructive actions remain
+  behind the existing confirmation flow.
 
 ## Environment
 
@@ -43,8 +48,11 @@ PIPEDREAM_SYNC_EMAILS_ACTION_ID=
 - `POST /pipedream/token`
 - `GET /pipedream/connect-url?integration_key=...`
 - `GET /pipedream/integrations`
+- `GET /pipedream/integrations/{integration_key}/tools`
 - `GET /pipedream/connections`
 - `DELETE /pipedream/connections/{connection_id}`
+- `DELETE /pipedream/local-connections/{connection_id}` — local compatibility
+  cleanup for historical `membrane_*` storage rows during the migration period.
 - `POST /pipedream/actions/{action_key}/run`
 - `POST /pipedream/webhook`
 

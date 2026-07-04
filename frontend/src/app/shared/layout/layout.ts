@@ -20,6 +20,7 @@ export class LayoutComponent implements OnInit {
     activeOrgName: string | null = null;
     activeOrgId: string | null = null;
     showOrgDropdown = false;
+    showUserMenu = false;
     organizations: BccOrganization[] = [];
 
     constructor(
@@ -53,6 +54,7 @@ export class LayoutComponent implements OnInit {
 
     toggleOrgDropdown(): void {
         this.showOrgDropdown = !this.showOrgDropdown;
+        this.showUserMenu = false;
     }
 
     switchOrg(org: BccOrganization): void {
@@ -63,5 +65,14 @@ export class LayoutComponent implements OnInit {
                 this.activeOrgId = user.active_organization_id;
             },
         });
+    }
+
+    toggleUserMenu(): void {
+        this.showUserMenu = !this.showUserMenu;
+        this.showOrgDropdown = false;
+    }
+
+    closeUserMenu(): void {
+        this.showUserMenu = false;
     }
 }

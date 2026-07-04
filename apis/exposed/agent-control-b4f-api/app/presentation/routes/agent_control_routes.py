@@ -44,6 +44,12 @@ async def get_agent_control_contract(current_user: dict = Depends(get_current_us
                 "local_prefix": "/contacts/{contact_id}/client-map",
                 "covers_existing_namespace": True,
             },
+            {
+                "name": "tool-governance",
+                "public_prefix": "/api/agent-control/v1/tool-governance",
+                "local_prefix": "/tool-governance",
+                "covers_existing_namespace": False,
+            },
         ],
         "guards": [
             "session_required",

@@ -1,0 +1,112 @@
+<div class="settings-panel">
+    <div class="settings-panel__header">
+        <h3 class="settings-panel__title">My Tool Access</h3>
+        <p class="settings-panel__subtitle">Manage how Bob uses tools for your account</p>
+    </div>
+
+    @if (error) {
+    <div class="settings-alert settings-alert--error">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span>{{ error }}</span>
+    </div>
+    }
+
+    @if (success) {
+    <div class="settings-alert settings-alert--success">
+        <i class="fa-solid fa-check-circle"></i>
+        <span>{{ success }}</span>
+    </div>
+    }
+
+    @if (loading) {
+    <div class="settings-empty">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <span>Loading tool access...</span>
+    </div>
+    } @else {
+    <section class="tool-settings-grid">
+        <div class="tool-settings-panel">
+            <div class="settings-section__header">
+                <div>
+                    <h4 class="settings-section__title">Personal Preferences</h4>
+                    <p class="settings-section__desc">These settings affect only your Bob sessions.</p>
+                </div>
+                <button class="integration-card__btn integration-card__btn--connect" type="button"
+                    (click)="savePreferences()" [disabled]="saving">
+                    @if (saving) {
+                    <i class="fa-solid fa-spinner fa-spin"></i> Saving
+                    } @else {
+                    <i class="fa-solid fa-floppy-disk"></i> Save
+                    }
+                </button>
+            </div>
+
+            <div class="form-row form-row--two">
+                <div class="form-group">
+                    <label class="form-label" for="preferred-email">Email provider</label>
+                    <select id="preferred-email" class="form-input" [(ngModel)]="preferences.preferred_email_provider">
+                        <option value="auto">Auto</option>
+                        <option value="ask">Ask me</option>
+                        <option value="gmail">Gmail</option>
+                        <option value="microsoft_outlook">Outlook</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="preferred-calendar">Calendar provider</label>
+                    <select id="preferred-calendar" class="form-input" [(ngModel)]="preferences.preferred_calendar_provider">
+                        <option value="auto">Auto</option>
+                        <option value="ask">Ask me</option>
+                        <option value="google_calendar">Google Calendar</option>
+                        <option value="microsoft_outlook">Outlook</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="toggle-row">
+                <div class="toggle-row__info">
+                    <p class="toggle-row__name">Confirm write actions</p>
+                    <p class="toggle-row__desc">Require approval before sending, deleting, updating, or syncing data.</p>
+                </div>
+                <label class="toggle">
+                    <input type="checkbox" [(ngModel)]="preferences.require_write_confirmation" />
+                    <span class="toggle__track"></span>
+                </label>
+            </div>
+
+            <div class="toggle-row">
+                <div class="toggle-row__info">
+                    <p class="toggle-row__name">Show tool trace</p>
+                    <p class="toggle-row__desc">Show Bob's tool steps in Conversation after execution.</p>
+                </div>
+                <label class="toggle">
+                    <input type="checkbox" [(ngModel)]="preferences.show_tool_trace" />
+                    <span class="toggle__track"></span>
+                </label>
+            </div>
+
+            <div class="toggle-row">
+                <div class="toggle-row__info">
+                    <p class="toggle-row__name">Personal connectors</p>
+                    <p class="toggle-row__desc">Allow Bob to use accounts you connected yourself.</p>
+                </div>
+                <label class="toggle">
+                    <input type="checkbox" [(ngModel)]="preferences.allow_personal_connectors" />
+                    <span class="toggle__track"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="tool-settings-panel">
+            <div class="settings-section__header">
+                <div>
+                    <h4 class="settings-section__title">Connections</h4>
+                    <p class="settings-section__desc">Connect accounts and review available tools in Integrations.</p>
+                </div>
+                <a class="integration-card__btn" routerLink="/settings/integrations">
+                    <i class="fa-solid fa-plug"></i> Integrations
+                </a>
+            </div>
+        </div>
+    </section>
+    }
+</div>

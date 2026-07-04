@@ -27,16 +27,41 @@ export interface MembraneConnectionListResponse {
     items: MembraneConnection[];
 }
 
+export interface MembranePageInfo {
+    count?: number;
+    total_count?: number;
+    start_cursor?: string;
+    end_cursor?: string;
+}
+
 export interface MembraneIntegration {
     id: string;
     key: string;
     name: string;
     logo_uri?: string;
+    iconUrl?: string;
     description?: string;
+    status?: string;
 }
 
 export interface MembraneIntegrationListResponse {
     items: MembraneIntegration[];
+    page_info?: MembranePageInfo;
+}
+
+export interface MembraneTool {
+    key: string;
+    name: string;
+    description?: string;
+    component_type?: string;
+    version?: string;
+    annotations?: Record<string, unknown>;
+    configurable_props_count?: number;
+}
+
+export interface MembraneToolListResponse {
+    items: MembraneTool[];
+    page_info?: MembranePageInfo;
 }
 
 export interface MembraneActionRunRequest {
@@ -53,7 +78,8 @@ export interface MembraneActionRunResponse {
 
 export interface MembraneConnectUrlResponse {
     url: string;
-    integration_key: string;
+    app?: string;
+    integration_key?: string;
 }
 
 export interface MembraneConfig {

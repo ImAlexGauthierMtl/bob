@@ -107,6 +107,10 @@ than a restrictive allowlist.
 - `GET /api/agent-control/v1/contacts/{contact_id}/client-map/meddpicc-score`
 - `POST /api/agent-control/v1/contacts/{contact_id}/client-map/analyze-behavior`
 - `GET /api/agent-control/v1/agent-control/contract`
+- `GET /api/agent-control/v1/tool-governance/policies`
+- `PUT /api/agent-control/v1/tool-governance/policies/{policy_id}`
+- `GET /api/agent-control/v1/tool-governance/me`
+- `PUT /api/agent-control/v1/tool-governance/me/preferences`
 
 Rules:
 
@@ -127,6 +131,10 @@ Rules:
 - Provider-backed operations such as behavioral analysis are delegated to the
   internal Agent Backend; the Agent Control B4F must not receive provider keys
   or instantiate LLM clients.
+- Tool governance is delegated to `agent-runtime-backend-api` with a signed
+  internal session context. The B4F exposes tenant-level admin policies and
+  user-level tool preferences to Settings, but never accesses DB tables or
+  external provider secrets directly.
 
 ## Bob Settings B4F
 
@@ -139,6 +147,11 @@ Exposed through the gateway as `/api/bob-settings/v1` and implemented by
 - `PUT /api/bob-settings/v1/voice`
 - `GET /api/bob-settings/v1/runtime`
 - `GET /api/bob-settings/v1/memory`
+- `GET /api/bob-settings/v1/knowledge`
+- `POST /api/bob-settings/v1/knowledge/databases`
+- `POST /api/bob-settings/v1/knowledge/collections`
+- `POST /api/bob-settings/v1/knowledge/sources`
+- `POST /api/bob-settings/v1/knowledge/ingest/zoho-desk`
 - `POST /api/bob-settings/v1/runtime/agents`
 - `POST /api/bob-settings/v1/runtime/skills`
 - `POST /api/bob-settings/v1/runtime/tools`
@@ -169,6 +182,13 @@ Rules:
   internal session context. The B4F returns memory counts, isolation status,
   redacted Milvus/embedding configuration and vector health only; it does not
   expose URIs, tokens, provider secrets or raw memory content.
+- Knowledge settings are delegated to `agent-memory-backend-api` with the same
+  signed internal context. Postgres stores the manageable registry of knowledge
+  databases, collections, themes and Pipedream sources; Milvus remains a
+  reconstructible vector index, not the source of truth for execution policy.
+- Zoho Desk learning ingestion is also delegated to `agent-memory-backend-api`.
+  The B4F receives the Pipedream-triggered ticket payload, signs the internal
+  context, and never persists raw tickets or embeddings itself.
 - Memory settings may return a `vector_index.degraded[]` list when vector
   configuration or health is unavailable. This must not block conversation,
   voice or runtime catalog settings from loading.
@@ -225,10 +245,20 @@ Rules:
 - `POST /internal/agent-runtime/v1/settings/agents`
 - `POST /internal/agent-runtime/v1/settings/skills`
 - `POST /internal/agent-runtime/v1/settings/tools`
+- `GET /internal/agent-runtime/v1/settings/tool-governance`
+- `PUT /internal/agent-runtime/v1/settings/tool-governance/{policy_id}`
+- `GET /internal/agent-runtime/v1/settings/tool-governance/me`
+- `PUT /internal/agent-runtime/v1/settings/tool-preferences/me`
 - Runtime settings expose the Bob agent skill catalog imported from
   `croo-agentic` as safe metadata (`id`, `name`, `description`, `scope`,
   `source`, `status`). These entries are selectable when admins compose a Bob
   agent in Settings and are injected into run metadata when that agent is used.
+- Runtime tool governance stores admin authorization policies in
+  `agent_runtime.runtime_catalog_items` collection `tool_policies`, scoped by
+  tenant. User-level Bob tool preferences are stored in collection
+  `user_tool_preferences`, scoped by tenant and user. Governance policies carry
+  provider, integration, tool key, MCP family/capability, risk, enabled state,
+  team scope, sync mode, data mapping notes and admin notes.
 - Runtime settings include the imported Croo agentic MCP catalog as safe
   metadata: family, skill path, capability index, server names and per-capability
   entries with `qualified_id`, risk level, capability file and expected MCP
@@ -284,6 +314,11 @@ Internal only. Not routed by the gateway.
 - `POST /internal/agent-memory/v1/vector-index/jobs/{job_id}/prepare`
 - `POST /internal/agent-memory/v1/vector-index/jobs/{job_id}/upsert-plan`
 - `POST /internal/agent-memory/v1/vector-index/jobs/{job_id}/rollback`
+- `GET /internal/agent-memory/v1/knowledge`
+- `POST /internal/agent-memory/v1/knowledge/databases`
+- `POST /internal/agent-memory/v1/knowledge/collections`
+- `POST /internal/agent-memory/v1/knowledge/sources`
+- `POST /internal/agent-memory/v1/knowledge/ingest/zoho-desk`
 
 Rules:
 
@@ -342,6 +377,21 @@ Rules:
   only as provider/model/dimension readiness.
 - Milvus is disabled by default and appears in health dependencies only when
   explicitly enabled or configured.
+- Knowledge registry writes require `agent_memory.knowledge.manage`,
+  `agent_memory.vector.manage` or an admin role, plus `Idempotency-Key`.
+- Zoho Desk ingestion is modeled as a Pipedream source attached to an
+  organization collection. Ticket chunks can be indexed into
+  `zoho_ticket_chunks_v1`; normalized action procedures can be indexed into
+  `support_procedure_chunks_v1`.
+- The Zoho Desk ingestion endpoint creates a Postgres ingestion run, normalized
+  item, candidate procedure and chunks before any Milvus upsert. Dry-run mode
+  persists planned learning records but skips Milvus writes.
+- Ingestion responses include `fireworks_api_key_set` and `fallback_mode` so
+  operations can see when deterministic development fallback may have been used
+  instead of Fireworks output.
+- Learning source-of-truth tables are `knowledge_ingestion_runs`,
+  `knowledge_items`, `knowledge_chunks` and `knowledge_procedures`; Milvus
+  stores only reconstructible vector entities keyed by chunk/vector IDs.
 - Avoid application startup DDL.
 
 ## Bob Cloud Stub

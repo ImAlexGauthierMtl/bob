@@ -1,7 +1,9 @@
 """HTTP clients for Agent Backend API."""
 import os
+from typing import Any
 
 from shared.services import HTTPClient
+from shared.services import create_service_client
 from shared.infrastructure import get_logger
 
 logger = get_logger(__name__)
@@ -12,6 +14,10 @@ def create_agent_backend_client() -> HTTPClient:
     if not base_url:
         raise RuntimeError("AGENT_BACKEND_API_URL is required for agent-control-b4f-api")
     return HTTPClient(base_url=base_url.rstrip("/"))
+
+
+def create_agent_runtime_backend_client() -> HTTPClient:
+    return create_service_client("agent-runtime~backend-api")
 
 
 class BccClient:
@@ -419,6 +425,48 @@ class TrainingClient:
         return resp.status_code == 204
 
 
+class ToolGovernanceClient:
+    """HTTP client for Agent Runtime tool governance."""
+
+    def __init__(self, client: HTTPClient | None = None):
+        self._client = client or create_agent_runtime_backend_client()
+
+    async def list_policies(self, headers: dict[str, str]) -> dict[str, Any]:
+        resp = await self._client.get(
+            "/internal/agent-runtime/v1/settings/tool-governance",
+            headers=headers,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def update_policy(self, policy_id: str, data: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
+        resp = await self._client.put(
+            f"/internal/agent-runtime/v1/settings/tool-governance/{policy_id}",
+            json=data,
+            headers=headers,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_my_access(self, headers: dict[str, str]) -> dict[str, Any]:
+        resp = await self._client.get(
+            "/internal/agent-runtime/v1/settings/tool-governance/me",
+            headers=headers,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def update_my_preferences(self, data: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
+        resp = await self._client.put(
+            "/internal/agent-runtime/v1/settings/tool-preferences/me",
+            json=data,
+            headers=headers,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+
 bcc_client = BccClient()
 client_map_client = ClientMapClient()
 training_client = TrainingClient()
+tool_governance_client = ToolGovernanceClient()

@@ -1,5 +1,6 @@
 from dataclasses import replace
 from datetime import datetime, timezone
+import asyncio
 
 from fastapi.testclient import TestClient
 import pytest
@@ -12,6 +13,7 @@ from app.infrastructure.persistence.in_memory_agent_memory_repository import (
 from app.infrastructure.vector import MilvusConfig, MilvusConfigError, MilvusHealthCheck
 import app.infrastructure.vector.milvus_health as milvus_health
 import app.infrastructure.vector.milvus_search as milvus_search
+import app.application.use_cases.agent_memory_use_cases as agent_memory_use_cases
 from app.presentation.routes import agent_memory_routes
 from shared.infrastructure import InternalSessionContext, InternalSessionContextSigner
 
@@ -285,6 +287,333 @@ def test_vector_config_rejects_enabled_milvus_without_uri(client, monkeypatch):
 
     assert response.status_code == 503
     assert response.json()["detail"] == {"code": "milvus_uri_required"}
+
+
+def test_knowledge_registry_lifecycle_is_permissioned_and_idempotent(client):
+    forbidden = client.get("/internal/agent-memory/v1/knowledge", headers=signed_headers())
+    headers = {
+        **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+        "Idempotency-Key": "knowledge-db-1",
+    }
+    database = client.post(
+        "/internal/agent-memory/v1/knowledge/databases",
+        json={
+            "name": "Bob Support Knowledge",
+            "display_name": "Bob Support Knowledge",
+            "description": "Zoho Desk support corpus",
+            "milvus_database": "bob_knowledge",
+            "embedding_provider": "fireworks",
+            "embedding_model": "fireworks/qwen3-embedding-8b",
+            "embedding_dimension": 4096,
+        },
+        headers=headers,
+    )
+    replay = client.post(
+        "/internal/agent-memory/v1/knowledge/databases",
+        json={
+            "name": "Ignored",
+            "display_name": "Ignored",
+            "embedding_model": "ignored",
+        },
+        headers=headers,
+    )
+    collection = client.post(
+        "/internal/agent-memory/v1/knowledge/collections",
+        json={
+            "database_id": database.json()["id"],
+            "name": "Zoho Support Procedures",
+            "display_name": "Zoho Support Procedures",
+            "theme": "support_technique",
+            "milvus_collection": "support_procedure_chunks_v1",
+        },
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "knowledge-col-1",
+        },
+    )
+    source = client.post(
+        "/internal/agent-memory/v1/knowledge/sources",
+        json={
+            "collection_id": collection.json()["id"],
+            "name": "Zoho Desk",
+            "pipedream_app": "zoho_desk",
+        },
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "knowledge-source-1",
+        },
+    )
+    overview = client.get(
+        "/internal/agent-memory/v1/knowledge",
+        headers=signed_headers(permissions=("agent_memory.knowledge.manage",)),
+    )
+
+    assert forbidden.status_code == 403
+    assert database.status_code == 201
+    assert database.json()["name"] == "bob_support_knowledge"
+    assert replay.json() == database.json()
+    assert collection.status_code == 201
+    assert collection.json()["status"] == "candidate"
+    assert source.status_code == 201
+    assert source.json()["status"] == "connection_required"
+    assert overview.status_code == 200
+    assert overview.json()["postgres_source_of_truth"] is True
+    assert overview.json()["milvus_role"] == "reconstructible_vector_index"
+    assert overview.json()["databases"][0]["id"] == database.json()["id"]
+
+
+def test_knowledge_registry_rejects_orphan_collection_and_source(client):
+    headers = {
+        **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+        "Idempotency-Key": "knowledge-orphan-col",
+    }
+    collection = client.post(
+        "/internal/agent-memory/v1/knowledge/collections",
+        json={
+            "database_id": "kdb_missing",
+            "name": "Orphan",
+            "display_name": "Orphan",
+            "milvus_collection": "orphan_chunks_v1",
+        },
+        headers=headers,
+    )
+    source = client.post(
+        "/internal/agent-memory/v1/knowledge/sources",
+        json={
+            "collection_id": "kcol_missing",
+            "name": "Orphan source",
+        },
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "knowledge-orphan-source",
+        },
+    )
+
+    assert collection.status_code == 404
+    assert collection.json()["detail"] == {"code": "knowledge_database_not_found"}
+    assert source.status_code == 404
+    assert source.json()["detail"] == {"code": "knowledge_collection_not_found"}
+
+
+def test_knowledge_zoho_ingestion_creates_learning_records(client, memory_repo, monkeypatch):
+    monkeypatch.delenv("FIREWORKS_API_KEY", raising=False)
+    database = client.post(
+        "/internal/agent-memory/v1/knowledge/databases",
+        json={
+            "name": "Bob Support Knowledge",
+            "display_name": "Bob Support Knowledge",
+            "embedding_model": "accounts/fireworks/models/qwen3-embedding-8b",
+            "embedding_dimension": 4096,
+        },
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "ingest-db",
+        },
+    )
+    collection = client.post(
+        "/internal/agent-memory/v1/knowledge/collections",
+        json={
+            "database_id": database.json()["id"],
+            "name": "Zoho Ticket History",
+            "display_name": "Zoho Ticket History",
+            "milvus_collection": "zoho_ticket_chunks_v1",
+        },
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "ingest-col",
+        },
+    )
+    source = client.post(
+        "/internal/agent-memory/v1/knowledge/sources",
+        json={"collection_id": collection.json()["id"], "name": "Zoho Desk"},
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "ingest-source",
+        },
+    )
+
+    response = client.post(
+        "/internal/agent-memory/v1/knowledge/ingest/zoho-desk",
+        json={
+            "source_id": source.json()["id"],
+            "dry_run": True,
+            "external_event_id": "evt-zoho-1",
+            "ticket": {
+                "id": "71638",
+                "subject": "Le client demande X",
+                "description": "Le client demande X; l'agent doit faire Y apres validation.",
+            },
+        },
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "ingest-run",
+        },
+    )
+
+    assert response.status_code == 202
+    assert response.json()["status"] == "completed"
+    assert response.json()["chunks"] >= 1
+    assert response.json()["milvus_upserted"] == 0
+    assert response.json()["dry_run"] is True
+    assert response.json()["fallback_mode"] == "deterministic_when_fireworks_unavailable"
+    assert len(memory_repo.knowledge_ingestion_runs) == 1
+    assert len(memory_repo.knowledge_items) == 1
+    assert len(memory_repo.knowledge_chunks) == response.json()["chunks"]
+    assert len(memory_repo.knowledge_procedures) == 1
+
+
+def test_knowledge_zoho_ingestion_upserts_milvus_when_enabled(client, monkeypatch):
+    monkeypatch.delenv("FIREWORKS_API_KEY", raising=False)
+    upserted = {}
+
+    def fake_upsert(*, collection_name, chunks, embeddings):
+        upserted["collection_name"] = collection_name
+        upserted["chunks"] = len(chunks)
+        upserted["dimensions"] = {len(vector) for vector in embeddings}
+        return len(chunks)
+
+    monkeypatch.setattr(agent_memory_use_cases, "_upsert_milvus_chunks", fake_upsert)
+    database = client.post(
+        "/internal/agent-memory/v1/knowledge/databases",
+        json={"name": "Bob Support", "display_name": "Bob Support"},
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "ingest-upsert-db",
+        },
+    )
+    collection = client.post(
+        "/internal/agent-memory/v1/knowledge/collections",
+        json={
+            "database_id": database.json()["id"],
+            "name": "Zoho Ticket History",
+            "display_name": "Zoho Ticket History",
+            "milvus_collection": "zoho_ticket_chunks_v1",
+        },
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "ingest-upsert-col",
+        },
+    )
+    source = client.post(
+        "/internal/agent-memory/v1/knowledge/sources",
+        json={"collection_id": collection.json()["id"], "name": "Zoho Desk"},
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "ingest-upsert-source",
+        },
+    )
+
+    response = client.post(
+        "/internal/agent-memory/v1/knowledge/ingest/zoho-desk",
+        json={
+            "source_id": source.json()["id"],
+            "ticket": {"id": "71690", "subject": "Connexion Zoho", "description": "Procedure de connexion."},
+        },
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "ingest-upsert-run",
+        },
+    )
+    missing = client.post(
+        "/internal/agent-memory/v1/knowledge/ingest/zoho-desk",
+        json={"source_id": "ksrc_missing", "ticket": {"id": "1", "subject": "Missing"}},
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "ingest-missing-source",
+        },
+    )
+
+    assert response.status_code == 202
+    assert response.json()["milvus_upserted"] == upserted["chunks"]
+    assert response.json()["fireworks_api_key_set"] is False
+    assert upserted["collection_name"] == "zoho_ticket_chunks_v1"
+    assert upserted["dimensions"] == {4096}
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == {"code": "knowledge_source_not_found"}
+
+
+def test_knowledge_ingestion_helpers_cover_fireworks_fallbacks(monkeypatch):
+    title, body, metadata = agent_memory_use_cases._normalize_zoho_ticket(
+        {
+            "id": "71638",
+            "subject": "Connexion impossible",
+            "status": "Open",
+            "category": "Login",
+            "threads": [{"content": "Le client ne peut pas se connecter."}],
+        }
+    )
+    chunks = agent_memory_use_cases._chunk_texts([body, "Procedure"], max_chars=20)
+    vector = agent_memory_use_cases._deterministic_embedding("abc", dimension=8)
+    monkeypatch.setenv("FIREWORKS_API_KEY", "invalid")
+    monkeypatch.setenv("FIREWORKS_BASE_URL", "http://127.0.0.1:1")
+    monkeypatch.setenv("FIREWORKS_TIMEOUT_SECONDS", "0.01")
+    procedure = asyncio.run(agent_memory_use_cases._generate_candidate_procedure(title=title, body=body))
+    embeddings = asyncio.run(agent_memory_use_cases._embed_texts(["abc", "def"]))
+    monkeypatch.setenv("MILVUS_ENABLED", "false")
+    skipped = agent_memory_use_cases._upsert_milvus_chunks(
+        collection_name="zoho_ticket_chunks_v1",
+        chunks=[],
+        embeddings=[],
+    )
+
+    assert title == "Connexion impossible"
+    assert metadata["ticket_id"] == "71638"
+    assert len(chunks) >= 2
+    assert len(vector) == 8
+    assert "Procedure candidate" in procedure
+    assert len(embeddings) == 2
+    assert {len(item) for item in embeddings} == {4096}
+    assert skipped == 0
+
+
+def test_knowledge_zoho_ingestion_rejects_forbidden_and_empty_ticket(client):
+    forbidden = client.post(
+        "/internal/agent-memory/v1/knowledge/ingest/zoho-desk",
+        json={"source_id": "ksrc_missing", "ticket": {"id": "1", "subject": "No permission"}},
+        headers={**signed_headers(), "Idempotency-Key": "ingest-forbidden"},
+    )
+    database = client.post(
+        "/internal/agent-memory/v1/knowledge/databases",
+        json={"name": "Bob Support", "display_name": "Bob Support"},
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "ingest-empty-db",
+        },
+    )
+    collection = client.post(
+        "/internal/agent-memory/v1/knowledge/collections",
+        json={
+            "database_id": database.json()["id"],
+            "name": "Zoho",
+            "display_name": "Zoho",
+            "milvus_collection": "zoho_ticket_chunks_v1",
+        },
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "ingest-empty-col",
+        },
+    )
+    source = client.post(
+        "/internal/agent-memory/v1/knowledge/sources",
+        json={"collection_id": collection.json()["id"], "name": "Zoho Desk"},
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "ingest-empty-source",
+        },
+    )
+    empty = client.post(
+        "/internal/agent-memory/v1/knowledge/ingest/zoho-desk",
+        json={"source_id": source.json()["id"], "ticket": {}},
+        headers={
+            **signed_headers(permissions=("agent_memory.knowledge.manage",)),
+            "Idempotency-Key": "ingest-empty-run",
+        },
+    )
+
+    assert forbidden.status_code == 403
+    assert forbidden.json()["detail"] == {"code": "knowledge_forbidden"}
+    assert empty.status_code == 400
+    assert empty.json()["detail"] == {"code": "zoho_ticket_empty"}
 
 
 def test_vector_config_rejects_invalid_embedding_dimension(client, monkeypatch):

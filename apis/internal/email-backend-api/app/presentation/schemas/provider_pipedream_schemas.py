@@ -41,6 +41,13 @@ class PipedreamConnectionListResponse(BaseModel):
     items: list[PipedreamConnectionResponse]
 
 
+class PipedreamPageInfo(BaseModel):
+    count: Optional[int] = None
+    total_count: Optional[int] = None
+    start_cursor: Optional[str] = None
+    end_cursor: Optional[str] = None
+
+
 class PipedreamIntegrationResponse(BaseModel):
     id: str
     key: str
@@ -52,6 +59,22 @@ class PipedreamIntegrationResponse(BaseModel):
 
 class PipedreamIntegrationListResponse(BaseModel):
     items: list[PipedreamIntegrationResponse]
+    page_info: Optional[PipedreamPageInfo] = None
+
+
+class PipedreamToolResponse(BaseModel):
+    key: str
+    name: str
+    description: Optional[str] = None
+    component_type: Optional[str] = None
+    version: Optional[str] = None
+    annotations: dict[str, Any] = Field(default_factory=dict)
+    configurable_props_count: int = 0
+
+
+class PipedreamToolListResponse(BaseModel):
+    items: list[PipedreamToolResponse]
+    page_info: Optional[PipedreamPageInfo] = None
 
 
 class PipedreamActionRunRequest(BaseModel):

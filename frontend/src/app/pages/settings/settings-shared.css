@@ -472,6 +472,12 @@
     font-size: 1.25rem;
 }
 
+.integration-card__logo {
+    width: 1.5rem;
+    height: 1.5rem;
+    object-fit: contain;
+}
+
 .integration-card__icon--blue {
     background-color: #ECECEA;
     color: #333330;
@@ -490,6 +496,11 @@
 .integration-card__icon--orange {
     background-color: #ffedd5;
     color: #ea580c;
+}
+
+.integration-card__icon--gmail {
+    background-color: #fef2f2;
+    color: #dc2626;
 }
 
 .integration-card__icon--sf {
@@ -521,17 +532,24 @@
 .integration-card__sub {
     font-size: 0.75rem;
     color: var(--color-gray-500);
+    overflow-wrap: anywhere;
 }
 
 .integration-card__desc {
     font-size: 0.75rem;
     color: var(--color-gray-600);
     margin-bottom: 1rem;
+    min-height: 2rem;
+    overflow-wrap: anywhere;
 }
 
 .integration-card__actions {
     display: flex;
     gap: 0.5rem;
+}
+
+.integration-card__actions--stacked {
+    align-items: stretch;
 }
 
 .integration-card__btn {
@@ -544,6 +562,11 @@
     background: none;
     cursor: pointer;
     transition: all var(--transition-base);
+}
+
+.integration-card__btn--compact {
+    flex: 0;
+    padding: 0.375rem 0.625rem;
 }
 
 .integration-card__btn:hover {
@@ -569,6 +592,80 @@
 
 .integration-card__btn--connect:hover {
     opacity: 0.9;
+}
+
+.integration-card__tools {
+    border-top: 1px solid var(--color-gray-200);
+    margin-top: 1rem;
+    padding-top: 1rem;
+}
+
+.integration-card__tools-header {
+    color: var(--color-gray-500);
+    font-size: 0.6875rem;
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.08em;
+    margin-bottom: 0.625rem;
+    text-transform: uppercase;
+}
+
+.integration-card__tool-list {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.integration-card__tool {
+    width: 100%;
+    border: 1px solid var(--color-gray-200);
+    background-color: var(--color-white);
+    color: inherit;
+    cursor: pointer;
+    font-family: var(--font-family);
+    padding: 0.625rem;
+    text-align: left;
+    transition: border-color var(--transition-base), background-color var(--transition-base);
+}
+
+.integration-card__tool:hover,
+.integration-card__tool:focus-visible {
+    background-color: var(--color-gray-50);
+    border-color: var(--color-accent);
+    outline: none;
+}
+
+.integration-card__tool-name {
+    display: block;
+    color: var(--color-black);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1.3;
+}
+
+.integration-card__tool-desc {
+    display: block;
+    color: var(--color-gray-500);
+    font-size: 0.6875rem;
+    line-height: 1.35;
+    margin-top: 0.25rem;
+    overflow-wrap: anywhere;
+}
+
+.integration-card__tools-state,
+.integration-empty {
+    color: var(--color-gray-500);
+    font-size: 0.75rem;
+    margin: 0.5rem 0;
+}
+
+.integration-card__tools-state--error {
+    color: #dc2626;
+}
+
+.integration-load-more {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
 }
 
 /* ── Team Member Card ─────────────────────────────────────── */
@@ -1968,6 +2065,65 @@
 /* ── Small Dialog Variant ────────────────────────────────── */
 .dialog-modal--sm {
     max-width: 480px;
+}
+
+.dialog-modal--tool {
+    max-width: 44rem;
+}
+
+.dialog-body--scroll {
+    max-height: min(68vh, 42rem);
+    overflow-y: auto;
+}
+
+.tool-detail__description {
+    color: var(--color-gray-600);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+    overflow-wrap: anywhere;
+}
+
+.tool-detail__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.tool-detail__field {
+    border: 1px solid var(--color-gray-200);
+    background-color: var(--color-gray-50);
+    padding: 0.875rem;
+    min-width: 0;
+}
+
+.tool-detail__label {
+    display: block;
+    color: var(--color-gray-500);
+    font-size: 0.6875rem;
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.06em;
+    margin-bottom: 0.375rem;
+    text-transform: uppercase;
+}
+
+.tool-detail__value {
+    color: var(--color-black);
+    display: block;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.tool-detail__value--code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.75rem;
+}
+
+@media (max-width: 700px) {
+    .tool-detail__grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .role-options {

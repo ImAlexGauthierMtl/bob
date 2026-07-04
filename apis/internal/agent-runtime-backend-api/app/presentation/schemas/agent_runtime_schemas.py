@@ -111,3 +111,27 @@ class RuntimeCatalogItemCreateRequest(BaseModel):
 
     def to_payload(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True)
+
+
+class ToolGovernancePolicyRequest(BaseModel):
+    display_name: str | None = Field(default=None, max_length=180)
+    provider: str | None = Field(default=None, max_length=80)
+    integration_key: str | None = Field(default=None, max_length=120)
+    tool_key: str | None = Field(default=None, max_length=180)
+    family: str | None = Field(default=None, max_length=120)
+    capability: str | None = Field(default=None, max_length=180)
+    risk: str | None = Field(default=None, max_length=80)
+    enabled: bool = True
+    team_scope: list[str] = Field(default_factory=list)
+    sync_enabled: bool = False
+    sync_mode: str = Field("none", max_length=40)
+    data_mapping: dict[str, Any] = Field(default_factory=dict)
+    notes: str | None = None
+
+
+class UserToolPreferencesRequest(BaseModel):
+    preferred_email_provider: str | None = Field(default=None, max_length=80)
+    preferred_calendar_provider: str | None = Field(default=None, max_length=80)
+    require_write_confirmation: bool | None = None
+    show_tool_trace: bool | None = None
+    allow_personal_connectors: bool | None = None

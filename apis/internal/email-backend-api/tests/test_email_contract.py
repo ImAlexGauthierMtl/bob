@@ -16,6 +16,7 @@ from app.infrastructure.persistence.models.smart_label import SmartLabel
 from app.infrastructure.persistence.models.synced_email import SyncedEmail
 from app.infrastructure.persistence.models.synced_event import SyncedEvent
 from app.events import publishers
+from app.events import pipedream_runtime_actions
 from app.infrastructure import database
 from app.infrastructure.persistence.integration_settings_repository import IntegrationSettingsRepository
 from app.infrastructure import clients_email_backend as local_clients
@@ -37,6 +38,7 @@ from app.presentation.routes import (
     smart_label_routes,
 )
 from app.presentation.schemas import integration_settings_schemas, membrane_schemas, ms365_schemas, smart_label_schemas
+from shared.event_bus import Event
 
 
 USER = {"user_id": "user-1", "email": "email@example.com", "tenant_id": "tenant-1", "role": "", "is_super_admin": False}
@@ -811,6 +813,69 @@ async def test_publishers_emit_email_domain_events(monkeypatch):
     assert [event.payload["entity_id"] for event in published] == ["email-1", "email-1"]
 
 
+@pytest.mark.asyncio
+async def test_pipedream_runtime_event_handler_executes_with_context(monkeypatch):
+    captured = {}
+
+    class FakeRuntimePipedreamUseCases:
+        async def list_connections(self, user, integration_key, request_headers):
+            captured["list_user"] = user
+            captured["list_integration_key"] = integration_key
+            captured["list_headers"] = request_headers
+            return [{"id": "apn-gmail", "app": "gmail", "healthy": True}]
+
+        async def run_action(self, user, action_key, integration_key, configured_props, request_headers, **kwargs):
+            captured["run_user"] = user
+            captured["action_key"] = action_key
+            captured["integration_key"] = integration_key
+            captured["configured_props"] = configured_props
+            captured["run_headers"] = request_headers
+            return {"ret": {"messages": [{"id": "msg-1"}]}}
+
+    async def fake_write_response(response_key, envelope):
+        captured["response_key"] = response_key
+        captured["envelope"] = envelope
+
+    monkeypatch.setattr(
+        pipedream_runtime_actions,
+        "_runtime_use_cases",
+        lambda tenant_id: captured.setdefault("tenant_id", tenant_id) and FakeRuntimePipedreamUseCases(),
+    )
+    monkeypatch.setattr(pipedream_runtime_actions, "_write_response", fake_write_response)
+
+    await pipedream_runtime_actions.handle_pipedream_runtime_action_request(
+        Event(
+            event_type=pipedream_runtime_actions.EVENT_TYPE,
+            source="agent-runtime",
+            trace_id="e" * 32,
+            payload={
+                "request_id": "req-1",
+                "response_key": "resp-1",
+                "operation": "run_action",
+                "context": {
+                    "tenant_id": "tenant-croo-local",
+                    "user_id": "717b9f8f-fb71-4223-9f89-3999ba73479b",
+                    "roles": ["admin"],
+                },
+                "data": {
+                    "action_key": "gmail-find-email",
+                    "integration_key": "gmail",
+                    "input": {"integration_key": "gmail", "gmail": {"authProvisionId": "apn-gmail"}},
+                },
+            },
+        )
+    )
+
+    assert captured["tenant_id"] == "tenant-croo-local"
+    assert captured["run_user"]["user_id"] == "717b9f8f-fb71-4223-9f89-3999ba73479b"
+    assert captured["run_user"]["tenant_id"] == "tenant-croo-local"
+    assert captured["action_key"] == "gmail-find-email"
+    assert captured["configured_props"]["gmail"] == {"authProvisionId": "apn-gmail"}
+    assert captured["response_key"] == "resp-1"
+    assert captured["envelope"]["ok"] is True
+    assert captured["envelope"]["data"]["output"]["ret"]["messages"][0]["id"] == "msg-1"
+
+
 def test_database_facade_and_schema_contracts(monkeypatch):
     monkeypatch.setattr(database, "create_db_engine", lambda api_name: f"engine:{api_name}")
     monkeypatch.setattr(database, "create_session_factory", lambda api_name: f"factory:{api_name}")
@@ -1017,3 +1082,95 @@ def test_python_package_contract_loads_runtime_components():
         MembraneSyncedEmail,
         MembraneSyncedEvent,
     )
+
+
+@pytest.mark.asyncio
+async def test_pipedream_provider_lists_catalog_and_tools():
+    from app.application.use_cases.pipedream_provider_use_cases import PipedreamProviderUseCases
+
+    class FakePipedreamClient:
+        def __init__(self):
+            self.apps_kwargs = None
+            self.actions_kwargs = None
+            self.closed = False
+
+        async def list_apps(self, **kwargs):
+            self.apps_kwargs = kwargs
+            return {
+                "data": [
+                    {
+                        "id": "app_1",
+                        "name_slug": "github",
+                        "name": "GitHub",
+                        "description": "Development work",
+                        "img_src": "https://example.test/github.png",
+                    }
+                ],
+                "page_info": {"count": 1, "total_count": 200, "end_cursor": "next-app"},
+            }
+
+        async def list_actions(self, app, **kwargs):
+            self.actions_kwargs = {"app": app, **kwargs}
+            return {
+                "data": [
+                    {
+                        "key": "github-list-issues",
+                        "name": "GitHub: List Issues",
+                        "description": "List issues",
+                        "component_type": "action",
+                        "version": "0.0.1",
+                        "configurable_props": [{"name": "repo"}],
+                        "annotations": {"readOnlyHint": True},
+                    }
+                ],
+                "page_info": {"count": 1, "total_count": 50, "end_cursor": "next-tool"},
+            }
+
+        async def close(self):
+            self.closed = True
+
+    async def setting_lookup(_integration_key, _headers):
+        return None
+
+    fake_client = FakePipedreamClient()
+    use_cases = PipedreamProviderUseCases(
+        client_factory=lambda: fake_client,
+        setting_lookup=setting_lookup,
+        build_external_user_id=lambda tenant, scope, user, org: f"{tenant}:{scope}:{user}:{org}",
+        default_scope_for=lambda _key: "per-user",
+        get_settings=lambda: SimpleNamespace(),
+        set_credentials=lambda *_args: None,
+    )
+
+    integrations = await use_cases.list_integrations("git", limit=25, after="cursor-1", has_actions=True)
+    assert integrations["items"] == [
+        {
+            "id": "app_1",
+            "key": "github",
+            "name": "GitHub",
+            "description": "Development work",
+            "iconUrl": "https://example.test/github.png",
+            "status": "active",
+        }
+    ]
+    assert integrations["page_info"]["total_count"] == 200
+    assert fake_client.apps_kwargs == {
+        "query": "git",
+        "limit": 25,
+        "after": "cursor-1",
+        "has_actions": True,
+        "has_triggers": None,
+    }
+
+    tools = await use_cases.list_tools("github", limit=5, after="cursor-2", registry="public")
+    assert tools["items"][0]["key"] == "github-list-issues"
+    assert tools["items"][0]["configurable_props_count"] == 1
+    assert tools["page_info"]["total_count"] == 50
+    assert fake_client.actions_kwargs == {
+        "app": "github",
+        "query": None,
+        "limit": 5,
+        "after": "cursor-2",
+        "registry": "public",
+    }
+    assert fake_client.closed is True

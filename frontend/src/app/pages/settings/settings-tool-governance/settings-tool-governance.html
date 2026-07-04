@@ -1,0 +1,117 @@
+<div class="settings-panel">
+    <div class="settings-panel__header">
+        <h3 class="settings-panel__title">Tool Governance</h3>
+        <p class="settings-panel__subtitle">Authorize Bob tools for the company and teams</p>
+    </div>
+
+    @if (error) {
+    <div class="settings-alert settings-alert--error">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span>{{ error }}</span>
+    </div>
+    }
+
+    @if (success) {
+    <div class="settings-alert settings-alert--success">
+        <i class="fa-solid fa-check-circle"></i>
+        <span>{{ success }}</span>
+    </div>
+    }
+
+    <section class="tool-governance-toolbar">
+        <div class="tool-summary">
+            <div>
+                <span class="tool-summary__value">{{ response?.enabled_total || 0 }}</span>
+                <span class="tool-summary__label">enabled</span>
+            </div>
+            <div>
+                <span class="tool-summary__value">{{ response?.total || 0 }}</span>
+                <span class="tool-summary__label">total policies</span>
+            </div>
+        </div>
+        <div class="tool-governance-filters">
+            <div class="search-bar search-bar--compact">
+                <i class="fa-solid fa-search search-bar__icon"></i>
+                <input class="search-bar__input" type="text" placeholder="Search policies..." [(ngModel)]="searchQuery" />
+            </div>
+            <select class="form-input tool-governance-filters__select" [(ngModel)]="providerFilter">
+                <option value="all">All providers</option>
+                @for (provider of providers; track provider) {
+                <option [value]="provider">{{ provider }}</option>
+                }
+            </select>
+        </div>
+    </section>
+
+    @if (loading) {
+    <div class="settings-empty">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <span>Loading governance...</span>
+    </div>
+    } @else {
+    <div class="governance-table">
+        <div class="governance-table__header">
+            <span>Tool</span>
+            <span>Risk</span>
+            <span>Teams</span>
+            <span>Sync</span>
+            <span>Enabled</span>
+        </div>
+        @for (policy of policies; track policy.id) {
+        <div class="governance-table__row">
+            <div>
+                <p class="tool-list__name">{{ policy.display_name }}</p>
+                <p class="tool-list__meta">{{ policy.provider }} · {{ policy.family || policy.integration_key || 'general' }}</p>
+                <textarea class="form-input governance-table__notes" rows="2" [ngModel]="policy.notes || ''"
+                    placeholder="Mapping or admin note"
+                    (blur)="saveNotes(policy, $any($event).target.value)"></textarea>
+            </div>
+            <div>
+                <select class="form-input" [ngModel]="policy.risk"
+                    (ngModelChange)="savePolicy(policy, { risk: $event })">
+                    <option value="read">read</option>
+                    <option value="draft">draft</option>
+                    <option value="write-requested">write-requested</option>
+                    <option value="destructive-confirmed">destructive-confirmed</option>
+                    <option value="gated">gated</option>
+                </select>
+                <span class="status-badge governance-table__risk" [ngClass]="riskClass(policy.risk)">{{ policy.risk }}</span>
+            </div>
+            <div>
+                <input class="form-input" type="text" [ngModel]="teamScopeValue(policy)"
+                    placeholder="sales, support"
+                    (blur)="saveTeamScope(policy, $any($event).target.value)" />
+            </div>
+            <div>
+                <label class="toggle-row__desc governance-table__inline-toggle">
+                    <input type="checkbox" [checked]="policy.sync_enabled"
+                        (change)="savePolicy(policy, { sync_enabled: $any($event).target.checked })" />
+                    Sync
+                </label>
+                <select class="form-input" [ngModel]="policy.sync_mode"
+                    (ngModelChange)="savePolicy(policy, { sync_mode: $event })">
+                    <option value="none">none</option>
+                    <option value="read_only">read only</option>
+                    <option value="import">import</option>
+                    <option value="two_way">two way</option>
+                </select>
+            </div>
+            <div class="governance-table__enabled">
+                @if (savingById[policy.id]) {
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                }
+                <label class="toggle">
+                    <input type="checkbox" [checked]="policy.enabled"
+                        (change)="savePolicy(policy, { enabled: $any($event).target.checked })" />
+                    <span class="toggle__track"></span>
+                </label>
+            </div>
+        </div>
+        }
+    </div>
+
+    @if (!policies.length) {
+    <p class="integration-empty">No governance policies found.</p>
+    }
+    }
+</div>

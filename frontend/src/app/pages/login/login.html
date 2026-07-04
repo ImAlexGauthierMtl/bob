@@ -170,7 +170,6 @@
             <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" class="checkbox" />
             <span>Rester connecté</span>
           </label>
-          <a href="#" class="link-accent">Mot de passe oublié</a>
         </div>
 
         @if (errorMessage) {
@@ -185,23 +184,6 @@
         </button>
       </form>
 
-      <div class="login-divider" id="divider">
-        <div class="login-divider__line"></div>
-        <span class="login-divider__text">Options d'accès</span>
-        <div class="login-divider__line"></div>
-      </div>
-
-      <div class="sso-options" id="sso-options">
-        <button type="button" class="btn-sso" (click)="signInWithGoogle()">
-          <i class="fa-brands fa-google"></i>
-          <span>Google</span>
-        </button>
-
-        <button type="button" class="btn-sso" (click)="signInWithMicrosoft()">
-          <i class="fa-brands fa-microsoft"></i>
-          <span>Microsoft</span>
-        </button>
-      </div>
     </div>
   </aside>
 </main>

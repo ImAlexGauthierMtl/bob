@@ -11,6 +11,7 @@ from app.application.use_cases.behavioral_analyzer import BehavioralAnalyzer
 from app.infrastructure.clients.agent_client import (
     BccClient,
     ClientMapClient,
+    ToolGovernanceClient,
     TrainingClient,
     create_agent_backend_client,
 )
@@ -19,8 +20,10 @@ from app.presentation.routes import (
     agent_control_routes,
     bcc_routes,
     client_map_routes,
+    tool_governance_routes,
     training_routes,
 )
+from shared.infrastructure import InternalSessionContextSigner
 
 
 def payload(method, *args, **extra):
@@ -57,6 +60,27 @@ class FakeBehaviorClientMap:
     async def upsert(self, contact_id, data, forward_headers=None):
         self.updated.append((contact_id, data))
         return {"contact_id": contact_id, **data}
+
+
+class FakeToolGovernanceRouteClient:
+    def __init__(self):
+        self.calls = []
+
+    async def list_policies(self, headers):
+        self.calls.append(("list_policies", headers))
+        return {"items": [], "total": 0, "enabled_total": 0}
+
+    async def update_policy(self, policy_id, data, headers):
+        self.calls.append(("update_policy", policy_id, data, headers))
+        return {"id": policy_id, **data}
+
+    async def get_my_access(self, headers):
+        self.calls.append(("get_my_access", headers))
+        return {"preferences": {"preferred_email_provider": "auto"}, "allowed_tools": []}
+
+    async def update_my_preferences(self, data, headers):
+        self.calls.append(("update_my_preferences", data, headers))
+        return {"preferred_email_provider": data.get("preferred_email_provider", "auto")}
 
 
 class FakeResponse:
@@ -105,10 +129,12 @@ def client(monkeypatch):
     bcc = FakeRouteClient()
     client_map = FakeRouteClient()
     training = FakeRouteClient()
+    tool_governance = FakeToolGovernanceRouteClient()
 
     monkeypatch.setattr(bcc_routes, "bcc_client", bcc)
     monkeypatch.setattr(client_map_routes, "client_map_client", client_map)
     monkeypatch.setattr(training_routes, "training_client", training)
+    monkeypatch.setattr(tool_governance_routes, "tool_governance_client", tool_governance)
 
     with TestClient(main.app) as test_client:
         yield test_client
@@ -157,8 +183,8 @@ def test_agent_control_contract_is_authenticated_and_describes_public_surface(cl
     assert body["identity"]["user_id_source"] == "session"
     assert body["identity"]["frontend_identity_override_allowed"] is False
     assert body["identity"]["session_validated"] is True
-    assert {namespace["name"] for namespace in body["namespaces"]} == {"bcc", "training", "client-map"}
-    assert all(namespace["covers_existing_namespace"] for namespace in body["namespaces"])
+    assert {namespace["name"] for namespace in body["namespaces"]} == {"bcc", "training", "client-map", "tool-governance"}
+    assert all(namespace["covers_existing_namespace"] for namespace in body["namespaces"] if namespace["name"] != "tool-governance")
     assert "frontend_to_b4f_only" in body["guards"]
     assert "no_tenant_or_user_from_frontend" in body["guards"]
 
@@ -277,6 +303,8 @@ def test_agent_control_surface_mounts_only_its_public_namespaces():
     assert "/bcc/organizations" in paths
     assert "/training/sessions" in paths
     assert "/contacts/{contact_id}/client-map" in paths
+    assert "/tool-governance/policies" in paths
+    assert "/tool-governance/me" in paths
     assert "/bob/chat" not in paths
     assert "/bob/settings" not in paths
     assert "/capabilities/catalog" not in paths
@@ -368,6 +396,46 @@ def test_training_and_client_map_routes(client, auth_headers):
 
     analyzed = client.post("/contacts/contact-1/client-map/analyze-behavior", headers=auth_headers)
     assert analyzed.json()["method"] == "analyze_behavior"
+
+
+def test_tool_governance_routes_sign_internal_runtime_context(monkeypatch, auth_headers):
+    fake = FakeToolGovernanceRouteClient()
+    monkeypatch.setattr(tool_governance_routes, "tool_governance_client", fake)
+
+    with TestClient(main.app) as test_client:
+        listed = test_client.get("/tool-governance/policies", headers=auth_headers)
+        updated = test_client.put(
+            "/tool-governance/policies/mail-calendar.mail-read-search",
+            json={"enabled": False, "team_scope": ["support"]},
+            headers=auth_headers,
+        )
+        mine = test_client.get("/tool-governance/me", headers=auth_headers)
+        preferences = test_client.put(
+            "/tool-governance/me/preferences",
+            json={"preferred_email_provider": "microsoft_outlook"},
+            headers=auth_headers,
+        )
+
+    assert listed.status_code == 200
+    assert updated.status_code == 200
+    assert mine.status_code == 200
+    assert preferences.status_code == 200
+    assert [call[0] for call in fake.calls] == [
+        "list_policies",
+        "update_policy",
+        "get_my_access",
+        "update_my_preferences",
+    ]
+
+    headers = fake.calls[0][1]
+    signer = InternalSessionContextSigner(
+        "dev-internal-session-secret-not-for-production",
+        kid="internal-session-dev",
+    )
+    context = signer.validate(headers["X-Session-Context"])
+    assert context.tenant_id == "tenant-1"
+    assert context.user_id == "user-1"
+    assert "agent_control.manage" in context.permissions
 
 
 def test_auth_dependency_accepts_and_rejects_tokens():
@@ -524,10 +592,12 @@ def test_python_package_contract_loads_runtime_components():
         agent_control_routes,
         bcc_routes,
         client_map_routes,
+        tool_governance_routes,
         training_routes,
     )
     assert contract.load_runtime_client_classes() == (
         BccClient,
         ClientMapClient,
+        ToolGovernanceClient,
         TrainingClient,
     )

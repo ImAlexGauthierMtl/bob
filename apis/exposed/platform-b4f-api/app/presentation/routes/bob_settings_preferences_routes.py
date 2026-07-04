@@ -87,6 +87,7 @@ _MEMORY_SETTINGS_PERMISSIONS = {
     "agent_memory.organization.search",
     "agent_memory.rag.search",
     "agent_memory.vector.manage",
+    "agent_memory.knowledge.manage",
 }
 
 
@@ -319,6 +320,88 @@ async def get_memory_settings(
     }
 
 
+@router.get("/knowledge")
+async def get_knowledge_settings(
+    request: Request,
+    authorization: str | None = Header(None, alias="Authorization"),
+    x_cde_capabilities: str | None = Header(None, alias="X-CDE-Capabilities"),
+) -> dict[str, Any]:
+    capabilities = _memory_settings_capabilities(
+        _capabilities_from_header_or_env(x_cde_capabilities)
+    )
+    headers = _runtime_backend_headers(
+        request=request,
+        authorization=authorization,
+        capabilities=capabilities,
+        idempotency_key=None,
+    )
+    return await _memory_backend_call("get_knowledge", headers=headers)
+
+
+@router.post("/knowledge/databases", status_code=status.HTTP_201_CREATED)
+async def create_knowledge_database(
+    payload: dict[str, Any],
+    request: Request,
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    principal: LocalSettingsPrincipal = Depends(_require_settings_mutation_permission),
+) -> dict[str, Any]:
+    return await _knowledge_backend_mutation(
+        "create_knowledge_database",
+        payload=payload,
+        request=request,
+        capabilities=principal.capabilities,
+        idempotency_key=idempotency_key,
+    )
+
+
+@router.post("/knowledge/collections", status_code=status.HTTP_201_CREATED)
+async def create_knowledge_collection(
+    payload: dict[str, Any],
+    request: Request,
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    principal: LocalSettingsPrincipal = Depends(_require_settings_mutation_permission),
+) -> dict[str, Any]:
+    return await _knowledge_backend_mutation(
+        "create_knowledge_collection",
+        payload=payload,
+        request=request,
+        capabilities=principal.capabilities,
+        idempotency_key=idempotency_key,
+    )
+
+
+@router.post("/knowledge/sources", status_code=status.HTTP_201_CREATED)
+async def create_knowledge_source(
+    payload: dict[str, Any],
+    request: Request,
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    principal: LocalSettingsPrincipal = Depends(_require_settings_mutation_permission),
+) -> dict[str, Any]:
+    return await _knowledge_backend_mutation(
+        "create_knowledge_source",
+        payload=payload,
+        request=request,
+        capabilities=principal.capabilities,
+        idempotency_key=idempotency_key,
+    )
+
+
+@router.post("/knowledge/ingest/zoho-desk", status_code=status.HTTP_202_ACCEPTED)
+async def ingest_zoho_desk_knowledge(
+    payload: dict[str, Any],
+    request: Request,
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    principal: LocalSettingsPrincipal = Depends(_require_settings_mutation_permission),
+):
+    return await _knowledge_backend_mutation(
+        "ingest_zoho_desk_knowledge",
+        payload=payload,
+        request=request,
+        capabilities=principal.capabilities,
+        idempotency_key=idempotency_key,
+    )
+
+
 @router.post("/runtime/agents", status_code=status.HTTP_201_CREATED)
 async def create_runtime_agent(
     payload: dict[str, Any],
@@ -431,6 +514,8 @@ async def _memory_backend_call(method: str, *, headers: dict[str, str]) -> dict[
             return await agent_memory_client.get_vector_config(headers=headers)
         if method == "get_vector_health":
             return await agent_memory_client.get_vector_health(headers=headers)
+        if method == "get_knowledge":
+            return await agent_memory_client.get_knowledge(headers=headers)
     except httpx.HTTPStatusError as exc:
         detail = _safe_backend_detail(exc.response, fallback_code="agent_memory_backend_error")
         raise HTTPException(status_code=exc.response.status_code, detail=detail) from exc
@@ -442,6 +527,43 @@ async def _memory_backend_call(method: str, *, headers: dict[str, str]) -> dict[
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail={"code": "memory_backend_call_invalid"},
+    )
+
+
+async def _knowledge_backend_mutation(
+    method: str,
+    *,
+    payload: dict[str, Any],
+    request: Request,
+    capabilities: set[str],
+    idempotency_key: str,
+) -> dict[str, Any]:
+    headers = _runtime_backend_headers(
+        request=request,
+        authorization=request.headers.get("authorization"),
+        capabilities=_memory_settings_capabilities(capabilities),
+        idempotency_key=idempotency_key,
+    )
+    try:
+        if method == "create_knowledge_database":
+            return await agent_memory_client.create_knowledge_database(data=payload, headers=headers)
+        if method == "create_knowledge_collection":
+            return await agent_memory_client.create_knowledge_collection(data=payload, headers=headers)
+        if method == "create_knowledge_source":
+            return await agent_memory_client.create_knowledge_source(data=payload, headers=headers)
+        if method == "ingest_zoho_desk_knowledge":
+            return await agent_memory_client.ingest_zoho_desk_knowledge(data=payload, headers=headers)
+    except httpx.HTTPStatusError as exc:
+        detail = _safe_backend_detail(exc.response, fallback_code="agent_memory_backend_error")
+        raise HTTPException(status_code=exc.response.status_code, detail=detail) from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "agent_memory_backend_unavailable", "message": str(exc)},
+        ) from exc
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail={"code": "knowledge_backend_call_invalid"},
     )
 
 

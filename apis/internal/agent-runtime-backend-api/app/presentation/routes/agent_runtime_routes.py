@@ -12,6 +12,8 @@ from app.presentation.schemas.agent_runtime_schemas import (
     RuntimeCatalogItemCreateRequest,
     RunCreateRequest,
     RunResponse,
+    ToolGovernancePolicyRequest,
+    UserToolPreferencesRequest,
 )
 
 
@@ -103,6 +105,51 @@ async def create_runtime_tool(
         idempotency_key=idempotency_key,
         context=context,
         use_cases=use_cases,
+    )
+
+
+@router.get("/settings/tool-governance")
+async def get_tool_governance(
+    context: InternalContext = Depends(get_internal_context),
+    use_cases: AgentRuntimeUseCases = Depends(get_agent_runtime_use_cases),
+) -> dict:
+    return await use_cases.get_tool_governance(context=context)
+
+
+@router.put("/settings/tool-governance/{policy_id}")
+async def update_tool_governance_policy(
+    policy_id: str,
+    body: ToolGovernancePolicyRequest,
+    context: InternalContext = Depends(get_internal_context),
+    use_cases: AgentRuntimeUseCases = Depends(get_agent_runtime_use_cases),
+) -> dict:
+    try:
+        return await use_cases.update_tool_governance_policy(
+            context=context,
+            policy_id=policy_id,
+            payload=body.model_dump(exclude_none=True),
+        )
+    except AgentRuntimeError as exc:
+        raise HTTPException(status_code=422, detail={"code": exc.code}) from exc
+
+
+@router.get("/settings/tool-governance/me")
+async def get_my_tool_governance(
+    context: InternalContext = Depends(get_internal_context),
+    use_cases: AgentRuntimeUseCases = Depends(get_agent_runtime_use_cases),
+) -> dict:
+    return await use_cases.get_user_tool_access(context=context)
+
+
+@router.put("/settings/tool-preferences/me")
+async def update_my_tool_preferences(
+    body: UserToolPreferencesRequest,
+    context: InternalContext = Depends(get_internal_context),
+    use_cases: AgentRuntimeUseCases = Depends(get_agent_runtime_use_cases),
+) -> dict:
+    return await use_cases.update_user_tool_preferences(
+        context=context,
+        payload=body.model_dump(exclude_none=True),
     )
 
 

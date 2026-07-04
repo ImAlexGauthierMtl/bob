@@ -6,7 +6,15 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.domain import MemoryEntry, MemoryJournalEntry, VectorIndexJob, VectorRevalidationMatch
+from app.domain import (
+    KnowledgeCollection,
+    KnowledgeDatabase,
+    KnowledgeSource,
+    MemoryEntry,
+    MemoryJournalEntry,
+    VectorIndexJob,
+    VectorRevalidationMatch,
+)
 
 
 class MemoryStatusResponse(BaseModel):
@@ -303,3 +311,120 @@ class VectorStoreHealthResponse(BaseModel):
     configured: bool
     embedding_configured: bool
     failure_code: str | None = None
+
+
+class KnowledgeDatabaseRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    display_name: str = Field(..., min_length=1, max_length=160)
+    description: str = Field("", max_length=4000)
+    milvus_database: str = Field("bob_knowledge", min_length=1, max_length=120)
+    embedding_provider: str = Field("fireworks", min_length=1, max_length=80)
+    embedding_model: str = Field("fireworks/qwen3-embedding-8b", min_length=1, max_length=160)
+    embedding_dimension: int = Field(4096, ge=1, le=8192)
+
+
+class KnowledgeCollectionRequest(BaseModel):
+    database_id: str = Field(..., min_length=1, max_length=64)
+    name: str = Field(..., min_length=1, max_length=120)
+    display_name: str = Field(..., min_length=1, max_length=160)
+    theme: str = Field("support_technique", min_length=1, max_length=120)
+    description: str = Field("", max_length=4000)
+    milvus_collection: str = Field(..., min_length=1, max_length=120)
+    scope_type: str = Field("organization", min_length=1, max_length=40)
+    source_kind: str = Field("zoho_desk", min_length=1, max_length=80)
+
+
+class KnowledgeSourceRequest(BaseModel):
+    collection_id: str = Field(..., min_length=1, max_length=64)
+    name: str = Field(..., min_length=1, max_length=160)
+    provider: str = Field("pipedream", min_length=1, max_length=80)
+    source_type: str = Field("zoho_desk", min_length=1, max_length=80)
+    pipedream_app: str = Field("zoho_desk", min_length=1, max_length=120)
+    pipedream_source_id: str | None = Field(None, max_length=180)
+    sync_mode: str = Field("incremental", min_length=1, max_length=80)
+    ingestion_strategy: str = Field("tickets_to_candidate_procedures", min_length=1, max_length=80)
+
+
+class KnowledgeDatabaseResponse(BaseModel):
+    id: str
+    name: str
+    display_name: str
+    description: str
+    status: str
+    milvus_database: str
+    embedding_provider: str
+    embedding_model: str
+    embedding_dimension: int
+    created_by: str
+    created_at: datetime
+
+    @classmethod
+    def from_domain(cls, database: KnowledgeDatabase) -> "KnowledgeDatabaseResponse":
+        return cls(**{key: getattr(database, key) for key in cls.model_fields})
+
+
+class KnowledgeCollectionResponse(BaseModel):
+    id: str
+    database_id: str
+    name: str
+    display_name: str
+    theme: str
+    description: str
+    status: str
+    milvus_collection: str
+    scope_type: str
+    source_kind: str
+    created_by: str
+    created_at: datetime
+
+    @classmethod
+    def from_domain(cls, collection: KnowledgeCollection) -> "KnowledgeCollectionResponse":
+        return cls(**{key: getattr(collection, key) for key in cls.model_fields})
+
+
+class KnowledgeSourceResponse(BaseModel):
+    id: str
+    collection_id: str
+    name: str
+    provider: str
+    source_type: str
+    status: str
+    pipedream_app: str
+    pipedream_source_id: str | None
+    sync_mode: str
+    ingestion_strategy: str
+    created_by: str
+    created_at: datetime
+
+    @classmethod
+    def from_domain(cls, source: KnowledgeSource) -> "KnowledgeSourceResponse":
+        return cls(**{key: getattr(source, key) for key in cls.model_fields})
+
+
+class KnowledgeOverviewResponse(BaseModel):
+    databases: list[KnowledgeDatabaseResponse]
+    collections: list[KnowledgeCollectionResponse]
+    sources: list[KnowledgeSourceResponse]
+    ingestion_flow: list[str]
+    postgres_source_of_truth: bool = True
+    milvus_role: str = "reconstructible_vector_index"
+
+
+class ZohoDeskIngestionRequest(BaseModel):
+    source_id: str = Field(..., min_length=1, max_length=64)
+    trigger_type: str = Field("pipedream_source_event", min_length=1, max_length=80)
+    external_event_id: str | None = Field(None, max_length=180)
+    dry_run: bool = False
+    ticket: dict[str, object]
+
+
+class ZohoDeskIngestionResponse(BaseModel):
+    run_id: str
+    status: str
+    item_id: str
+    procedure_id: str
+    chunks: int
+    milvus_upserted: int
+    dry_run: bool
+    fireworks_api_key_set: bool
+    fallback_mode: str

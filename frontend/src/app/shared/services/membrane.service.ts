@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
@@ -12,6 +12,7 @@ import {
     MembraneConnectUrlResponse,
     MembraneConfig,
     MembraneConfigResponse,
+    MembraneToolListResponse,
 } from '../models/membrane.model';
 
 const API_URL = `${environment.communicationApiUrl}`;
@@ -49,8 +50,34 @@ export class MembraneService {
     // ── Integrations Catalog ─────────────────────────────────────
 
     /** List available Pipedream apps. */
-    getIntegrations(): Observable<MembraneIntegrationListResponse> {
-        return this.http.get<MembraneIntegrationListResponse>(`${API_URL}/pipedream/integrations`);
+    getIntegrations(query?: string, after?: string, limit = 100, hasActions = true): Observable<MembraneIntegrationListResponse> {
+        let params = new HttpParams()
+            .set('limit', String(limit))
+            .set('has_actions', String(hasActions));
+        if (query) {
+            params = params.set('q', query);
+        }
+        if (after) {
+            params = params.set('after', after);
+        }
+        return this.http.get<MembraneIntegrationListResponse>(`${API_URL}/pipedream/integrations`, { params });
+    }
+
+    /** List Pipedream actions/tools exposed by a specific app. */
+    getIntegrationTools(integrationKey: string, query?: string, after?: string, limit = 8): Observable<MembraneToolListResponse> {
+        let params = new HttpParams()
+            .set('limit', String(limit))
+            .set('registry', 'public');
+        if (query) {
+            params = params.set('q', query);
+        }
+        if (after) {
+            params = params.set('after', after);
+        }
+        return this.http.get<MembraneToolListResponse>(
+            `${API_URL}/pipedream/integrations/${encodeURIComponent(integrationKey)}/tools`,
+            { params },
+        );
     }
 
     // ── Actions ───────────────────────────────────────────────────

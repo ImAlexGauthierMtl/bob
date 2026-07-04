@@ -35,12 +35,12 @@
     </div>
 
     <!-- Error Banner -->
-    @if (ms365Error || membraneError) {
+    @if (ms365Error || membraneError || toolGovernanceError) {
     <div style="background: var(--color-danger-light, #fef2f2); border: 1px solid var(--color-danger, #ef4444); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px;">
         <i class="fa-solid fa-circle-exclamation" style="color: var(--color-danger, #ef4444);"></i>
-        <span style="flex: 1; font-size: 13px; color: var(--color-danger, #ef4444);">{{ ms365Error || membraneError }}</span>
+        <span style="flex: 1; font-size: 13px; color: var(--color-danger, #ef4444);">{{ ms365Error || membraneError || toolGovernanceError }}</span>
         <button style="background: none; border: none; cursor: pointer; color: var(--color-danger, #ef4444); font-size: 14px;"
-            (click)="ms365Error = null; membraneError = null">
+            (click)="ms365Error = null; membraneError = null; toolGovernanceError = null">
             <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
@@ -82,7 +82,12 @@
                 <div class="integration-card__header">
                     <div class="integration-card__brand">
                         <div class="integration-card__icon {{ integration.iconColorClass }}">
+                            @if (logoFor(integration); as logoUrl) {
+                            <img class="integration-card__logo" [src]="logoUrl" [alt]="integration.name"
+                                (error)="onIntegrationLogoError(integration.key)" />
+                            } @else {
                             <i class="{{ integration.iconClass }}"></i>
+                            }
                         </div>
                         <div>
                             <p class="integration-card__name">{{ integration.name }}</p>
@@ -126,9 +131,119 @@
                     <button class="integration-card__btn" routerLink="/settings/ms365">Configure</button>
                     <button class="integration-card__btn integration-card__btn--disconnect" (click)="disconnectMs365()">Disconnect</button>
                     } @else {
+                    <button class="integration-card__btn" (click)="toggleTools(integration.key)">
+                        @if (isToolsExpanded(integration.key)) {
+                        <i class="fa-solid fa-chevron-up"></i> Hide tools
+                        } @else {
+                        <i class="fa-solid fa-list-check"></i> Tools
+                        }
+                    </button>
                     <button class="integration-card__btn" (click)="disconnectMembrane(integration.connection!)">Disconnect</button>
                     }
                 </div>
+                @if (!integration.isLegacyMs365 && isToolsExpanded(integration.key)) {
+                <div class="integration-card__tools">
+                    @if (toolLoadingByIntegration[integration.key] && toolsFor(integration.key).length === 0) {
+                    <p class="integration-card__tools-state">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Loading tools...
+                    </p>
+                    }
+                    @if (toolErrorByIntegration[integration.key]) {
+                    <p class="integration-card__tools-state integration-card__tools-state--error">
+                        {{ toolErrorByIntegration[integration.key] }}
+                    </p>
+                    }
+                    @if (toolsFor(integration.key).length > 0) {
+                    <div class="integration-card__tools-header">
+                        <span>{{ toolsTotalFor(integration.key) }} tools</span>
+                    </div>
+                    <div class="integration-card__tool-list">
+                        @for (tool of toolsFor(integration.key); track tool.key) {
+                        <button type="button" class="integration-card__tool" (click)="openToolDetails(integration, tool)">
+                            <span class="integration-card__tool-name">{{ tool.name }}</span>
+                            @if (tool.description) {
+                            <span class="integration-card__tool-desc">{{ tool.description }}</span>
+                            }
+                        </button>
+                        }
+                    </div>
+                    }
+                    @if (!toolLoadingByIntegration[integration.key] && !toolErrorByIntegration[integration.key] && toolsFor(integration.key).length === 0) {
+                    <p class="integration-card__tools-state">No tools listed.</p>
+                    }
+                    @if (hasMoreTools(integration.key)) {
+                    <button class="integration-card__btn integration-card__btn--compact"
+                        (click)="loadMoreTools(integration.key)"
+                        [disabled]="toolLoadingByIntegration[integration.key]">
+                        @if (toolLoadingByIntegration[integration.key]) {
+                        <i class="fa-solid fa-spinner fa-spin"></i> Loading
+                        } @else {
+                        Load more tools
+                        }
+                    </button>
+                    }
+                </div>
+                }
+            </div>
+            }
+        </div>
+    </div>
+    }
+
+    <!-- Croo / Agentic -->
+    @if (managedIntegrations.length > 0) {
+    <div class="settings-section">
+        <p class="section-label">Croo / Agentic</p>
+        <div class="integration-grid">
+            @for (integration of managedIntegrations; track integration.key) {
+            <div class="integration-card">
+                <div class="integration-card__header">
+                    <div class="integration-card__brand">
+                        <div class="integration-card__icon {{ integration.iconColorClass }}">
+                            <i class="{{ integration.iconClass }}"></i>
+                        </div>
+                        <div>
+                            <p class="integration-card__name">{{ integration.name }}</p>
+                            <p class="integration-card__sub">{{ integration.description }}</p>
+                        </div>
+                    </div>
+                    <span class="status-badge"
+                        [class.status-badge--green]="(integration.statusLabel || 'Enabled') === 'Enabled'"
+                        [class.status-badge--gray]="(integration.statusLabel || 'Enabled') !== 'Enabled'">
+                        {{ integration.statusLabel || 'Enabled' }}
+                    </span>
+                </div>
+                <p class="integration-card__desc">{{ integration.description }}</p>
+                <div class="integration-card__actions">
+                    <button class="integration-card__btn" (click)="toggleTools(integration.key)">
+                        @if (isToolsExpanded(integration.key)) {
+                        <i class="fa-solid fa-chevron-up"></i> Hide tools
+                        } @else {
+                        <i class="fa-solid fa-list-check"></i> Tools
+                        }
+                    </button>
+                </div>
+                @if (isToolsExpanded(integration.key)) {
+                <div class="integration-card__tools">
+                    @if (toolsFor(integration.key).length > 0) {
+                    <div class="integration-card__tools-header">
+                        <span>{{ toolsTotalFor(integration.key) }} tools</span>
+                    </div>
+                    <div class="integration-card__tool-list">
+                        @for (tool of toolsFor(integration.key); track tool.key) {
+                        <button type="button" class="integration-card__tool" (click)="openToolDetails(integration, tool)">
+                            <span class="integration-card__tool-name">{{ tool.name }}</span>
+                            @if (tool.description) {
+                            <span class="integration-card__tool-desc">{{ tool.description }}</span>
+                            }
+                        </button>
+                        }
+                    </div>
+                    } @else {
+                    <p class="integration-card__tools-state">No tools listed.</p>
+                    }
+                </div>
+                }
             </div>
             }
         </div>
@@ -144,7 +259,12 @@
                 <div class="integration-card__header">
                     <div class="integration-card__brand">
                         <div class="integration-card__icon {{ integration.iconColorClass }}">
+                            @if (logoFor(integration); as logoUrl) {
+                            <img class="integration-card__logo" [src]="logoUrl" [alt]="integration.name"
+                                (error)="onIntegrationLogoError(integration.key)" />
+                            } @else {
                             <i class="{{ integration.iconClass }}"></i>
+                            }
                         </div>
                         <div>
                             <p class="integration-card__name">{{ integration.name }}</p>
@@ -153,14 +273,115 @@
                     </div>
                 </div>
                 <p class="integration-card__desc">{{ integration.description }}</p>
-                <button class="integration-card__btn integration-card__btn--connect" style="width:100%"
-                    (click)="connectMembrane(integration.key)">
-                    Connect
-                </button>
+                <div class="integration-card__actions integration-card__actions--stacked">
+                    <button class="integration-card__btn integration-card__btn--connect"
+                        (click)="connectMembrane(integration.key)">
+                        <i class="fa-solid fa-link"></i> Connect
+                    </button>
+                    <button class="integration-card__btn" (click)="toggleTools(integration.key)">
+                        @if (isToolsExpanded(integration.key)) {
+                        <i class="fa-solid fa-chevron-up"></i> Hide tools
+                        } @else {
+                        <i class="fa-solid fa-list-check"></i> Tools
+                        }
+                    </button>
+                </div>
+                @if (isToolsExpanded(integration.key)) {
+                <div class="integration-card__tools">
+                    @if (toolLoadingByIntegration[integration.key] && toolsFor(integration.key).length === 0) {
+                    <p class="integration-card__tools-state">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Loading tools...
+                    </p>
+                    }
+                    @if (toolErrorByIntegration[integration.key]) {
+                    <p class="integration-card__tools-state integration-card__tools-state--error">
+                        {{ toolErrorByIntegration[integration.key] }}
+                    </p>
+                    }
+                    @if (toolsFor(integration.key).length > 0) {
+                    <div class="integration-card__tools-header">
+                        <span>{{ toolsTotalFor(integration.key) }} tools</span>
+                    </div>
+                    <div class="integration-card__tool-list">
+                        @for (tool of toolsFor(integration.key); track tool.key) {
+                        <button type="button" class="integration-card__tool" (click)="openToolDetails(integration, tool)">
+                            <span class="integration-card__tool-name">{{ tool.name }}</span>
+                            @if (tool.description) {
+                            <span class="integration-card__tool-desc">{{ tool.description }}</span>
+                            }
+                        </button>
+                        }
+                    </div>
+                    }
+                    @if (!toolLoadingByIntegration[integration.key] && !toolErrorByIntegration[integration.key] && toolsFor(integration.key).length === 0) {
+                    <p class="integration-card__tools-state">No tools listed.</p>
+                    }
+                    @if (hasMoreTools(integration.key)) {
+                    <button class="integration-card__btn integration-card__btn--compact"
+                        (click)="loadMoreTools(integration.key)"
+                        [disabled]="toolLoadingByIntegration[integration.key]">
+                        @if (toolLoadingByIntegration[integration.key]) {
+                        <i class="fa-solid fa-spinner fa-spin"></i> Loading
+                        } @else {
+                        Load more tools
+                        }
+                    </button>
+                    }
+                </div>
+                }
             </div>
             }
         </div>
+        @if (!membraneLoading && availableIntegrations.length === 0) {
+        <p class="integration-empty">No integrations found.</p>
+        }
+        @if (hasMoreIntegrations) {
+        <div class="integration-load-more">
+            <button class="integration-card__btn" (click)="loadMoreIntegrations()" [disabled]="membraneLoadingMore">
+                @if (membraneLoadingMore) {
+                <i class="fa-solid fa-spinner fa-spin"></i> Loading...
+                } @else {
+                Load more integrations
+                }
+            </button>
+        </div>
+        }
 </div>
+
+@if (selectedToolDetails; as details) {
+<div class="dialog-overlay" (click)="closeToolDetails()">
+    <div class="dialog-modal dialog-modal--tool" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+            <div class="dialog-header__left">
+                <div class="dialog-header__icon {{ details.integration.iconColorClass }}">
+                    <i class="{{ details.integration.iconClass }}"></i>
+                </div>
+                <div>
+                    <h3 class="dialog-header__title">{{ details.tool.name }}</h3>
+                    <p class="dialog-header__subtitle">{{ details.integration.name }}</p>
+                </div>
+            </div>
+            <button class="dialog-close" type="button" (click)="closeToolDetails()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="dialog-body dialog-body--scroll">
+            @if (details.tool.description) {
+            <p class="tool-detail__description">{{ details.tool.description }}</p>
+            }
+
+            <div class="tool-detail__grid">
+                @for (field of details.fields; track field.label) {
+                <div class="tool-detail__field">
+                    <span class="tool-detail__label">{{ field.label }}</span>
+                    <span class="tool-detail__value" [class.tool-detail__value--code]="field.code">{{ field.value }}</span>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+}
 
 <!-- Pipedream Configuration Modal -->
 @if (showMembraneConfigModal) {
@@ -271,92 +492,5 @@
     </div>
 </div>
 }
-
-<!-- Admin Configuration -->
-    @if (isAdmin) {
-    <div class="settings-section" style="margin-top: 32px;">
-        <p class="section-label">Admin Configuration</p>
-        <p style="font-size: 13px; color: var(--color-text-muted); margin-bottom: 12px;">
-            Define how each integration is scoped within your tenant. Changes apply to all users.
-        </p>
-        <div class="integration-grid">
-            <!-- Pipedream integrations -->
-            @for (integration of membraneIntegrations; track integration.key) {
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon {{ _colorClassForIntegration(integration.key) }}">
-                            <i class="{{ _iconForIntegration(integration.key) }}"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">{{ integration.name }}</p>
-                            <p class="integration-card__sub">Scope mode</p>
-                        </div>
-                    </div>
-                </div>
-                <div style="padding: 8px 0;">
-                    <select class="search-bar__input"
-                        [value]="getScopeFor(integration.key)"
-                        (change)="setScope(integration.key, $any($event).target.value)">
-                        <option value="per-user">Per User (each user connects individually)</option>
-                        <option value="per-organization">Per Organization (shared by active org)</option>
-                        <option value="per-tenant">Per Tenant (shared across entire tenant)</option>
-                    </select>
-                </div>
-            </div>
-            }
-            <!-- Hardcoded integrations that don't appear in Pipedream yet -->
-            @for (hardcoded of [{key:'hubspot',name:'HubSpot'},{key:'salesforce',name:'Salesforce'},{key:'slack',name:'Slack'}]; track hardcoded.key) {
-            @if (!membraneIntegrations.some(i => i.key === hardcoded.key)) {
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon {{ _colorClassForIntegration(hardcoded.key) }}">
-                            <i class="{{ _iconForIntegration(hardcoded.key) }}"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">{{ hardcoded.name }}</p>
-                            <p class="integration-card__sub">Scope mode</p>
-                        </div>
-                    </div>
-                </div>
-                <div style="padding: 8px 0;">
-                    <select class="search-bar__input"
-                        [value]="getScopeFor(hardcoded.key)"
-                        (change)="setScope(hardcoded.key, $any($event).target.value)">
-                        <option value="per-user">Per User</option>
-                        <option value="per-organization">Per Organization</option>
-                        <option value="per-tenant">Per Tenant</option>
-                    </select>
-                </div>
-            </div>
-            }
-            }
-            <!-- Legacy MS365 scope config -->
-            <div class="integration-card">
-                <div class="integration-card__header">
-                    <div class="integration-card__brand">
-                        <div class="integration-card__icon integration-card__icon--ms">
-                            <i class="fa-brands fa-microsoft"></i>
-                        </div>
-                        <div>
-                            <p class="integration-card__name">Microsoft 365 / Outlook</p>
-                            <p class="integration-card__sub">Scope mode</p>
-                        </div>
-                    </div>
-                </div>
-                <div style="padding: 8px 0;">
-                    <select class="search-bar__input"
-                        [value]="getScopeFor('microsoft-outlook')"
-                        (change)="setScope('microsoft-outlook', $any($event).target.value)">
-                        <option value="per-user">Per User (recommended for email)</option>
-                        <option value="per-organization">Per Organization</option>
-                        <option value="per-tenant">Per Tenant</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-    </div>
-    }
 
 </div>

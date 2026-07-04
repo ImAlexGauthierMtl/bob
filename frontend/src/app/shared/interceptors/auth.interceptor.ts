@@ -1,4 +1,4 @@
-import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
@@ -13,9 +13,10 @@ const isAuthSessionRequest = (url: string): boolean => (
     url.includes('/auth/refresh')
 );
 
-export const authInterceptor: HttpInterceptorFn = (req, next) => {
-    const authService = inject(AuthService);
-    const router = inject(Router);
+const withCredentialsAndAccessToken = (
+    req: HttpRequest<unknown>,
+    authService: AuthService,
+): HttpRequest<unknown> => {
     const accessToken = authService.getAccessToken();
     let credentialRequest = req.withCredentials ? req : req.clone({ withCredentials: true });
     if (accessToken && !credentialRequest.headers.has('Authorization')) {
@@ -23,6 +24,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             setHeaders: { Authorization: `Bearer ${accessToken}` },
         });
     }
+    return credentialRequest;
+};
+
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+    const authService = inject(AuthService);
+    const router = inject(Router);
+    const credentialRequest = withCredentialsAndAccessToken(req, authService);
 
     return next(credentialRequest).pipe(
         catchError((error: HttpErrorResponse) => {
@@ -33,13 +41,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             }
             if (error.status === 401 && !isAuthSessionRequest(credentialRequest.url)) {
                 return authService.refreshSession().pipe(
-                    switchMap(() => next(credentialRequest.clone({ withCredentials: true }))),
                     catchError((refreshError) => {
                         if (refreshError?.status !== 0) {
                             authService.clearSessionAndRedirect();
                         }
                         return throwError(() => refreshError);
                     }),
+                    switchMap(() => next(withCredentialsAndAccessToken(req, authService))),
                 );
             }
             if (error.status === 403) {

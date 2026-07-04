@@ -3,48 +3,6 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-export interface BobVoiceOption {
-    id: string;
-    name: string;
-    gender: string;
-    accent: string;
-    style: string;
-    provider?: string;
-}
-
-export interface BobLanguageOption {
-    code: string;
-    name: string;
-}
-
-export interface BobConversationPersonality {
-    tone: string;
-    formality: number;
-    response_length: string;
-    language: string;
-    creativity: number;
-    emoji_usage: boolean;
-}
-
-export interface BobVoiceSettings {
-    voice: string;
-    speed: number;
-    auto_listen: boolean;
-}
-
-export interface BobConversationSettingsResponse {
-    personality: BobConversationPersonality;
-    available_tones: string[];
-    available_languages: BobLanguageOption[];
-    source?: string;
-}
-
-export interface BobVoiceSettingsResponse {
-    voice: BobVoiceSettings;
-    available_voices: BobVoiceOption[];
-    source?: string;
-}
-
 export interface BobRuntimeProvider {
     id: string;
     name: string;
@@ -119,32 +77,6 @@ export interface BobRuntimeMcpSettings {
     capabilities: BobRuntimeMcpCapability[];
 }
 
-export interface BobRuntimeConversionModule {
-    id: string;
-    label: string;
-    status: string;
-    owner: string;
-    controls?: string[];
-}
-
-export interface BobRuntimeConversionSurface {
-    id: string;
-    label: string;
-    status: string;
-    current: string;
-    target: string;
-    evidence?: string[];
-    remaining_work?: string[];
-}
-
-export interface BobRuntimeConversionInventory {
-    target: string;
-    status: string;
-    active_model: string;
-    settings_modules: BobRuntimeConversionModule[];
-    surfaces: BobRuntimeConversionSurface[];
-}
-
 export interface BobRuntimeSettingsResponse {
     providers: BobRuntimeProvider[];
     active_provider: string;
@@ -153,7 +85,6 @@ export interface BobRuntimeSettingsResponse {
     tools: BobRuntimeTool[];
     memory: Record<string, string>;
     mcp?: BobRuntimeMcpSettings;
-    conversion_inventory?: BobRuntimeConversionInventory;
     source?: string;
 }
 
@@ -219,6 +150,59 @@ export interface BobMemorySettingsResponse {
     source?: string;
 }
 
+export interface KnowledgeDatabase {
+    id: string;
+    name: string;
+    display_name: string;
+    description: string;
+    status: string;
+    milvus_database: string;
+    embedding_provider: string;
+    embedding_model: string;
+    embedding_dimension: number;
+    created_by: string;
+    created_at: string;
+}
+
+export interface KnowledgeCollection {
+    id: string;
+    database_id: string;
+    name: string;
+    display_name: string;
+    theme: string;
+    description: string;
+    status: string;
+    milvus_collection: string;
+    scope_type: string;
+    source_kind: string;
+    created_by: string;
+    created_at: string;
+}
+
+export interface KnowledgeSource {
+    id: string;
+    collection_id: string;
+    name: string;
+    provider: string;
+    source_type: string;
+    status: string;
+    pipedream_app: string;
+    pipedream_source_id?: string | null;
+    sync_mode: string;
+    ingestion_strategy: string;
+    created_by: string;
+    created_at: string;
+}
+
+export interface KnowledgeOverviewResponse {
+    databases: KnowledgeDatabase[];
+    collections: KnowledgeCollection[];
+    sources: KnowledgeSource[];
+    ingestion_flow: string[];
+    postgres_source_of_truth: boolean;
+    milvus_role: string;
+}
+
 export interface BobRuntimeCreateResponse<T> {
     item: T;
     runtime: BobRuntimeSettingsResponse;
@@ -229,36 +213,16 @@ export class BobAssistantSettingsService {
     private http = inject(HttpClient);
     private baseUrl = environment.bobSettingsApiUrl;
 
-    getConversation(): Observable<BobConversationSettingsResponse> {
-        return this.http.get<BobConversationSettingsResponse>(`${this.baseUrl}/conversation`);
-    }
-
-    updateConversation(personality: BobConversationPersonality): Observable<BobConversationSettingsResponse> {
-        return this.http.put<BobConversationSettingsResponse>(
-            `${this.baseUrl}/conversation`,
-            { personality },
-            { headers: this.idempotencyHeaders('conversation') },
-        );
-    }
-
-    getVoice(): Observable<BobVoiceSettingsResponse> {
-        return this.http.get<BobVoiceSettingsResponse>(`${this.baseUrl}/voice`);
-    }
-
-    updateVoice(voice: BobVoiceSettings): Observable<BobVoiceSettingsResponse> {
-        return this.http.put<BobVoiceSettingsResponse>(
-            `${this.baseUrl}/voice`,
-            { voice },
-            { headers: this.idempotencyHeaders('voice') },
-        );
-    }
-
     getRuntime(): Observable<BobRuntimeSettingsResponse> {
         return this.http.get<BobRuntimeSettingsResponse>(`${this.baseUrl}/runtime`);
     }
 
     getMemory(): Observable<BobMemorySettingsResponse> {
         return this.http.get<BobMemorySettingsResponse>(`${this.baseUrl}/memory`);
+    }
+
+    getKnowledge(): Observable<KnowledgeOverviewResponse> {
+        return this.http.get<KnowledgeOverviewResponse>(`${this.baseUrl}/knowledge`);
     }
 
     createRuntimeAgent(payload: Partial<BobRuntimeAgent> & { name: string }): Observable<BobRuntimeCreateResponse<BobRuntimeAgent>> {
@@ -282,6 +246,30 @@ export class BobAssistantSettingsService {
             `${this.baseUrl}/runtime/tools`,
             payload,
             { headers: this.idempotencyHeaders('runtime-tool') },
+        );
+    }
+
+    createKnowledgeDatabase(payload: Partial<KnowledgeDatabase> & { name: string; display_name: string }): Observable<KnowledgeDatabase> {
+        return this.http.post<KnowledgeDatabase>(
+            `${this.baseUrl}/knowledge/databases`,
+            payload,
+            { headers: this.idempotencyHeaders('knowledge-db') },
+        );
+    }
+
+    createKnowledgeCollection(payload: Partial<KnowledgeCollection> & { database_id: string; name: string; display_name: string; milvus_collection: string }): Observable<KnowledgeCollection> {
+        return this.http.post<KnowledgeCollection>(
+            `${this.baseUrl}/knowledge/collections`,
+            payload,
+            { headers: this.idempotencyHeaders('knowledge-collection') },
+        );
+    }
+
+    createKnowledgeSource(payload: Partial<KnowledgeSource> & { collection_id: string; name: string }): Observable<KnowledgeSource> {
+        return this.http.post<KnowledgeSource>(
+            `${this.baseUrl}/knowledge/sources`,
+            payload,
+            { headers: this.idempotencyHeaders('knowledge-source') },
         );
     }
 

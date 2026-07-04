@@ -138,17 +138,55 @@ class PipedreamClient:
         data = response.json()
         return data if isinstance(data, list) else data.get("data", [])
 
-    async def list_apps(self, query: Optional[str] = None, limit: int = 100) -> list[dict[str, Any]]:
+    async def list_apps(
+        self,
+        query: Optional[str] = None,
+        limit: int = 100,
+        *,
+        after: Optional[str] = None,
+        has_actions: Optional[bool] = None,
+        has_triggers: Optional[bool] = None,
+    ) -> dict[str, Any]:
         params: dict[str, Any] = {"limit": limit}
         if query:
             params["q"] = query
+        if after:
+            params["after"] = after
+        if has_actions is not None:
+            params["has_actions"] = str(has_actions).lower()
+        if has_triggers is not None:
+            params["has_triggers"] = str(has_triggers).lower()
         response = await self._client.get(
             f"{self._base}/connect/apps",
             params=params,
             headers=await self._headers(),
         )
         response.raise_for_status()
-        return response.json().get("data", [])
+        payload = response.json()
+        return payload if isinstance(payload, dict) else {"data": payload}
+
+    async def list_actions(
+        self,
+        app: str,
+        query: Optional[str] = None,
+        limit: int = 20,
+        *,
+        after: Optional[str] = None,
+        registry: str = "public",
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {"app": app, "limit": limit, "registry": registry}
+        if query:
+            params["q"] = query
+        if after:
+            params["after"] = after
+        response = await self._client.get(
+            f"{self._base}/connect/{self._project_id}/actions",
+            params=params,
+            headers=await self._headers(),
+        )
+        response.raise_for_status()
+        payload = response.json()
+        return payload if isinstance(payload, dict) else {"data": payload}
 
     async def delete_account(self, account_id: str) -> bool:
         response = await self._client.delete(

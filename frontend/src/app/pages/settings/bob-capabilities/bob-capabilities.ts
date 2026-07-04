@@ -39,11 +39,6 @@ export class BobCapabilitiesComponent implements OnInit {
         });
     }
 
-    toggleCapability(cap: UserCapability): void {
-        cap.granted = !cap.granted;
-        // TODO: call API to update capability grant status
-    }
-
     get filteredCapabilities(): UserCapability[] {
         if (!this.searchQuery.trim()) return this.capabilities;
         const q = this.searchQuery.toLowerCase();

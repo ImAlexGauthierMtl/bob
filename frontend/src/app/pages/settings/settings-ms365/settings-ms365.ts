@@ -1,7 +1,9 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { catchError, of, switchMap, throwError } from 'rxjs';
 import { MS365Service } from '../../../shared/services/ms365.service';
+import { MembraneService } from '../../../shared/services/membrane.service';
 import { MembraneBackendService, MembraneBackendConnection, MembraneBackendEmail, MembraneBackendEvent } from '../../../shared/services/membrane-backend.service';
 import { AuthService } from '../../../shared/services/auth.service';
 import { MS365Connection, SyncedEmail, SyncedEvent } from '../../../shared/models/ms365.model';
@@ -26,6 +28,7 @@ function isMembraneEvent(e: UnifiedEvent): e is MembraneBackendEvent {
 })
 export class SettingsMs365Component implements OnInit {
     private ms365Service = inject(MS365Service);
+    private membraneService = inject(MembraneService);
     private membraneBackend = inject(MembraneBackendService);
     private authService = inject(AuthService);
 
@@ -294,9 +297,24 @@ export class SettingsMs365Component implements OnInit {
                 },
             });
         } else if (this.provider === 'membrane' && this.membraneConnection) {
-            // Disconnect via Membrane API (B4F routes)
-            // TODO: implement Membrane disconnect if needed
-            this.membraneConnection = null;
+            const connection = this.membraneConnection;
+            this.membraneService.disconnect(connection.membrane_connection_id, connection.integration_key).pipe(
+                catchError((err) => err?.status === 404 ? of(undefined) : throwError(() => err)),
+                switchMap(() => this.membraneBackend.disconnectConnection(connection.id)),
+                catchError((err) => {
+                    console.error('Failed to disconnect Pipedream Outlook connection', err);
+                    alert('Failed to disconnect. Please try again.');
+                    return throwError(() => err);
+                }),
+            ).subscribe({
+                next: () => {
+                    this.membraneConnection = null;
+                    this.emails = [];
+                    this.events = [];
+                    this.emailTotal = 0;
+                    this.eventTotal = 0;
+                },
+            });
         }
     }
 }

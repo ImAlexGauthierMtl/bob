@@ -100,6 +100,11 @@ export class MembraneBackendService {
         return this.http.get<MembraneBackendConnection>(url);
     }
 
+    /** Soft-delete a local Pipedream-backed connection record. */
+    disconnectConnection(connectionId: string): Observable<void> {
+        return this.http.delete<void>(`${API_URL}/pipedream/local-connections/${encodeURIComponent(connectionId)}`);
+    }
+
     /** Get a specific synced email from the local integration backend. */
     getEmail(id: string, userId: string): Observable<MembraneBackendEmail> {
         return this.http.get<MembraneBackendEmail>(`${API_URL}/pipedream/emails/${id}?user_id=${userId}`);

@@ -26,14 +26,6 @@
                     Trust Score: <strong>{{ (capabilities.trust_score * 100).toFixed(0) }}%</strong> ·
                     {{ capabilities.capabilities.length }} capabilities loaded
                 </p>
-                <div class="ai-banner__actions">
-                    <button class="btn btn-outline--purple">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> View Recommendations
-                    </button>
-                    <button class="btn btn-purple">
-                        Auto-Generate Workflow
-                    </button>
-                </div>
             </div>
             <button class="ai-banner__close" (click)="dismissBanner()">
                 <i class="fa-solid fa-xmark"></i>

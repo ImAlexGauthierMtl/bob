@@ -439,7 +439,6 @@ textarea {
 
 .status-badge,
 .counter-badge,
-.settings-nav__badge,
 .result-tag {
   border-radius: var(--radius-sm) !important;
   letter-spacing: 0 !important;
